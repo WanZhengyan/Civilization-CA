@@ -212,7 +212,7 @@ function inspect(){
   updateSurvey();
   if(activeUnit){
     const u=activeUnit,o=selectedOptions;
-    info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+(u.type==="builder"?stat("Charges",u.charges):stat("Terrain",terrain[tile.terrain]))+'</div>'+healthBar(u.hp,u.maxHp);
+    info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+((u.type==="builder"||u.type==="workboat")?stat("Charges",u.charges):stat("Terrain",terrain[tile.terrain]))+'</div>'+healthBar(u.hp,u.maxHp);
     if(own){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
@@ -221,12 +221,12 @@ function inspect(){
         const assessment=survey.get(u.tile);
         explanation=assessment?surveySummary(assessment,true):"Settle at least three hexes from every city, with movement remaining.";
         if(assessment?.nearestCity && !explanation.includes(assessment.nearestCity.name))explanation+=" "+nearestCityText(assessment);
-      }else if(u.type==="builder"){
-        for(const item of ['farm','mine']){
+      }else if(u.type==="builder" || u.type==="workboat"){
+        for(const item of u.type==="workboat" ? ['fishery'] : ['farm','mine']){
           const ok=o.improvements.includes(item);
           actions+=actionButton(item,'Build '+items[item].toLowerCase(),ok?'1 charge':'Unavailable',"gold",disabled||!ok);
         }
-        explanation="Build on an unimproved, friendly district outside a city.";
+        explanation=u.type==="workboat" ? "Build a fishery on open water within two water hexes of a friendly harbor." : "Build on an unimproved, friendly district outside a city.";
       }else{
         actions+=actionButton("attack","Preview attack",o.attacks.length+' '+(o.attacks.length===1?'target':'targets'),"red",disabled||!o.attacks.length,order==="attack");
         explanation=UNIT_TYPES[u.type].description||(u.type==="ranged"?"Rangers can strike enemies up to two hexes away." :"Militia can engage adjacent enemies and capture a city.");
@@ -376,7 +376,7 @@ function chooseOrder(key){
   }
   if(key==="upgrade"){order="";Game.doAction({type:"upgrade",unit:u.id});return}
   if(key==="found"){order="";Game.doAction({type:"found",unit:u.id});return}
-  if(key==="farm"||key==="mine"){order="";Game.doAction({type:"improve",unit:u.id,item:key})}
+  if(key==="farm"||key==="mine"||key==="fishery"){order="";Game.doAction({type:"improve",unit:u.id,item:key})}
 }
 function chooseRoster(id){
   const units=activeRoster==="units",item=(units?ownUnits():ownCities()).find(o=>sameId(o.id,id));

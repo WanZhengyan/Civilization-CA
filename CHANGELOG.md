@@ -1,5 +1,11 @@
 # Release notes
 
+## 3.6 · Fishing crews and coastal fleets
+
+Ports could earn revenue but had no vessels to launch. Fishing crews can establish fisheries, cutters patrol connected sea hexes, and steam frigates bombard the shore. A crew in the reference coastal opening launched in round 6, worked two fisheries, then shared its harbor with a cutter in round 8.
+
+37 checks passed. 6 fixed campaigns replayed identically twice. Try the same port rules against the peninsulas and narrow water passages of San Francisco Bay.
+
 ## 3.5 · Harbors and working waterfronts
 
 A coastal district previously generated no port income and offered the same building list as an inland city. A harbor now needs access to a connected controlled shore. Its berth is reserved while under construction. A finished harbor adds two capital each turn and unlocks a shipyard with two extra production.

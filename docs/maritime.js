@@ -29,3 +29,21 @@ export function findPortSite(state, city, byId, neighbors) {
   }
   return null;
 }
+
+export const VESSELS = {
+  workboat: {name: 'Fishing crew', role: 'Maritime engineering unit', domain: 'sea', era: 'frontier', required: 7, maxHp: 60, moves: 3, range: 0, strength: 0, charges: 2, description: 'Builds two offshore fisheries within two water hexes of a friendly port.'},
+  cutter: {name: 'Revenue cutter', role: 'Naval patrol unit', domain: 'sea', era: 'frontier', required: 9, maxHp: 85, moves: 3, range: 1, strength: 36, description: 'A fast sailing vessel for fighting nearby ships and bombarding the shoreline.'},
+  frigate: {name: 'Steam frigate', role: 'Naval artillery unit', domain: 'sea', era: 'industrial', tech: 'steam', required: 16, maxHp: 110, moves: 3, range: 2, strength: 48, description: 'A shipyard warship that bombards targets up to two hexes away.'}
+};
+
+// Fishing fleets work sheltered water connected to an actual port by sea.
+export function fisheryPort(state, seat, tile, byId, neighbors) {
+  const holding = state.board[tile];
+  if (byId[tile]?.terrain !== 'ocean' || holding.improvement || (holding.owner !== null && holding.owner !== seat)) return null;
+  if (state.cities.some(city => city.portTile === tile || city.queue?.portTile === tile)) return null;
+  const ports = state.cities.filter(city => city.seat === seat && city.portTile && city.buildings.includes('harbor'));
+  if (!ports.length) return null;
+  const adjacentWater = neighbors(tile).filter(id => byId[id].terrain === 'ocean');
+  const near = ports.find(city => adjacentWater.includes(city.portTile));
+  return near || ports.find(city => adjacentWater.some(id => neighbors(id).includes(city.portTile))) || null;
+}
