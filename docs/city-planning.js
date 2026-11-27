@@ -1,3 +1,4 @@
+import {NATURAL_WONDERS} from './natural-wonders.js';
 import {illustration} from './illustrations.js';
 
 function line(label, value) {
@@ -55,7 +56,7 @@ export function paintCitizenLedger(state,seat,canAct,read) {
   const activeChoice=ledger.contains(document.activeElement) && document.activeElement.dataset.cityFocus;
   const focus=Object.entries(focusNames).map(([id,name])=>'<button type="button" class="modal-tab" data-city-focus="'+id+
     '" aria-pressed="'+(id===workforce.focus)+'" '+(!canAct?'disabled':'')+'>'+name+'</button>').join('');
-  const jobs=workforce.workedTiles.map(job=>'<li><strong>'+escape(job.name)+'</strong><small> × '+job.workers+'</small>'+
+  const jobs=workforce.workedTiles.map(job=>'<li><strong>'+escape(job.name)+'</strong>'+(job.naturalWonders||[]).map(id=>'<small> · <span>'+escape(NATURAL_WONDERS[id].name)+'</span></small>').join('')+'<small> × '+job.workers+'</small>'+
     '<span>'+job.output[0]+' / '+job.output[1]+' / '+job.output[2]+'</span></li>').join('');
   const html='<div class="modal-shell"><div class="modal-head"><div><small class="modal-kicker">City planning</small>'+
     '<h2 class="modal-title" id="population-dialog-title">'+escape(city.name)+'</h2></div><button type="button" class="modal-close" data-citizens-close aria-label="Close dialog">×</button></div>'+

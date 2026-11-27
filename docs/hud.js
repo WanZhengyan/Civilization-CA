@@ -1,3 +1,5 @@
+import {NATURAL_WONDERS,neighboringWonders} from './natural-wonders.js';
+import {naturalWonderArt} from './natural-wonder-art.js';
 import {illustration, illustrationPath} from './illustrations.js';
 import {mountBattleReports} from './battle-history.js';
 import {researchLinks,syncResearchLens} from './research-catalog.js';
@@ -198,6 +200,8 @@ function updateHint(id){
   if(order==="inspect" && surveyUnitId)hint="Inspect mode · "+hint;
   if(tile && !visible.has(id))hint=tile.name+" · "+terrain[tile.terrain]+" · Outside current sight";
   if(tile && mapRegion.bridgesByTile?.[tile.id])hint+=" · "+mapRegion.bridgesByTile[tile.id].map(b=>b.name).join(", ");
+  const nature=NATURAL_WONDERS[view.state.board[id]?.naturalWonder];
+  if(nature)hint+=' · '+nature.name;
   const neutral=tile && wildAt(view.state,tile.id);
   if (neutral) hint+=" · "+WILDS[neutral.type].name;
   text("map-hint",hint);
@@ -250,10 +254,11 @@ function inspect(){
   const depositId=canSeeDeposits(state,view.seat) ? holding?.resource : null;
   const deposit=RESOURCES[depositId];
   const campus=holding?.wonder;
+  const nature=NATURAL_WONDERS[holding?.naturalWonder];
   const locationArt='./'+artFor(tile,activeCity)+'.webp';
   const districtArt=campus || (port ? 'harbor' : null) || holding?.improvement || depositId;
   const cityArt=activeCity?.buildings.includes('harbor') ? 'harbor' : null;
-  const fallback=illustrationPath(activeCity ? cityArt : districtArt) || locationArt;
+  const fallback=naturalWonderArt(holding?.naturalWonder) || illustrationPath(activeCity ? cityArt : districtArt) || locationArt;
   const unitArt=activeUnit ? illustrationPath(activeUnit.type) : null;
   const fullArt=unitArt&&!unavailableArt.has(unitArt);
   const art=fullArt?unitArt:fallback;
@@ -263,9 +268,9 @@ function inspect(){
     image.onerror=()=>{unavailableArt.add(unitArt);image.onerror=null;image.src=fallback;portrait.hidden=false;drawUnitPortrait(portrait,activeUnit.type,gov.color)};
   }else{image.onerror=null;if(activeUnit)drawUnitPortrait(portrait,activeUnit.type,gov.color)}
   if(image.getAttribute("src")!==art)image.src=art;
-  text("entity-kind",activeUnit ? (own?"Your ":"Rival ")+(UNIT_TYPES[activeUnit.type].role||unitRole[activeUnit.type]||"unit") : activeCity ? (own?"Your city":"Rival city") : (campus?"University wonder":port?"Harbor district":tile.landmark?"Landmark":"District"));
+  text("entity-kind",activeUnit ? (own?"Your ":"Rival ")+(UNIT_TYPES[activeUnit.type].role||unitRole[activeUnit.type]||"unit") : activeCity ? (own?"Your city":"Rival city") : (nature?"Natural wonder":campus?"University wonder":port?"Harbor district":tile.landmark?"Landmark":"District"));
   el("entity-name").translate=!customCity(activeCity);
-  text("entity-name",activeUnit ? (items[activeUnit.type]||activeUnit.type) : activeCity?.name||(campus?WONDERS[campus]?.name:port?"Harbor":tile.name));
+  text("entity-name",activeUnit ? (items[activeUnit.type]||activeUnit.type) : activeCity?.name||nature?.name||(campus?WONDERS[campus]?.name:port?"Harbor":tile.name));
   text("entity-location",activeUnit ? tile.name : activeCity ? gov.name : port?.name||terrain[tile.terrain]);
   entityTabs(tile.id,activeUnit);
   const disabled=!mayOrder()||!own;
@@ -320,12 +325,15 @@ function inspect(){
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
   }else{
     if(!visible.has(tile.id)){
-      el("entity-info").innerHTML=stat("Terrain",terrain[tile.terrain])+depositStrip(depositId);
+      el("entity-info").innerHTML=stat("Terrain",terrain[tile.terrain])+depositStrip(depositId)+(nature?note(nature.description)+note(nature.effect):"");
       el("entity-commands").innerHTML=note("Outside current sight");return;
     }
     info='<div class="province-meta"><i style="background:'+esc(gov?.color||"#98a1a6")+'"></i>'+esc(gov?.name||(tile.terrain==="ocean"?"Open water":"Unclaimed land"))+'</div><div class="entity-stats">'+stat("Terrain",terrain[tile.terrain])+stat("Improvement",items[holding?.improvement]||"None")+'</div>';
     const territory=getActions(state,view.seat,tile.id)[0];
-    if(campus && WONDERS[campus]){
+    if(nature){
+      info+=note(nature.description)+note(nature.effect);
+      explanation='This protected site cannot host a city, improvement or campus.';
+    }else if(campus && WONDERS[campus]){
       explanation=WONDERS[campus].description;
       info+='<p class="built-list">'+esc(tile.name)+'</p>';
     }else if(port){
@@ -343,6 +351,11 @@ function inspect(){
     info='<div class="entity-stats">'+stat("Health",neutral.hp,neutral.maxHp)+'</div>'+healthBar(neutral.hp,neutral.maxHp);
     actions="";
     explanation=neutral.type==="camp"?"Send a close-combat unit to clear the camp for 12 capital.":neutral.type==="raider"?"Guard the city with a military unit or city walls to repel these raiders.":"This lookout belongs to a nearby barbarian camp.";
+  }
+  if(!activeUnit && !activeCity && !nature){
+    for(const id of neighboringWonders(state.board,mapRegion,tile.id)){
+      if(!['ocean','mountains'].includes(tile.terrain))info+=stat("Adjacent natural wonder",NATURAL_WONDERS[id].name)+note(NATURAL_WONDERS[id].effect);
+    }
   }
   info+=depositStrip(depositId);
   if(deposit){

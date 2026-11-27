@@ -25,7 +25,7 @@ export function surveyCampus(state, city, item, map, distance) {
   const reserved=new Set(state.cities.flatMap(c=>[c.tile,c.portTile,c.queue?.site]).filter(Boolean));
   const sites=[];
   for (const [id,holding] of Object.entries(state.board)) {
-    if (holding.owner!==city.seat || holding.improvement || holding.resource || holding.wonder || reserved.has(id)) continue;
+    if (holding.owner!==city.seat || holding.improvement || holding.resource || holding.naturalWonder || holding.wonder || reserved.has(id)) continue;
     const tile=map.byId[id], range=distance(city.tile,id);
     if (range>2 || !tile || ['ocean','mountains'].includes(tile.terrain)) continue;
     const favored=campus.terrain.includes(tile.terrain);

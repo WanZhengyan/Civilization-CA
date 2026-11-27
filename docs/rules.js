@@ -1,3 +1,4 @@
+import {placeNaturalWonders, neighboringWonders} from './natural-wonders.js';
 import {REGIMENTS, matchup, formationChoices, signalPosition} from './regiments.js';
 import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
 import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
@@ -314,13 +315,14 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const allocation = shuffled(FACTIONS.map((_,i)=>i), seededRandom(seed,'civilizations'));
   const map = getMap(mapId);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, mapShape:REGIONAL_SHAPE, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
+  const next = {seed, mapId, mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
     players:players.map((player,seat)=>({
       name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[allocation[seat]].name,
       bot:player?.bot===true,faction:allocation[seat],color:FACTIONS[allocation[seat]].color,capital:12,influence:6,score:0
     })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
   starts.forEach(([site],seat)=>spawn(next,seat,'settler',site));
+  placeNaturalWonders(next,map);
   seedCamps(next,map,map.neighbors,hexDistance);
   refreshScores(next);
   for (const player of next.players) player.surveyEnabled=false;
@@ -357,8 +359,16 @@ function cityWorkArea(state, city) {
 export function getCitizenWorkforce(state,cityId,focus) {
   const city=cityOrNull(state,cityId);
   if(!city)return null;
+  const map=getMap(state);
+  const known=state.exploration?.[city.seat] || {};
+  const visible=getVisibleTiles(state,city.seat);
+  const canIdentify=id=>visible.has(id) || Object.hasOwn(known,id) || state.intel?.explored?.includes(id);
   const tiles=cityWorkArea(state,city).filter(tile=>
-    !state.board[tile.id].pillaged && getWorkingCity(state,tile.id)?.id===city.id);
+    !state.board[tile.id].pillaged && !state.board[tile.id].naturalWonder && getWorkingCity(state,tile.id)?.id===city.id)
+    .map(tile=>{
+      const wonders=neighboringWonders(state.board,map,tile.id,canIdentify);
+      return wonders.length ? {...tile,naturalWonders:wonders} : tile;
+    });
   return assignWorkforce(city,tiles,focus);
 }
 export function getCityYield(state,cityId) {
@@ -454,7 +464,7 @@ function record(state,seat,type,text,tile,detail={}) {
 function territoryOrder(state,seat,tile) {
   if (tile.terrain==='ocean' || wildAt(state,tile.id)) return null;
   const {owner,level}=state.board[tile.id];
-  if (state.board[tile.id].wonder || state.cities.some(c=>c.queue?.site===tile.id)) return null;
+  if (state.board[tile.id].wonder || state.board[tile.id].naturalWonder || state.cities.some(c=>c.queue?.site===tile.id)) return null;
   if (owner===seat) return level<3 ? {type:'develop',label:'Develop district',cost:{capital:5+level*3,influence:0}} : null;
   if (state.cities.some(c=>c.tile===tile.id) || state.units.some(u=>u.tile===tile.id && u.seat!==seat)) return null;
   if (owner===null) return {type:'claim',label:'Claim district',cost:{capital:4,influence:0}};
@@ -550,6 +560,7 @@ function nearestSettlement(state, tileId) {
   return nearest;
 }
 function settlementRestriction(state, seat, tile, nearest) {
+  if (state.board[tile.id].naturalWonder) return 'protected';
   if (!terrainCost[tile.terrain] || state.board[tile.id].wonder || state.cities.some(c=>c.queue?.site===tile.id)) return 'terrain';
   const owner = state.board[tile.id].owner;
   if (owner !== null && owner !== seat) return 'ownership';
@@ -582,7 +593,9 @@ export function getSettlementAssessment(state, unitId, tileId) {
   assessment.movesAfter = assessment.reachable ? unit.moves - cost : null;
 
   const restriction = settlementRestriction(state, unit.seat, tile, nearest);
-  if (restriction === 'terrain') {
+  if (restriction === 'protected') {
+    assessment.reason='This protected site cannot host a city, improvement or campus.';
+  } else if (restriction === 'terrain') {
     assessment.reason = tile.terrain === 'ocean' ? 'Cities need land. This tile is open water.' : 'Mountain terrain is impassable.';
   } else if (restriction === 'ownership') {
     const owner = state.board[tileId].owner;
@@ -617,7 +630,7 @@ export function getWorkingCity(state,id) {
   return serviceCity(state,id,map.byId,map.neighbors);
 }
 function improvementAt(state,seat,id) {
-  if(state.board[id].wonder || state.cities.some(c=>c.queue?.site===id)) return null;
+  if(state.board[id].naturalWonder || state.board[id].wonder || state.cities.some(c=>c.queue?.site===id)) return null;
   if (state.board[id].owner!==seat || state.board[id].improvement || state.cities.some(c=>c.tile===id)) return null;
   if (!getWorkingCity(state,id) || state.board[id].wonder || state.cities.some(city=>city.queue?.site===id)) return null;
   const deposit=RESOURCES[state.board[id].resource];

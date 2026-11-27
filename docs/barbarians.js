@@ -30,7 +30,7 @@ export function seedCamps(state,map,neighbors,distance) {
     const next=[...neighbors(queue[i]),...(map.bridgesByTile?.[queue[i]]||[]).map(link=>link.to)];
     for (const id of next) if (!reachable.has(id) && dry(id)) {reachable.add(id);queue.push(id);}
   }
-  const safe=id=>reachable.has(id) && dry(id) && state.board[id].owner==null &&
+  const safe=id=>reachable.has(id) && dry(id) && !state.board[id].naturalWonder && state.board[id].owner==null &&
     starts.every(start=>distance(start,id)>=4);
   const rank=id=>randomRank(state.seed,'camp/'+map.id+'/'+id);
   const candidates=map.tiles.map(t=>t.id).filter(safe).sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));

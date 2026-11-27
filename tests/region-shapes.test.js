@@ -56,7 +56,7 @@ test('new saves, rooms, movement, founding and city work share the same chart ma
     assert.deepEqual(getMovePath(state,unit.id,omitted),[]);
     assert.throws(()=>applyAction(state,0,{type:'move',unit:unit.id,tile:omitted}));
     assert.throws(()=>applyAction(state,0,{type:'claim',tile:omitted}));
-    const coast=map.tiles.find(t=>land(t) && map.neighbors(t.id).length<6 && map.neighbors(t.id).some(n=>sea(map.byId[n])));
+    const coast=map.tiles.find(t=>land(t) && !state.board[t.id].naturalWonder && map.neighbors(t.id).length<6 && map.neighbors(t.id).some(n=>sea(map.byId[n])));
     unit.tile=coast.id;
     state.barbarians={camps:[],parties:[]};
     const town=applyAction(state,0,{type:'found',unit:unit.id}),city=town.cities[0];

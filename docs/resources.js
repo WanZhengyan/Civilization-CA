@@ -19,7 +19,7 @@ function roll(seed, tile, salt) {
 export function populateDeposits(state, region, seed, adjacent) {
   const assigned = new Set();
   for (const [i,[key, item]] of Object.entries(RESOURCES).entries()) {
-    const sites = region.tiles.filter(tile => item.terrains.includes(tile.terrain) && !assigned.has(tile.id)
+    const sites = region.tiles.filter(tile => item.terrains.includes(tile.terrain) && !assigned.has(tile.id) && !state.board[tile.id].naturalWonder
       && !state.cities.some(city => city.tile === tile.id || city.portTile === tile.id));
     // Hills are shared by quarries and ore; place a modest number of each.
     const count = Math.min(sites.length, Math.max(sites.length ? 1 : 0,
@@ -36,7 +36,7 @@ export function populateDeposits(state, region, seed, adjacent) {
   if (adjacent) for (const unit of state.units || []) {
     if (unit.type!=='settler') continue;
     const ring=adjacent(unit.tile).map(id=>region.byId[id]).filter(tile=>
-      tile && !['mountains','ocean'].includes(tile.terrain) && !state.cities.some(c=>c.tile===tile.id));
+      tile && !state.board[tile.id].naturalWonder && !['mountains','ocean'].includes(tile.terrain) && !state.cities.some(c=>c.tile===tile.id));
     if (ring.some(tile=>RESOURCES[state.board[tile.id]?.resource])) continue;
     ring.sort((a,b)=>roll(seed,a,0x3da7)-roll(seed,b,0x3da7));
     const tile=ring[0];

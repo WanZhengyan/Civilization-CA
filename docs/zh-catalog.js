@@ -991,3 +991,24 @@ Spends charges to improve land connected to a friendly city.|消耗建造次数�
 Captures a weakened city through an adjacent attack.|可从相邻地块进攻并占领被削弱的城市。
 Can attack from two hexes away.|可以从两格外发动攻击。
 `);
+
+section(`
+Natural wonder|自然奇观
+Adjacent natural wonder|相邻自然奇观
+La Brea Tar Pits|拉布雷亚沥青坑
+South Bay Salt Marshes|南湾盐沼
+Torrey Pines|托里松林
+Cabrillo Tide Pools|卡布里洛潮池
+Each adjacent worked district gains 2 science.|每块由市民工作的相邻地块增加 2 点科研。
+Each adjacent worked district gains 1 production and 1 science.|每块由市民工作的相邻地块增加 1 点生产力和 1 点科研。
+Each adjacent worked district gains 2 food.|每块由市民工作的相邻地块增加 2 点粮食。
+Each adjacent worked district gains 1 food and 1 production.|每块由市民工作的相邻地块增加 1 点粮食和 1 点生产力。
+Each adjacent worked district gains 1 food and 1 science.|每块由市民工作的相邻地块增加 1 点粮食和 1 点科研。
+Dark asphalt seeps through the city floor, preserving the bones of Ice Age animals.|沥青从城市地下缓缓渗出，保存了冰河时代动物的骨骼。
+Sandstone walls rise above a winding creek in the Santa Monica Mountains.|圣莫尼卡山脉中，蜿蜒的小溪穿行于砂岩峭壁之间。
+From the summit in Marin, wooded ridges fall away toward the Pacific and the bay.|从马林县的山顶望去，林木覆盖的山脊一路蜿蜒向太平洋和海湾。
+Tidal channels wind between salt-tolerant plants at the shallow southern end of the bay.|在海湾南端的浅滩，潮沟穿过成片的耐盐植物。
+Wind-shaped pines cling to sandstone bluffs above the Pacific near La Jolla.|在拉霍亚附近，海风塑造的松树扎根于俯瞰太平洋的砂岩峭壁。
+At the foot of Point Loma, receding water leaves small rock pools alive with intertidal creatures.|在洛马角的崖脚，潮水退去后，岩池中仍可看到丰富的潮间带生物。
+This protected site cannot host a city, improvement or campus.|这里是受保护的自然奇观，无法建城、改良地块或建设大学。
+`);

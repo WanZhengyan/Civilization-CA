@@ -1,4 +1,6 @@
 import {battleMarkers,paintBattleReport} from './battle-overlay.js';
+import {NATURAL_WONDERS} from './natural-wonders.js';
+import {drawNaturalWonder} from './natural-wonder-marker.js';
 import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom} from './hex-survey.js';
 import {politicalPaths, inkPolitics} from './political-borders.js';
 import {drawResource} from './resource-art.js';
@@ -14,6 +16,8 @@ const places = {
   downtown: 'Downtown LA', westwood: 'Westwood', rosebowl: 'Rose Bowl', airport: 'LAX'
 };
 export function getAtlasPlace(tile, holding) {
+  const nature=NATURAL_WONDERS[holding?.naturalWonder];
+  if(nature)return {name:nature.name,landmark:null};
   const campus=WONDERS[holding?.wonder];
   if(campus) return {name:campus.name, landmark:null};
   if(!tile.landmark) return null;
@@ -864,6 +868,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   for(const t of tiles){
     const holding=board[t.id];
+    if(holding?.naturalWonder)drawNaturalWonder(g,holding.naturalWonder,...pos(t.q,t.r),scale);
     if(holding?.wonder){const [x,y]=pos(t.q,t.r);drawCampus(g,holding.wonder,x,y,getFaction(holding.owner));}
   }
   for(const c of model.cities||[])drawCity(g,c,model);

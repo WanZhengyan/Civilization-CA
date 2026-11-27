@@ -1,3 +1,4 @@
+import {NATURAL_WONDERS} from './natural-wonders.js';
 // All regions use the same odd-row, point-up hex grid. Cached footprints contain
 // only public geometry; never cache occupancy, observations, or player data here.
 const footprints = new Map();
@@ -59,10 +60,13 @@ function observedDeposit(state,seat,id) {
 export function rememberVision(state, previous) {
   if (!state || state.intel) return state;
   const sights=state.players.map((_,seat)=>getVisibleTiles(state,seat));
+  const discoveries=[];
   const exploration=sights.map((visible,seat)=>{
     const old=state.exploration?.[seat] || {};
     let known=old;
     for(const id of visible) {
+      const wonder=state.board[id].naturalWonder;
+      if(wonder && !Object.hasOwn(old,id))discoveries.push({round:state.round,seat,type:'discovery',tile:id,wonder,text:'Discovered '+NATURAL_WONDERS[wonder].name+'.'});
       const resource=observedDeposit(state,seat,id);
       if(known[id]===resource) continue;
       if(known===old) known={...old};
@@ -76,7 +80,7 @@ export function rememberVision(state, previous) {
     const audience=sights.reduce((mask,visible,seat)=>visible.has(entry.tile) ? mask|(1<<seat) : mask,0);
     return {...entry,audience};
   });
-  return {...state,exploration,log};
+  return {...state,exploration,log:discoveries.length ? [...log,...discoveries].slice(-160) : log};
 }
 
 const publicShape=(object,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(object,key)).map(key=>[key,object[key]]));
@@ -102,6 +106,7 @@ export function projectForSeat(state,seat) {
       return [id,fields];
     }
     const cellMemory={owner:null,level:0,improvement:null};
+    if(explored.has(id) && cell.naturalWonder)cellMemory.naturalWonder=cell.naturalWonder;
     if (memory[id] && state.players[seat].surveyEnabled!==false) cellMemory.resource=memory[id];
     return [id,cellMemory];
   }));
@@ -111,7 +116,7 @@ export function projectForSeat(state,seat) {
     {...publicShape(c,['id','name','seat','tile','hp','maxHp','population','originalSeat']),buildings:[]});
   const units=state.units.filter(u=>u.seat===seat || visible.has(u.tile)).map(u=>u.seat===seat ? u :
     publicShape(u,['id','seat','type','tile','hp','maxHp','maxMoves']));
-  const view={...publicShape(state,['rulesVersion','opening','mapId','mapShape','round','turn','phase','victoryReason','winners','wonderRegistry']),
+  const view={...publicShape(state,['rulesVersion','opening','mapId','mapShape','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
     log:state.log.map(e=>observedEvent(e,seat)).filter(Boolean),intel:{seat,visible:[...visible],explored:[...explored],battles:state.battleReports?.[seat] || []}};
   if (state.barbarians) {

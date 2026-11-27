@@ -18,7 +18,7 @@ export function findPortSite(state, city, byId, neighbors, visible) {
       for (const id of neighbors(shore)) {
         const tile = byId[id];
         if (tile.terrain === 'ocean') {
-          if ((!visible || visible.has(id)) && !reserved.has(id) && state.board[id].owner == null && !state.board[id].improvement) return id;
+          if ((!visible || visible.has(id)) && !reserved.has(id) && state.board[id].owner == null && !state.board[id].improvement && !state.board[id].naturalWonder) return id;
         } else if (!seen.has(id) && tile.terrain !== 'mountains' && state.board[id].owner === city.seat) {
           seen.add(id);
           next.push(id);
@@ -39,7 +39,7 @@ export const VESSELS = {
 // Fishing fleets work sheltered water connected to an actual port by sea.
 export function fisheryPort(state, seat, tile, byId, neighbors) {
   const holding = state.board[tile];
-  if (byId[tile]?.terrain !== 'ocean' || holding.improvement || (holding.owner !== null && holding.owner !== seat)) return null;
+  if (byId[tile]?.terrain !== 'ocean' || holding.naturalWonder || holding.improvement || (holding.owner !== null && holding.owner !== seat)) return null;
   if (state.cities.some(city => city.portTile === tile || city.queue?.portTile === tile)) return null;
   const ports = state.cities.filter(city => city.seat === seat && city.portTile && city.buildings.includes('harbor'));
   if (!ports.length) return null;
