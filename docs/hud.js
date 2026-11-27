@@ -232,7 +232,8 @@ function inspect(){
   const image=el("district-img");
   const port=state.cities.find(c=>c.portTile===tile.id);
   const atHarbor=activeCity?.buildings.includes("harbor") || port || state.board[tile.id]?.improvement==="fishery";
-  const fallback=atHarbor?"./art/harbor.webp":'./'+artFor(tile,activeCity)+'.webp';
+  const campus=state.board[tile.id]?.wonder;
+  const fallback=campus && WONDERS[campus] ? "./art/"+campus+".webp" : atHarbor?"./art/harbor.webp":'./'+artFor(tile,activeCity)+'.webp';
   const unitArt=activeUnit?'./art/'+activeUnit.type+'.webp':null;
   const fullArt=unitArt&&!unavailableArt.has(unitArt);
   const art=fullArt?unitArt:fallback;
@@ -242,9 +243,9 @@ function inspect(){
     image.onerror=()=>{unavailableArt.add(unitArt);image.onerror=null;image.src=fallback;portrait.hidden=false;drawUnitPortrait(portrait,activeUnit.type,gov.color)};
   }else{image.onerror=null;if(activeUnit)drawUnitPortrait(portrait,activeUnit.type,gov.color)}
   if(image.getAttribute("src")!==art)image.src=art;
-  text("entity-kind",activeUnit ? (own?"Your ":"Rival ")+(UNIT_TYPES[activeUnit.type].role||unitRole[activeUnit.type]||"unit") : activeCity ? (own?"Your city":"Rival city") : (port?"Harbor district":tile.landmark?"Landmark":"District"));
+  text("entity-kind",activeUnit ? (own?"Your ":"Rival ")+(UNIT_TYPES[activeUnit.type].role||unitRole[activeUnit.type]||"unit") : activeCity ? (own?"Your city":"Rival city") : (campus?"University wonder":port?"Harbor district":tile.landmark?"Landmark":"District"));
   el("entity-name").translate=!customCity(activeCity);
-  text("entity-name",activeUnit ? (items[activeUnit.type]||activeUnit.type) : activeCity?.name||(port?"Harbor":tile.name));
+  text("entity-name",activeUnit ? (items[activeUnit.type]||activeUnit.type) : activeCity?.name||(campus?WONDERS[campus]?.name:port?"Harbor":tile.name));
   text("entity-location",activeUnit ? tile.name : activeCity ? gov.name : port?.name||terrain[tile.terrain]);
   entityTabs(tile.id,activeUnit);
   const disabled=!mayOrder()||!own;
@@ -304,7 +305,10 @@ function inspect(){
     }
     info='<div class="province-meta"><i style="background:'+esc(gov?.color||"#98a1a6")+'"></i>'+esc(gov?.name||(tile.terrain==="ocean"?"Open water":"Unclaimed land"))+'</div><div class="entity-stats">'+stat("Terrain",terrain[tile.terrain])+stat("Improvement",items[holding?.improvement]||"None")+'</div>';
     const territory=getActions(state,view.seat,tile.id)[0];
-    if(port){
+    if(campus && WONDERS[campus]){
+      explanation=WONDERS[campus].description;
+      info+='<p class="built-list">'+esc(tile.name)+'</p>';
+    }else if(port){
       if(port.seat===view.seat)actions=actionButton("port-production","Port production",port.name,"gold");
       explanation="Ships launch here and repair in nearby water.";
     }else if(territory){
@@ -502,9 +506,24 @@ function paint(next){
   const eventKey=event?JSON.stringify(event):"";
   if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end"].includes(event.type))flash(Game.eventText(event));
   previousEvent=eventKey;
-  redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();populationLedger();
+  redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();showCampusOpening(state,seat,key);populationLedger();
   if(el("production-modal").open)productionOptions();
   if(el("combat-modal").open)drawCombat();
+}
+let campusNoticeKey='',hiddenCampusNotice='';
+function showCampusOpening(state,seat,key){
+  const recent=[...state.log].reverse().find(e=>e.type==="complete" && WONDERS[e.item] && e.seat===seat && state.round-e.round<=1);
+  const id=recent?key+"|"+recent.round+"|"+recent.city+"|"+recent.item:"";
+  const old=document.getElementById("campus-opening");
+  if(!recent || hiddenCampusNotice===id){old?.remove();campusNoticeKey="";return}
+  if(id===campusNoticeKey && old)return;
+  const host=el("roster-panel");
+  if(!host?.parentNode)return;
+  const banner=document.createElement("aside");
+  banner.id="campus-opening";banner.className="campus-banner";banner.setAttribute("aria-live","polite");
+  banner.innerHTML='<img alt="" src="./art/'+recent.item+'.webp"><div><small>University opened</small><strong>'+esc(WONDERS[recent.item].name)+'</strong><small>'+esc(WONDERS[recent.item].description)+'</small></div><button type="button" aria-label="Dismiss campus notice">×</button>';
+  banner.querySelector("button").onclick=()=>{hiddenCampusNotice=id;banner.remove()};
+  old?.remove();host.before(banner);campusNoticeKey=id;
 }
 function populationLedger() {
   paintCitizenLedger(view.state,view.seat,mayOrder(),city=>({

@@ -109,3 +109,36 @@ test('rivals race on distinct parcels; the loser recovers only the paid charter,
   assert.match(getProductionOptions(state,b.id).find(o=>o.item==='ucla').reason,/already opened/);
   assert.equal(state.log.filter(e=>e.type==='wonder-refund').length,1);
 });
+
+test('the California regional atlas starts with no university wonder in any geographic district',()=>{
+  for(const mapId of ['la','sf','sd']){
+    const state=createGame([{name:'North'},{name:'South'}],mapId,{seed:190});
+    const campusIds=Object.keys(WONDERS);
+    assert.ok(getMap(state).tiles.every(t=>!campusIds.includes(t.landmark) && t.landmark!=='campanile'));
+    assert.ok(Object.values(state.board).every(t=>!t.wonder));
+  }
+});
+
+test('survey choices vary across random starts in all three regions with their actual deposits', () => {
+  for (const mapId of ['la', 'sf', 'sd']) {
+    const locations = new Set();
+    const parcels = new Set();
+    let viableOpenings = 0;
+    for (const seed of [0, 1, 9, 13, 51, 240, 837, 999]) {
+      let state = createGame([{name:'North'}, {name:'South'}], mapId, {seed});
+      const pioneer = state.units.find(u => u.seat === 0 && u.type === 'settler');
+      state = applyAction(state, 0, {type:'found', unit:pioneer.id});
+      const city = state.cities.find(c => c.seat === 0);
+      locations.add(city.tile);
+      const sites = getWonderSites(state, city.id, 'ucla');
+      if (sites.length) viableOpenings++;
+      for (const site of sites) {
+        assert.equal(state.board[site.id].owner, 0);
+        assert.ok(!state.board[site.id].resource);
+        parcels.add(site.id);
+      }
+    }
+    assert.ok(locations.size > 1 && parcels.size > 4, mapId);
+    assert.ok(viableOpenings >= 6, mapId);
+  }
+});

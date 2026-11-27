@@ -817,3 +817,18 @@ A competing campus opened first. The charter fee was returned.|对手抢先建�
 This university has already opened.|这所大学已在本局建成。
 One of your cities already holds this charter.|己方已有城市正在筹建这所大学。
 `);
+
+section(`
+University wonder|大学奇观
+University opened|大学建成
+Dismiss campus notice|关闭大学建成通知
+Universities|大学奇观
+Charter a university|解锁大学
+Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.|采用市政宪章解锁加州大学洛杉矶分校，研究工坊工程解锁斯坦福大学，采用公园保护政策解锁加州大学伯克利分校，研究蒸汽动力解锁加州理工学院。在城市生产菜单中选择大学奇观。
+Survey the campus|选择校园地块
+Choose any surveyed empty plot within two hexes of the city. Deposits, improvements and city centers are protected. A matching landscape grants one additional point in the listed specialty every turn.|选择城市两格内的一处空闲候选地。资源、改良设施和市中心不能被占用。适宜的地形会让该校每回合额外提供 1 点特色产出。
+Compete for a charter|竞争世界奇观
+Pay the charter fee and assign city production. The first campus of its kind to open wins the charter for this world. A competing city stops work and recovers its fee. Its spent production is lost.|支付筹建费并投入城市生产力。第一座建成的同名大学成为本局唯一的该校。竞争失败的城市会停工并收回筹建费；已投入的生产力不会返还。
+Read the opening report|查看大学落成
+A completed campus appears on the map. Select the campus tile to inspect its effect. Capturing its host city transfers the campus with the city.|建成后可在地图上选择校园地块，查看其效果。占领大学所属城市也会接管该校。
+`);

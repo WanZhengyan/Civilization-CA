@@ -516,6 +516,12 @@ const guideSections = {
     ['Clear a camp', 'Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.'],
     ['Recover', 'Units regain movement at the start of their faction’s turn. A unit in a friendly city heals up to 12 health. Each friendly city recovers up to 6.']
   ]},
+  universities: {label:'Universities', entries:[
+    ['Charter a university', 'Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.'],
+    ['Survey the campus', 'Choose any surveyed empty plot within two hexes of the city. Deposits, improvements and city centers are protected. A matching landscape grants one additional point in the listed specialty every turn.'],
+    ['Compete for a charter', 'Pay the charter fee and assign city production. The first campus of its kind to open wins the charter for this world. A competing city stops work and recovers its fee. Its spent production is lost.'],
+    ['Read the opening report', 'A completed campus appears on the map. Select the campus tile to inspect its effect. Capturing its host city transfers the campus with the city.']
+  ]},
   coast: {label:'At sea', entries:[
     ['Choose a harbor site', 'Found on the shore or connect a city to your own coast within two hexes. Choose Harbor in city production. The harbor reserves an adjacent water hex and earns capital.'],
     ['Put a crew to work', 'Train a Fishing crew at a harbor. Sail to open water within two water hexes of a friendly harbor and build a Fishery. Each crew has two charges.'],

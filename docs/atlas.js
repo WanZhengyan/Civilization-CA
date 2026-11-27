@@ -1,4 +1,5 @@
 import {drawResource} from './resource-art.js';
+import {drawCampus} from './campus-art.js';
 import {translate} from './i18n.js';
 /* Illustrated, pointy-top, odd-row-offset California campaign maps. */
 const W = 72, H = 76, ROW = H * .75, COLS = 17, ROWS = 13;
@@ -8,7 +9,7 @@ const dY = [-H / 2, -H / 4, H / 4, H / 2, H / 4, -H / 4];
 const FACTION = ['#efbb62','#69b7c7','#8ab98a','#dc8c9f'];
 const places = {
   griffith: 'Griffith Observatory', hollywood: 'Hollywood', pier: 'Santa Monica',
-  downtown: 'Downtown LA', ucla: 'UCLA', rosebowl: 'Rose Bowl', airport: 'LAX'
+  downtown: 'Downtown LA', westwood: 'Westwood', rosebowl: 'Rose Bowl', airport: 'LAX'
 };
 const pos = (q,r) => [W / 2 + (q + (r & 1) * .5) * W, H / 2 + r * ROW];
 const idFor = (q,r) => q + ',' + r;
@@ -391,7 +392,7 @@ function renderAtlas(tiles,map) {
     }
   }
   for(const t of tiles.filter(t=>t.landmark)){
-    const [x,y]=pos(t.q,t.r),scales={downtown:1.97,griffith:1.76,hollywood:1.52,pier:1.73,ucla:1.66,studios:1.69,airport:1.65,rosebowl:1.73};
+    const [x,y]=pos(t.q,t.r),scales={downtown:1.97,griffith:1.76,hollywood:1.52,pier:1.73,westwood:1.66,studios:1.69,airport:1.65,rosebowl:1.73};
     scene.push({y:y+4,run:()=>{
       g.save();g.shadowColor='#434c4060';g.shadowBlur=2.8;
       drawLandmark(g,t.landmark,x,y+2,scales[t.landmark]||1.55);g.restore();
@@ -805,6 +806,10 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   if(model.showResources) for(const tile of tiles) {
     const resource=board[tile.id]?.resource;
     if(resource)drawResource(g,...pos(tile.q,tile.r),resource);
+  }
+  for(const t of tiles){
+    const holding=board[t.id];
+    if(holding?.wonder){const [x,y]=pos(t.q,t.r);drawCampus(g,holding.wonder,x,y,getFaction(holding.owner));}
   }
   for(const c of model.cities||[])drawCity(g,c,model);
   drawBarbarians(g,model,pos);
@@ -1311,31 +1316,10 @@ function drawLandmark(g, kind, x, y, scale = 1) {
     building(20,1.9,6.4,6,15,warm,5);
     building(8,6,6.8,6,17,blue,6);
     building(-6.2,5.3,4.9,6.2,10.8,warm,3);
-  } else if (kind === 'ucla') {
-    shade(27.5,6.5);
-    const brick=['#e5ad7e','#bd886a','#98695e'];
-    const tile=['#d59a70','#bc795a','#925c4b'];
-    solid(0,6,19,17,2,['#e3cb9c','#9d876b','#8d765d']);
-    solid(-1,3,16,13,8,brick);
-    solid(-1,-4.5,16.4,13.4,1.2,tile);
-    for(const [cx,cy] of [[-15,-3.8],[13,-4.8]]) {
-      solid(cx,cy,4.6,5.3,15.6,brick);
-      solid(cx,cy-13.9,5,5.6,1.2,cream);
-      solid(cx,cy-15.2,4.7,5.2,3.3,brick);
-      const top=cy-20.2;
-      put([[cx-5.6,top-1.8],[cx,top+.65],[cx+6.1,top-1.7],[cx,top-5.3]],'#c38361',ink,.65);
-      for(const xx of [-3,-.95,1.4,3.5]) {
-        arch(cx+xx,cy-15.5-Math.abs(xx)*.32,.59,1.8,'#67493e');
-        arch(cx+xx,cy-9-Math.abs(xx)*.32,.57,2.45,'#755446');
-      }
-    }
-    // The west front has a continuous arched entrance gallery.
-    for(let i=0;i<7;i++) {
-      const xx=-11.1+i*3.45, yy=2.7-Math.abs(xx+1)*.27;
-      arch(xx,yy,1.02,3.8,'#614e42');
-      line([[xx-1.4,yy-2.5],[xx-1.4,yy-.12]],'#e0b98c',.53);
-    }
-    oval(-.7,-5.3,1.6,1.6,'#735449','#deb487',.5);
+  } else if (kind === 'westwood' || kind === 'cityhall') {
+    solid(0,1,13,5,6,cream);
+    solid(4,-2,3.5,4,12,cream);
+    solid(4,-14,2,2,2,cream);
   } else if (kind === 'rosebowl') {
     shade(28,7);
     oval(0,-3,27,11,'#aa9588','#464648',.9,-.08);

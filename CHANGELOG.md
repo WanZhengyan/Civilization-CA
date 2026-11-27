@@ -1,5 +1,11 @@
 # Release notes
 
+## 6.0 · Recognizable campuses on the California map
+
+The architectural identity and progress of a campus were difficult to read on a crowded map. University construction, completion and specialties now have dedicated artwork, visual feedback and bilingual guidance.
+
+91 checks passed. 18 fixed campaigns replayed identically twice. Play a full founding-to-campus journey and recheck every hidden-information boundary.
+
 ## 5.9 · Compete for a unique world wonder
 
 Different cities can pursue the same charter, so finishing a race must settle conflicts consistently. The first completion awards the world wonder. Competing queues resolve by the same rules online and in solo games.

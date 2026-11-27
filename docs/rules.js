@@ -51,7 +51,7 @@ const DISTRICTS = {
   "6,11": ["El Segundo", "coast"],
   "7,12": ["Manhattan Beach", "coast"],
   "6,5": ["Brentwood", "hills"],
-  "6,6": ["Westwood", "urban", "ucla"],
+  "6,6": ["Westwood", "urban", "westwood"],
   "7,4": ["Bel Air", "hills"],
   "7,7": ["Century City", "urban"],
   "7,8": ["Culver City", "urban"],
@@ -959,6 +959,20 @@ function botProject(state,city) {
   const forecast=getPopulationReport(state,city.id);
   if (forecast.housingLimited && !city.buildings.includes('granary')) choices.push('granary');
   if (forecast.housingLimited && !city.buildings.includes('neighborhood')) choices.push('neighborhood');
+  const defensible=units.some(u=>UNIT_TYPES[u.type]?.strength>0 && UNIT_TYPES[u.type]?.domain!=='sea')
+    && !state.units.some(u=>u.seat!==city.seat && UNIT_TYPES[u.type]?.strength>0 && hexDistance(u.tile,city.tile)<=2);
+  if (!choices.length && defensible && state.players[city.seat].capital>=12 && (state.round>=5 || cities.length>1)) {
+    const preferences=[
+      ['ucla','berkeley','stanford','caltech'],['stanford','caltech','ucla','berkeley'],
+      ['berkeley','ucla','caltech','stanford'],['caltech','stanford','berkeley','ucla']
+    ][state.players[city.seat].faction%4];
+    const available=getProductionOptions(state,city.id);
+    const university=preferences.find(item=>available.some(o=>o.item===item && o.enabled));
+    if(university && !cities.some(c=>WONDERS[c.queue?.item])) {
+      const site=getWonderSites(state,city.id,university)[0];
+      if(site) return {type:'produce',city:city.id,item:university,site:site.id};
+    }
+  }
   if (!city.buildings.includes('harbor') && getPortSite(state,city.id)) choices.push('harbor');
   if (city.buildings.includes('harbor')) {
     const worked=Object.values(state.board).filter(tile=>tile.portCity===city.id).length;
