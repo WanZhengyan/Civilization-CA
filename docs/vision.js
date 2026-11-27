@@ -85,7 +85,7 @@ function observedEvent(entry,seat) {
     const {audience,...copy}=entry;
     return copy;
   }
-  if (!(entry.audience & (1<<seat)) || !['move','attack','found','barbarian','capture'].includes(entry.type)) return null;
+  if (!(entry.audience & (1<<seat)) || !['move','found'].includes(entry.type)) return null;
   // Enemy orders must not reveal the route from fog, the hidden target's city name,
   // composition, queue, or the seat IDs that also witnessed this event.
   return {round:entry.round,seat:entry.seat,tile:entry.tile,type:'observation',text:'Activity spotted in view.'};
@@ -113,7 +113,7 @@ export function projectForSeat(state,seat) {
     publicShape(u,['id','seat','type','tile','hp','maxHp','maxMoves']));
   const view={...publicShape(state,['rulesVersion','opening','mapId','mapShape','round','turn','phase','victoryReason','winners','wonderRegistry']),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
-    log:state.log.map(e=>observedEvent(e,seat)).filter(Boolean),intel:{seat,visible:[...visible],explored:[...explored]}};
+    log:state.log.map(e=>observedEvent(e,seat)).filter(Boolean),intel:{seat,visible:[...visible],explored:[...explored],battles:state.battleReports?.[seat] || []}};
   if (state.barbarians) {
     const shown=entries=>(entries||[]).filter(e=>visible.has(e.tile))
       .map(e=>publicShape(e,['id','tile','type','hp','maxHp']));

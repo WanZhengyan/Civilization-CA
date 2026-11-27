@@ -18,6 +18,7 @@ export function getEra(state, seat) { return eraFor(state.players[seat]?.technol
 import {campaignChart, REGIONAL_SHAPE} from './region-shapes.js';
 import {LOS_ANGELES, regionalMaps, validMapId} from './maps.js';
 export {CAMPAIGN_MAPS, validMapId} from './maps.js';
+import {prepareBattle} from './battle-reports.js';
 import {barbarianRound,seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
 
 export const MAX_ROUNDS = 30;
@@ -901,6 +902,8 @@ function resolveAttack(state, unit, target) {
   const from = unit.tile;
   const isUnit = result.defenderType === 'unit';
   const defender = isUnit ? unitOrNull(state, result.defenderId) : cityOrNull(state, result.defenderId);
+  const garrison = isUnit && state.cities.find(c => c.tile === target && c.seat === defender.seat);
+  const recordResult = prepareBattle(state, unit, defender, result, {garrison:garrison?.name});
   const name = isUnit ? UNIT_TYPES[defender.type].name+' in '+getMap(state).byId[target].name : defender.name;
   defender.hp = result.defenderHpAfter;
   if (result.capture) {
@@ -941,6 +944,7 @@ function resolveAttack(state, unit, target) {
     refreshScores(state);
     finish(state, remaining, 'survival');
   }
+  recordResult();
 }
 function unitOrder(state,seat,action) {
   const unit=unitOrNull(state,action.unit);

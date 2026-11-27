@@ -1,3 +1,5 @@
+import {prepareBattle} from './battle-reports.js';
+
 // A camp has no civilization seat. Neutral parties are separate from player
 // units so they cannot count as a faction, own a capital, or take a player turn.
 export const WILDS = {
@@ -58,6 +60,7 @@ export function wildForecast(unit,definition,target) {
     defenderHpBefore:target.hp,defenderHpAfterHit:after,defenderHpAfter:after};
 }
 export function resolveWildAttack(state,unit,target,result,record) {
+  const recordResult=prepareBattle(state,unit,target,result);
   unit.hp=result.attackerHpAfter;
   unit.moves=0;
   if (result.advances) unit.tile=target.tile;
@@ -69,6 +72,7 @@ export function resolveWildAttack(state,unit,target,result,record) {
     state.players[unit.seat].capital+=12;
     record(state,unit.seat,'barbarian','Camp cleared. Your treasury gains 12 capital.',target.tile);
   } else record(state,unit.seat,'barbarian',result.defeated?'A barbarian patrol was dispersed.':'Your unit engaged the barbarians.',target.tile);
+  recordResult();
 }
 
 function legalNeighbors(state,id,map,neighbors) {
@@ -131,21 +135,36 @@ function raidTurn(state,party,town,defs,map,neighbors,distance,record) {
   if (!town) return false;
   if (distance(party.tile,town.tile)<=1) {
     const guard=state.units.some(u=>u.seat===town.seat && defs[u.type]?.strength>0 && distance(u.tile,town.tile)<=1);
-    if (guard || town.buildings.includes('walls')) {
+    const repelled=guard || town.buildings.includes('walls');
+    const damage=repelled ? 0 : Math.min(12,town.hp-1);
+    const loot=repelled ? 0 : Math.min(3,state.players[town.seat].capital);
+    const recordResult=prepareBattle(state,party,town,{
+      defenderType:'city', damage, retaliation:0, attackerHpAfter:party.hp, defenderHpAfterHit:town.hp-damage
+    }, {outcome:repelled ? 'repelled' : 'looted', loot});
+    if (repelled) {
       record(state,town.seat,'barbarian','The city defenses repelled the raid.',town.tile);
     } else {
-      state.players[town.seat].capital=Math.max(0,state.players[town.seat].capital-3);
-      town.hp=Math.max(1,town.hp-12);
+      state.players[town.seat].capital-=loot;
+      town.hp-=damage;
       record(state,town.seat,'barbarian','Raiders struck the city and looted up to 3 capital.',town.tile);
     }
+    recordResult();
     return false;
   }
   const foe=state.units.find(u=>defs[u.type]?.strength>0 && defs[u.type]?.domain!=='sea' && u.seat===town.seat && distance(u.tile,party.tile)===1);
   if (foe) {
-    foe.hp=Math.max(0,foe.hp-14);
-    party.hp-=Math.max(4,Math.round(defs[foe.type].strength*.4));
+    const damage=Math.min(foe.hp,14);
+    const retaliation=Math.min(party.hp,Math.max(4,Math.round(defs[foe.type].strength*.4)));
+    const garrison=state.cities.find(c=>c.tile===foe.tile && c.seat===foe.seat);
+    const recordResult=prepareBattle(state,party,foe,{
+      defenderType:'unit', damage, retaliation, defeated:damage===foe.hp, attackerDefeated:retaliation===party.hp,
+      attackerHpAfter:party.hp-retaliation, defenderHpAfterHit:foe.hp-damage
+    }, {garrison:garrison?.name});
+    foe.hp-=damage;
+    party.hp-=retaliation;
     if(!foe.hp)state.units=state.units.filter(u=>u.id!==foe.id);
     record(state,foe.seat,'barbarian','Barbarian raiders clashed with your military unit.',foe.tile);
+    recordResult();
     return party.hp>0;
   }
   const step=nextStep(state,party,legalNeighbors(state,town.tile,map,neighbors),map,neighbors);

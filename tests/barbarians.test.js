@@ -49,6 +49,10 @@ test('a close-combat unit takes a camp for the displayed bounty exactly once',()
   assert.equal(next.players[0].capital,starting+12);
   assert.ok(!wildAt(next,camp.tile));assert.equal(next.units[0].tile,camp.tile);
   assert.equal(next.units[0].hp,forecast.attackerHpAfter);
+  const [report]=projectForSeat(next,0).intel.battles;
+  assert.equal(report.outcome,'destroyed');assert.equal(report.target.kind,'wild');
+  assert.equal(report.target.type,'camp');assert.equal(report.target.tile,camp.tile);
+  assert.equal(report.retaliation,forecast.retaliation);
   assert.throws(()=>applyAction(next,0,{type:'attack',unit:unit.id,tile:camp.tile}));
 });
 test('ranged fire can weaken a camp but cannot collect the land bounty',()=>{
@@ -115,6 +119,11 @@ test('scouting provides an interception turn and two rounds of warning before a 
   const before=s.players[0].capital;
   for(let n=0;n<8 && !s.log.some(e=>e.text.includes('looted'));n++)next();
   assert.equal(s.players[0].capital,before-3);assert.equal(city.hp,88);
+  const [report]=projectForSeat(s,0).intel.battles;
+  assert.equal(report.outcome,'looted');assert.equal(report.loot,3);assert.equal(report.damage,12);
+  assert.equal(report.attacker.type,'raider');assert.equal(report.attacker.seat,null);
+  assert.equal(report.target.name,city.name);assert.equal(report.target.hpAfter,88);
+  assert.deepEqual(projectForSeat(s,1).intel.battles,[]);
 });
 test('city defenses stop an incoming raider; civilian founders and new towns cannot trigger it',()=>{
   const {s,city,camp,front,next}=raidFixture();
@@ -123,6 +132,8 @@ test('city defenses stop an incoming raider; civilian founders and new towns can
   const before=s.players[0].capital;
   next();assert.equal(city.hp,100);assert.equal(s.players[0].capital,before);
   assert.ok(s.log.at(-1).text.includes('repelled'));
+  assert.equal(projectForSeat(s,0).intel.battles.at(-1).outcome,'repelled');
+  assert.equal(projectForSeat(s,0).intel.battles.at(-1).damage,0);
   city.buildings=[];s.barbarians.parties=[{...raid}];
   s.units=[{id:'guard',seat:0,type:'melee',tile:city.tile,hp:84}];
   next();assert.equal(city.hp,100);assert.equal(s.players[0].capital,before);
@@ -140,4 +151,38 @@ test('clearing a camp cancels any preparing raid and prevents fresh patrols',()=
   s.barbarians=cleared.barbarians;
   for(let i=0;i<5;i++)next();
   assert.ok(!s.barbarians.camps.length&&!s.barbarians.parties.length);
+});
+
+
+test('raider attacks report exact losses even when both combatants disappear',()=>{
+  const {s,city,camp,front,next}=raidFixture();
+  s.barbarians.parties=[{id:'raid',type:'raider',tile:camp.tile,target:city.id,hp:3,maxHp:44}];
+  s.units=[{id:'guard',seat:0,type:'melee',tile:front,hp:7,maxHp:100}];
+  next();
+  const [report]=projectForSeat(s,0).intel.battles;
+  assert.equal(report.damage,7);assert.equal(report.retaliation,3);
+  assert.equal(report.attacker.tile,camp.tile);assert.equal(report.target.tile,front);
+  assert.equal(report.attackerLost,true);assert.equal(report.targetLost,true);
+  assert.ok(!s.units.length);assert.ok(!s.barbarians.parties.some(p=>p.id==='raid'));
+});
+
+test('an observed raid reveals the battle damage but keeps looted capital private',()=>{
+  const {s,city,camp,front,next}=raidFixture();
+  s.players[0].capital=1;city.hp=4;
+  s.units=[{id:'observer',seat:1,type:'melee',tile:camp.tile,hp:100,maxHp:100}];
+  s.barbarians.parties=[{id:'raid',type:'raider',tile:front,target:city.id,hp:44,maxHp:44}];
+  next();
+  const [owner]=projectForSeat(s,0).intel.battles,[witness]=projectForSeat(s,1).intel.battles;
+  assert.equal(owner.loot,1);assert.equal(witness.loot,undefined);
+  assert.equal(witness.damage,3);assert.equal(witness.target.hpAfter,1);
+});
+
+test('attacking a lookout produces a report without its home camp or reconnaissance orders',()=>{
+  const {s,camp,unit}=battlefield();
+  s.barbarians.camps=[];
+  s.barbarians.parties=[{id:'eyes',type:'lookout',campId:'private-home',report:'private-city',tile:camp.tile,hp:1,maxHp:24}];
+  const next=applyAction(s,0,{type:'attack',unit:unit.id,tile:camp.tile});
+  const [report]=projectForSeat(next,0).intel.battles;
+  assert.equal(report.target.type,'lookout');assert.equal(report.targetLost,true);
+  assert.ok(!JSON.stringify(report).includes('private-'));
 });

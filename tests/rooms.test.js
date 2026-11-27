@@ -270,3 +270,42 @@ test('both seats see different server projections on every region, including cre
     assert.equal((await fixture.call('GET',{code},guest.token)).room.game.board[target].resource,'classified');
   }
 });
+
+test("an incoming strike survives polling, a lost response and reconnect without disclosing a fogged gun position", async t => {
+  const fixture=roomFixture(t), seats=await twoPlayers(fixture);
+  const {revision}=await seats.start();
+  const game=JSON.parse(fixture.sqlite.prepare('SELECT game FROM game_rooms WHERE code=?').get(seats.code).game);
+  // Establish a late-game encounter. The order and every client projection go through HTTP.
+  const [left,right]=game.units;
+  game.units=[
+    {...left,type:'artillery',tile:'7,6',hp:75,maxHp:75},
+    {...left,id:'spotter',type:'settler',tile:'10,7'},
+    {...right,type:'melee',tile:'10,6',hp:5,maxHp:100},
+    {...right,id:'pioneer',tile:'14,4'}
+  ];
+  game.barbarians={camps:[],parties:[],nextPiece:1};game.log=[];
+  fixture.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(game),seats.code);
+  assert.deepEqual((await seats.read(seats.guest)).game.intel.battles,[]);
+  const action={type:'attack',unit:left.id,tile:'10,6'};
+  const first=await seats.act(seats.host,revision,action);
+  const sent=first.room.game.intel.battles;
+  assert.equal(sent[0].attacker.tile,'7,6');assert.equal(sent[0].targetLost,true);
+  await seats.act(seats.host,revision,action,409);
+  const incoming=(await seats.read(seats.guest)).game;
+  assert.equal(incoming.intel.battles.length,1);
+  const [hit]=incoming.intel.battles;
+  assert.deepEqual(hit.attacker,{kind:'unknown'});
+  assert.equal(hit.id,1);assert.equal(hit.damage,5);
+  assert.equal(hit.target.seat,1);assert.equal(hit.target.tile,'10,6');
+  assert.equal(hit.target.type,'melee');assert.equal(hit.target.hpAfter,0);
+  assert.equal(hit.outcome,'destroyed');
+  assert.ok(!incoming.units.some(u=>u.tile==='7,6' || u.id===right.id));
+  assert.ok(!incoming.log.some(e=>e.type==='attack' || e.type==='observation'));
+  assert.equal(incoming.battleReports,undefined);
+  await fixture.call('GET',{code:seats.code,revision:first.room.revision},seats.guest,204);
+  const afterEnd=await seats.act(seats.host,first.room.revision,{type:'end'});
+  const rejoin=await fixture.call('POST',{op:'join',code:seats.code,name:'Returning',ticket:seats.guest});
+  assert.equal(rejoin.room.revision,afterEnd.room.revision);
+  assert.deepEqual(rejoin.room.game.intel.battles,[hit]);
+  assert.deepEqual((await seats.read(seats.host)).game.intel.battles,sent);
+});
