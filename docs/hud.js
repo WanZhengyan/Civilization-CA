@@ -1,3 +1,4 @@
+import {illustration, illustrationPath} from './illustrations.js';
 import {researchLinks,syncResearchLens} from './research-catalog.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
@@ -67,7 +68,8 @@ function text(id,v){const node=el(id);if(node.textContent!==String(v))node.textC
 function fmt(v){return String(v??"—")}
 function sameId(a,b){return a!=null&&b!=null&&String(a)===String(b)}
 function actionButton(key,title,detail,style="",disabled=false,pressed=false){
-  return '<button class="order-btn '+style+'" data-order="'+esc(key)+'" '+(disabled?'disabled':'')+(pressed?' aria-pressed="true"':'')+'>'+icon(key==='choose-production'?'production':key)+'<b>'+esc(title)+'</b><small>'+esc(detail)+'</small></button>';
+  const picture=Object.hasOwn(IMPROVEMENTS,key) ? illustration(key) : icon(key==='choose-production'?'production':key);
+  return '<button class="order-btn '+style+'" data-order="'+esc(key)+'" '+(disabled?'disabled':'')+(pressed?' aria-pressed="true"':'')+'>'+picture+'<b>'+esc(title)+'</b><small>'+esc(detail)+'</small></button>';
 }
 function stat(label,value,total){return '<div class="entity-stat"><small>'+esc(label)+'</small><strong>'+esc(fmt(value))+(total!=null?' <em>/ '+esc(total)+'</em>':'')+'</strong></div>'}
 function healthBar(cur,max){return '<div class="entity-health"><i style="width:'+percentage(cur,max)+'%"></i></div>'}
@@ -224,7 +226,10 @@ function cityQueue(city){
   const production=getCityYield(view.state,city.id).production;
   const turns=Math.ceil(Math.max(0,q.required-q.progress)/Math.max(1,production));
   const remaining=q.progress>=q.required?'Awaiting deployment':turnsText(turns)+' left';
-  return '<div class="queue-info"><div class="queue-name"><strong>Producing · '+esc(items[q.item]||q.item)+'</strong><small>'+remaining+'</small></div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
+  return '<div class="queue-info">'+illustration(q.item)+'<div class="queue-name"><strong><span>Producing</span> · <span>'+esc(items[q.item]||q.item)+'</span></strong><small>'+remaining+'</small></div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
+}
+function depositStrip(id){
+  return RESOURCES[id] ? '<div class="deposit-strip">'+illustration(id)+'<small>Resource</small><strong>'+esc(RESOURCES[id].name)+'</strong></div>' : '';
 }
 function inspect(){
   const state=view.state,tile=tileAt(),unit=getUnit(),city=cityAt(selectedTile);
@@ -240,10 +245,15 @@ function inspect(){
   text("hex-coord","HEX "+[tile.q,tile.r].map(v=>String(v).padStart(2,"0")).join(" / "));
   const image=el("district-img");
   const port=state.cities.find(c=>c.portTile===tile.id);
-  const atHarbor=activeCity?.buildings.includes("harbor") || port || state.board[tile.id]?.improvement==="fishery";
-  const campus=state.board[tile.id]?.wonder;
-  const fallback=campus && WONDERS[campus] ? "./art/"+campus+".webp" : atHarbor?"./art/harbor.webp":'./'+artFor(tile,activeCity)+'.webp';
-  const unitArt=activeUnit?'./art/'+activeUnit.type+'.webp':null;
+  const holding=state.board[tile.id];
+  const depositId=canSeeDeposits(state,view.seat) ? holding?.resource : null;
+  const deposit=RESOURCES[depositId];
+  const campus=holding?.wonder;
+  const locationArt='./'+artFor(tile,activeCity)+'.webp';
+  const districtArt=campus || (port ? 'harbor' : null) || holding?.improvement || depositId;
+  const cityArt=activeCity?.buildings.includes('harbor') ? 'harbor' : null;
+  const fallback=illustrationPath(activeCity ? cityArt : districtArt) || locationArt;
+  const unitArt=activeUnit ? illustrationPath(activeUnit.type) : null;
   const fullArt=unitArt&&!unavailableArt.has(unitArt);
   const art=fullArt?unitArt:fallback;
   const portrait=el("unit-portrait");
@@ -303,14 +313,13 @@ function inspect(){
     }
     const y=getCityYield(state,c.id);
     info='<div class="entity-stats">'+stat("Population",c.population)+stat("Production","+"+y.production)+stat("City HP",c.hp,c.maxHp)+'</div>'+healthBar(c.hp,c.maxHp);
-    const buildings=(c.buildings||[]).map(i=>items[i]||i);
-    if(buildings.length)info+='<p class="built-list">Buildings · '+esc(buildings.join(", "))+'</p>';
+    const buildings=(c.buildings||[]).map(id=>'<span>'+illustration(id)+'<span>'+esc(items[id]||id)+'</span></span>');
+    if(buildings.length)info+='<div class="built-gallery">'+buildings.join('')+'</div>';
     if(own) info+=populationSummary(getPopulationReport(state,c.id))+cityQueue(c);
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
   }else{
-    const holding=state.board[tile.id];
     if(!visible.has(tile.id)){
-      el("entity-info").innerHTML=stat("Terrain",terrain[tile.terrain])+(holding?.resource ? stat("Resource",items[holding.resource]||holding.resource) : "");
+      el("entity-info").innerHTML=stat("Terrain",terrain[tile.terrain])+depositStrip(depositId);
       el("entity-commands").innerHTML=note("Outside current sight");return;
     }
     info='<div class="province-meta"><i style="background:'+esc(gov?.color||"#98a1a6")+'"></i>'+esc(gov?.name||(tile.terrain==="ocean"?"Open water":"Unclaimed land"))+'</div><div class="entity-stats">'+stat("Terrain",terrain[tile.terrain])+stat("Improvement",items[holding?.improvement]||"None")+'</div>';
@@ -334,8 +343,7 @@ function inspect(){
     actions="";
     explanation=neutral.type==="camp"?"Send a close-combat unit to clear the camp for 12 capital.":neutral.type==="raider"?"Guard the city with a military unit or city walls to repel these raiders.":"This lookout belongs to a nearby barbarian camp.";
   }
-  const deposit=canSeeDeposits(state,view.seat) && RESOURCES[state.board[tile.id]?.resource];
-  if(deposit)info+='<div class="deposit-strip"><i style="background:'+deposit.color+'"></i><small>Resource</small><strong>'+esc(deposit.name)+'</strong></div>';
+  info+=depositStrip(depositId);
   if(deposit){
     const site=state.board[tile.id], supplier=getWorkingCity(state,tile.id);
     const status=connectedDeposit(site) && supplier ? 'Supplying city' : 'Build to harvest';
@@ -387,7 +395,7 @@ function paintProjects(){
   const markup=settler ? '<div class="expedition-orders"><p>Choose a site for your first city. Surveying or founding can reveal local resources.</p><button type="button" data-founding-unit="'+esc(settler.id)+'">Locate settler</button></div>' : cities.map(city=>{
     const turns=projectTurns(city);
     const status=turns===null?"Choose production":turns===0?"Awaiting deployment":items[city.queue.item]||city.queue.item;
-    return '<button class="watch-city" type="button" data-watch="'+esc(city.id)+'"><strong'+cityNameAttrs(city)+'>'+esc(city.name)+'</strong><span>'+esc(status)+'</span>'+(turns>0?'<small>'+esc(turnsText(turns))+'</small>':'')+'</button>';
+    return '<button class="watch-city" type="button" data-watch="'+esc(city.id)+'">'+illustration(city.queue?.item)+'<strong'+cityNameAttrs(city)+'>'+esc(city.name)+'</strong><span>'+esc(status)+'</span>'+(turns>0?'<small>'+esc(turnsText(turns))+'</small>':'')+'</button>';
   }).join("");
   if(markup!==lastProjectsMarkup){el("watch-cities").innerHTML=markup;lastProjectsMarkup=markup}
 }
@@ -416,7 +424,7 @@ function productionOptions(){
       const def=UNIT_TYPES[o.item]||BUILDINGS[o.item];
       const desc=def.description||itemDesc[o.item]||o.label;
       const race=WONDERS[o.item] ? '<small><span>Charter fee</span> · <span>'+def.grant+' capital</span> · <span>'+({open:'Available worldwide.',commissioned:'Under construction',complete:'Already opened'})[campusStatus(view.state,o.item)]+'</span></small>' : '';
-      return '<button class="production-item" data-produce="'+esc(o.item)+'" '+(disabled?'disabled':'')+'>'+icon(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+esc(turnsText(o.turns))+' · '+esc(o.required)+' production</small>'+(o.reason?'<small>'+esc(o.reason)+'</small>':'')+'</span></button>';
+      return '<button class="production-item" data-produce="'+esc(o.item)+'" '+(disabled?'disabled':'')+'>'+illustration(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+esc(turnsText(o.turns))+' · '+esc(o.required)+' production</small>'+(o.reason?'<small>'+esc(o.reason)+'</small>':'')+'</span></button>';
     }).join('')+'</div>'});
   el("production-options").innerHTML=(c.queue?cityQueue(c):'')+html.join('');
 }

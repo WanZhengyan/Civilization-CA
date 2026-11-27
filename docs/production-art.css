@@ -1,64 +1,55 @@
-/* Production choices use the same plates as the field command. Names, costs,
-   availability and descriptions remain live text in either interface language. */
-#production-options [data-produce="settler"] { --plate: url("./art/settler.webp"); }
-#production-options [data-produce="scout"] { --plate: url("./art/scout.webp"); }
-#production-options [data-produce="builder"] { --plate: url("./art/builder.webp"); }
-#production-options [data-produce="melee"] { --plate: url("./art/melee.webp"); }
-#production-options [data-produce="ranged"] { --plate: url("./art/ranged.webp"); }
-#production-options [data-produce="cavalry"] { --plate: url("./art/cavalry.webp"); }
-#production-options [data-produce="riflemen"] { --plate: url("./art/riflemen.webp"); }
-#production-options [data-produce="artillery"] { --plate: url("./art/artillery.webp"); }
-#production-options [data-produce="armor"] { --plate: url("./art/armor.webp"); }
-#production-options [data-produce="workboat"] { --plate: url("./art/workboat.webp"); }
-#production-options [data-produce="cutter"] { --plate: url("./art/cutter.webp"); }
-#production-options [data-produce="frigate"] { --plate: url("./art/frigate.webp"); }
-#production-options [data-produce="harbor"], #production-options [data-produce="shipyard"] { --plate: url("./art/harbor.webp"); }
-
+.item-illustration {
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  border: 1px solid #76694e;
+  border-radius: 3px;
+  box-sizing: border-box;
+}
 #production-options .production-item {
-  --plate-width: clamp(42px, 7vw, 60px);
   display: grid;
-  grid-template-columns: var(--plate-width) minmax(0, 1fr);
-  align-content: start;
-  position: relative;
+  grid-template-columns: clamp(48px, 6vw, 64px) minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
 }
-#production-options .production-item::before {
-  content: "";
-  width: var(--plate-width);
-  height: calc(var(--plate-width) * .93);
-  border-radius: 2px;
-  border: 1px solid #6b6559;
-  box-sizing: border-box;
-  background: linear-gradient(24deg, #24302c, #444a3d);
-  background-image: var(--plate, linear-gradient(24deg, #24302c, #444a3d));
-  background-size: cover;
-  background-position: center 40%;
-}
-#production-options [data-produce="shipyard"]::before { background-position: 84% center; }
-#production-options .production-item > svg {
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  padding: 2px;
-  box-sizing: border-box;
-  border-radius: 2px;
-  color: #f2dfb6;
-  background: #25322ff0;
+.production-item .item-illustration {
+  width: 100%;
+  aspect-ratio: 1;
 }
 #production-options .production-item span { min-width: 0; }
 #production-options .production-item:focus-visible { outline: 2px solid #eed094; outline-offset: -2px; }
-#production-options .production-item:disabled::before { filter: saturate(.62); }
+#production-options .production-item:disabled { opacity: 1; background: #22272d; }
+#production-options .production-item:disabled strong { color: #c2c6bd; }
+#production-options .production-item:disabled .item-illustration { filter: saturate(.74); }
+.watch-city:has(.item-illustration) { grid-template-columns: 37px minmax(0, 1fr) auto; }
+.watch-city .item-illustration { width: 34px; height: 34px; grid-row: 1/3; }
+.watch-city:has(.item-illustration) strong { grid-column: 2/-1; }
+.queue-info:has(.item-illustration) {
+  display: grid;
+  grid-template-columns: 43px minmax(0, 1fr);
+  column-gap: 9px;
+  align-items: center;
+}
+.queue-info .item-illustration { width: 43px; height: 43px; grid-row: 1/3; }
+.queue-info .queue-name { align-items: flex-start; flex-wrap: wrap; }
+.queue-info .queue-progress { margin: 3px 0 0; }
+.deposit-strip .item-illustration, .cargo-row .item-illustration {
+  width: 38px;
+  height: 38px;
+  flex: none;
+}
+.tactics .side .order-btn:has(.item-illustration) { grid-template-columns: 30px minmax(0, 1fr) auto; }
+.order-btn .item-illustration { width: 30px; height: 30px; }
+.built-gallery { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+.built-gallery > span { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
+.built-gallery .item-illustration { width: 26px; height: 26px; }
+.housing-project .item-illustration { width: 100%; height: 60px; }
 @media (max-width: 530px) {
   #production-options .production-grid { grid-template-columns: minmax(0,1fr); }
-  #production-options .production-item { --plate-width: 55px; gap: 10px; }
+  #production-options .production-item { grid-template-columns: 62px minmax(0, 1fr); gap: 10px; }
+  .cargo-row .item-illustration { width: 30px; height: 34px; }
 }
-
+@media (max-width: 520px) {
+  .cargo-ledger .cargo-row { grid-template-columns: 30px minmax(0, 1fr); }
+}
 .formation-notes { margin: .55rem 0; padding-inline-start: 1.2rem; color: #e2c99b; font-size: .85rem; }
-#production-options [data-produce="skirmisher"] { --plate: url("./art/skirmisher.webp"); }
-#production-options [data-produce="pikes"] { --plate: url("./art/pikes.webp"); }
-#production-options [data-produce="sappers"] { --plate: url("./art/sappers.webp"); }
-#production-options [data-produce="signals"] { --plate: url("./art/signals.webp"); }
-#production-options [data-produce="ironclad"] { --plate: url("./art/ironclad.webp"); }
-#production-options [data-produce="destroyer"] { --plate: url("./art/destroyer.webp"); }

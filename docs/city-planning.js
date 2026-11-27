@@ -1,3 +1,5 @@
+import {illustration} from './illustrations.js';
+
 function line(label, value) {
   return '<div><span>'+label+'</span><b>'+value+'</b></div>';
 }
@@ -48,7 +50,7 @@ export function paintCitizenLedger(state,seat,canAct,read) {
     const selected=city.queue?.item===p.item;
     const detail=built?'Completed':selected?'Under construction':!p.enabled?p.reason:p.turns+' '+(p.turns===1?'turn':'turns');
     return '<button type="button" class="housing-project" data-housing-project="'+p.item+'" '+(!p.enabled||!canAct?'disabled':'')+'>'+
-      '<b>'+escape(p.label)+'</b><span>'+escape(detail)+'</span></button>';
+      illustration(p.item)+'<b>'+escape(p.label)+'</b><span>'+escape(detail)+'</span></button>';
   }).join('');
   const activeChoice=ledger.contains(document.activeElement) && document.activeElement.dataset.cityFocus;
   const focus=Object.entries(focusNames).map(([id,name])=>'<button type="button" class="modal-tab" data-city-focus="'+id+

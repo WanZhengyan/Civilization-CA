@@ -1,3 +1,4 @@
+import {illustration} from './illustrations.js';
 import {RESOURCES,isProduce} from './resources.js';
 
 export function ledgerBody(state, seat, accounts, selectedCity, busy, esc) {
@@ -13,7 +14,7 @@ export function ledgerBody(state, seat, accounts, selectedCity, busy, esc) {
     const blocked=waiting || stock<2;
     const projectReady=city?.queue && city.queue.required>city.queue.progress;
     const dispatch=(market,title,disabled)=>'<button type="button" class="cargo-order" data-act="cargo-'+key+'-'+market+'"'+(disabled?' disabled':'')+'>'+title+'</button>';
-    return '<div class="cargo-row"><span class="cargo-symbol" aria-hidden="true" style="--cargo:'+resource.color+'">'+resource.mark+'</span><div class="cargo-balance"><strong>'+resource.name+'</strong><small><span>Stored</span> '+stock+' · <span>Harvest</span> +'+income+'</small></div><div class="cargo-actions">'+
+    return '<div class="cargo-row">'+illustration(key)+'<div class="cargo-balance"><strong>'+resource.name+'</strong><small><span>Stored</span> '+stock+' · <span>Harvest</span> +'+income+'</small></div><div class="cargo-actions">'+
       dispatch('sell','Sell for 5 capital',blocked)+dispatch('city',food?'Supply 4 food':'Supply 4 production',blocked||!city||(!food&&!projectReady))+'</div></div>';
   });
   return '<p class="modal-desc">Each worked deposit adds one good at the end of your turn. Dispatch two of the same good once per turn.</p>'+destination+
