@@ -1,4 +1,5 @@
-import { FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame } from './rules.js';
+import {mapPicker, installMapStyles} from './regions-ui.js';
+import { FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
 
 const SOLO_KEY = 'angel-basin.solo.v1';
 const SEATS_KEY = 'angel-basin.room-seats.v1';
@@ -26,11 +27,11 @@ function save(key, value) {
   } catch { /* Play can continue when device storage is unavailable. */ }
 }
 
-function freshSolo() {
+function freshSolo(mapId = "la") {
   return createGame(FACTIONS.map((_, index) => ({
     name: index ? FACTION_NAMES[index] : 'You',
     bot: index !== 0
-  })));
+  })), mapId);
 }
 
 function storedSolo() {
@@ -48,6 +49,7 @@ function storedSolo() {
 
 let renderView, toast, dialog, solo, room = null, token = null;
 let mode = 'solo', modal = '', roomTab = 'create', joinCode = '', formName = '';
+let selectedMap = 'la';
 let pending = false, errorMessage = '', playingBots = false;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
 let inviteOpen = false, resultShown = '', guideTab = 'start';
@@ -121,7 +123,7 @@ async function runBots() {
   }
 }
 
-async function requestRoom({ op, code, name, revision, action, auth, ticket }) {
+async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId }) {
   const isGet = !op;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
@@ -135,7 +137,7 @@ async function requestRoom({ op, code, name, revision, action, auth, ticket }) {
         ...(!isGet && { 'Content-Type': 'application/json' }),
         ...(auth && { Authorization: 'Bearer ' + auth })
       },
-      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket })
+      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId })
     });
     if (response.status === 204 && isGet && revision !== undefined) return { unchanged: true };
     let data;
@@ -242,6 +244,7 @@ function returnToSolo() {
 async function seatRequest(form) {
   if (pending) return;
   const values = new FormData(form);
+  if (values.get('mapId')) selectedMap = values.get('mapId');
   const name = String(values.get('name') || '').trim();
   const code = canonicalCode(values.get('code'));
   formName = name;
@@ -265,14 +268,14 @@ async function seatRequest(form) {
         forgetSeat(code);
       }
     }
-    const intent = [roomTab, roomTab === 'join' ? code : '', name].join('|');
+    const intent = [roomTab, roomTab === 'join' ? code : selectedMap, name].join('|');
     let ticket = read(TICKET_KEY, null);
     if (ticket?.intent !== intent) {
       const bytes = crypto.getRandomValues(new Uint8Array(24));
       ticket = {intent, token:Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')};
       save(TICKET_KEY, ticket);
     }
-    const data = await requestRoom({ op: roomTab, name, ticket:ticket.token, ...(roomTab === 'join' && {code}) });
+    const data = await requestRoom({ op: roomTab, name, ticket:ticket.token, ...(roomTab === 'join' ? {code} : {mapId:selectedMap}) });
     connect(data.room, data.token);
     save(TICKET_KEY, null);
   } catch (error) { showError(error.message); }
@@ -343,6 +346,7 @@ function open(kind, tab, code) {
   if (changed) errorMessage = '';
   if (tab) roomTab = tab;
   if (code) joinCode = code;
+  if (changed && (kind === 'multiplayer' || kind === 'restart')) selectedMap = getMap(getState()).id;
   if (changed && kind === 'multiplayer') inviteOpen = false;
   drawDialog();
   if (!dialog.open) dialog.showModal();
@@ -450,7 +454,7 @@ function multiplayerContent() {
     const footer = lobby && host ? button('start', pending ? 'Starting…' : 'Start campaign', 'primary', pending || room.players.length < 2)
       : (lobby ? '' : button('back', 'Return to map', 'primary'));
     return { title: lobby ? 'Room lobby' : 'Your room', kicker: 'Multiplayer', body:
-      sharing + list(roster) + muted(status) + actions(footer, button('to-solo', 'Return to solo', 'secondary', pending)) };
+      sharing + muted(getMap(room.mapId).name) + list(roster) + muted(status) + actions(footer, button('to-solo', 'Return to solo', 'secondary', pending)) };
   }
   const joining = roomTab === 'join';
   const disabled = pending ? ' disabled' : '';
@@ -459,7 +463,7 @@ function multiplayerContent() {
     `<button type="button" class="modal-tab" role="tab" aria-selected="${t === roomTab}" data-act="tab-${t}"${disabled}>${i ? 'Join room' : 'Create room'}</button>`).join('')}</div>`;
   return { kicker: 'Multiplayer', title: 'Play with friends', body: tabs +
     desc(joining ? 'Enter a room code to join a friend or return to a saved seat.' : 'Create a room for 2–4 players and share its invite link.') +
-    `<form class="modal-form" data-room-form><label class="modal-field">Player name<input class="modal-input" type="text" name="name" placeholder="Your name" maxlength="24" autocomplete="nickname" value="${escapeHTML(formName)}" required${disabled}></label>${codeField}<button class="modal-primary" type="submit"${disabled}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
+    `<form class="modal-form" data-room-form><label class="modal-field">Player name<input class="modal-input" type="text" name="name" placeholder="Your name" maxlength="24" autocomplete="nickname" value="${escapeHTML(formName)}" required${disabled}></label>${codeField}${joining ? '' : mapPicker(selectedMap,pending)}<button class="modal-primary" type="submit"${disabled}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
 }
 
 const guideSections = {
@@ -520,7 +524,7 @@ function content() {
         actions(button('back','Return to map','primary')) };
   }
   if (modal === 'restart') return {kicker:'Solo campaign', title:'Start a new campaign?',
-    body:desc('This replaces your saved solo campaign on this device.') + actions(button('restart','Start new campaign','primary'),button('menu','Keep playing'))};
+    body:mapPicker(selectedMap) + desc('This replaces your saved solo campaign on this device.') + actions(button('restart','Start new campaign','primary'),button('menu','Keep playing'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings','Faction standings'),button('log','Event log'),
     button('help','Field guide'), mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
@@ -574,7 +578,7 @@ function modalAction(act) {
   else if (act === 'start') mutate('start');
   else if (act === 'confirm-restart') open('restart');
   else if (act === 'restart') {
-    solo = freshSolo();
+    solo = freshSolo(selectedMap);
     resultShown = '';
     save(SOLO_KEY, solo);
     returnToSolo();
@@ -587,7 +591,9 @@ async function init({ render, toast: showToast }) {
   toast = showToast;
   if (initialized) { emit(); return; }
   initialized = true;
+  installMapStyles();
   dialog = document.getElementById('modal');
+  dialog.addEventListener('change', e => { if (e.target.name === 'mapId') selectedMap=e.target.value; });
   solo = storedSolo();
   formName = String(read(NAME_KEY, '') || '');
   dialog.addEventListener('click', e => {

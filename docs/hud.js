@@ -2,7 +2,7 @@ import {paintCompactCivics} from "./council.js";
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
-import {FACTIONS,TILE_BY_ID,MAX_ROUNDS,getMovePath,getSettlementAssessment,getResearchOptions,combatPreview,getActions,getStats,getCityYield,getProductionOptions,getUnitOptions,UNIT_TYPES,BUILDINGS,IMPROVEMENTS} from "./rules.js";
+import {FACTIONS,getMap,MAX_ROUNDS,getMovePath,getSettlementAssessment,getResearchOptions,combatPreview,getActions,getStats,getCityYield,getProductionOptions,getUnitOptions,UNIT_TYPES,BUILDINGS,IMPROVEMENTS} from "./rules.js";
 
 const el=id=>document.getElementById(id);
 const names=FACTIONS.map(f=>f.name);
@@ -40,7 +40,7 @@ function stat(label,value,total){return '<div class="entity-stat"><small>'+esc(l
 function healthBar(cur,max){return '<div class="entity-health"><i style="width:'+percentage(cur,max)+'%"></i></div>'}
 function percentage(cur,max){return Math.min(100,Math.max(0,Number(cur)/Math.max(1,Number(max))*100))||0}
 function note(s){return s?'<p class="panel-note">'+esc(s)+'</p>':''}
-function tileAt(){return TILE_BY_ID[selectedTile]}
+function tileAt(){return mapRegion.byId[selectedTile]}
 function cityAt(tile){return view.state.cities.find(c=>c.tile===tile)}
 function getUnit(){return view.state.units.find(u=>sameId(u.id,selectedUnit))}
 function faction(seat){const player=view.state.players[seat];return {name:names[player?.faction??seat],color:FACTIONS[player?.faction??seat]?.color||"#9aabb2"}}
@@ -48,6 +48,7 @@ function ownUnits(){return view.state.units.filter(u=>u.seat===view.seat)}
 function ownCities(){return view.state.cities.filter(c=>c.seat===view.seat)}
 function lobby(){return view.mode==="online"&&view.room?.phase==="lobby"}
 function mayOrder(){return view.state.phase==="playing"&&view.state.turn===view.seat&&!lobby()&&!view.busy}
+let mapRegion=getMap("la");
 let view,atlas,selectedTile,selectedUnit,kind="tile",order="",matchKey="",activeRoster="units",timer,productionCity=null;
 let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEvent="";
 const unavailableArt=new Set();
@@ -55,7 +56,7 @@ let surveyUnitId=null;
 let survey=new Map();
 function toast(message){text("toast",message);el("toast").hidden=false;clearTimeout(timer);timer=setTimeout(()=>el("toast").hidden=true,3200)}
 function select(tile,unit=null,city=false){
-  if(!TILE_BY_ID[tile])return;
+  if(!mapRegion.byId[tile])return;
   order="";selectedTile=tile;
   const candidates=view.state.units.filter(u=>u.tile===tile);
   const piece=candidates.find(u=>sameId(u.id,unit)) || (city ? null : candidates.find(u=>u.seat===view.seat)||candidates[0]);
@@ -65,13 +66,13 @@ function select(tile,unit=null,city=false){
 function selectOpening(){
   const units=ownUnits(),starter=units.find(u=>u.type==="settler"&&u.moves>0)||units.find(u=>u.moves>0)||units[0];
   if(starter)select(starter.tile,starter.id);
-  else {const city=ownCities()[0];select(city?.tile || FACTIONS[view.seat].capital,null,true)}
+  else {const city=ownCities()[0];select(city?.tile || mapRegion.starts[view.seat][0],null,true)}
 }
 function openMapOnMobile(){
   if(window.matchMedia("(max-width:700px)").matches)el("map-frame").scrollIntoView({block:"center",behavior:"smooth"});
 }
 function onMapSelect(tileId,unitId){
-  if(!view || !TILE_BY_ID[tileId])return;
+  if(!view || !mapRegion.byId[tileId])return;
   const unit=getUnit(), targetUnit=view.state.units.find(u=>sameId(u.id,unitId));
   const available=unit && unit.seat===view.seat && mayOrder() && order!=="inspect";
   if(available && targetUnit?.seat!==view.seat){
@@ -112,7 +113,7 @@ function renderSurveyDialog(){
   if(!u || !sameId(surveyUnitId,u.id)){el("survey-modal").close();return}
   const source=survey.get(u.tile);
   const now=[...survey].filter(([,data])=>data.status==="now"),later=[...survey].filter(([,data])=>data.status==="next-turn");
-  let html='<p class="survey-current"><strong>Current site · '+esc(TILE_BY_ID[u.tile].name)+'</strong><span>'+esc(surveySummary(source,true))+'</span></p>';
+  let html='<p class="survey-current"><strong>Current site · '+esc(mapRegion.byId[u.tile].name)+'</strong><span>'+esc(surveySummary(source,true))+'</span></p>';
   if(!now.length && !later.length)html+='<p class="survey-empty">No suitable sites are within this turn’s movement range.</p>';
   for(const [heading,sites] of [["Found this turn",now],["Found next turn",later]]){
     if(!sites.length)continue;
@@ -121,7 +122,7 @@ function renderSurveyDialog(){
       const here=u.tile===id;
       const label=here?(data.status==="now"?"Found city":"Wait here"):"Move here";
       const cost=here?"Current hex":data.moveCost+" movement";
-      html+='<div class="survey-option"><div><strong>'+esc(TILE_BY_ID[id].name)+'</strong><small>'+esc(cost)+' · '+esc(terrain[TILE_BY_ID[id].terrain])+'</small><small>'+esc(nearestCityText(data))+'</small></div><button class="modal-secondary" data-survey-site="'+esc(id)+'" '+(here && data.status!=="now"?"disabled":"")+'>'+label+'</button></div>';
+      html+='<div class="survey-option"><div><strong>'+esc(mapRegion.byId[id].name)+'</strong><small>'+esc(cost)+' · '+esc(terrain[mapRegion.byId[id].terrain])+'</small><small>'+esc(nearestCityText(data))+'</small></div><button class="modal-secondary" data-survey-site="'+esc(id)+'" '+(here && data.status!=="now"?"disabled":"")+'>'+label+'</button></div>';
     }
     html+='</div>';
   }
@@ -130,7 +131,7 @@ function renderSurveyDialog(){
 function updateHint(id){
   hoverId=id;
   if(!view)return;
-  const tile=TILE_BY_ID[id],u=getUnit();
+  const tile=mapRegion.byId[id],u=getUnit();
   const ready=Boolean(u && u.seat===view.seat && mayOrder() && order!=="inspect");
   let hint=order==="inspect"?"Inspection mode. Click a hex to inspect it without moving.":"Select a unit, city or district to inspect it.";
   if(ready && selectedOptions?.moves.length)hint="Click a highlighted hex to move your "+items[u.type]+".";
@@ -140,7 +141,7 @@ function updateHint(id){
     if(ready && selectedOptions?.attacks.includes(id))hint+=" · Click to preview attack";
     else if(ready && selectedOptions?.moves.includes(id) && order!=="attack"){
       const path=getMovePath(view.state,u.id,id);
-      const cost=path.slice(1).reduce((n,t)=>n+(["forest","hills"].includes(TILE_BY_ID[t].terrain)?2:1),0);
+      const cost=path.slice(1).reduce((n,t)=>n+(["forest","hills"].includes(mapRegion.byId[t].terrain)?2:1),0);
       hint+=" · Move here for "+cost+" movement";
     }
   }
@@ -317,7 +318,7 @@ function drawCombat(){
   if(!mayOrder()||!forecast){closeCombat();return false}
   const defender=forecast.defenderType==="city"?view.state.cities.find(c=>sameId(c.id,forecast.defenderId)):view.state.units.find(u=>sameId(u.id,forecast.defenderId));
   if(!defender){closeCombat();return false}
-  text("combat-where",TILE_BY_ID[battle.tile].name);
+  text("combat-where",mapRegion.byId[battle.tile].name);
   const enemy=defender.type?items[defender.type]:defender.name;
   const attack=forecastRow("Attacker",items[u.type],forecast.attackerHpBefore,forecast.attackerHpAfter,u.maxHp,forecast.retaliation?forecast.retaliation+" retaliation damage":"No retaliation",faction(u.seat).color);
   const defend=forecastRow("Defender",enemy,forecast.defenderHpBefore,forecast.defenderHpAfterHit??forecast.defenderHpAfter,defender.maxHp,forecast.damage+" incoming damage",faction(defender.seat).color);
@@ -335,7 +336,12 @@ function closeCombat(){
 }
 function paint(next){
   const previousKey=matchKey;view=next;const {state,seat,mode,room}=next;
-  const key=mode+':'+(room?.code||'')+':'+seat;
+  mapRegion=getMap(state);
+  const key=mapRegion.id+':'+mode+':'+(room?.code||'')+':'+seat;
+  text("campaign-title",mapRegion.name);
+  document.querySelector(".brand-region").textContent=mapRegion.shortName;
+  document.querySelector(".chart-coordinate").textContent=mapRegion.coordinates;
+  document.querySelector(".map-panel").setAttribute("aria-label","Tactical map · "+mapRegion.shortName);
   if(key!==matchKey||!selectedTile){matchKey=key;activeRoster="units";selectOpening()}
   if(kind==="unit"){
     const u=getUnit();if(u)selectedTile=u.tile;else select(selectedTile,null,Boolean(cityAt(selectedTile)));

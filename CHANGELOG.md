@@ -1,5 +1,11 @@
 # Release notes
 
+## 3.7 · A campaign across San Francisco Bay
+
+On the Los Angeles map most factions begin inland. A second region needed to make competing ports part of the opening. The new Bay Area map has its own terrain, city sites and a navigable Golden Gate. In a four-faction opening all four capitals can commission distinct harbors. The host selects the scenario for everyone.
+
+41 checks passed. 6 fixed campaigns replayed identically twice. Next test switching between two coastlines without losing either saved solo campaign.
+
 ## 3.6 · Fishing crews and coastal fleets
 
 Ports could earn revenue but had no vessels to launch. Fishing crews can establish fisheries, cutters patrol connected sea hexes, and steam frigates bombard the shore. A crew in the reference coastal opening launched in round 6, worked two fisheries, then shared its harbor with a cutter in round 8.

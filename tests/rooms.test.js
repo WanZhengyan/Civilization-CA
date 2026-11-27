@@ -202,3 +202,17 @@ test("a saved tactical room keeps units, damage and production when receiving th
   await seats.act(seats.host,migrated.revision,{type:"research",item:"agronomy"},409);
   assert.deepEqual((await seats.read(seats.guest)).game,researched.game);
 });
+
+test("a host chooses the region before inviting players and both seats recover that map", async t => {
+  const fixture=roomFixture(t);
+  await fixture.call("POST",{op:"create",name:"Host",mapId:"elsewhere"},null,400);
+  const host=await fixture.call("POST",{op:"create",name:"Host",mapId:"sf"},null,201);
+  assert.equal(host.room.mapId,"sf");
+  const code=host.room.code;
+  const guest=await fixture.call("POST",{op:"join",code,name:"Guest",mapId:"la"});
+  assert.equal(guest.room.mapId,"sf");
+  const {room}=await fixture.call("POST",{op:"start",code,mapId:"la",revision:guest.room.revision},host.token);
+  assert.equal(room.game.mapId,"sf");
+  assert.deepEqual(room.game.cities.map(city=>city.name),["San Francisco","Oakland"]);
+  assert.deepEqual((await fixture.call("GET",{code},guest.token)).room.game,room.game);
+});
