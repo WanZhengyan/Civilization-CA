@@ -1,3 +1,4 @@
+import {invitationCode, launchDestination} from './launch.js';
 import {ledgerBody} from './resource-ledger.js';
 import {getResourceLedger} from './rules.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
@@ -80,7 +81,16 @@ function getState() {
   return renderedView;
 }
 const currentSeat = () => mode === 'online' && room ? room.you : 0;
+function updateRoomShortcut() {
+  const code = read(LAST_ROOM_KEY, '');
+  const shortcut = document.querySelector('[data-title="reconnect"]');
+  if (!shortcut) return;
+  shortcut.hidden = !(validCode(code) && read(SEATS_KEY,{})[code]);
+  shortcut.querySelector('[data-last-room]').textContent = shortcut.hidden ? '' : code;
+}
+
 function showTitle(visible) {
+  if (visible) updateRoomShortcut();
   const screen = document.getElementById('title-screen');
   screen.hidden = !visible;
   document.body.classList.toggle('on-title', visible);
@@ -281,7 +291,6 @@ function returnToSolo() {
   showTitle(false);
   room = token = null;
   offline = inviteOpen = false;
-  save(LAST_ROOM_KEY, null);
   updateURL(null,true);
   close();
   emit();
@@ -310,7 +319,7 @@ async function seatRequest(form) {
   const values = new FormData(form);
   if (values.get('mapId')) selectedMap = values.get('mapId');
   const name = String(values.get('name') || '').trim();
-  const code = canonicalCode(values.get('code'));
+  const code = invitationCode(values.get('code'));
   formName = name;
   if (!name || name.length > 24) return showError('Choose a player name between 1 and 24 characters.');
   if (roomTab === 'join' && !validCode(code)) return showError('Enter the six-character room code.');
@@ -417,6 +426,11 @@ function open(kind, tab, code) {
   if (!dialog.open) dialog.showModal();
   if (changed) dialog.querySelector('.modal-title')?.focus();
 }
+function dismissDialog() {
+  if (modal === 'multiplayer' && pending) return;
+  if (modal === 'multiplayer' && mode === 'online' && room?.phase === 'lobby') enterTitle();
+  else close();
+}
 function close() {
   modal = '';
   errorMessage = '';
@@ -520,11 +534,11 @@ function multiplayerContent() {
     const footer = lobby && host ? button('start', pending ? 'Starting…' : 'Start campaign', 'primary', pending || room.players.length < 2)
       : (lobby ? '' : button('back', 'Return to map', 'primary'));
     return { title: lobby ? 'Room lobby' : 'Your room', kicker: 'Multiplayer', body:
-      sharing + muted(getMap(room.mapId).name) + list(roster) + muted(status) + actions(footer, button('to-solo', 'Return to solo', 'secondary', pending)) };
+      sharing + muted(getMap(room.mapId).name) + list(roster) + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
   }
   const joining = roomTab === 'join';
   const disabled = pending ? ' disabled' : '';
-  const codeField = joining ? `<label class="modal-field">Room code<input class="modal-input" type="text" name="code" aria-label="Room code" placeholder="Six-character code" autocomplete="off" spellcheck="false" autocapitalize="characters" maxlength="6" value="${escapeHTML(joinCode)}" required${disabled}></label>` : '';
+  const codeField = joining ? `<label class="modal-field">Room code<input class="modal-input" type="text" name="code" aria-label="Room code or invite link" placeholder="Room code or invite link" autocomplete="off" spellcheck="false" autocapitalize="characters" maxlength="2048" value="${escapeHTML(joinCode)}" required${disabled}></label>` : '';
   const tabs = `<div class="modal-tabs" role="tablist" aria-label="Room options">${['create','join'].map((t, i) =>
     `<button type="button" class="modal-tab" role="tab" aria-selected="${t === roomTab}" data-act="tab-${t}"${disabled}>${i ? 'Join room' : 'Create room'}</button>`).join('')}</div>`;
   return { kicker: 'Multiplayer', title: 'Play with friends', body: tabs +
@@ -681,10 +695,10 @@ function modalAction(act) {
     roomTab = act.slice(4);
     errorMessage = '';
     drawDialog();
-  } else if (act === 'back') close();
+  } else if (act === 'back') dismissDialog();
   else if (act === 'copy') copyInvite();
   else if (act === 'show-link') { inviteOpen = !inviteOpen; drawDialog(); }
-  else if (act === 'to-solo' && !pending) { returnToSolo(); toast?.('Solo campaign resumed. Use the room code to return to your seat.'); }
+  else if (act === 'to-solo' && !pending) { returnToSolo(); }
   else if (act === 'start') mutate('start');
   else if (act === 'campaign-atlas') open('campaign-atlas');
   else if (act === 'load-region') {
@@ -704,6 +718,29 @@ function modalAction(act) {
     returnToSolo();
     toast?.('New campaign started.');
   } else if (['menu','multiplayer','standings','log','help'].includes(act)) open(act);
+}
+
+async function reconnectRoom(code) {
+  const savedToken = read(SEATS_KEY,{})[code];
+  if (!savedToken || pending) return;
+  open('multiplayer','join',code);
+  pending = true;
+  drawDialog();
+  try {
+    const result = await requestRoom({code,auth:savedToken});
+    connect(result.room,savedToken);
+  } catch (error) {
+    if ([401,403,404].includes(error.status)) {
+      forgetSeat(code);
+      if (read(LAST_ROOM_KEY,'') === code) save(LAST_ROOM_KEY,null);
+      updateRoomShortcut();
+    }
+    showError(error.message);
+  } finally {
+    pending = false;
+    if (modal) drawDialog();
+    emit();
+  }
 }
 
 async function init({ render, toast: showToast }) {
@@ -728,48 +765,36 @@ async function init({ render, toast: showToast }) {
     const action = event.target.closest('[data-title]')?.dataset.title;
     if (pending || !action) return;
     if (action === 'solo') { selectedMap = getMap(solo).id; open('campaign-atlas'); }
-    if (action === 'create' || action === 'join') open('multiplayer',action);
+    if (action === 'reconnect') reconnectRoom(read(LAST_ROOM_KEY,''));
+    if (action === 'create' || action === 'join') {
+      joinCode = '';
+      selectedMap = getMap(solo).id;
+      open('multiplayer',action);
+    }
   });
   dialog.addEventListener('click', e => {
     const btn = e.target.closest('button[data-act]');
     if (btn) modalAction(btn.dataset.act);
     else if (e.target === dialog) {
       const bounds = dialog.getBoundingClientRect();
-      if (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom) close();
+      if (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom) dismissDialog();
     }
   });
   dialog.addEventListener('submit', e => {
     if (e.target.matches('[data-room-form]')) { e.preventDefault(); seatRequest(e.target); }
   });
-  dialog.addEventListener('cancel', () => { modal = ''; errorMessage = ''; });
+  dialog.addEventListener('cancel', e => { e.preventDefault(); dismissDialog(); });
   dialog.addEventListener('close', () => { if (!dialog.open) modal = ''; });
   document.addEventListener('visibilitychange', () => {
     if (mode === 'online' && !document.hidden && !polling) { clearTimeout(pollTimer); poll(); }
   });
-  const invite = canonicalCode(new URL(location.href).searchParams.get('room'));
-  const code = invite || canonicalCode(read(LAST_ROOM_KEY, ''));
-  const savedToken = validCode(code) ? read(SEATS_KEY, {})[code] : null;
-  emit();
-  if (savedToken) {
-    pending = true;
-    emit();
-    try {
-      const result = await requestRoom({ code, auth:savedToken });
-      connect(result.room,savedToken);
-    } catch (error) {
-      if ([401,403,404].includes(error.status)) { forgetSeat(code); save(LAST_ROOM_KEY,null); }
-      open('multiplayer','join',code);
-      showError(error.message);
-    } finally {
-      pending = false;
-      if (modal) drawDialog();
-      emit();
-    }
-  } else if (!invite && location.hash === '#campaign' && solo) {
-    returnToSolo();
-  } else if (invite) {
-    open('multiplayer','join',invite);
-    if (!validCode(invite)) showError('This invitation has an invalid room code.');
+  updateRoomShortcut();
+  const entry = launchDestination(location.href, Boolean(solo), read(SEATS_KEY,{}));
+  if (entry.screen === 'reconnect') await reconnectRoom(entry.code);
+  if (entry.screen === 'solo') returnToSolo();
+  if (entry.screen === 'join') {
+    open('multiplayer','join',entry.code);
+    if (!entry.code) showError('This invitation has an invalid room code.');
   }
   if (mode === 'solo') runBots();
   if (!modal && mode !== 'home') checkFinished();
