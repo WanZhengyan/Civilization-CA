@@ -63,6 +63,71 @@ function section(pairs) {
   }
 }
 section(`
+Room setup|房间设置
+Open lobby for 2–4 people|开放房间（2–4 名真人）
+You vs. computer|你对战电脑
+Two friends vs. two computers|双人合作对战两名电脑
+Four-way free-for-all|四方混战
+Custom seats|自定义席位
+Number of seats|席位数
+Controller|席位类型
+Human player|真人玩家
+Computer|电脑
+Team|队伍
+Difficulty|难度
+Computer difficulty|电脑难度
+Compare computer difficulties|比较电脑难度
+Easy|简单
+Normal|一般
+Hard|困难
+Seat 1|席位 1
+Seat 2|席位 2
+Seat 3|席位 3
+Seat 4|席位 4
+Team A|A 队
+Team B|B 队
+Team C|C 队
+Team D|D 队
+Easy develops home districts first and patrols within three hexes of its cities.|简单电脑优先开发本土地块，在距己方城市三格以内巡逻。
+Normal balances scouting, growth and production, and compares targets for each unit.|一般难度的电脑兼顾侦察、城市发展与生产，并为每支部队比较攻击目标。
+Hard expands earlier and compares attacks across its units before committing one.|困难电脑会更早扩张，比较多支部队的进攻机会再选择出手的单位。
+Invite up to three friends. The host can start once two people have joined.|最多可邀请三名好友。至少两名真人入座后，房主即可开局。
+Teammates combine civic scores and share victory. Each player keeps their own units, treasury and vision.|队友的市政积分相加，全队共享胜利。部队、金库和地图视野由各自掌握。
+The starting team is drawn at random.|开局随机抽取先手队伍。
+Drew first turn|抽中先手
+Teams are uneven. The larger team has more civilizations contributing points.|队伍人数不相等。人数较多的一队有更多文明可以贡献积分。
+Computer playing…|电脑行动中…
+Assign the seats to at least two different teams.|请将席位分到至少两支队伍。
+Waiting for player|等待玩家加入
+All required seats are ready.|所需席位均已就绪，可以开局。
+Invite a friend to each open human seat before starting.|请邀请好友坐满空缺的真人席位后再开始。
+Invite friends, face a computer opponent or form teams.|邀请好友、挑战电脑，或组队作战。
+Enter a room code or invitation link. New players take the first open human seat. This device remembers your seat.|输入房间码或邀请链接。新玩家会进入第一个空缺的真人席位，当前设备会记住你的席位。
+This room service supports open human lobbies only. Choose the open lobby to play here.|当前联机服务仅支持真人开放房间。请选择开放房间进行联机。
+Your teammate commands this unit.|这支部队由你的队友指挥。
+Allied city|盟友城市
+Allied capital city|盟友首府
+Your team|你的队伍
+Team standings|队伍排名
+Winning team|获胜队伍
+Shared victory|并列获胜
+All original capitals controlled|已控制全部初始首府
+Last surviving team|最后存续的队伍
+Team civic points|队伍市政积分
+Team civic target|队伍积分目标
+A team wins immediately when its members collectively hold every original capital.|只要全队合力控制所有初始首府，就会立即赢得统治胜利。
+Living teammates combine their civic points. Compare team totals at the end of the round when a team reaches the target, or after round 30. Tied teams share victory.|队伍积分等于仍在场的队友市政积分之和。当任一队达到目标时，在该轮结束后比较各队总分；最迟在第 30 轮结束后结算。最高分并列的队伍共享胜利。
+Choose two to four seats with a human host.|请选择 2–4 个席位，并由真人担任房主。
+Choose a seat type and team for every player.|请为每个席位选择类型和队伍。
+Choose a valid computer difficulty.|请选择有效的电脑难度。
+Choose a valid AI difficulty.|请选择有效的电脑难度。
+Choose at least two opposing teams.|至少设置两支互相对抗的队伍。
+No human seats are open.|真人席位已满。
+Wait for every human seat to join.|请等待所有真人入座。
+Choose a team for every seat.|请为每个席位选择队伍。
+A campaign needs at least two opposing teams.|对局需要至少两支互相对抗的队伍。
+`);
+section(`
 Campaign controls|战役控制
 Map size|地图尺寸
 Standard|标准

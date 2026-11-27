@@ -1,4 +1,4 @@
-import {getDevelopmentPreview,getStats} from './rules.js';
+import {getDevelopmentPreview,getStats,sameTeam} from './rules.js';
 
 const metrics=[['Capital per turn','capitalIncome'],['Influence per turn','influenceIncome'],['Civic points','score']];
 
@@ -11,10 +11,12 @@ export function foundingLabel(state,seat) {
   return !founded && state.log[0]?.type==='start' ? 'Found capital' : 'Found city';
 }
 
-export function cityKind(city,seat) {
-  if (city.originalSeat == null) return city.seat === seat ? 'Your city' : 'Rival city';
-  if (city.originalSeat !== city.seat) return 'Captured original capital';
-  return city.seat === seat ? 'Your capital city' : 'Rival capital city';
+export function cityKind(city,seat,state) {
+  if (city.originalSeat != null && city.originalSeat !== city.seat) return 'Captured original capital';
+  const capital=city.originalSeat != null;
+  if (city.seat===seat) return capital ? 'Your capital city' : 'Your city';
+  if (state && sameTeam(state,seat,city.seat)) return capital ? 'Allied capital city' : 'Allied city';
+  return capital ? 'Rival capital city' : 'Rival city';
 }
 
 export function developmentPanel(preview,stats) {

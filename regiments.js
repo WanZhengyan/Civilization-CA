@@ -1,3 +1,5 @@
+import {sameTeam} from './teams.js';
+
 // Definitions and combat roles for specialized formations. The forecast and
 // authoritative order use the same modifiers so the two views stay in sync.
 export const REGIMENTS = {
@@ -56,7 +58,7 @@ export function matchup(unit, defender, town, state, distance, definitions) {
     damage+=18;
     notes.push('Escort against a warship · +18 damage');
   }
-  const hasSignal=state.units.some(other=>other.seat===unit.seat && other.type==='signals'
+  const hasSignal=state.units.some(other=>sameTeam(state,other.seat,unit.seat) && other.type==='signals'
     && distance(other.tile,unit.tile)===1);
   if (hasSignal) {
     damage+=8;
@@ -66,9 +68,9 @@ export function matchup(unit, defender, town, state, distance, definitions) {
 }
 
 export function formationChoices(state,city,units,count,nearbyTerrain) {
-  const visibleRiders=state.units.some(other=>other.seat!==city.seat && other.type==='cavalry');
+  const visibleRiders=state.units.some(other=>!sameTeam(state,other.seat,city.seat) && other.type==='cavalry');
   const plans=[];
-  if (!count('sappers') && state.cities.some(other=>other.seat!==city.seat)) plans.push('sappers');
+  if (!count('sappers') && state.cities.some(other=>!sameTeam(state,other.seat,city.seat))) plans.push('sappers');
   if (!count('signals') && units.filter(unit=>unit.type!=='scout' && unit.maxHp>=80).length>=2) plans.push('signals');
   if (!count('pikes') && (visibleRiders || units.some(unit=>unit.type==='ranged'))) plans.push('pikes');
   if (!count('skirmisher') && nearbyTerrain.some(t=>t==='forest'||t==='hills')) plans.push('skirmisher');
@@ -78,9 +80,9 @@ export function formationChoices(state,city,units,count,nearbyTerrain) {
 // A communications team holds an adjacent position instead of trying to occupy
 // its own ally’s hex. Visible rivals give front-line formations priority.
 export function signalPosition(state, unit, moves, definitions, distance) {
-  const allies=state.units.filter(other=>other.seat===unit.seat && definitions[other.type].strength>0
+  const allies=state.units.filter(other=>sameTeam(state,other.seat,unit.seat) && definitions[other.type].strength>0
     && definitions[other.type].domain!=='sea');
-  const rivals=state.units.filter(other=>other.seat!==unit.seat);
+  const rivals=state.units.filter(other=>!sameTeam(state,other.seat,unit.seat));
   if (!allies.length) return null;
   const postValue=tile=>Math.max(...allies.map(ally=>{
     const range=distance(tile,ally.tile);

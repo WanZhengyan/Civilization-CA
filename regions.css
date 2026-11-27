@@ -41,6 +41,20 @@
 .solo-save-card>p{margin:.15rem 0 0;font-size:.85rem;line-height:1.35}
 .solo-new-setup>h3:first-child{margin-bottom:.45rem}
 .solo-new-setup{min-width:0}
+.room-select{display:grid;min-width:0;gap:.2rem;color:#dfd8c6;font-size:.86rem}
+.room-select select{display:block;min-width:0;width:100%;min-height:44px;padding:.32rem .45rem;border:1px solid #61675e;border-radius:4px;background:#20262e;color:#f5eee1;font:inherit;text-overflow:ellipsis}
+.room-select select:focus-visible,.room-difficulty-guide summary:focus-visible{outline:2px solid #9cdfea;outline-offset:2px}
+.room-seat{margin:0;padding:.4rem .6rem .6rem;min-width:0;border:1px solid #63675b;border-radius:5px}
+.room-seat legend{padding:0 .2rem;color:#e7c992;font-weight:600}
+.room-seat>div{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(6rem,100%),1fr));align-items:end;gap:.35rem}
+.room-host{align-self:center;color:#e8ddc4;font-weight:600}
+.room-seats{display:grid;gap:.5rem}
+.modal-body .room-rule,.room-difficulty>p,.room-difficulty-guide p{margin:.1rem 0 .3rem;color:#c3c4bd;font-size:.84rem;line-height:1.45}
+.room-difficulty{margin:0 0 .9rem}
+.room-difficulty>p{margin:.3rem 0 0}
+.room-difficulty-guide summary{padding:.55rem .1rem;color:#ebd3a6;cursor:pointer;font-weight:600}
+.room-difficulty-guide p{margin:.35rem 0}
+.room-team-record>h3{margin:.65rem 0 .1rem;font-size:1rem;color:#e6ce9c}
 @container (max-width:19rem){
   .solo-options:not(.solo-rivals)>div{grid-template-columns:1fr}
   .solo-options:not(.solo-rivals) label{grid-template-columns:1rem minmax(0,1fr) auto}

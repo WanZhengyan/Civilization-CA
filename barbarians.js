@@ -1,4 +1,5 @@
 import {prepareBattle} from './battle-reports.js';
+import {sameTeam} from './teams.js';
 
 // A camp has no civilization seat. Neutral parties are separate from player
 // units so they cannot count as a faction, own a capital, or take a player turn.
@@ -134,7 +135,7 @@ function scoutTurn(state,party,camp,settled,map,neighbors,distance,record) {
 function raidTurn(state,party,town,defs,map,neighbors,distance,record) {
   if (!town) return false;
   if (distance(party.tile,town.tile)<=1) {
-    const guard=state.units.some(u=>u.seat===town.seat && defs[u.type]?.strength>0 && distance(u.tile,town.tile)<=1);
+    const guard=state.units.some(u=>sameTeam(state,u.seat,town.seat) && defs[u.type]?.strength>0 && distance(u.tile,town.tile)<=1);
     const repelled=guard || town.buildings.includes('walls');
     const damage=repelled ? 0 : Math.min(12,town.hp-1);
     const loot=repelled ? 0 : Math.min(3,state.players[town.seat].capital);
@@ -151,7 +152,7 @@ function raidTurn(state,party,town,defs,map,neighbors,distance,record) {
     recordResult();
     return false;
   }
-  const foe=state.units.find(u=>defs[u.type]?.strength>0 && defs[u.type]?.domain!=='sea' && u.seat===town.seat && distance(u.tile,party.tile)===1);
+  const foe=state.units.find(u=>defs[u.type]?.strength>0 && defs[u.type]?.domain!=='sea' && sameTeam(state,u.seat,town.seat) && distance(u.tile,party.tile)===1);
   if (foe) {
     const damage=Math.min(foe.hp,14);
     const retaliation=Math.min(party.hp,Math.max(4,Math.round(defs[foe.type].strength*.4)));
