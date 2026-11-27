@@ -141,6 +141,7 @@ export function mountBattleReports(atlas) {
   function replay(r) {
     if(!r)return;
     if(playing && !manual && playing.id!==r.id)recent.unshift(playing);
+    recent=recent.filter(queued=>queued.id!==r.id);
     halt();
     document.getElementById('map-frame').scrollIntoView({block:'nearest',behavior:'instant'});
     document.querySelector('#atlas canvas')?.focus({preventScroll:true});
