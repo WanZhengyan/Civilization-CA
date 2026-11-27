@@ -1,4 +1,7 @@
 // Shared rules for the browser and the authoritative room service.
+import {TECHS, eraFor} from './progression.js';
+export {TECHS, ERAS} from './progression.js';
+export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies); }
 export const MAX_ROUNDS = 30;
 export const TARGET_SCORE = 100;
 export const ACTIONS_PER_TURN = 2;
@@ -174,12 +177,6 @@ export const BUILDINGS = {
 export const IMPROVEMENTS = {
   farm: {name:"Farm"}, mine: {name:"Mine"}
 };
-export const TECHS = {
-  agronomy: {name: "Agronomy", cost: 12, description: "Each city produces 2 more food per turn."},
-  industry: {name: "Industrial Engineering", cost: 16, description: "Each city produces 2 more production per turn."},
-  tactics: {name: "Field Tactics", cost: 15, description: "Military units deal 7 more attack damage and 3 more retaliation damage."},
-  civics: {name: "Civic Administration", cost: 14, description: "Each city earns 2 more capital and 1 more influence per turn."}
-};
 function knows(state, seat, technology) {
   return state.players[seat]?.technologies?.includes(technology) === true;
 }
@@ -266,10 +263,12 @@ export function getCityYield(state,cityId) {
     if (holding.improvement==='mine') mines++;
   }
   const civics = knows(state, city.seat, 'civics');
+  const steam = has('workshop') && knows(state, city.seat, 'steam');
+  const trade = TILE_BY_ID[city.tile].terrain === 'coast' && knows(state, city.seat, 'navigation');
   return {
     food: 2 + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
-    production: 3 + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0),
-    capital: city.population + (civics ? 2 : 0),
+    production: 3 + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
+    capital: city.population + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
 }
@@ -290,8 +289,9 @@ export function getStats(state,seat) {
   const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
   return {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
     score:state.legacyFinalScores?.[seat] ?? score,
-    scienceIncome:2+count+Math.floor(population/3),
-    capitalIncome:3+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0),
+    scienceIncome:2+count+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0),
+    capitalIncome:3+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
+      +(knows(state,seat,'navigation') ? 2*cities.filter(c=>TILE_BY_ID[c.tile].terrain==='coast').length : 0),
     influenceIncome:2+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
 }
 function refreshScores(state) { state.players.forEach((p,i)=>{p.score=getStats(state,i).score;}); }
@@ -452,13 +452,15 @@ export function getResearchOptions(state, seat) {
   return Object.entries(TECHS).map(([item, tech]) => {
     const completed = knows(state, seat, item);
     const active = player.research === item;
+    const missing = tech.requires.filter(key => !knows(state, seat, key));
     let reason = "";
     if (state.phase !== "playing") reason = "The campaign has ended.";
     else if (state.turn !== seat) reason = "Wait for your turn.";
     else if (completed) reason = "Your faction already knows this technology.";
     else if (active) reason = "This is your current research project.";
+    else if (missing.length) reason = "Requires " + missing.map(key=>TECHS[key].name).join(" + ") + ".";
     const turns = completed ? 0 : Math.max(0, Math.ceil((tech.cost - player.science) / income));
-    return {item, label: tech.name, description: tech.description, cost: tech.cost, completed, active, turns, enabled: !reason, reason};
+    return {item, label: tech.name, description: tech.description, cost: tech.cost, era: tech.era, requires: tech.requires, locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
   });
 }
 function checkDiscovery(state, seat) {
@@ -547,7 +549,8 @@ export function combatPreview(state, unitId, target) {
   const terrain = TILE_BY_ID[target].terrain;
   const terrainDefense = terrain === 'hills' || terrain === 'forest' ? 4 : 0;
   const strength = Math.round(UNIT_TYPES[unit.type].strength * (0.75 + 0.25 * unit.hp / unit.maxHp));
-  const attackBonus = knows(state, unit.seat, 'tactics') ? 7 : 0;
+  const attackBonus = (knows(state, unit.seat, 'tactics') ? 7 : 0)
+    + (UNIT_TYPES[unit.type].range > 1 && knows(state, unit.seat, 'ballistics') ? 5 : 0);
   let damage = Math.min(opponent.hp, Math.max(1, strength + attackBonus - terrainDefense - (walls ? 7 : 0)));
   let retaliation = 0;
   if (melee) {
@@ -723,8 +726,9 @@ export function chooseBotAction(source) {
     const threatened = state.cities.some(city => city.seat === seat && state.units.some(
       unit => unit.seat !== seat && UNIT_TYPES[unit.type].range > 0 && hexDistance(unit.tile, city.tile) <= 2));
     const opening = ['industry', 'agronomy', 'tactics', 'civics'][seat];
-    const priorities = [threatened ? 'tactics' : opening, 'industry', 'tactics', 'agronomy', 'civics'];
-    return {type: 'research', item: priorities.find(item => !knows(state, seat, item))};
+    const priorities = [threatened ? 'tactics' : opening, 'ballistics', 'industry', 'steam', 'tactics', 'motorization', 'radio', 'agronomy', 'navigation', 'civics'];
+    const project = priorities.find(key => !knows(state, seat, key) && TECHS[key].requires.every(parent => knows(state, seat, parent)));
+    if (project) return {type: 'research', item: project};
   }
   const available=state.units.filter(u=>u.seat===seat && u.moves>0);
   const plans=available.map(u=>[u,getUnitOptions(state,u.id)]);

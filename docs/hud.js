@@ -300,8 +300,8 @@ function paintResearch(){
   if(!el("research-modal").open)return;
   const glyph={agronomy:"farm",industry:"production",tactics:"melee",civics:"monument"};
   const cards=opts.map(o=>{
-    const label=o.completed?"Discovered":o.active?"In progress":o.turns===0?"Discover now":turnsText(o.turns);
-    return '<button class="discovery-card '+(o.active?'ongoing':o.completed?'completed':'')+'" data-research="'+esc(o.item)+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="discovery-icon">'+icon(glyph[o.item])+'</span><span class="discovery-detail"><strong>'+esc(o.label)+'</strong><small>'+esc(o.description)+'</small></span><span class="discovery-cost">'+esc(label)+'<small>'+o.cost+' science</small></span></button>';
+    const label=o.locked?"Locked":o.completed?"Discovered":o.active?"In progress":o.turns===0?"Discover now":turnsText(o.turns);
+    return '<button class="discovery-card '+(o.active?'ongoing':o.completed?'completed':'')+'" data-research="'+esc(o.item)+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="discovery-icon">'+icon(glyph[o.item])+'</span><span class="discovery-detail"><strong>'+esc(o.label)+'</strong><small>'+esc(o.description)+'</small>'+(o.locked?'<small>'+esc(o.reason)+'</small>':'')+'</span><span class="discovery-cost">'+esc(label)+'<small>'+o.cost+' science</small></span></button>';
   });
   el("research-options").innerHTML='<p class="science-balance"><strong>'+player.science+' science</strong> banked · +'+getStats(view.state,view.seat).scienceIncome+' each turn</p><div class="discoveries">'+cards.join('')+'</div>';
 }

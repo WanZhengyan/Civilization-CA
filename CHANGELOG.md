@@ -1,5 +1,11 @@
 # Release notes
 
+## 3.2 · Research across three eras
+
+Four independent research buttons left little reason to plan ahead. A prerequisite tree now links coastal navigation, industry and land warfare. Banking 100 science cannot skip either route into motorization.
+
+25 checks passed. 6 fixed campaigns replayed identically twice. The next playtest asks whether a player can pursue a civilian policy while research is underway.
+
 ## 3.1 · Settlement survey
 
 **Playtest finding.** The opening settler can reach 14 destinations. The original command panel showed a single generic spacing rule, which left players to guess how many of those destinations would make a good city site. At desktop width the command panel could also crop the End turn button.
