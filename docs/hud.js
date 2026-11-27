@@ -1,4 +1,5 @@
 import {illustration, illustrationPath} from './illustrations.js';
+import {mountBattleReports} from './battle-history.js';
 import {researchLinks,syncResearchLens} from './research-catalog.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
@@ -85,7 +86,7 @@ function customCity(city){return Boolean(city && city.name!==mapRegion.byId[city
 function cityNameAttrs(city){return customCity(city)?' translate="no"':''}
 function lobby(){return view.mode==="online"&&view.room?.phase==="lobby"}
 function mayOrder(){return view.state.phase==="playing"&&view.state.turn===view.seat&&!lobby()&&!view.busy}
-let view,atlas,selectedTile,selectedUnit,kind="tile",order="",matchKey="",activeRoster="units",timer,productionCity=null;
+let view,atlas,battleReports,selectedTile,selectedUnit,kind="tile",order="",matchKey="",activeRoster="units",timer,productionCity=null;
 let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEvent="";
 const unavailableArt=new Set();
 let surveyUnitId=null;
@@ -550,6 +551,7 @@ function paint(next){
   redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();showCampusOpening(state,seat,key);populationLedger();
   if(el("production-modal").open)productionOptions();
   if(el("combat-modal").open)drawCombat();
+  battleReports.update(next,key,mapRegion);
 }
 let campusNoticeKey='',hiddenCampusNotice='';
 function showCampusOpening(state,seat,key){
@@ -611,6 +613,7 @@ function showRoster(type){activeRoster=type;roster()}
 function toggleLayers(open){el("layers-menu").hidden=!open;el("layers").setAttribute("aria-expanded",String(open))}
 function mount(){
   atlas=createAtlas(el("atlas"),{onSelect:onMapSelect,onHover:updateHint,onZoom:percent=>text("map-zoom",Math.round(percent)+"%")});
+  battleReports=mountBattleReports(atlas);
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>Game.open(b.dataset.open));
   el("board-nav").onclick=()=>el("map-frame").scrollIntoView({block:"nearest"});
   el("end-turn").onclick=()=>{if(lobby())Game.open("multiplayer");else if(view.state.phase==="finished")Game.open("standings");else{order="";Game.endTurn()}};

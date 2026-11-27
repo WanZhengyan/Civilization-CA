@@ -1,3 +1,4 @@
+import {battleMarkers,paintBattleReport} from './battle-overlay.js';
 import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom} from './hex-survey.js';
 import {politicalPaths, inkPolitics} from './political-borders.js';
 import {drawResource} from './resource-art.js';
@@ -945,6 +946,8 @@ export function createAtlas(host, options = {}) {
   host.appendChild(canvas);
   const ctx=canvas.getContext('2d'), input=new AbortController(), pointers=new Map();
   let tiles=options.tiles||getMap('la').tiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
+  let replay=null,returnCamera=null,lastCameraInput=-Infinity;
+  function manualCamera(){returnCamera=null;lastCameraInput=performance.now();}
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
   let labels=true,territories=true,grid=true,fresh=true,gesture=null,didDrag=false,disposed=false;
   let frame=chartFrame(tiles), mesh=chartMesh(tiles), extent=chartExtent(tiles);
@@ -976,6 +979,7 @@ export function createAtlas(host, options = {}) {
     if(paintUnits(ctx,model,s,performance.now()))schedule();
     if(model.fog)ctx.restore();
     paintHexFocus(ctx,model,s);
+    if(replay && paintBattleReport(ctx,replay,s,performance.now()))schedule();
     ctx.restore();
     inkChartFrame(ctx,frame,s);
     ctx.restore();
@@ -1035,7 +1039,7 @@ export function createAtlas(host, options = {}) {
   function on(name,fn,extra={}){canvas.addEventListener(name,fn,{...extra,signal:input.signal});}
   on('pointerdown',e=>{
     if(e.button!==0 && e.pointerType==='mouse')return;
-    cancelAnimationFrame(tween);const xy=local(e);pointers.set(e.pointerId,xy);
+    manualCamera();cancelAnimationFrame(tween);const xy=local(e);pointers.set(e.pointerId,xy);
     canvas.setPointerCapture(e.pointerId);canvas.style.cursor='grabbing';hoverTile(null);
     if(pointers.size===1){didDrag=false;gesture={start:xy,center:[cx,cy]};}
     else if(pointers.size===2){didDrag=true;const [a,b]=[...pointers.values()];gesture={dist:Math.max(2,Math.hypot(a[0]-b[0],a[1]-b[1])),initial:zoom,mid:[(a[0]+b[0])/2,(a[1]+b[1])/2]};}
@@ -1067,8 +1071,9 @@ export function createAtlas(host, options = {}) {
   }
   on('pointerup',e=>finishPointer(e,true));on('pointercancel',e=>finishPointer(e,false));
   on('pointerleave',()=>hoverTile(null));
-  on('wheel',e=>{e.preventDefault();const xy=local(e);cancelAnimationFrame(tween);setZoom(zoom*Math.exp(-Math.max(-100,Math.min(100,e.deltaY))*.0019),...xy);},{passive:false});
+  on('wheel',e=>{e.preventDefault();manualCamera();const xy=local(e);cancelAnimationFrame(tween);setZoom(zoom*Math.exp(-Math.max(-100,Math.min(100,e.deltaY))*.0019),...xy);},{passive:false});
   on('keydown',e=>{
+    manualCamera();
     const home=model.units.find(unit=>unit.seat===model.state?.intel?.seat);
     const t=model.byId.get(model.hoverId)||model.byId.get(model.selectedId)||model.byId.get(home?.tile)||model.byId.get('11,7')||tiles[0];
     let target=null;
@@ -1132,9 +1137,24 @@ export function createAtlas(host, options = {}) {
       if(model.previewPath?.length && !model.moveTiles.includes(model.previewPath.at(-1)))model.previewPath=[];
       schedule();return api;
     },
-    zoomBy(factor){if(Number.isFinite(factor)&&factor>0)animateZoom(zoom*factor,boxW/2,boxH/2);},
-    reset(){cancelAnimationFrame(tween);zoom=overviewZoom();resetCenter();options.onZoom?.(Math.round(zoom*100));schedule();},
-    focus(id,opening=false){const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} [cx,cy]=pos(t.q,t.r);bound();schedule();}},
+    playBattle(report,manual,duration){
+      const points=battleMarkers(report,model.byId);if(!points)return;
+      const still=Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+      const player=model.players[report.attacker.seat];
+      replay={report,...points,still,color:player?.color || FACTION[player?.faction] || '#d58a6c',start:performance.now(),duration};
+      const [x,y]=points.to,s=base*zoom;
+      const outside=Math.abs(x-cx)*s>boxW/2-48 || Math.abs(y-cy)*s>boxH/2-48;
+      if(manual){manualCamera();cx=x;cy=y;bound();}
+      else if(outside && !still && !gesture && performance.now()-lastCameraInput>2600){
+        if(!returnCamera)returnCamera=[cx,cy];
+        cx=x;cy=y;bound();
+      }
+      schedule();
+    },
+    stopBattle(){replay=null;if(returnCamera){[cx,cy]=returnCamera;returnCamera=null;bound();}schedule();},
+    zoomBy(factor){manualCamera();if(Number.isFinite(factor)&&factor>0)animateZoom(zoom*factor,boxW/2,boxH/2);},
+    reset(){manualCamera();cancelAnimationFrame(tween);zoom=overviewZoom();resetCenter();options.onZoom?.(Math.round(zoom*100));schedule();},
+    focus(id,opening=false){if(!opening)manualCamera();const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} [cx,cy]=pos(t.q,t.r);bound();schedule();}},
     setGrid(show){grid=Boolean(show);schedule();},
     setLabels(show){labels=Boolean(show);schedule();},
     setTerritories(show){territories=Boolean(show);schedule();},

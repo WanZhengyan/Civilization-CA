@@ -96,6 +96,7 @@ function showTitle(visible) {
   const leavingTitle = !visible && !screen.hidden;
   screen.hidden = !visible;
   document.body.classList.toggle('on-title', visible);
+  document.dispatchEvent(new Event('civitas-screen'));
   if (leavingTitle) requestAnimationFrame(() => {
     if (screen.hidden && !dialog?.open) document.getElementById('board-nav')?.focus({preventScroll:true});
   });
@@ -621,8 +622,8 @@ function content() {
   }
   if (modal === 'log') return {
     kicker: 'Campaign records', title: 'Event log',
-    body: state.log.length ? list([...state.log].reverse().map(entry => row(escapeHTML(eventText(entry)),
-      'Round ' + escapeHTML(entry.round), Number.isInteger(entry.seat) && FACTIONS[entry.seat] ? factionMark(entry.seat) : ''))) : muted('No events yet.')
+    body: actions(button('battle-reports',getLanguage()==='zh-CN'?'战报':'Battle reports')) + (state.log.length ? list([...state.log].reverse().map(entry => row(escapeHTML(eventText(entry)),
+      'Round ' + escapeHTML(entry.round), Number.isInteger(entry.seat) && FACTIONS[entry.seat] ? factionMark(entry.seat) : ''))) : muted('No events yet.'))
   };
   if (modal === 'standings') {
     const winnersFirst = seat => Number(state.winners?.includes(seat));
@@ -678,6 +679,7 @@ async function copyInvite() {
   }
 }
 function modalAction(act) {
+  if(act==='battle-reports'){dismissDialog();document.dispatchEvent(new Event('civitas-battle-history'));return;}
   if(act==='title-screen'){enterTitle();return}
   if(act==='supplies'){open('supplies');return}
   if(act.startsWith('cargo-')){
