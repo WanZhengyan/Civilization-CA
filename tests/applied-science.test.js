@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createClassicGame} from './classic-game.js';
-import {applyAction, campaignView, getCityYield, getResearchOptions, getMap, getRouteDetail, UNIT_TYPES} from '../docs/rules.js';
+import {applyAction, campaignView, getCityYield, getResearchOptions, getMap, getRouteDetail, neighbors, UNIT_TYPES} from '../docs/rules.js';
 import {getVisibleTiles} from '../docs/vision.js';
 import {translate} from '../docs/i18n.js';
 import {appliedScience} from '../docs/applied-science.js';
@@ -31,19 +31,28 @@ test('crop and mineral discoveries pay only for working, connected sites',()=>{
   assert.equal(getCityYield(state,city).production,inactive);
 });
 
-test('mapping reveals the outer ring just to the civilization that made the discovery',()=>{
-  let state=fundedCampaign();
-  state.units=[{...state.units[0],type:'scout',tile:'8,6'}];
+test('mapping speeds scout travel through foothills without expanding the owner’s visible map',()=>{
+  let state=learn(fundedCampaign(),'civics');
+  const map=getMap(state);
+  const hill=map.tiles.find(t=>t.terrain==='hills' && neighbors(t.id).some(id=>map.byId[id]?.terrain==='plains'));
+  const start=neighbors(hill.id).find(id=>map.byId[id]?.terrain==='plains');
+  const unit={...state.units[0],type:'scout',tile:start,moves:3,maxMoves:3};
+  state.units=[unit];
   state.cities=[];
   for(const id of Object.keys(state.board)) state.board[id]={owner:null,level:0};
-  state=learn(state,'civics');
-  const before=getVisibleTiles(state,0);
-  assert.equal(before.size,37);
+  const before=[...getVisibleTiles(state,0)].sort();
+  assert.equal(getRouteDetail(state,unit.id,hill.id).cost,2);
   state=learn(state,'cartography');
-  assert.equal(getVisibleTiles(state,0).size,61);
-  assert.equal(campaignView(state,0).intel.visible.length,61);
+  assert.deepEqual(campaignView(state,0).intel.visible.sort(),before);
   assert.equal(campaignView(state,1).intel.visible.length,0);
   assert.equal(campaignView(state,1).players[0].technologies,undefined);
+  for (const [type,cost] of [['scout',1],['cavalry',1],['melee',2]]) {
+    state.units[0].type=type;
+    assert.equal(getRouteDetail(campaignView(state,0),unit.id,hill.id).cost,cost);
+    const walked=applyAction(state,0,{type:'move',unit:unit.id,tile:hill.id});
+    assert.equal(walked.units[0].moves,3-cost);
+    assert.equal(walked.units[0].tile,hill.id);
+  }
 });
 
 test('the council can explain every applied technology in both languages',()=>{

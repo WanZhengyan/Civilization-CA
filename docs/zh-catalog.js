@@ -74,7 +74,7 @@ Ground units spend only 1 movement between friendly districts, including bridge 
 Coastal Radar|海岸雷达
 Each working harbor observes four hexes in every direction from its berth.|每座运作中的港口可观测以泊位为中心、半径四格的区域。
 Topographic Mapping|地形测绘
-Scouts and mounted scouts observe one additional ring of hexes.|侦察兵和骑乘侦察兵的视野半径增加一格。
+Scouts and mounted scouts spend one movement point to enter foothills.|侦察兵和骑乘侦察兵进入丘陵只消耗一点移动力。
 Crop Rotation|轮作制
 Each working farm or orchard supplies 1 extra food to its city.|每块有产出的农田或果园为所属城市额外提供 1 粮食。
 Industrial Metallurgy|工业冶金
@@ -121,7 +121,7 @@ Civitas LA · The Los Angeles Campaign|Civitas LA · 洛杉矶战役
 Scout|侦察兵
 Light reconnaissance infantry. Moves three points per turn, can skirmish with units, and cannot occupy cities.|轻装侦察步兵。每回合有三点移动力，可以与敌军交战，不能占领城市。
 Train a scout|训练侦察兵
-A Scout is available as soon as you found a city. It has three movement points to a Militia unit’s two. Forests and hills still cost two points to enter.|建城后即可训练侦察兵。侦察兵每回合有三点移动力，民兵有两点。进入林地或丘陵需要两点。
+Train a Scout after founding a city. It has three movement points to a Militia unit’s two. Move again after revealing new ground. Topographic Mapping makes foothills cost only one point for scouts and mounted scouts.|建城后可以训练侦察兵。侦察兵每回合有三点移动力，民兵有两点。发现新地块后，还可使用剩余移动力继续前进。研究地形测绘后，侦察兵和骑乘侦察兵进入丘陵只需一点移动力。
 Choose your first city site|选择首都的位置
 Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.|每个文明都从一名开拓者起步。你可以就地建都，也可以先去探索。建城后可获得收入并训练单位。
 Found capital|建立首都
@@ -805,7 +805,7 @@ Uncharted territory|未知区域
 Outside current sight|目前没有视野
 Only the city owner can inspect its economy.|只有城市所属文明可以查看其经济情况。
 Explore the fog|探索迷雾
-Dark tiles are uncharted. Move a Scout to see three hexes in every direction. The shaded terrain behind it stays on your map, but enemy positions disappear when your units lose sight.|深色地块尚未探索。侦察兵可以看见周围三格。走过的地形会留在地图上，离开视野的敌军位置将被隐藏。
+Each unit sees two hexes in every direction. Dark tiles are uncharted. Shaded tiles keep the terrain you explored, but enemies there are hidden.|每个单位都能看见周围两格。深色地块尚未探索。阴影内保留已探索的地形，其中的敌人会隐藏。
 Grain|谷物
 Citrus|柑橘
 Timber|木材

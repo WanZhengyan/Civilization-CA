@@ -21,7 +21,7 @@ The visitor footer counts anonymous browser profiles on each site from the day t
 ## Your first expedition
 
 1. Select your settler. Decide whether to found immediately, move to a different site, or spend a movement point surveying nearby resources. Nobody begins with a city, army or claimed land. The first city you found becomes your original capital.
-2. Train a **Scout** to explore. A scout gets three movement points to a militia unit’s two. Rough terrain can cost more than one point. The map distinguishes uncharted land, places you remember, and tiles you can currently observe. In an online game each seat gets its own observations.
+2. Train a **Scout** to explore. All units see two hexes in every direction. A scout gets three movement points to a militia unit’s two. After researching Topographic Mapping, scouts and mounted scouts spend one point to enter foothills. The map distinguishes uncharted land, places you remember, and tiles you can currently observe. In an online game each seat gets its own observations.
 3. Choose research and a civic in the left rail, then train a **Builder**. An improved deposit supplies a city only when it is connected to controlled territory. Check the stockpile for your actual income. Fishing crews work marine sites from a harbor.
 4. Inspect the city's food reserve, consumption, housing and next expected population change. Switch its workforce focus to favor food, industry or science. Granaries and residential quarters can expand housing.
 5. Watch for neutral lookouts as the map opens. Returning lookouts can warn a camp and lead to a raid. Intercept a party, protect a city with a garrison or walls, or clear the source with a ground unit.
@@ -40,7 +40,7 @@ Open **Change map** to choose a different region. For 2–4 people, choose **Cre
 
 ## 中文快速开始
 
-首页可以开始或继续单人战役、创建房间，也可以用房间码或邀请链接加入多人游戏。地图上的双线为可玩边缘，界外有斜纹，地块格线可以在图层中单独开关。开局只有一名开拓者。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
+首页可以开始或继续单人战役、创建房间，也可以用房间码或邀请链接加入多人游戏。地图上的双线为可玩边缘，界外有斜纹，地块格线可以在图层中单独开关。开局只有一名开拓者。所有单位的基础视野都是两格，侦察兵移动更快，研究地形测绘后进入丘陵只需一点移动力。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
 
 ## Run locally
 

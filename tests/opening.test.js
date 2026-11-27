@@ -89,11 +89,23 @@ test('a first city can train a Scout; it travels farther than militia and cannot
  }
  const scout=state.units.find(u=>u.type==='scout');
  assert.equal(scout.moves,3);assert.equal(UNIT_TYPES.melee.moves,2);
- const farther=getUnitOptions(state,scout.id).moves.find(id=>getRouteDetail(state,scout.id,id).cost===3);
- assert.ok(farther);const walk=applyAction(state,0,{type:'move',unit:scout.id,tile:farther});
+ // Advance to the edge, then use the scout's spare move on land that was in fog.
+ const destinations=getUnitOptions(state,scout.id).moves;
+ const explored=new Set(Object.keys(state.exploration[0]));
+ let advance;
+ for(const id of destinations) {
+   if(getRouteDetail(state,scout.id,id).cost!==2) continue;
+   const middle=applyAction(state,0,{type:'move',unit:scout.id,tile:id});
+   const farther=getUnitOptions(middle,scout.id).moves.find(tile=>!explored.has(tile));
+   if(farther){ advance={id,middle,farther}; break; }
+ }
+ assert.ok(advance);
+ const walk=applyAction(advance.middle,0,{type:'move',unit:scout.id,tile:advance.farther});
  assert.equal(walk.units.find(u=>u.id===scout.id).moves,0);
  const twin={...state,units:[{...scout,moves:2,type:'melee'}]};
- assert.ok(!getUnitOptions(twin,scout.id).moves.includes(farther));
+ const stopped=applyAction(twin,0,{type:'move',unit:scout.id,tile:advance.id});
+ assert.deepEqual(getUnitOptions(stopped,scout.id).moves,[]);
+
  const rival=state.cities[1]; scout.tile=neighbors(rival.tile).find(id=>getMap(state).byId[id].terrain==='urban')||neighbors(rival.tile)[0];
  assert.ok(!getUnitOptions(state,scout.id).attacks.includes(rival.tile));
 });

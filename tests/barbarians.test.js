@@ -69,7 +69,8 @@ test('a lookout in sight reveals its own piece without revealing its home or ord
   }
   const party=s.barbarians.parties[0];
   const camp=s.barbarians.camps.find(c=>c.id===party.campId);
-  const post=neighbors(party.tile).find(id=>hexDistance(id,camp.tile)>1);
+  const post=getMap(s).tiles.find(t=>!['ocean','mountains'].includes(t.terrain) &&
+    hexDistance(t.id,party.tile)<=2 && hexDistance(t.id,camp.tile)>2)?.id;
   assert.ok(post);
   s.units=[{...s.units[0],type:'settler',seat:0,tile:post}];
   s.cities=[];

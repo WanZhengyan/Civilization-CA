@@ -34,12 +34,17 @@ test('a patrol explores, and an unseen enemy capital cannot steer it across the 
 
 test('a settler can check its own site without disclosing a hidden rival town',()=>{
   const state=createGame(['Pioneer','Rival'],'sd',{seed:19});
-  const pioneer=state.units[0], location=getMap(state).tiles.find(t=>hexDistance(pioneer.tile,t.id)===2);
+  const pioneer=state.units[0], location=getMap(state).tiles.find(t=>hexDistance(pioneer.tile,t.id)===3);
   state.cities.push({id:'secret-city',seat:1,name:'Secret city',tile:location.id,buildings:[],hp:100,maxHp:100,population:1});
   const view=campaignView(state,0);
   assert.ok(!view.intel.visible.includes(location.id));
   assert.ok(!JSON.stringify(view).includes('secret-city'));
-  assert.equal(getUnitOptions(view,pioneer.id).canFound,false);
+  assert.equal(getUnitOptions(view,pioneer.id).canFound,true);
   assert.equal(getSettlementAssessment(view,pioneer.id,pioneer.tile).nearestCity,null);
-  assert.equal(getSettlementAssessment(view,pioneer.id,pioneer.tile).status,'invalid');
+  assert.equal(getSettlementAssessment(view,pioneer.id,pioneer.tile).status,'now');
+  const neighbor=getMap(state).tiles.find(t=>hexDistance(pioneer.tile,t.id)===2);
+  state.cities[0].tile=neighbor.id;
+  const nearby=campaignView(state,0);
+  assert.equal(getUnitOptions(nearby,pioneer.id).canFound,false);
+  assert.equal(getSettlementAssessment(nearby,pioneer.id,pioneer.tile).nearestCity.id,'secret-city');
 });

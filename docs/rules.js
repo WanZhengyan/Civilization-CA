@@ -467,6 +467,8 @@ export function getActions(state,seat,id,visible) {
 }
 function movementCost(state,unit, tileId) {
   const terrain=getMap(state).byId[tileId].terrain;
+  const reconnaissance = unit.type==='scout' || unit.type==='cavalry';
+  if (terrain==='hills' && reconnaissance && knows(state,unit.seat,'cartography')) return 1;
   if (unit.type==='skirmisher' && (terrain==='forest'||terrain==='hills')) return 1;
   return UNIT_TYPES[unit.type].domain==='sea' ? Number(terrain==='ocean') : terrainCost[terrain];
 }
@@ -1077,7 +1079,7 @@ function botProject(state,city) {
 // contributes movement costs; the shape of the hex grid is public geography.
 function exploreFrontier(state,unit,moves) {
   const explored=new Set(state.intel.explored);
-  const newlyVisible=id=>sightFrom(state,id,unit.type,unit.seat).reduce((total,tile)=>total+Number(!explored.has(tile)),0);
+  const newlyVisible=id=>sightFrom(state,id).reduce((total,tile)=>total+Number(!explored.has(tile)),0);
   let best=unit.tile, gain=newlyVisible(best);
   for (const tile of moves) {
     const count=newlyVisible(tile);

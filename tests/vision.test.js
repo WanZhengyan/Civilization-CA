@@ -1,24 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {getSightRadius,getVisibleTiles} from '../docs/vision.js';
-import {getMap} from '../docs/rules.js';
+import {campaignView, getMap, UNIT_TYPES} from '../docs/rules.js';
 
 function field() {
   return {board:Object.fromEntries(getMap('sf').tiles.map(t=>[t.id,{owner:null,level:0}])),units:[{id:'unit',seat:0,type:'settler',tile:'8,6'}],cities:[]};
 }
 
-test('each formation has a defined sight footprint, distinct from its attack and movement',()=>{
+test('every mobile formation sees two rings while movement and attack ranges stay independent',()=>{
   const state=field();
-  const settler=getVisibleTiles(state,0);
-  assert.equal(settler.size,7);
-  const type=state.units[0];
-  type.type='scout';
-  assert.equal(getSightRadius('scout'),3);
-  assert.equal(getVisibleTiles(state,0).size,37);
-  type.type='melee';
-  assert.equal(getVisibleTiles(state,0).size,19);
-  type.type='frigate';
-  assert.equal(getVisibleTiles(state,0).size,37);
+  for (const type of Object.keys(UNIT_TYPES)) {
+    state.units[0].type=type;
+    assert.equal(getSightRadius(type),2,type);
+    assert.equal(getVisibleTiles(state,0).size,19,type);
+  }
+  assert.ok(UNIT_TYPES.scout.moves>UNIT_TYPES.melee.moves);
+  assert.ok(UNIT_TYPES.artillery.range>getSightRadius('artillery'));
   assert.equal(getVisibleTiles(state,1).size,0);
 });
 
@@ -54,4 +51,22 @@ test('exploration persists across moves, is private, and stores only observed re
   assert.ok(!view.units.some(u=>u.id==='secret'));
   assert.equal(a.exploration[0]['12,8'],undefined);
   assert.strictEqual(projectForSeat(view,0),view);
+});
+
+test('a charted deposit in an old scout’s fourth ring stays on the map without revealing current occupants',()=>{
+  const state={...field(),mapId:'sf',round:6,turn:0,log:[],
+    players:[{technologies:['cartography'],surveyEnabled:true},{}],
+    exploration:[{'11,6':'timber','12,6':'citrus'},{}]};
+  state.units[0].type='scout';
+  state.units.push({id:'hidden',seat:1,type:'ranged',tile:'11,6'});
+  state.board['11,6']={owner:1,level:3,resource:'iron',improvement:'mine'};
+  const resumed=JSON.parse(JSON.stringify(state));
+  const view=campaignView(rememberVision(resumed),0);
+  assert.equal(view.intel.visible.length,19);
+  for(const [id,deposit] of Object.entries(state.exploration[0])) {
+    assert.ok(view.intel.explored.includes(id));
+    assert.ok(!view.intel.visible.includes(id));
+    assert.deepEqual(view.board[id],{owner:null,level:0,improvement:null,resource:deposit});
+  }
+  assert.equal(view.units.length,1);
 });
