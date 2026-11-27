@@ -16,3 +16,33 @@
 .setup-setting input{flex:none;margin:0;accent-color:#b7934f}
 .setup-setting strong,.setup-setting small{display:block}
 .setup-setting strong{font-size:1rem}.setup-setting small{font-size:.875rem;color:#c4cecb}
+
+.solo-options{container-type:inline-size}
+.solo-options>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem}
+.solo-rivals>div{grid-template-columns:repeat(2,minmax(0,1fr))}
+.solo-options label{
+  display:grid;grid-template-columns:1rem minmax(0,1fr);align-content:center;
+  align-items:center;column-gap:.4rem;row-gap:.18rem;padding:.5rem .6rem;line-height:1.3;
+}
+.solo-options input{width:1rem;height:1rem}
+.solo-options small{grid-column:1/-1;font-size:.8rem;overflow-wrap:anywhere}
+.solo-options strong{font-size:.94rem;overflow-wrap:anywhere}
+.solo-options label:has(input:checked){
+  border-color:#e0bf77;background:#514532;color:#fff3d5;box-shadow:inset 0 0 0 1px #e0bf77;
+}
+.solo-options label:has(input:checked) small{color:#f3e3bf}
+.solo-options label:has(input:focus-visible){outline:2px solid #9cdfea;outline-offset:2px}
+#solo-practice-note{margin:.45rem 0 0;color:#c4cecb;font-size:.85rem}
+.solo-rivals:not(:has(input[value="0"]:checked)) #solo-practice-note{display:none}
+.solo-save-card{margin:0 0 .85rem;padding:.55rem .7rem;border:1px solid #6c6c58;border-radius:6px}
+.solo-save-heading{display:flex;align-items:center;justify-content:space-between;gap:.25rem .65rem;flex-wrap:wrap}
+.solo-save-heading>h3,.solo-new-setup>h3:first-child{margin:0}
+.solo-save-heading>button{min-height:44px}
+.solo-save-card>p{margin:.15rem 0 0;font-size:.85rem;line-height:1.35}
+.solo-new-setup>h3:first-child{margin-bottom:.45rem}
+.solo-new-setup{min-width:0}
+@container (max-width:19rem){
+  .solo-options:not(.solo-rivals)>div{grid-template-columns:1fr}
+  .solo-options:not(.solo-rivals) label{grid-template-columns:1rem minmax(0,1fr) auto}
+  .solo-options:not(.solo-rivals) small{grid-column:auto}
+}

@@ -1,6 +1,6 @@
 # Civilization CA
 
-A bilingual, turn-based strategy game for one to four players. Each California campaign begins with one settler, a randomly drawn civilization and a new starting location. Choose Los Angeles, San Francisco Bay or San Diego, then a Standard or Large map. Solo campaigns support one to three computer opponents and save separately for each region and size.
+A bilingual, turn-based strategy game for one to four players. Each California campaign begins with one settler, a randomly drawn civilization and a new starting location. Choose Los Angeles, San Francisco Bay or San Diego, then a Standard or Large map. Practice on your own or play against one, two or three computer civilizations.
 
 [Official website](https://wanzhengyan.github.io/Civilization-CA/) · [Play solo](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Watch a campaign](https://wanzhengyan.github.io/Civilization-CA/#film) · [Campaign updates](./CHANGELOG.md)
 
@@ -12,7 +12,9 @@ A bilingual, turn-based strategy game for one to four players. Each California c
 
 ## Enter a campaign
 
-Choose **Play solo** to select a region, map size and number of rivals. Standard maps have 149–172 playable hexes. Large maps divide the same coast into 598–689 playable hexes. You can resume an existing Standard save while keeping a separate Large campaign. **Create room** lets the host set the region and size for everyone. **Join room** accepts a room code or invitation. Switch between English and 简体中文 on the website or during play.
+Choose **Play solo** to set the number of computer opponents and a civic point target of 100, 125 or 150. With zero opponents, you can explore and build toward the target by round 30. Neutral camps still roam the map. In competitive games, reaching the target triggers scoring at the end of the round. A civilization can also win by taking every original capital.
+
+Standard maps have 149–172 playable hexes. Large maps divide the same coast into 598–689 playable hexes. Each region and size has its own solo save. Resuming keeps the original opponents and goal. Starting a new campaign in an occupied slot requires confirmation. **Create room** lets the host set the region and size for everyone. **Join room** accepts a room code or invitation. Switch between English and 简体中文 on the website or during play.
 
 Drag the map or pinch to zoom. Technology and Civics sit on the left, with Field Command on the right. **Fit region** shows the whole playable coastline. A double line marks the last playable hex, and a shared border shows the color of each civilization on its own side. Select a frontier district to identify its neighbors.
 
@@ -44,7 +46,7 @@ Open **Change map** to choose a different region. For 2–4 people, choose **Cre
 
 ## 中文快速开始
 
-官网提供实机短片和三个地区的开局入口。单人开局可以选择标准或大型地图，以及一至三名电脑对手。联机地图由房主选择。每个地区分别保存标准和大型单人战役，旧存档可以从标准地图继续。
+点击「开始单人战役」可选 0–3 个电脑对手，以及 100、125 或 150 分的市政目标。选 0 可练习建城、探索和发展，地图上仍有野蛮人营地。每个地区的标准和大型地图分别存档。继续旧档会沿用原对手和目标，确认重开后才会替换该存档。联机地图由房主选择。
 
 首页可以开始或继续单人战役、创建房间，也可以用房间码或邀请链接加入多人游戏。地图上的双线为可玩边缘，界外有斜纹，地块格线可以在图层中单独开关。开局只有一名开拓者。所有单位的基础视野都是两格，侦察兵移动更快，研究地形测绘后进入丘陵只需一点移动力。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
 

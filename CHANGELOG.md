@@ -1,5 +1,11 @@
 # Campaign updates
 
+## Set your solo opponents and civic goal
+
+Choose practice with zero opponents, a duel with one or a contest with two or three. Set the civic target to 100, 125 or 150 points. Practice keeps exploration, city building and neutral camps. Reaching the target completes the challenge. If round 30 ends first, you see your final score.
+
+Solo setup shows the existing save and its Resume button together, followed by the settings for a new campaign. You can review the old and new settings before replacing a save. Earlier campaigns keep their original roster and 125-point target. Online rooms still require two to four human players.
+
 ## Choose the scale of your California campaign
 
 Choose a Standard or Large coast when starting a solo campaign or creating a room. Los Angeles opens from 172 to 689 playable hexes, San Francisco Bay from 166 to 667 and San Diego from 149 to 598. Units keep their movement and sight ranges. Large Bay Area crossings meet the shore within sight of a ground unit. Solo players can also choose one, two or three computer rivals and keep a separate save for each region and map size.

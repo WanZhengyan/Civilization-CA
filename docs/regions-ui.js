@@ -1,4 +1,4 @@
-import {CAMPAIGN_MAPS, getMap} from './rules.js';
+import {CAMPAIGN_MAPS, SCORE_TARGETS, TARGET_SCORE, getMap} from './rules.js';
 import {chartPerimeter} from './hex-survey.js';
 
 const chartCache = new WeakMap();
@@ -55,9 +55,24 @@ export function sizePicker(mapId,selected,disabled=false) {
   return '<fieldset class="setup-setting"><legend>Map size</legend><div>'+choices.join('')+'</div></fieldset>';
 }
 
-export function rivalPicker(selected) {
-  const choices = [1,2,3].map(count=>`<label><input type="radio" name="rivals" value="${count}"${count===selected?' checked':''}><span>${count}</span></label>`);
-  return '<fieldset class="setup-setting"><legend>Computer opponents</legend><div>'+choices.join('')+'</div></fieldset>';
+function soloOption(name, value, selected, title, detail, describedBy) {
+  return `<label><input type="radio" name="${name}" value="${value}"${value===selected?' checked':''}${describedBy?' aria-describedby="'+describedBy+'"':''}>
+    <strong>${title}</strong><small>${detail}</small></label>`;
+}
+
+export function rivalPicker(selected=3) {
+  const choices = [0,1,2,3].map(count => {
+    if (count===0) return soloOption('rivals',0,selected,'0 rivals','Solo practice','solo-practice-note');
+    return soloOption('rivals',count,selected,count===1?'1 rival':count+' rivals',(count+1)+' civilizations total');
+  });
+  return '<fieldset class="setup-setting solo-options solo-rivals"><legend>Computer opponents</legend><div>'+choices.join('')+
+    '</div><p id="solo-practice-note">In practice, neutral camps remain on the map and you can still earn civic points.</p></fieldset>';
+}
+
+export function victoryPicker(scoreTarget=TARGET_SCORE) {
+  const lengths = {100:'Short',125:'Standard',150:'Long'};
+  const choices = SCORE_TARGETS.map(target=>soloOption('scoreTarget',target,scoreTarget,lengths[target],target+' civic points'));
+  return '<fieldset class="setup-setting solo-options"><legend>Victory target</legend><div>'+choices.join('')+'</div></fieldset>';
 }
 
 export function installMapStyles() {

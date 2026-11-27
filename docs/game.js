@@ -5,11 +5,11 @@ import {armyHandbook} from './army-handbook.js';
 import {ledgerBody} from './resource-ledger.js';
 import {getResourceLedger} from './rules.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
-import {mapPicker, sizePicker, sizeName, rivalPicker, installMapStyles} from './regions-ui.js';
+import {mapPicker, sizePicker, sizeName, rivalPicker, victoryPicker, installMapStyles} from './regions-ui.js';
 import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
 
-import {TARGET_SCORE, MAX_ROUNDS} from './rules.js';
+import {getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
 
 const SEATS_KEY = 'angel-basin.room-seats.v1';
 const LAST_ROOM_KEY = 'angel-basin.active-room.v1';
@@ -49,12 +49,13 @@ function selectCampaignSettings(state) {
   selectedMap = getMap(state).id;
   selectedSize = state?.mapSize || 'standard';
   selectedRivals = state?.players ? state.players.length - 1 : 3;
+  selectedGoal = getScoreTarget(state);
 }
 
 let renderView, locateDistrict, toast, dialog, solo, room = null, token = null;
 let mode = 'home', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
-let selectedSize = 'standard', selectedRivals = 3;
+let selectedSize = 'standard', selectedRivals = 3, selectedGoal = TARGET_SCORE;
 let supplyCity='';
 let pending = false, errorMessage = '', playingBots = false;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
@@ -293,6 +294,14 @@ function returnToSolo() {
   checkFinished();
 }
 
+function enterSoloCampaign(target) {
+  archiveSolo();
+  solo = target;
+  resultShown = '';
+  save(SOLO_KEY,solo);
+  returnToSolo();
+}
+
 function enterTitle() {
   if (pending) return;
   archiveSolo();
@@ -423,6 +432,7 @@ function open(kind, tab, code) {
   if (changed && kind === 'multiplayer') inviteOpen = false;
   drawDialog();
   if (!dialog.open) dialog.showModal();
+  if (changed && ['campaign-atlas','restart'].includes(kind)) dialog.querySelector('.modal-body').scrollTop=0;
   if (changed) dialog.querySelector('.modal-title')?.focus();
 }
 function dismissDialog() {
@@ -553,13 +563,27 @@ function campaignSummary(map,size) {
   return `<span>${escapeHTML(map.name)}</span> · <span>${sizeName(size)}</span> · ${map.tiles.length} <span>playable hexes</span>`;
 }
 
+function soloSettingsSummary(rivals,scoreTarget) {
+  return `<span>Computer opponents</span> ${rivals} · <span>Victory target</span> ${scoreTarget}`;
+}
+
+function savedCampaignCard(saved,resumable) {
+  if (!saved) return '';
+  const locality = campaignSummary(getMap(saved),saved.mapSize);
+  const settings = soloSettingsSummary(saved.players.length-1,getScoreTarget(saved));
+  const oldCoastline = saved.mapShape !== 'regional' ? muted('This save uses the original map. Start a new campaign here to play the regional coastline.') : '';
+  return '<section class="solo-save-card"><div class="solo-save-heading"><h3>Saved campaign</h3>'+
+    (resumable ? button('load-region','Resume campaign') : '')+'</div>'+muted(locality)+
+    '<p><span>Round '+escapeHTML(saved.round)+'</span> · '+settings+'</p>'+oldCoastline+'</section>';
+}
+
 const guideSections = {
   start: {label:'First turn', entries:[
     ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
     ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
     ['Explore the fog', 'Each unit sees two hexes in every direction. Dark tiles are uncharted. Shaded tiles keep the terrain you explored, but enemies there are hidden.'],
     ['Survey for deposits', 'Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.'],
-    ['Choose your map', 'Choose a region and map size. Each combination has its own solo save. Choose one to three computer opponents for a new solo campaign. Online, the host sets the map for everyone.'],
+    ['Choose your map', 'Choose a region and map size. Each combination has its own solo save. Set the civic victory target and choose practice or up to three computer opponents. Online, the host sets the map for everyone.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
     ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
     ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.'],
@@ -603,8 +627,8 @@ const guideSections = {
     ['Choose a specialization', 'Workshop Engineering opens Steam Power and then Radio Networks. Field Tactics leads to Ballistics. Learn both Steam Power and Ballistics to unlock Motorization and train an Armored Column.'],
     ['Build up science', 'Cities, population and discoveries contribute science. Culture funds a separate civic project at the same time. Switch projects without losing saved points. Surplus science and culture carry over.'],
     ['Choose a civic path', 'Municipal Charter leads to County Federation for another district order, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
-    ['Win by domination', 'Control every participating faction’s original capital to win immediately.'],
-    ['Win on civic points', `If a faction reaches ${TARGET_SCORE} civic points, finish the current round and compare scores. The same scoring applies after round ${MAX_ROUNDS}. The highest score wins, and a tie shares victory.`],
+    ['Win by domination', 'In a campaign with rivals, control every participating civilization’s original capital to win immediately.'],
+    ['Win on civic points', state=>state?.practice ? 'Reach the civic target to complete practice. At round 30, practice ends with your final score.' : `If a faction reaches ${getScoreTarget(state)} civic points, finish the current round and compare scores. The same scoring applies after round ${MAX_ROUNDS}. The highest score wins, and a tie shares victory.`],
     ['Count civic points', 'Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.']
   ]}
 };
@@ -638,7 +662,7 @@ function content() {
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
     return {kicker:'Field guide', title:'How to play', body:tabs +
       (guideTab === 'universities' ? wonderJournal(state) : '') +
-      (guideTab === 'formations' ? armyHandbook(escapeHTML) : list(guideSections[guideTab].entries.map(([title, text]) => row(title, text)))) + actions(button('back', 'Return to map', 'primary'))};
+      (guideTab === 'formations' ? armyHandbook(escapeHTML) : list(guideSections[guideTab].entries.map(([title, text]) => row(title, typeof text === 'function' ? text(state) : text)))) + actions(button('back', 'Return to map', 'primary'))};
   }
   if (modal === 'log') return {
     kicker: 'Campaign records', title: 'Event log',
@@ -646,29 +670,43 @@ function content() {
       'Round ' + escapeHTML(entry.round), Number.isInteger(entry.seat) && FACTIONS[entry.seat] ? factionMark(entry.seat) : ''))) : muted('No events yet.'))
   };
   if (modal === 'standings') {
+    if (state.practice) {
+      const finished = state.phase === 'finished';
+      const score = state.players[0].score ?? getStats(state,0).score;
+      const title = finished ? (state.winners?.includes(0) ? 'Practice goal reached' : 'Practice complete') : 'Faction standings';
+      return {kicker:'Campaign records',title,body:
+        list([row(factionMark(0)+FACTION_NAMES[seatFaction(0)],'Civic points',escapeHTML(score)+' / '+getScoreTarget(state))])+
+        (finished ? '' : desc('Reach the civic target to complete practice. At round 30, practice ends with your final score.'))+
+        actions(button('back','Return to map','primary'))};
+    }
     const winnersFirst = seat => Number(state.winners?.includes(seat));
     const ranked = state.players.map((p, seat) => ({seat, name:p.name, stats:getStats(state,seat)}))
       .sort((a,b)=>winnersFirst(b.seat)-winnersFirst(a.seat) || b.stats.score-a.stats.score);
     const winners = (state.winners || []).map(seat => FACTION_NAMES[seatFaction(seat)]);
     const label = winners.join(' and ') + (state.victoryReason === 'survival' ? ' is the last civilization standing.' : state.victoryReason === 'domination' ? ' captured every original capital.' : winners.length > 1 ? ' tied on civic points and share victory.' : ' won on civic points.');
     return { kicker: 'Campaign records', title: state.phase === 'finished' ? 'Campaign complete' : 'Faction standings',
-      body: desc(state.phase === 'finished' ? label : `Holding every original capital wins immediately. Civic points are compared at the end of the round when a faction reaches ${TARGET_SCORE}, or after round ${MAX_ROUNDS}.`) +
+      body: desc(state.phase === 'finished' ? label : `Holding every original capital wins immediately. Civic points are compared at the end of the round when a faction reaches ${getScoreTarget(state)}, or after round ${MAX_ROUNDS}.`) +
         list(ranked.map(({seat,name,stats}) => row(factionMark(seat) + FACTION_NAMES[seatFaction(seat)],
           [mode === 'online' && '<span translate="no">'+escapeHTML(name)+'</span>', seat===currentSeat()?countLabel(stats.cities,'city','cities'):'In sight', countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), (seat===currentSeat()||state.phase==='finished') ? escapeHTML(state.players[seat].score ?? stats.score)+' pts' : '—'))) +
         actions(button('back','Return to map','primary')) };
   }
   if (modal === 'campaign-atlas') {
     const saved=campaignSave(selectedMap,selectedSize);
-    const status=saved ? '<span>Round '+saved.round+'</span> · <span>Computer opponents</span> '+(saved.players.length-1) : 'No campaign started on this map.';
-    return {kicker:'California campaigns', title:'Campaign atlas',
-      body:campaignPicker()+(saved?'':rivalPicker(selectedRivals))+muted(status)+
-        (saved && saved.mapShape!=='regional' ? muted('This save uses the original map. Start a new campaign here to play the regional coastline.') : '')+actions(button('load-region',saved?'Resume campaign':'Start campaign','primary'),saved?button('confirm-restart','Start new campaign'):'')};
+    return {kicker:'California campaigns', title:'Solo game setup',
+      body:savedCampaignCard(saved,true)+'<section class="solo-new-setup"><h3>New campaign settings</h3>'+
+        rivalPicker(selectedRivals)+victoryPicker(selectedGoal)+sizePicker(selectedMap,selectedSize)+
+        mapPicker(selectedMap,false,selectedSize)+actions(button('start-configured',saved?'Start new campaign':'Start campaign','primary'))+
+        '</section>'};
   }
-  if (modal === 'restart') return {kicker:'Solo campaign', title:'Start a new campaign?',
-    body:muted(campaignSummary(getMap(selectedMap,selectedSize),selectedSize)) + rivalPicker(selectedRivals) + desc('Starting over replaces the solo save for this region and size.') + actions(button('restart','Start new campaign','primary'),button('campaign-atlas','Keep saved campaign'))};
+  if (modal === 'restart') return {kicker:'Solo campaign', title:'Replace saved campaign?',
+    body:savedCampaignCard(campaignSave(selectedMap,selectedSize),false)+
+      '<section class="solo-new-setup"><h3>New campaign settings</h3>'+muted(campaignSummary(getMap(selectedMap,selectedSize),selectedSize))+
+      muted(soloSettingsSummary(selectedRivals,selectedGoal))+'</section>'+
+      desc('Starting over replaces the solo save for this region and size.')+
+      actions(button('campaign-atlas','Edit settings'),button('restart','Replace and start','primary'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings','Faction standings'),button('log','Event log'),
-    button('help','Field guide'), button('supplies','Supply ledger'), button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Campaign atlas') : '', mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
+    button('help','Field guide'), button('supplies','Supply ledger'), button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
 }
 
 function drawDialog() {
@@ -742,22 +780,16 @@ function modalAction(act) {
   else if (act === 'to-solo' && !pending) { returnToSolo(); }
   else if (act === 'start') mutate('start');
   else if (act === 'campaign-atlas') open('campaign-atlas');
-  else if (act === 'load-region') {
-    const target=campaignSave(selectedMap,selectedSize)||newSolo(selectedMap,selectedSize,selectedRivals);
-    archiveSolo();
-    solo=target;
-    save(SOLO_KEY, solo);
-    resultShown='';
-    returnToSolo();
-  }
-  else if (act === 'confirm-restart') open('restart');
-  else if (act === 'restart') {
-    archiveSolo();
-    solo = newSolo(selectedMap,selectedSize,selectedRivals);
-    resultShown = '';
-    save(SOLO_KEY, solo);
-    returnToSolo();
-    toast?.('New campaign started.');
+  else if (act === 'load-region' && modal === 'campaign-atlas') {
+    const saved = campaignSave(selectedMap,selectedSize);
+    if (saved) enterSoloCampaign(saved);
+    else drawDialog();
+  } else if ((act === 'start-configured' && modal === 'campaign-atlas') || (act === 'restart' && modal === 'restart')) {
+    if (act === 'start-configured' && campaignSave(selectedMap,selectedSize)) open('restart');
+    else {
+      enterSoloCampaign(newSolo(selectedMap,selectedSize,selectedRivals,selectedGoal));
+      toast?.('New campaign started.');
+    }
   } else if (['menu','multiplayer','standings','log','help'].includes(act)) open(act);
 }
 
@@ -796,6 +828,7 @@ async function init({ render, locate, toast: showToast }) {
   dialog.addEventListener('change', e => {
     const {name,value} = e.target;
     if (name === 'rivals') { selectedRivals = Number(value); return; }
+    if (name === 'scoreTarget') { selectedGoal = Number(value); return; }
     if (name !== 'mapId' && name !== 'mapSize') return;
     keepForm();
     if (name === 'mapId') selectedMap=value;

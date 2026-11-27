@@ -24,6 +24,10 @@ import {barbarianRound,seedCamps,wildAt,wildForecast,resolveWildAttack} from "./
 
 export const MAX_ROUNDS = 30;
 export const TARGET_SCORE = 125;
+export const SCORE_TARGETS = Object.freeze([100,TARGET_SCORE,150]);
+export function getScoreTarget(state) {
+  return SCORE_TARGETS.includes(state?.scoreTarget) ? state.scoreTarget : TARGET_SCORE;
+}
 export const ACTIONS_PER_TURN = 2;
 export const FACTIONS = [
   { id: "republic", nameZh:"加州共和国", name: "California Republic", color: "#efbb62", capital: "11,7", capitalName: "Downtown LA" },
@@ -313,15 +317,23 @@ function migrateCore(state) {
   else next.legacyFinalScores = state.players.map(p=>p.score);
   return addResearch(next);
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard'} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!validMapSize(mapSize)) throw new Error("Choose a valid map size.");
-  if (!Array.isArray(players) || players.length < 2 || players.length > 4) throw new Error("A campaign needs two to four factions.");
+  if (!SCORE_TARGETS.includes(scoreTarget)) throw new Error("Choose a valid civic victory target.");
+  if (practice) {
+    if (practice!==true || !Array.isArray(players) || players.length!==1 || players[0]?.bot===true) {
+      throw new Error('Practice needs one human player.');
+    }
+  } else if (!Array.isArray(players) || players.length<2 || players.length>4) {
+    throw new Error('A campaign needs two to four factions.');
+  }
   const seed = campaignSeed(requestedSeed);
   const allocation = shuffled(FACTIONS.map((_,i)=>i), seededRandom(seed,'civilizations'));
   const map = getMap(mapId,mapSize);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, ...(mapSize==='large' ? {mapSize} : {}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
+  const next = {seed, mapId, ...(mapSize==='large' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
+    ...(scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
     players:players.map((player,seat)=>({
       name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[allocation[seat]].name,
@@ -826,6 +838,11 @@ function produceCityTurn(state,city) {
 }
 function finish(state,winners,reason) {
   state.phase='finished';state.winners=winners;state.actionsLeft=0;state.victoryReason=reason;
+  if (reason==='practice') {
+    const result=winners.length ? 'Practice goal reached' : 'Practice complete';
+    record(state,0,'finish',result+' with '+state.players[0].score+' civic points.');
+    return;
+  }
   const names=winners.map(i=>FACTIONS[state.players[i].faction].name).join(' and ');
   const message=reason==='survival' ? names+' is the last civilization standing.' : reason==='domination' ? names+' controls every original capital.' : names+(winners.length===1 ? ' won' : ' shared victory')+' with '+state.players[winners[0]].score+' civic points.';
   record(state,winners[0],'finish',message);
@@ -846,8 +863,13 @@ function endTurn(state,seat) {
   while (state.players[next].eliminated && next!==seat) next=(next+1)%state.players.length;
   if (next<=seat) {
     const top=Math.max(...state.players.filter(p=>!p.eliminated).map(p=>p.score));
-    if (state.round>=MAX_ROUNDS || top>=TARGET_SCORE) {
-      finish(state,state.players.map((p,i)=>!p.eliminated && p.score===top ? i : -1).filter(i=>i>=0),'civic');
+    const targetReached=top>=getScoreTarget(state);
+    if (state.round>=MAX_ROUNDS || targetReached) {
+      if (state.practice) finish(state,targetReached ? [0] : [],'practice');
+      else {
+        const leaders=state.players.map((p,i)=>!p.eliminated && p.score===top ? i : -1).filter(i=>i>=0);
+        finish(state,leaders,'civic');
+      }
       return;
     }
     state.round++;
@@ -977,6 +999,7 @@ function resolveAttack(state, unit, target) {
   if (result.attackerDefeated || result.defeated) state.units = state.units.filter(other => other.hp > 0);
   const text = UNIT_TYPES[unit.type].name+(result.capture ? ' captured ' : ' attacked ')+name+' for '+result.damage+' damage.';
   record(state, unit.seat, 'attack', text, target, {unit: unit.id, from, ...result});
+  if (state.practice) { recordResult(); return; }
   if (state.opening==='settlers') {
     for (const [seat,player] of state.players.entries()) {
       if (player.eliminated || state.cities.some(c=>c.seat===seat) || state.units.some(u=>u.seat===seat && u.type==='settler')) continue;
