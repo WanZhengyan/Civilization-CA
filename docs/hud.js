@@ -202,7 +202,7 @@ function inspect(){
     image.onerror=()=>{unavailableArt.add(unitArt);image.onerror=null;image.src=fallback;portrait.hidden=false;drawUnitPortrait(portrait,activeUnit.type,gov.color)};
   }else{image.onerror=null;if(activeUnit)drawUnitPortrait(portrait,activeUnit.type,gov.color)}
   if(image.getAttribute("src")!==art)image.src=art;
-  text("entity-kind",activeUnit ? (own?"Your ":"Rival ")+(unitRole[activeUnit.type]||"unit") : activeCity ? (own?"Your city":"Rival city") : (tile.landmark?"Landmark":"District"));
+  text("entity-kind",activeUnit ? (own?"Your ":"Rival ")+(UNIT_TYPES[activeUnit.type]?.role||unitRole[activeUnit.type]||"unit") : activeCity ? (own?"Your city":"Rival city") : (tile.landmark?"Landmark":"District"));
   text("entity-name",activeUnit ? (items[activeUnit.type]||activeUnit.type) : activeCity?.name||tile.name);
   text("entity-location",activeUnit ? tile.name : activeCity ? gov.name : terrain[tile.terrain]);
   entityTabs(tile.id,activeUnit);
@@ -229,7 +229,8 @@ function inspect(){
         explanation="Build on an unimproved, friendly district outside a city.";
       }else{
         actions+=actionButton("attack","Preview attack",o.attacks.length+' '+(o.attacks.length===1?'target':'targets'),"red",disabled||!o.attacks.length,order==="attack");
-        explanation=u.type==="ranged"?"Rangers can strike enemies up to two hexes away.":"Militia can engage adjacent enemies and capture a city.";
+        explanation=UNIT_TYPES[u.type].description||(u.type==="ranged"?"Rangers can strike enemies up to two hexes away." :"Militia can engage adjacent enemies and capture a city.");
+        if(o.upgrade) actions+=actionButton("upgrade","Upgrade to "+items[o.upgrade.to],o.upgrade.reason||o.upgrade.cost+" capital","gold",disabled||!o.upgrade.enabled);
       }
     }else explanation="Select a friendly unit to give orders.";
   }else if(activeCity){
@@ -281,10 +282,10 @@ function productionOptions(){
   if(!c||c.seat!==view.seat){closeProduction();return}
   text("production-city",c.name);
   const list=getProductionOptions(view.state,c.id);
-  const html=[["Train a unit",list.filter(x=>unitRole[x.item])],["Construct a building",list.filter(x=>!unitRole[x.item])]].map(([heading,opts])=>{
+  const html=[["Train a unit",list.filter(x=>x.kind==="unit")],["Construct a building",list.filter(x=>x.kind==="building")]].map(([heading,opts])=>{
     return '<h3 class="production-group">'+heading+'</h3><div class="production-grid">'+opts.map(o=>{
       const disabled=!o.enabled||!mayOrder();
-      const desc=itemDesc[o.item]||o.label;
+      const desc=UNIT_TYPES[o.item]?.description||itemDesc[o.item]||o.label;
       return '<button class="production-item" data-produce="'+esc(o.item)+'" '+(disabled?'disabled':'')+'>'+icon(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small><small>'+esc(turnsText(o.turns))+' · '+esc(o.required)+' production</small>'+(o.reason?'<small>'+esc(o.reason)+'</small>':'')+'</span></button>';
     }).join('')+'</div>'});
   el("production-options").innerHTML=(c.queue?cityQueue(c):'')+html.join('');
@@ -320,7 +321,7 @@ function drawCombat(){
   const enemy=defender.type?items[defender.type]:defender.name;
   const attack=forecastRow("Attacker",items[u.type],forecast.attackerHpBefore,forecast.attackerHpAfter,u.maxHp,forecast.retaliation?forecast.retaliation+" retaliation damage":"No retaliation",faction(u.seat).color);
   const defend=forecastRow("Defender",enemy,forecast.defenderHpBefore,forecast.defenderHpAfterHit??forecast.defenderHpAfter,defender.maxHp,forecast.damage+" incoming damage",faction(defender.seat).color);
-  const outcome=forecast.capture?"Your militia will capture this city.":forecast.attackerDefeated&&forecast.defeated?"Both units will fall.":forecast.attackerDefeated?"Your unit will fall in this attack.":forecast.defeated?"The defending unit will fall.":"Both sides will hold their positions.";
+  const outcome=forecast.capture?"Your unit will capture this city.":forecast.attackerDefeated&&forecast.defeated?"Both units will fall.":forecast.attackerDefeated?"Your unit will fall in this attack.":forecast.defeated?"The defending unit will fall.":"Both sides will hold their positions.";
   el("combat-preview").innerHTML='<div class="forecast-grid">'+attack+defend+'</div><p class="forecast-outcome">'+esc(outcome)+'</p>';
   return true;
 }
@@ -373,6 +374,7 @@ function chooseOrder(key){
     if(targets.length===1){openCombat(u.id,targets[0]);return}
     order=order==="attack"?"":"attack";redraw();if(order)openMapOnMobile();return;
   }
+  if(key==="upgrade"){order="";Game.doAction({type:"upgrade",unit:u.id});return}
   if(key==="found"){order="";Game.doAction({type:"found",unit:u.id});return}
   if(key==="farm"||key==="mine"){order="";Game.doAction({type:"improve",unit:u.id,item:key})}
 }

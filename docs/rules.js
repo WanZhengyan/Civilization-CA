@@ -1,5 +1,5 @@
 // Shared rules for the browser and the authoritative room service.
-import {TECHS, CIVICS, eraFor} from './progression.js';
+import {TECHS, CIVICS, ERA_UNITS, eraFor} from './progression.js';
 export {TECHS, CIVICS, ERAS} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
 export const MAX_ROUNDS = 30;
@@ -163,10 +163,11 @@ function isProductive(terrain) {
   return terrain === "coast" || terrain === "plains" || terrain === "urban";
 }
 export const UNIT_TYPES = {
-  settler: {name:"Settler", maxHp:60, moves:2, range:0, strength:0, required:14},
-  builder: {name:"Builder", maxHp:60, moves:2, range:0, strength:0, required:9},
-  melee: {name:"Militia", maxHp:100, moves:2, range:1, strength:42, required:10},
-  ranged: {name:"Rangers", maxHp:80, moves:2, range:2, strength:35, required:12}
+  settler: {name:"Settler", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:14},
+  builder: {name:"Builder", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:9},
+  melee: {name:"Militia", era:"frontier", captures:true, upgrade:"riflemen", upgradeCost:10, maxHp:100, moves:2, range:1, strength:42, required:10},
+  ranged: {name:"Rangers", era:"frontier", captures:false, upgrade:"artillery", upgradeCost:12, maxHp:80, moves:2, range:2, strength:35, required:12},
+  ...ERA_UNITS
 };
 export const BUILDINGS = {
   granary: {name:"Granary", required:10},
@@ -436,14 +437,24 @@ function attackTargets(state,unit) {
   const range=UNIT_TYPES[unit.type].range;
   if (!range) return [];
   const occupied=state.units.filter(u=>u.seat!==unit.seat && hexDistance(unit.tile,u.tile)<=range).map(u=>u.tile);
-  const cities=state.cities.filter(c=>c.seat!==unit.seat && hexDistance(unit.tile,c.tile)<=range && (unit.type!=='ranged' || c.hp>1)).map(c=>c.tile);
+  const cities=state.cities.filter(c=>c.seat!==unit.seat && hexDistance(unit.tile,c.tile)<=range && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
   return [...new Set([...occupied,...cities])];
 }
+function fieldUpgrade(state, unit) {
+  const source = UNIT_TYPES[unit.type];
+  if (!source.upgrade) return null;
+  const next = UNIT_TYPES[source.upgrade];
+  if (!knows(state,unit.seat,next.tech)) return null;
+  let reason = '';
+  if (state.board[unit.tile].owner !== unit.seat) reason = 'Move into your territory to upgrade.';
+  else if (state.players[unit.seat].capital < source.upgradeCost) reason = 'Your treasury cannot cover this upgrade.';
+  return {to:source.upgrade, cost:source.upgradeCost, enabled:!reason, reason};
+}
 export function getUnitOptions(state,unitId) {
-  const empty={moves:[],attacks:[],canFound:false,improvements:[]},unit=unitOrNull(state,unitId);
+  const empty={moves:[],attacks:[],canFound:false,improvements:[],upgrade:null},unit=unitOrNull(state,unitId);
   if (!active(state,unit)) return empty;
   const improvement=unit.type==='builder' && unit.charges>0 ? improvementAt(state,unit.seat,unit.tile) : null;
-  return {moves:[...findRoutes(state,unit).parents.keys()],attacks:attackTargets(state,unit),
+  return {moves:[...findRoutes(state,unit).parents.keys()],attacks:attackTargets(state,unit),upgrade:fieldUpgrade(state,unit),
     canFound:unit.type==='settler' && canSettle(state,unit.seat,unit.tile),improvements:improvement ? [improvement]:[]};
 }
 export function getProductionOptions(state,cityId) {
@@ -457,7 +468,8 @@ export function getProductionOptions(state,cityId) {
     else if (city.seat!==state.turn) reason='Wait for the city owner’s turn.';
     else if (city.queue) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
-    return {item,label:def.name,kind,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
+    else if (def.tech && !knows(state,city.seat,def.tech)) reason='Requires '+TECHS[def.tech].name+'.';
+    return {item,label:def.name,kind,era:def.era || null,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
   });
 }
 const SCIENCE = {tree: TECHS, bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
@@ -573,7 +585,7 @@ export function combatPreview(state, unitId, target) {
   const defender = state.units.find(other => other.tile === target && other.seat !== unit.seat);
   const town = state.cities.find(city => city.tile === target && city.seat !== unit.seat);
   const opponent = defender || town;
-  const melee = unit.type === 'melee';
+  const melee = UNIT_TYPES[unit.type].captures === true;
   const walls = !!town?.buildings.includes('walls');
   const terrain = TILE_BY_ID[target].terrain;
   const terrainDefense = terrain === 'hills' || terrain === 'forest' ? 4 : 0;
@@ -640,6 +652,16 @@ function unitOrder(state,seat,action) {
     unit.moves-=path.slice(1).reduce((sum,k)=>sum+terrainCost[TILE_BY_ID[k].terrain],0);
     unit.tile=action.tile;
     record(state,seat,'move',label+' moved to '+TILE_BY_ID[unit.tile].name+'.',unit.tile,{from:id,unit:unit.id,path});
+  } else if (action.type==='upgrade') {
+    const upgrade=fieldUpgrade(state,unit);
+    if (!upgrade?.enabled) throw new Error(upgrade?.reason || 'No field upgrade is available.');
+    const def=UNIT_TYPES[upgrade.to];
+    const trainingBonus=unit.maxHp-UNIT_TYPES[unit.type].maxHp;
+    const maxHp=def.maxHp+trainingBonus;
+    const hp=Math.max(1,Math.floor(unit.hp/unit.maxHp*maxHp));
+    Object.assign(unit,{type:upgrade.to,maxHp,hp,moves:0,maxMoves:def.moves});
+    state.players[seat].capital-=upgrade.cost;
+    record(state,seat,'upgrade',label+' upgraded to '+def.name+'.',id,{unit:unit.id,item:upgrade.to});
   } else if (action.type==='attack') {
     resolveAttack(state,unit,action.tile);
   } else if (action.type==='found') {
@@ -671,7 +693,7 @@ export function applyAction(source,seat,action) {
     if (!option || !option.enabled) throw new Error(option?.reason || 'Choose an available production project.');
     city.queue={item:option.item,required:option.required,progress:0};
     record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
-  } else if (['move','attack','found','improve'].includes(action.type)) {
+  } else if (['move','attack','found','improve','upgrade'].includes(action.type)) {
     unitOrder(next,seat,action);
   } else {
     if (typeof action.tile!=='string') throw new Error('Choose a district.');
@@ -694,6 +716,9 @@ function botProject(state,city) {
   const count=type=>units.filter(u=>u.type===type).length+cities.filter(c=>c.queue?.item===type).length;
   const choices=[];
   if (count('builder')===0) choices.push('builder');
+  for (const type of ['armor','artillery','riflemen','cavalry']) {
+    if (knows(state,city.seat,UNIT_TYPES[type].tech) && !count(type)) choices.push(type);
+  }
   if (count('ranged')<Math.max(1,cities.length-1)) choices.push('ranged');
   if (count('melee')<2) choices.push('melee');
   if (cities.length<3 && count('settler')===0) choices.push('settler');
@@ -782,6 +807,8 @@ export function chooseBotAction(source) {
       return {type:'attack',unit:unit.id,tile:target};
     }
   }
+  const veteran=plans.find(([,options])=>options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
+  if (veteran) return {type:'upgrade',unit:veteran[0].id};
   for (const city of state.cities) if (city.seat===seat && !city.queue) {
     const order=botProject(state,city);
     if (order) return order;

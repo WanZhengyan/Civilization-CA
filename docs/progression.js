@@ -47,3 +47,18 @@ export const CIVICS = {
   mobilization: {name: 'Civil Mobilization', era: 'modern', requires: ['publicWorks', 'federation'], cost: 12,
     description: 'New military units enter service with 20 extra maximum health.'}
 };
+
+export const ERA_UNITS = {
+  cavalry: {name:'Mounted Scouts', era:'frontier', role:'Recon unit', tech:'agronomy', captures:true,
+    description:'Fast riders move four hexes and can occupy a weakened city.',
+    maxHp:80, moves:4, range:1, strength:32, required:12, upgrade:'armor', upgradeCost:18},
+  riflemen: {name:'Rifle Company', era:'industrial', role:'Infantry unit', tech:'ballistics', captures:true,
+    description:'Durable infantry fight at close range and capture weakened cities.',
+    maxHp:110, moves:2, range:1, strength:55, required:15, upgrade:'armor', upgradeCost:16},
+  artillery: {name:'Field Artillery', era:'industrial', role:'Siege unit', tech:'steam', captures:false,
+    description:'Guns bombard targets up to three hexes away. A ground unit must occupy the city.',
+    maxHp:75, moves:2, range:3, strength:46, required:17},
+  armor: {name:'Armored Column', era:'modern', role:'Armored unit', tech:'motorization', captures:true,
+    description:'Armored columns move three hexes, break defended positions and occupy cities.',
+    maxHp:130, moves:3, range:1, strength:68, required:21}
+};

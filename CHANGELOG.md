@@ -1,5 +1,11 @@
 # Release notes
 
+## 3.4 · Mobilize across three eras
+
+In the prior build a discovery could raise damage, but cities kept training the same four units. Cities now train mounted scouts, rifle companies, field artillery and armored columns after the matching discoveries. In the four-faction opening those units first appeared in rounds 6, 7, 10 and 12.
+
+31 checks passed. 6 fixed campaigns replayed identically twice. Coastal cities still have few uses for an ocean-facing location. Test a port economy next.
+
 ## 3.3 · Civics and a culture economy
 
 Choosing a treasury technology consumed the same research slot as engineering. A separate culture budget now lets cities research science and adopt civic policies in parallel. County Federation adds a third district order on the next turn.
