@@ -15,6 +15,16 @@
 .map-survey-key .grid-sample { height: 1px; background: #9fae9f; }
 .map-survey-key .frame-sample { height: 3px; border-block: 1px solid #e0ce9c; }
 .map-survey-key .claim-sample { height: 3px; border-top: 2px solid #98bdb1; border-bottom: 1px solid #596e70; }
+.map-survey-key .city-symbol, .map-survey-key .capital-symbol {
+  width: 17px;
+  height: 15px;
+  fill: none;
+  stroke: #d9dfd6;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.map-survey-key .capital-symbol { stroke: #f2d792; }
 .map-survey-key button {
   min-height: 30px;
   margin-inline-start: auto;

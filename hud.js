@@ -11,7 +11,8 @@ import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
 import {addPolicyPanel,updateCivicAgenda} from "./policy-panel.js";
 import {campusPlan} from './campus-plan.js';
-import {getWonderSites} from './rules.js';
+import {getDevelopmentPreview,getWonderSites} from './rules.js';
+import {cityKind,developmentPanel,developmentReceipt,foundingLabel} from './district-command.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
 import {mountSurveyControls, showSelectedFrontier} from './survey-controls.js';
 import {createAtlas} from "./atlas.js";
@@ -94,7 +95,14 @@ let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEven
 const unavailableArt=new Set();
 let surveyUnitId=null;
 let survey=new Map(), explored=new Set(), visible=new Set();
-function toast(message){text("toast",message);el("toast").hidden=false;clearTimeout(timer);timer=setTimeout(()=>el("toast").hidden=true,3200)}
+function toast(message){
+  const status=el("toast");
+  if(Array.isArray(message)) status.innerHTML=message.map(part=>
+    [part].flat().map(word=>'<span>'+esc(word)+'</span>').join(' ')
+  ).join(' · ');
+  else text("toast",message);
+  status.hidden=false;clearTimeout(timer);timer=setTimeout(()=>status.hidden=true,3200);
+}
 function select(tile,unit=null,city=false){
   if(!mapRegion.byId[tile])return;
   order="";selectedTile=tile;
@@ -111,9 +119,14 @@ function selectOpening(){
 function openMapOnMobile(){
   displayMapOnMobile();
 }
-function onMapSelect(tileId,unitId){
+function onMapSelect(tileId,unitId,cityPlate=false){
   if(!view || !mapRegion.byId[tileId])return;
   if(!explored.has(tileId)) {toast("Uncharted territory. Move closer to explore.");return}
+  if(cityPlate && cityAt(tileId)){
+    const inspecting=order==="inspect";
+    select(tileId,null,true);if(inspecting)order="inspect";
+    redraw();inspectMapOnMobile();return;
+  }
   const unit=getUnit(), targetUnit=view.state.units.find(u=>sameId(u.id,unitId));
   const available=unit && unit.seat===view.seat && mayOrder() && order!=="inspect";
   if(available && targetUnit?.seat!==view.seat){
@@ -212,11 +225,11 @@ function flash(message){
   text("map-feedback",message);el("map-feedback").hidden=false;clearTimeout(feedbackTimer);
   feedbackTimer=setTimeout(()=>el("map-feedback").hidden=true,3400);
 }
-function entityTabs(tile,selected){
+function entityTabs(tile,selected,development){
   const units=view.state.units.filter(u=>u.tile===tile);
   const choices=units.map(u=>({id:'u'+u.id,label:items[u.type]||u.type,selected:kind==="unit"&&sameId(selected?.id,u.id)}));
   if(cityAt(tile))choices.push({id:'city',label:'City',selected:kind==="city"});
-  if(choices.length)choices.push({id:"land",label:"District",selected:kind==="tile"});
+  if(choices.length)choices.push({id:"land",label:development?"District development":"District",selected:kind==="tile"});
   const bar=el("entity-tabs");
   bar.hidden=choices.length<2;
   bar.innerHTML=choices.map(x=>'<button type="button" data-entity="'+esc(x.id)+'" aria-pressed="'+x.selected+'">'+esc(x.label)+'</button>').join('');
@@ -270,13 +283,17 @@ function inspect(){
     image.onerror=()=>{unavailableArt.add(unitArt);image.onerror=null;image.src=fallback;portrait.hidden=false;drawUnitPortrait(portrait,activeUnit.type,gov.color)};
   }else{image.onerror=null;if(activeUnit)drawUnitPortrait(portrait,activeUnit.type,gov.color)}
   if(image.getAttribute("src")!==art)image.src=art;
-  text("entity-kind",activeUnit ? (own?"Your ":"Rival ")+(UNIT_TYPES[activeUnit.type].role||unitRole[activeUnit.type]||"unit") : activeCity ? (own?"Your city":"Rival city") : (nature?"Natural wonder":campus?"University wonder":port?"Harbor district":tile.landmark?"Landmark":"District"));
+  text("entity-kind",activeUnit ? (own?"Your ":"Rival ")+(UNIT_TYPES[activeUnit.type].role||unitRole[activeUnit.type]||"unit") : activeCity ? cityKind(activeCity,view.seat) : (nature?"Natural wonder":campus?"University wonder":port?"Harbor district":tile.landmark?"Landmark":"District"));
   el("entity-name").translate=!customCity(activeCity);
   text("entity-name",activeUnit ? (items[activeUnit.type]||activeUnit.type) : activeCity?.name||nature?.name||(campus?WONDERS[campus]?.name:port?"Harbor":tile.name));
-  text("entity-location",activeUnit ? tile.name : activeCity ? gov.name : port?.name||terrain[tile.terrain]);
-  entityTabs(tile.id,activeUnit);
+  if(activeCity && Number.isInteger(activeCity.originalSeat) && activeCity.originalSeat !== activeCity.seat) {
+    el("entity-location").innerHTML='<span>Controlled by</span> <span>'+esc(gov.name)+'</span> · <span>Original capital of</span> <span>'+esc(faction(activeCity.originalSeat).name)+'</span>';
+  } else text("entity-location",activeUnit ? tile.name : activeCity ? gov.name : port?.name||terrain[tile.terrain]);
+  const territory=visible.has(tile.id) ? getActions(state,view.seat,tile.id)[0] : null;
+  const capped=visible.has(tile.id) && holding?.owner===view.seat && holding.level===3 && tile.terrain!=="ocean" && !nature && !campus && !port && !wildAt(state,tile.id);
+  entityTabs(tile.id,activeUnit,territory?.type==="develop" || capped);
   const disabled=!mayOrder()||!own;
-  let info="",actions="",explanation="";
+  let info="",actions="",explanation="",development="";
   selectedOptions=activeUnit?getUnitOptions(state,activeUnit.id):null;
   updateSurvey();
   if(activeUnit){
@@ -288,8 +305,7 @@ function inspect(){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
       if(u.type==="settler"){
-        const capital=state.opening==="settlers" && !state.cities.some(c=>c.originalSeat===view.seat);
-        actions+=actionButton("found",capital?"Found capital":"Found city",o.canFound?"Settle here":"Unavailable","gold",disabled||!o.canFound);
+        actions+=actionButton("found",foundingLabel(state,view.seat),o.canFound?"Settle here":"Unavailable","gold",disabled||!o.canFound);
         const assessment=survey.get(u.tile);
         explanation=assessment?surveySummary(assessment,true):"Settle at least three hexes from every city, with movement remaining.";
         if(assessment?.nearestCity && !explanation.includes(assessment.nearestCity.name))explanation+=" "+nearestCityText(assessment);
@@ -331,7 +347,6 @@ function inspect(){
       el("entity-commands").innerHTML=note("Outside current sight");return;
     }
     info='<div class="province-meta"><i style="background:'+esc(gov?.color||"#98a1a6")+'"></i>'+esc(gov?.name||(tile.terrain==="ocean"?"Open water":"Unclaimed land"))+'</div><div class="entity-stats">'+stat("Terrain",terrain[tile.terrain])+stat("Improvement",items[holding?.improvement]||"None")+'</div>';
-    const territory=getActions(state,view.seat,tile.id)[0];
     if(nature){
       info+=note(nature.description)+note(nature.effect);
       explanation='This protected site cannot host a city, improvement or campus.';
@@ -341,6 +356,16 @@ function inspect(){
     }else if(port){
       if(port.seat===view.seat)actions=actionButton("port-production","Port production",port.name,"gold");
       explanation="Ships launch here and repair in nearby water.";
+    }else if(territory?.type==="develop"){
+      const preview=getDevelopmentPreview(state,view.seat,tile.id);
+      if(preview) {
+        development=developmentPanel(preview,getStats(state,view.seat));
+        const cost=preview.cost.capital+" capital · "+preview.cost.orders+" district order";
+        actions=actionButton("develop",territory.label,cost,"gold",!mayOrder()||!preview.enabled);
+        explanation=preview.reason || (state.actionsLeft===1 ? '1 district order remains this turn.' : state.actionsLeft+' district orders remain this turn.');
+      }
+    }else if(capped){
+      development=developmentPanel(null);
     }else if(territory){
       const cost=[territory.cost.capital && (territory.cost.capital+" capital"),territory.cost.influence && (territory.cost.influence+" influence")].filter(Boolean).join(" · ");
       actions=actionButton(territory.type,territory.label,cost,"gold",!mayOrder()||!territory.enabled);
@@ -367,7 +392,7 @@ function inspect(){
   }
   if(order==="attack")explanation="Select an enemy outlined in red to review the combat forecast.";
   el("entity-info").innerHTML=info;
-  el("entity-commands").innerHTML='<div class="orders">'+actions+'</div>'+note(explanation);
+  el("entity-commands").innerHTML=development+'<div class="orders">'+actions+'</div>'+note(explanation);
 }
 function updateMap(){
   showSelectedFrontier(selectedTile,view.state.board,visible,mapRegion.byId,faction);
@@ -377,7 +402,7 @@ function updateMap(){
     if(assessment.status==="now")settlementSites.now.push(id);
     else if(assessment.status==="next-turn")settlementSites.nextTurn.push(id);
   }
-  atlas.update({showResources:canSeeDeposits(view.state,view.seat),settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  atlas.update({showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -536,7 +561,7 @@ function closeCombat(){
   battle=null;if(el("combat-modal").open)el("combat-modal").close();if(view&&atlas)updateMap();
 }
 function paint(next){
-  const previousKey=matchKey;view=next;const {state,seat,mode,room}=next;
+  const previousKey=matchKey,previousState=view?.state;view=next;const {state,seat,mode,room}=next;
   mapRegion=getMap(state);
   visible=new Set(state.intel?.visible??Object.keys(state.board));explored=new Set(state.intel?.explored??Object.keys(state.board));
   const regionKey=state.mapSize==='large' ? mapRegion.id+'-large' : mapRegion.id;
@@ -565,7 +590,9 @@ function paint(next){
   const event=state.log.at(-1);text("event-turn","TURN "+String(event?.round||1).padStart(2,"0"));text("event-text",event?Game.eventText(event):"");
   el("legend").innerHTML=state.players.map(p=>'<span class="legend-item"><i class="swatch" style="--swatch:'+FACTIONS[p.faction].color+'"></i>'+esc(names[p.faction])+'</span>').join('');
   const eventKey=event?JSON.stringify(event):"";
-  if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end"].includes(event.type))flash(Game.eventText(event));
+  const receipt=previousKey===key ? developmentReceipt(previousState,state,seat,mapRegion) : null;
+  if(receipt) toast(receipt);
+  else if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end","develop"].includes(event.type))flash(Game.eventText(event));
   previousEvent=eventKey;
   redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();showCampusOpening(state,seat,key);populationLedger();
   if(el("production-modal").open)productionOptions();
@@ -605,7 +632,17 @@ function chooseOrder(key){
   }
   if(key==="supplies"){Game.open("supplies");return}
   if(key==="choose-production"){openProduction();return}
-  if(["develop","claim","contest"].includes(key)&&mayOrder()){Game.doAction({type:key,tile:selectedTile});return}
+  if(["develop","claim","contest"].includes(key)&&mayOrder()){
+    const tile=selectedTile,commands=el("entity-commands");
+    const restoreFocus=key==="develop" && commands.contains(document.activeElement);
+    const result=Game.doAction({type:key,tile});
+    if(restoreFocus) Promise.resolve(result).then(()=>{
+      if(tile!==selectedTile || kind!=="tile" || document.activeElement!==document.body)return;
+      const next=commands.querySelector('[data-order="develop"]:enabled') || commands.querySelector('.district-development');
+      next?.focus({preventScroll:true});
+    });
+    return;
+  }
   const u=getUnit();if(!u||!mayOrder()||u.seat!==view.seat)return;
   if(key==="move"){
     order="";redraw();openMapOnMobile();return;
@@ -645,7 +682,14 @@ function mount(){
   el("territory-lines").onchange=e=>atlas.setTerritories(e.currentTarget.checked);
   document.addEventListener("click",e=>{if(!e.target.closest(".layers-wrap"))toggleLayers(false)});
   el("entity-commands").onclick=e=>{const b=e.target.closest("[data-order]");if(b&&!b.disabled)chooseOrder(b.dataset.order)};
-  el("entity-tabs").onclick=e=>{const key=e.target.closest("[data-entity]")?.dataset.entity;if(!key)return;if(key==="land"){kind="tile";selectedUnit=null;order=""}else select(selectedTile,key.startsWith("u")?key.slice(1):null,key==="city");redraw()};
+  el("entity-tabs").onclick=e=>{
+    const key=e.target.closest("[data-entity]")?.dataset.entity;
+    if(!key)return;
+    if(key==="land"){kind="tile";selectedUnit=null;order=""}
+    else select(selectedTile,key.startsWith("u")?key.slice(1):null,key==="city");
+    redraw();
+    el("entity-tabs").querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
+  };
   el("survey-sites").onclick=()=>{if(surveyUnitId){renderSurveyDialog();el("survey-modal").showModal()}};
   el("close-survey").onclick=()=>el("survey-modal").close();
   el("survey-modal").onclick=e=>{if(e.target===el("survey-modal"))el("survey-modal").close()};

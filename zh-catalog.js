@@ -209,7 +209,11 @@ Map edge|地图边界
 Territory border|领土边界
 Fit region|查看全图
 Map line key|地图线型图例
+Map key|地图图例
+Original capital|初始首府
 Place names|地名
+Geographic labels|地名与地标名称
+Show or hide place and landmark names. City names stay enabled.|显示或隐藏地名和地标名称。城市名称不受此开关影响。
 Territories|领土
 Zoom out|缩小
 Zoom in|放大
@@ -429,6 +433,18 @@ Adds 2 production per turn in this city.|这座城市每回合增加 2 生产力
 Adds 3 influence per turn.|每回合增加 3 影响力。
 Increases this city’s defenses.|提高城市防御能力。
 Develop district|开发地区
+District development|地区开发
+District level|开发等级
+Maximum district level|已达最高开发等级
+Capital per turn|每回合资金收入
+Influence per turn|每回合影响力收入
+1 district order|1 次地区指令
+Your capital city|己方首府
+Rival capital city|敌方首府
+Captured original capital|已易主的初始首府
+Controlled by|当前控制方
+Original capital of|建都阵营
+District developed|地区已开发
 Claim district|拓展领土
 Contest district|争夺地区
 The campaign has ended.|战役已结束。
@@ -489,6 +505,8 @@ Use stored goods|使用库存物资
 Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.|每处已改良并连通城市的资源在回合结束时提供一份物资。打开「物资账簿」可将两份同类物资卖得五点资金，或运送到己方城市。每回合可发运一次。
 Survey for deposits|寻找资源
 Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.|开局时资源尚未显现。选择开拓者的「勘探资源」，消耗一点移动力即可看见视野内的资源。建立首都也会自动开启勘探。单位离开后，已发现的资源仍会标在地图上。
+Read city markers|辨认城市标记
+City markers use the current owner’s color. Zoom in to read names in a crowded area. A crown marks the first city founded by a civilization and stays with that city after capture. Geographic labels also mark places where no city has been founded.|城市标记的颜色表示当前控制方。若多座城市挤在一起，可放大地图查看城名。每个文明建立的第一座城市带有王冠，被其他文明占领后仍保留王冠。地名与地标名称图层也会标出没有建城的地点。
 Send out your settler|派出开拓者
 Select the Settler on the map or in your roster. Point at a highlighted hex to preview the route. Click a reachable hex to move. You can also tap a highlighted destination on a touch screen.|在地图或名册中选择开拓者。指向高亮地块可预览路线，点击即可移动；触屏上直接轻点目的地。
 Found a city|建立城市
@@ -501,6 +519,10 @@ Each faction also gets two district actions to claim land, develop a district or
 City growth|城市发展
 Food and production|粮食与生产
 Food grows your population. Production completes the unit or building in a city’s queue. More residents contribute capital and can raise production.|粮食推动人口增长，生产力用于完成队列中的单位或建筑。更多居民能增加收入，也能提高生产力。
+Develop a district|开发己方地区
+Select visible land you own. If a unit or city shares the hex, open District development in Field command. Each upgrade spends one district order and raises the level by one. Levels 1, 2 and 3 cost 5, 8 and 11 capital respectively. Level 3 is the maximum.|选中视野内的己方陆地。地块上若有单位或城市，可在战场指挥面板打开「地区开发」。每次升级消耗一次地区指令。升到 1、2、3 级分别花费 5、8、11 资金，最高为 3 级。
+Compare development returns|比较开发收益
+Each new level adds 1 civic point. Coast, lowland and urban districts also earn 1 more capital per turn. Woodland, foothills and mountains add 1 to base influence income. Check the preview for the change under your current policy.|每升一级增加 1 市政积分。海岸、低地和城区每回合额外获得 1 资金。林地、丘陵和山地则使每回合的基础影响力收入增加 1。升级前可预览当前施政方针下的实际变化。
 Improve nearby land|改良周边土地
 A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.|建设者可以施工三次。选择能经己方陆地在两步内连通己方城市的地块，并按资源选择设施。谷物需要农场，柑橘需要果园，木材需要伐木场，石料需要采石场，铁矿需要矿场。
 Choose a building|选择建筑

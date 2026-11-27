@@ -481,6 +481,7 @@ function record(state,seat,type,text,tile,detail={}) {
   state.log.push({round:state.round,seat,type,text,...(tile ? {tile}:{}),...detail});
   if (state.log.length>160) state.log.shift();
 }
+const DISTRICT_ORDER_COST=1;
 function territoryOrder(state,seat,tile) {
   if (tile.terrain==='ocean' || wildAt(state,tile.id)) return null;
   const {owner,level}=state.board[tile.id];
@@ -500,13 +501,32 @@ export function getActions(state,seat,id,visible) {
   let reason='';
   if (state.phase!=='playing') reason='The campaign has ended.';
   else if (state.turn!==seat) reason='Wait for your turn.';
-  else if (state.actionsLeft<=0) reason='You have used all district orders this turn.';
+  else if (state.actionsLeft<DISTRICT_ORDER_COST) reason='You have used all district orders this turn.';
   else if (order.type!=='develop' && !getMap(state).neighbors(id).some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
   else if (player.capital<order.cost.capital) reason='You need '+order.cost.capital+' capital.';
   else if (player.influence<order.cost.influence) reason='You need '+order.cost.influence+' influence.';
   if (!reason && state.intel?.districtChoices && !state.intel.districtChoices.includes(id)) return [];
   return [{...order,enabled:!reason,reason}];
 }
+
+// Inspect one owned district without issuing an order. Revalue just the
+// changed holding through the same economy used at the end of the turn:
+// Port concessions can absorb an extra point of influence at the zero floor.
+export function getDevelopmentPreview(state,seat,id) {
+  if (!Number.isInteger(seat) || state?.board?.[id]?.owner!==seat || (state.intel && state.intel.seat!==seat)) return null;
+  const [order]=getActions(state,seat,id);
+  if (order?.type!=='develop') return null;
+  const holding=state.board[id], nextLevel=holding.level+1;
+  const proposed={...state,board:{...state.board,[id]:{...holding,level:nextLevel}}};
+  const before=getStats(state,seat), after=getStats(proposed,seat);
+  return {
+    currentLevel:holding.level, nextLevel,
+    cost:{...order.cost,orders:DISTRICT_ORDER_COST}, enabled:order.enabled, reason:order.reason,
+    delta:{capitalIncome:after.capitalIncome-before.capitalIncome,
+      influenceIncome:after.influenceIncome-before.influenceIncome, score:after.score-before.score}
+  };
+}
+
 function movementCost(state,unit, tileId) {
   const terrain=getMap(state).byId[tileId].terrain;
   const reconnaissance = unit.type==='scout' || unit.type==='cavalry';
@@ -1117,7 +1137,7 @@ function resolveOrder(source,seat,action) {
     const tile=getMap(state).byId[action.tile],prior=next.board[tile.id],player=next.players[seat];
     player.capital-=order.cost.capital;player.influence-=order.cost.influence;
     next.board[tile.id]={...prior,owner:seat,level:order.type==='develop' ? prior.level+1:prior.level};
-    next.actionsLeft--;
+    next.actionsLeft-=DISTRICT_ORDER_COST;
     const verb={develop:'developed',contest:'took control of',claim:'claimed'}[order.type];
     record(next,seat,order.type,FACTIONS[state.players[seat].faction].name+' '+verb+' '+tile.name+'.',tile.id);
   }

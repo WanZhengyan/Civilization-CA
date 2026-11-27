@@ -581,6 +581,7 @@ const guideSections = {
   start: {label:'First turn', entries:[
     ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
     ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
+    ['Read city markers', 'City markers use the current owner’s color. Zoom in to read names in a crowded area. A crown marks the first city founded by a civilization and stays with that city after capture. Geographic labels also mark places where no city has been founded.'],
     ['Explore the fog', 'Each unit sees two hexes in every direction. Dark tiles are uncharted. Shaded tiles keep the terrain you explored, but enemies there are hidden.'],
     ['Survey for deposits', 'Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.'],
     ['Choose your map', 'Choose a region and map size. Each combination has its own solo save. Set the civic victory target and choose practice or up to three computer opponents. Online, the host sets the map for everyone.'],
@@ -591,6 +592,8 @@ const guideSections = {
   ]},
   city: {label:'City growth', entries:[
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
+    ['Develop a district', 'Select visible land you own. If a unit or city shares the hex, open District development in Field command. Each upgrade spends one district order and raises the level by one. Levels 1, 2 and 3 cost 5, 8 and 11 capital respectively. Level 3 is the maximum.'],
+    ['Compare development returns', 'Each new level adds 1 civic point. Coast, lowland and urban districts also earn 1 more capital per turn. Woodland, foothills and mountains add 1 to base influence income. Check the preview for the change under your current policy.'],
     ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
     ['Use stored goods', 'Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.'],
     ['Plan housing', 'A new city has room for three citizens. A granary adds two places. Public Works unlocks residential quarters, which add three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.'],
