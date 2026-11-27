@@ -901,6 +901,15 @@ A completed campus appears on the map. Select the campus tile to inspect its eff
 `);
 
 section(`
+Play solo|开始单人战役
+Title screen|返回开始界面
+Rejoin room|重新进入房间
+Keep saved campaign|保留已有存档
+Room code or invite link|房间代码或邀请链接
+Explore California, settle its coast and lead your civilization through the ages.|探索加州海岸，选址建城，带领你的文明走过不同的时代。
+`);
+
+section(`
 Civilization CA · California Campaigns|Civilization CA · 加州战役
 Founding expedition|建都远征
 Choose a site for your first city. Surveying or founding can reveal local resources.|选择第一座城市的位置。勘探或建城后可发现附近的资源。

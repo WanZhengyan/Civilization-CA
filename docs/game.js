@@ -92,8 +92,12 @@ function updateRoomShortcut() {
 function showTitle(visible) {
   if (visible) updateRoomShortcut();
   const screen = document.getElementById('title-screen');
+  const leavingTitle = !visible && !screen.hidden;
   screen.hidden = !visible;
   document.body.classList.toggle('on-title', visible);
+  if (leavingTitle) requestAnimationFrame(() => {
+    if (screen.hidden && !dialog?.open) document.getElementById('board-nav')?.focus({preventScroll:true});
+  });
 }
 
 function emit() {
@@ -261,7 +265,7 @@ async function poll() {
     if ([401, 403, 404].includes(error.status)) {
       const code = room.code;
       forgetSeat(code);
-      returnToSolo();
+      enterTitle();
       open('multiplayer', 'join', code);
       showError(error.message);
     } else if (!offline) {
@@ -643,7 +647,7 @@ function drawDialog() {
   if (!modal || !dialog) return;
   const scrolled = dialog.querySelector('.modal-body')?.scrollTop || 0;
   const { kicker, title, body } = content();
-  dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back">×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl() : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl() : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
   dialog.setAttribute('aria-labelledby','game-dialog-title');
   dialog.querySelector('.modal-body').scrollTop = scrolled;
 }
@@ -761,7 +765,16 @@ async function init({ render, toast: showToast }) {
   });
   solo = storedSolo();
   formName = String(read(NAME_KEY, '') || '');
-  document.getElementById('title-screen').addEventListener('click', event => {
+  const title = document.getElementById('title-screen');
+  const syncLocale = () => title.querySelectorAll('[data-title-lang]').forEach(button => {
+    button.setAttribute('aria-pressed',String(button.dataset.titleLang === getLanguage()));
+  });
+  syncLocale();
+  document.addEventListener('civitas-language',syncLocale);
+  document.getElementById('title-nav').addEventListener('click',enterTitle);
+  title.addEventListener('click', event => {
+    const locale = event.target.closest('[data-title-lang]')?.dataset.titleLang;
+    if (locale) { setLanguage(locale); return; }
     const action = event.target.closest('[data-title]')?.dataset.title;
     if (pending || !action) return;
     if (action === 'solo') { selectedMap = getMap(solo).id; open('campaign-atlas'); }

@@ -2,7 +2,7 @@ body.on-title { background: #172b2c; }
 .on-title .app > header, .on-title .app > main, .on-title .app > footer { display: none; }
 .on-title .app { min-height: 0; }
 .title-screen[hidden] { display: none; }
-.title-screen { position: relative; isolation: isolate; display: grid; min-height: 100vh; min-height: 100svh; background: #253c39; color: #fff5db; overflow: hidden; }
+.title-screen { position: relative; isolation: isolate; display: grid; width: 100%; max-width: none; margin: 0; padding: 0; min-height: 100vh; min-height: 100svh; background: #253c39; color: #fff5db; overflow: hidden; }
 .title-scenery { position: absolute; inset: 0; z-index: -1; background-image: linear-gradient(90deg,rgba(9,24,26,.72),rgba(12,29,31,.47) 32%,rgba(12,28,30,.02) 72%),linear-gradient(0deg,rgba(8,20,23,.75),transparent 17%,transparent 79%,rgba(9,21,24,.2)),url('./art/california-coast.webp'); background-size: cover; background-position: center; }
 .title-content { box-sizing: border-box; width: min(100%, 1600px); margin: auto; min-height: inherit; display: grid; grid-template-rows: auto 1fr auto; padding: clamp(26px,5vh,60px) clamp(24px,7vw,114px) clamp(30px,5vh,52px); }
 .title-header, .title-imprint { display: flex; align-items: center; }
@@ -31,3 +31,23 @@ body.on-title { background: #172b2c; }
   .title-regions { justify-content: flex-start; gap: 8px; margin-bottom: 6px; }
   .title-screen .title-orders { width: min(100%,380px); }
 }
+
+.title-header .title-language { display: inline-flex; padding: 3px; border-radius: 5px; border: 1px solid #d1bd96a6; background: #152828a8; }
+.title-header .title-language button { min-height: 34px; color: #eee8da; background: none; border: 1px solid transparent; padding: 5px 10px; font-size: .79rem; border-radius: 2px; }
+.title-header .title-language button[aria-pressed="true"] { background: #ead6a6; color: #26312e; }
+.title-orders [data-last-room] { margin-inline-start: 7px; letter-spacing: .1em; color: #ecd29c; }
+button.brand { padding: 0; border: 0; background: none; text-align: left; }
+button.brand:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+@media (max-width: 550px) {
+  .title-content { padding-bottom: max(40px, calc(24px + env(safe-area-inset-bottom))); }
+  .title-imprint { gap: 9px; font-size: .65rem; letter-spacing: .12em; }
+  .title-imprint img { width: 29px; height: 35px; }
+  .title-header .title-language button { min-height: 36px; padding: 5px 8px; }
+}
+@media (max-height: 530px) and (min-width: 550px) {
+  .title-content { padding-block: 15px 28px; }
+  .title-menu { padding: 14px 0; }
+  .title-menu h1 { font-size: 52px; }
+  .title-summary { margin: 12px 0 16px; font-size: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) { .title-screen button { transition: none; } }
