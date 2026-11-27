@@ -1,5 +1,7 @@
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
+import {populationSummary} from "./city-planning.js";
+import {getPopulationReport} from "./rules.js";
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -277,15 +279,16 @@ function inspect(){
       }
     }else explanation="Select a friendly unit to give orders.";
   }else if(activeCity){
-    const c=activeCity,y=getCityYield(state,c.id);
+    const c=activeCity;
     if(!own) {
       info='<div class="entity-stats">'+stat("Population",c.population)+stat("City HP",c.hp,c.maxHp)+'</div>'+healthBar(c.hp,c.maxHp);
       el("entity-info").innerHTML=info;el("entity-commands").innerHTML=note("Only the city owner can inspect its economy.");return;
     }
+    const y=getCityYield(state,c.id);
     info='<div class="entity-stats">'+stat("Population",c.population)+stat("Production","+"+y.production)+stat("City HP",c.hp,c.maxHp)+'</div>'+healthBar(c.hp,c.maxHp);
     const buildings=(c.buildings||[]).map(i=>items[i]||i);
     if(buildings.length)info+='<p class="built-list">Buildings · '+esc(buildings.join(", "))+'</p>';
-    info+='<p class="built-list">Food '+c.food+' / '+(6+2*c.population)+' · +'+y.food+' per turn</p>'+cityQueue(c);
+    if(own) info+=populationSummary(getPopulationReport(state,c.id))+cityQueue(c);
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods");
   }else{
     const holding=state.board[tile.id];

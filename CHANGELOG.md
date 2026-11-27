@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.2 · Feed each citizen
+
+Population grew without a clear cost to providing food. Cities now consume food per resident, store surplus and draw down their reserves during shortages. Prolonged shortages reduce population.
+
+73 checks passed. 18 fixed campaigns replayed identically twice. Compare food-oriented and industry-oriented assignments in the same city.
+
 ## 5.1 · Turn local deposits into usable supplies
 
 A map icon did not explain how a city earned and spent goods. Improved, connected deposits credit the owning civilization’s stockpile. A ledger makes production and exchanges visible.

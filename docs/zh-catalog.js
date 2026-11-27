@@ -9,6 +9,16 @@ function section(pairs) {
   }
 }
 section(`
+Stored food|存粮
+Harvest|粮食产量
+Consumption|粮食消耗
+Food balance|粮食结余
+Population loss|人口减少
+Next citizen|新增人口
+Population stable|人口稳定
+Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.|每位居民每回合消耗两份粮食。盈余的粮食储存起来供人口增长。遇到短缺时先用存粮，存粮耗尽后失去一名居民，但始终保留第一户人家。生产力用于推进城市项目。
+`);
+section(`
 Civitas LA · The Los Angeles Campaign|Civitas LA · 洛杉矶战役
 Scout|侦察兵
 Light reconnaissance infantry. Moves three points per turn, can skirmish with units, and cannot occupy cities.|轻装侦察步兵。每回合有三点移动力，可以与敌军交战，不能占领城市。

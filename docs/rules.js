@@ -1,6 +1,7 @@
 import {getVisibleTiles, projectForSeat, rememberVision} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
+import { foodForecast, feedCity } from "./population.js";
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
@@ -327,11 +328,15 @@ export function getCityYield(state,cityId) {
   const steam = has('workshop') && knows(state, city.seat, 'steam');
   const trade = tradesBySea(state,city);
   return {
-    food: 2 + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
+    food: 4 + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
     production: 3 + materialBonus + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
+}
+export function getPopulationReport(state, cityId) {
+  const city = cityOrNull(state, cityId);
+  return city ? foodForecast(city, getCityYield(state, cityId).food) : null;
 }
 export function getStats(state,seat) {
   let territories=0,developments=0,landmarks=0,improvements=0,productive=0,fisheries=0;
@@ -616,9 +621,7 @@ function cloneGame(state) {
 }
 function produceCityTurn(state,city) {
   const yieldNow=getCityYield(state,city.id);
-  city.food+=yieldNow.food;
-  const threshold=6+city.population*2;
-  if (city.food>=threshold) {city.food-=threshold;city.population++;}
+  feedCity(city, foodForecast(city, yieldNow.food));
   const queue=city.queue;
   if (!queue) return;
   queue.progress=Math.min(queue.required,queue.progress+yieldNow.production);

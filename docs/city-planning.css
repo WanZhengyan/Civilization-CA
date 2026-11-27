@@ -1,0 +1,4 @@
+.city-food-report { margin: .65rem 0; padding: .55rem .6rem; font-size: .76rem; line-height: 1.5; background: #191f27; border-left: 2px solid #879768; }
+.city-food-report > div { display: flex; justify-content: space-between; gap: .5rem; }
+.city-food-report span { color: #c8c9b9; }
+.city-food-report b { font-variant-numeric: tabular-nums; font-weight: 600; }
