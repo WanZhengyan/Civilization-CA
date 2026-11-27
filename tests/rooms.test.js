@@ -237,6 +237,34 @@ test("a host chooses the region before inviting players and both seats recover t
   assert.notEqual(visitor.game.units[0].tile,room.game.units[0].tile);
 });
 
+test("host map sizes persist through lobby, territorial orders and reconnection for both seats", async t=>{
+  const fixture=roomFixture(t);
+  await fixture.call('POST',{op:'create',name:'Host',mapSize:'invalid'},null,400);
+  for(const region of ['la','sf','sd']) {
+    const host=await fixture.call('POST',{op:'create',name:'Host',mapId:region,mapSize:'large'},null,201);
+    const code=host.room.code;
+    const guest=await fixture.call('POST',{op:'join',code,name:'访客',mapSize:'standard'});
+    assert.equal(guest.room.mapSize,'large');
+    let {room}=await fixture.call('POST',{op:'start',code,revision:guest.room.revision,mapSize:'standard'},host.token);
+    const count=rules.getMap(region,'large').tiles.length;
+    assert.ok(count>rules.getMap(region).tiles.length);
+    assert.equal(Object.keys(room.game.board).length,count);
+    for(const [seat,token] of [[0,host.token],[1,guest.token]]) {
+      room=(await fixture.call('GET',{code},token)).room;
+      assert.equal(room.game.mapSize,'large');
+      assert.equal(rules.getMap(room.game).tiles.length,count);
+      const founder=room.game.units.find(unit=>unit.seat===seat && unit.type==='settler');
+      room=(await fixture.call('POST',{op:'action',code,revision:room.revision,action:{type:'found',unit:founder.id}},token)).room;
+      assert.equal(room.game.cities.find(city=>city.seat===seat).tile,founder.tile);
+      await fixture.call('POST',{op:'action',code,revision:room.revision,action:{type:'end'}},token);
+    }
+    const resumed=(await fixture.call('POST',{op:'join',code,name:'Host',ticket:host.token})).room;
+    assert.equal(resumed.game.round,2);
+    assert.equal(resumed.game.mapSize,'large');
+    assert.equal(Object.keys(resumed.game.board).length,count);
+  }
+});
+
 test('both seats see different server projections on every region, including create, action and conditional poll',async t=>{
   for(const mapId of ['la','sf','sd']){
     const fixture=roomFixture(t);

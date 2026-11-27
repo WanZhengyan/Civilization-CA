@@ -62,3 +62,19 @@ The fixed reference was the Los Angeles opening at seed 39, seat zero. Before th
 The change is retained. All 165 tests passed, including 80 seeds for every map and seat to prove that the preview never names an undiscovered wonder. The reference and candidate reports for all 18 fixed AI campaigns had identical actions and final states (combined report hash `c04d6168b3a18d0511f3d68cde3da61c6e3226f1bb153ee3f9efe1ba022e0ee2`), so the added advice did not alter balance. In a local two-seat room, the host previewed two La Brea districts, founded the city, received exactly two eligible districts, passed to the guest, and both seats reloaded the next round consistently. English and Simplified Chinese count labels are covered by the localization checks.
 
 The gain is a concrete founding tradeoff using the same numbers that later drive city yields. The cost is extra height in a candidate card when a wonder is relevant; candidates without a known wonder remain unchanged. The survey still does not summarize ordinary terrain yields, resource prospects or travel risk, and automated play cannot establish whether a person finds the comparison quickly enough. The next isolated question is whether a computer settler should compare these same known wonder prospects instead of always founding immediately, without letting it inspect hidden wonders.
+
+## Campaign scale and first-time entry
+
+Players reported that their maps felt too small. We tested whether increasing the playable coastline to roughly four times as many hexes would leave room to explore while keeping each ground start connected and the existing Standard openings reproducible. The reference was `9fe96a8`.
+
+| Region | Standard hexes | Large hexes |
+| --- | ---: | ---: |
+| Los Angeles | 172 | 689 |
+| San Francisco Bay | 166 | 667 |
+| San Diego | 149 | 598 |
+
+Large and Standard share a geographic outline. Movement, visibility, production and settlement use the actual hex grid. Checking the Bay Area at a ground unit's sight range caught two crossings whose landings were too distant. The revised landings can be reached through visible cells. Independent two-seat HTTP matches on all three Large regions founded both capitals, advanced to round two and restored each player's private state after reconnecting.
+
+All 174 tests passed. The 18 Standard reference campaigns produced identical replay reports before and after the change. At seed 417007 with four seats, a complete Large match repeated identically in each region. Compared with Standard, the closest pair of starting positions moved from 5 to 10 hexes in Los Angeles, 5 to 10 in the Bay Area and 6 to 10 in San Diego. Attacks ordered fell from 102 to 26, 48 to 20 and 77 to 24 respectively. All six matches ended in civic victories.
+
+Keep the extra size as an opening choice. The added exploration space has a cost in the frequency of early encounters. The next playtest should measure the round of first rival contact across several fixed seeds and compare it with the first-contact round that human players find engaging.

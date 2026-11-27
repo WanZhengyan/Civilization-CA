@@ -1,15 +1,13 @@
 import {battleMarkers,paintBattleReport} from './battle-overlay.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
 import {drawNaturalWonder} from './natural-wonder-marker.js';
-import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom,chartViewport} from './hex-survey.js';
+import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom,chartViewport,atlasRasterLayout} from './hex-survey.js';
 import {politicalPaths, inkPolitics} from './political-borders.js';
 import {drawResource} from './resource-art.js';
 import {drawCampus} from './campus-art.js';
 import {WONDERS} from './wonders.js';
 import {translate} from './i18n.js';
 /* Illustrated, pointy-top, odd-row-offset California campaign maps. */
-const COLS = 17, ROWS = 13;
-const worldW = COLS * W + W / 2, worldH = (ROWS - 1) * ROW + H;
 const FACTION = ['#efbb62','#69b7c7','#8ab98a','#dc8c9f'];
 const places = {
   griffith: 'Griffith Observatory', hollywood: 'Hollywood', pier: 'Santa Monica',
@@ -156,7 +154,7 @@ function regionalShore(geo) {
     return (a+(b-a)*(r-top))*53 + 2.3*Math.sin(x*.058+y*.031)+1.2*Math.sin(y*.081);
   };
 }
-function terrainGround(geo,margin,shore,step=3.1){
+function terrainGround(geo,shore,{width:worldW,height:worldH,margin,terrainStep:step}){
   const w=Math.ceil((worldW+margin*2)/step),h=Math.ceil((worldH+margin*2)/step);
   const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),pixels=g.createImageData(w,h),data=pixels.data;
   const sin=Math.sin;
@@ -227,7 +225,7 @@ function house(g,x,y,w,d,h,tone,roof=true){
     line(g,[xx+d*.27,yy-b*.27-h*.53,xx+d*.64,yy-b*.64-h*.53], '#77877e',.8);
   }
 }
-function coastPath(shift=0) {
+function coastPath(shift,worldH) {
   const p=new Path2D();
   for(let y=-190;y<=worldH+190;y+=3){const x=naturalShore(y)+shift+(shift?Math.sin(y*.057+shift*.15)*1.3:0);if(y===-190)p.moveTo(x,y);else p.lineTo(x,y);}
   return p;
@@ -257,13 +255,20 @@ function roadNetwork(g){
   bezierRoute(g,river,[['#77977096',13],['#a5b486',8],['#c6bd99',6.1],['#4d9293',4.5],['#a2d0bd',1.35]]);
   g.restore();
 }
-function figuresOnTerrain(g,geo,extended,landmarks,shore){
+function figuresOnTerrain(g,geo,extended,landmarks,shore,{width:worldW,height:worldH}){
   const scene=[], nearLandmark=(x,y,rx,ry)=>landmarks.some(([lx,ly])=>Math.abs(x-lx)<rx&&Math.abs(y-ly)<ry);
 
   // The two oblique streets of a city block share world coordinates across all districts.
   const block=(a,b)=>[a*17-b*15.4, a*5.15+b*6.8];
 
-  for(let i=-23;i<119;i++)for(let j=-82;j<93;j++){
+  // Invert the street grid at all four corners of the illustrated area.
+  const corners=[[-120,-118],[-120,worldH+135],[worldW+125,-118],[worldW+125,worldH+135]];
+  const determinant=17*6.8+15.4*5.15;
+  const is=corners.map(([x,y])=>(6.8*x+15.4*y)/determinant);
+  const js=corners.map(([x,y])=>(17*y-5.15*x)/determinant);
+  const firstI=Math.floor(Math.min(...is)),lastI=Math.ceil(Math.max(...is));
+  const firstJ=Math.floor(Math.min(...js)),lastJ=Math.ceil(Math.max(...js));
+  for(let i=firstI;i<=lastI;i++)for(let j=firstJ;j<=lastJ;j++){
     const [x,y]=block(i,j);
     if(x< -120||x>worldW+125||y< -118||y>worldH+135||shore(x,y)<15)continue;
     const tile=nearTile(geo,x,y);if(!tile)continue;
@@ -354,25 +359,28 @@ function ridgeSilhouette(g,x,y,s,rng) {
   g.restore();
 }
 function renderAtlas(tiles,map,landmarkTiles) {
-  const margin=144,resolution=1.55,buffer=document.createElement('canvas');
+  const survey=map.terrainAtlas || tiles;
+  const layout=atlasRasterLayout(survey);
+  const {width:worldW,height:worldH,rows,columns,margin,resolution}=layout;
+  const illustratedCoast=map.id==='la' && map.mapSize!=='large';
+  const buffer=document.createElement('canvas');
   buffer.width=Math.ceil((worldW+2*margin)*resolution);buffer.height=Math.ceil((worldH+2*margin)*resolution);
   const g=buffer.getContext('2d');g.scale(resolution,resolution);g.translate(margin,margin);
   // Terrain interpolation needs samples just past the edge of the playable chart.
-  const survey=map.terrainAtlas || tiles;
   const extended=[...survey],geo=new Map(survey.map(t=>[t.id,t])),landmarks=tiles.filter(t=>t.landmark).map(t=>pos(t.q,t.r));
-  for(let r=-4;r<ROWS+4;r++)for(let q=-4;q<COLS+4;q++){
-    if(q>=0&&q<COLS&&r>=0&&r<ROWS)continue;
-    const clamp=(v,n)=>Math.max(0,Math.min(n,v)),nearest=geo.get(idFor(clamp(q,COLS-1),clamp(r,ROWS-1)));
-    const [x,y]=pos(q,r),terrain=map.id==='la'?(x<naturalShore(y)?'ocean':nearest?.terrain==='ocean'?'plains':nearest?.terrain||'plains'):nearest.terrain;
+  for(let r=-4;r<rows+4;r++)for(let q=-4;q<columns+4;q++){
+    if(q>=0&&q<columns&&r>=0&&r<rows)continue;
+    const clamp=(v,n)=>Math.max(0,Math.min(n,v)),nearest=geo.get(idFor(clamp(q,columns-1),clamp(r,rows-1)));
+    const [x,y]=pos(q,r),terrain=illustratedCoast?(x<naturalShore(y)?'ocean':nearest?.terrain==='ocean'?'plains':nearest?.terrain||'plains'):nearest?.terrain||'ocean';
     const t={id:idFor(q,r),q,r,terrain};extended.push(t);geo.set(t.id,t);
   }
-  const shore=map.id==='la'?(x,y)=>x-naturalShore(y):regionalShore(geo);
-  const base=terrainGround(geo,margin,shore);
+  const shore=illustratedCoast?(x,y)=>x-naturalShore(y):regionalShore(geo);
+  const base=terrainGround(geo,shore,layout);
   g.drawImage(base,-margin,-margin,worldW+2*margin,worldH+2*margin);
   g.save();g.lineCap='round';g.lineJoin='round';
   // Soft breaker lines and the sandy tide mark follow a continuous coastline.
   for(const [offset,w,col] of [[-45,.9,'#a6d2c353'],[-29,.95,'#acd8cd78'],[-19,.85,'#c2e1d19b'],[-9,1.4,'#d4e9cda8'],[-3.5,2.5,'#e8efccd9'],[0,1.8,'#e9d9ac'],[2.8,.9,'#c6b385a6']]){
-    if(map.id==='la'){g.lineWidth=w;g.strokeStyle=col;g.stroke(coastPath(offset));}
+    if(illustratedCoast){g.lineWidth=w;g.strokeStyle=col;g.stroke(coastPath(offset,worldH));}
   }
   const rnd=generator(900,900,117);
   for(let i=0;i<5800;i++){
@@ -386,9 +394,14 @@ function renderAtlas(tiles,map,landmarkTiles) {
     }
   }
   g.restore();
-  const scene=figuresOnTerrain(g,geo,extended,landmarks,shore);
+  const scene=figuresOnTerrain(g,geo,extended,landmarks,shore,layout);
   if(map.routes)for(const route of map.routes)bezierRoute(g,route,[['#847964',4.7],['#e7d4ae',3.2],['#b69e78',.7]]);
-  else roadNetwork(g);
+  else {
+    g.save();
+    if(map.mapSize==='large'){g.translate(-W/2,-H/2);g.scale(2,2);}
+    roadNetwork(g);
+    g.restore();
+  }
   for(const bridge of map.crossings||[]) {
     const a=map.byId[bridge.a],b=map.byId[bridge.b], pa=pos(a.q,a.r),pb=pos(b.q,b.r);
     const span=[...pa,...pb];
@@ -415,7 +428,7 @@ function renderAtlas(tiles,map,landmarkTiles) {
     }});
   }
   scene.sort((a,b)=>a.y-b.y);for(const item of scene)item.run();
-  const boats=map.id==='la'?[[.8,7,1.1],[3,11,1.15],[1,10,.73],[4,9,.9]]:tiles.filter(t=>t.terrain==='ocean'&&(t.q*73+t.r*37)%31===0).map(t=>[t.q,t.r,.82]);
+  const boats=illustratedCoast?[[.8,7,1.1],[3,11,1.15],[1,10,.73],[4,9,.9]]:tiles.filter(t=>t.terrain==='ocean'&&(t.q*73+t.r*37)%31===0).map(t=>[t.q,t.r,.82]);
   for(const [q,r,s] of boats){const [x,y]=pos(q,r);seaBoat(g,x+4,y+5,s);}
   return {buffer,margin,resolution};
 }
@@ -892,7 +905,8 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   const [mountX,mountY]=pos(rq,rr);g.save();g.translate(mountX,mountY+20);g.rotate(.022);
   g.shadowColor='#405b48';g.shadowBlur=2.3;smallCaps(g,ridge,0,0,9.3*labelScale,1.4,'#f9e9bd');g.restore();
   if(region.id==='sd'){
-    const [bx,by]=pos(9.6,8.6);g.save();g.translate(bx,by);g.rotate(.22);
+    const [bx,by]=pos(9.6,8.6),large=region.mapSize==='large';
+    g.save();g.translate(large?2*bx-W/2:bx,large?2*by-H/2:by);g.rotate(.22);
     g.shadowColor='#234651';g.shadowBlur=2;smallCaps(g,'SAN DIEGO BAY',0,0,9*labelScale,1.4,'#f5eac4');g.restore();
   }
   const labelObstacles=[], labelBounds=[];
@@ -935,7 +949,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   if(scale>1.02){
     const names=region.districts;
-    for(const t of tiles) if(names.includes(t.name)&&!getAtlasPlace(t,board[t.id])&&!model.cityTiles.has(t.id)){
+    for(const t of tiles) if(t.namedCenter!==false && names.includes(t.name)&&!getAtlasPlace(t,board[t.id])&&!model.cityTiles.has(t.id)){
       const [x,y]=pos(t.q,t.r);g.save();g.font='italic 13px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
       g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(translate(t.name),x,y+14);g.fillStyle='#eee1bd';g.fillText(translate(t.name),x,y+14);g.restore();
     }
@@ -953,7 +967,7 @@ export function createAtlas(host, options = {}) {
   let tiles=options.tiles||getMap('la').tiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
   let replay=null,returnCamera=null,lastCameraInput=-Infinity;
   function manualCamera(){returnCamera=null;lastCameraInput=performance.now();}
-  let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
+  let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=0,cy=0,request=0,resizeFrame=0,tween=0;
   let labels=true,territories=true,grid=true,fresh=true,pendingFocus=null,gesture=null,didDrag=false,disposed=false;
   let frame=chartFrame(tiles), mesh=chartMesh(tiles), extent=chartExtent(tiles);
   let landmarkTiles=tiles.filter(tile=>tile.landmark);
@@ -1017,10 +1031,13 @@ export function createAtlas(host, options = {}) {
     return px<view.left+pad || px>view.left+view.width-pad || py<view.top+pad || py>view.top+view.height-pad;
   }
   function resetCenter(){centerAt((extent.left+extent.right)/2,(extent.top+extent.bottom)/2);}
+  function referenceScale(){
+    return Math.max(boxW/(extent.width+197),boxH/(extent.height+175),Math.min(boxW/(W*15.65),boxH/(ROW*12.55)));
+  }
   function measure(){
     const rect=host.getBoundingClientRect();boxW=Math.round(rect.width);boxH=Math.round(rect.height);
     if(boxW<2||boxH<2)return;
-    base=Math.max(boxW/(worldW+197),boxH/(worldH+175),Math.min(boxW/(W*15.65),boxH/(ROW*12.55)));
+    base=referenceScale();
     const dpr=Math.min(2,window.devicePixelRatio||1);canvas.width=Math.round(dpr*boxW);canvas.height=Math.round(dpr*boxH);
     if(pendingFocus){
       centerAt(...pendingFocus);pendingFocus=null;
@@ -1118,7 +1135,8 @@ export function createAtlas(host, options = {}) {
       if(tilesChanged){
         tiles=nextTiles;extent=chartExtent(tiles);frame=chartFrame(tiles);mesh=chartMesh(tiles);model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
         model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
-        zoom=1;resetCenter();options.onZoom?.(100);
+        pendingFocus=null;returnCamera=null;replay=null;
+        base=referenceScale();zoom=1;resetCenter();options.onZoom?.(100);
       }
       const state=o.state||o;if(o.state)model.state=o.state;
       const priorFog=model.fog;

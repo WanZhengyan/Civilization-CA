@@ -32,6 +32,22 @@ export function chartExtent(tiles) {
   return {left,right,top,bottom,width:right-left,height:bottom-top};
 }
 
+// Size the backing paint layer to the full terrain survey. Limit the bitmap
+// separately from world coordinates so a large map keeps every selectable hex.
+export function atlasRasterLayout(survey) {
+  const columns = 1 + Math.max(...survey.map(tile => tile.q));
+  const rows = 1 + Math.max(...survey.map(tile => tile.r));
+  const width = columns * W + W / 2;
+  const height = (rows - 1) * ROW + H;
+  const margin = 144;
+  const paddedWidth = width + 2 * margin;
+  const paddedHeight = height + 2 * margin;
+  const area = paddedWidth * paddedHeight;
+  const resolution = Math.min(1.55, 4095 / Math.max(paddedWidth, paddedHeight), Math.sqrt(5_000_000 / area));
+  const terrainStep = Math.max(3.1, Math.sqrt(area / 200_000));
+  return {columns, rows, width, height, margin, resolution, terrainStep};
+}
+
 // Only coordinates enter the frame. Unseen oceans, deposits and opponents
 // cannot move the line that marks the outermost playable hexes.
 export function chartPerimeter(tiles) {

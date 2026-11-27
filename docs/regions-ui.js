@@ -34,12 +34,30 @@ export function regionThumbnail(map) {
   return svg;
 }
 
-export function mapPicker(selected,disabled=false) {
+export function mapPicker(selected,disabled=false,mapSize='standard') {
   return '<fieldset class="region-picker"><legend>Campaign map</legend>'+CAMPAIGN_MAPS.map(choice=>{
     const active=choice.id===selected;
-    return '<label class="region-choice"><input type="radio" name="mapId" value="'+choice.id+'" '+(active?'checked ':'')+(disabled?'disabled':'')+'>'+regionThumbnail(getMap(choice.id))+
+    return '<label class="region-choice"><input type="radio" name="mapId" value="'+choice.id+'" '+(active?'checked ':'')+(disabled?'disabled':'')+'>'+regionThumbnail(getMap(choice.id,mapSize))+
       '<span class="region-details"><strong>'+choice.shortName+'</strong><small>'+choice.description+'</small></span></label>';
   }).join('')+'</fieldset>';
+}
+
+export function sizeName(mapSize) {
+  return mapSize === 'large' ? 'Large' : 'Standard';
+}
+
+export function sizePicker(mapId,selected,disabled=false) {
+  const choices = ['standard','large'].map(size=>{
+    const count = getMap(mapId,size).tiles.length;
+    return `<label><input type="radio" name="mapSize" value="${size}"${size===selected?' checked':''}${disabled?' disabled':''}>
+      <span><strong>${sizeName(size)}</strong><small>${count} <span>playable hexes</span></small></span></label>`;
+  });
+  return '<fieldset class="setup-setting"><legend>Map size</legend><div>'+choices.join('')+'</div></fieldset>';
+}
+
+export function rivalPicker(selected) {
+  const choices = [1,2,3].map(count=>`<label><input type="radio" name="rivals" value="${count}"${count===selected?' checked':''}><span>${count}</span></label>`);
+  return '<fieldset class="setup-setting"><legend>Computer opponents</legend><div>'+choices.join('')+'</div></fieldset>';
 }
 
 export function installMapStyles() {

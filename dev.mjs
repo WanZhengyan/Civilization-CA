@@ -37,7 +37,7 @@ const types = {
   ".mjs":"text/javascript; charset=utf-8", ".webp":"image/webp", ".svg":"image/svg+xml",
   ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".avif":"image/avif",
   ".gif":"image/gif", ".ico":"image/x-icon", ".woff":"font/woff", ".woff2":"font/woff2", ".ttf":"font/ttf",
-  ".ogg":"audio/ogg", ".mp3":"audio/mpeg", ".wav":"audio/wav"
+  ".ogg":"audio/ogg", ".mp3":"audio/mpeg", ".wav":"audio/wav", ".mp4":"video/mp4"
 };
 const port = Number(process.env.PORT || 8080);
 const host = process.env.HOST || "127.0.0.1";
@@ -73,7 +73,7 @@ const server = createServer(async (req, res) => {
     const file = url.pathname.startsWith(prefix) ? url.pathname.slice(prefix.length)||"index.html" : "";
     if (!assets.has(file) || file.startsWith(".")) { res.writeHead(404); res.end(); return; }
     let content = await readFile(new URL(file,docs));
-    if (file==="index.html") {
+    if (file==="index.html" || file==="game.html") {
       content=Buffer.from(content.toString().replace(/(<meta name="civitas-api-origin" content=")[^"]*(")/, "$1$2"));
     }
     res.writeHead(200,{"Content-Type":types[extname(file).toLowerCase()] || "application/octet-stream","Cache-Control":"no-store"});

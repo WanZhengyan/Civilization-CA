@@ -94,3 +94,29 @@ test('fit and focus use the open play area beneath floating map controls',async(
     }
   }
 });
+
+test('large regional maps paint, fit and pick the districts beyond the original chart',async()=>{
+  const {atlasRasterLayout,chartExtent,chartHit,chartViewport,regionOverviewZoom}=await import('../docs/hex-survey.js');
+  const {fitAtlasCaption}=await import('../docs/atlas.js');
+  const view=chartViewport(390,844,{top:98,bottom:84});
+  for(const mapId of ['la','sf','sd']){
+    const region=getMap({mapId,mapShape:'regional',mapSize:'large'});
+    const bounds=chartExtent(region.tiles);
+    const raster=atlasRasterLayout(region.terrainAtlas);
+    const beyond=region.tiles.filter(({q,r})=>q>=17 || r>=13);
+    assert.ok(beyond.length>100);
+    assert.ok(bounds.right<=raster.width && bounds.bottom<=raster.height);
+    const fit=regionOverviewZoom(view.width,view.height,bounds.width,bounds.height,1);
+    const exists=id=>Object.hasOwn(region.byId,id);
+    for(const {id,q,r} of beyond){
+      const [x,y]=pos(q,r);
+      assert.equal(chartHit(x,y,exists),id);
+      assert.ok((x-bounds.left)*fit<view.width);
+      assert.ok((y-bounds.top)*fit<view.height);
+    }
+    const last=beyond.at(-1);
+    const [x,y]=pos(last.q,last.r);
+    const [cx,cy]=fitAtlasCaption(x,y+26,72,12,region);
+    for(const side of [-1,1])for(const end of [-1,1])assert.ok(chartHit(cx+side*72,cy+end*12,exists));
+  }
+});

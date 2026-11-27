@@ -1,5 +1,11 @@
 # Campaign updates
 
+## Choose the scale of your California campaign
+
+Choose a Standard or Large coast when starting a solo campaign or creating a room. Los Angeles opens from 172 to 689 playable hexes, San Francisco Bay from 166 to 667 and San Diego from 149 to 598. Units keep their movement and sight ranges. Large Bay Area crossings meet the shore within sight of a ground unit. Solo players can also choose one, two or three computer rivals and keep a separate save for each region and map size.
+
+The bilingual official website opens directly into solo, host and join setup. Watch a recorded Los Angeles campaign found Westwood, explore the coast, build UCLA and replay a rival attack. Older room invitations and campaign bookmarks still open the game.
+
 ## Compare natural-wonder land before founding
 
 The settlement survey now explains when a known natural wonder will improve land claimed by a proposed city. Each candidate lists the wonder, the number of immediately workable neighboring districts and the exact yield effect. Undiscovered wonders remain private, and the estimate uses the same ownership, occupation and protected-land rules as the city workforce.

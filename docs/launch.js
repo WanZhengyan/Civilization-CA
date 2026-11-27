@@ -1,3 +1,5 @@
+import {validMapId} from './maps.js';
+
 // Invitation links only provide a public room code. API requests always go to the configured room host.
 export function invitationCode(input) {
   const raw = String(input || '').trim();
@@ -15,5 +17,11 @@ export function launchDestination(url, hasSolo, seats) {
     const code = invitationCode(location.searchParams.get('room'));
     return {screen: code && seats[code] ? 'reconnect' : 'join', code};
   }
-  return {screen: location.hash === '#campaign' && hasSolo ? 'solo' : 'home'};
+  if (location.hash === '#campaign') return {screen: hasSolo ? 'solo' : 'home'};
+  const setup = location.searchParams.get('setup');
+  if (['solo','create','host','join'].includes(setup)) {
+    const region = location.searchParams.get('region');
+    return {screen:'setup',mode:setup === 'host' ? 'create' : setup,region:validMapId(region) ? region : null};
+  }
+  return {screen:'home'};
 }

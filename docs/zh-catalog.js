@@ -2,6 +2,14 @@
 // their canonical IDs in both languages.
 export const catalog = new Map();
 section(`
+E|东
+W|西
+NE|东北
+NW|西北
+SE|东南
+SW|西南
+`);
+section(`
 Civic projects|市政项目
 Council agenda|可审议项目
 Full civic tree|完整市政树
@@ -56,6 +64,16 @@ function section(pairs) {
 }
 section(`
 Campaign controls|战役控制
+Map size|地图尺寸
+Standard|标准
+Large|大型
+playable hexes|块可玩地块
+Computer opponents|电脑对手
+Choose a valid map size.|请选择有效的地图尺寸。
+Choose a region and map size. Each combination has its own solo save. Choose one to three computer opponents for a new solo campaign. Online, the host sets the map for everyone.|选择地区和地图尺寸，每种组合都有独立的单人存档。开始新的单人战役时，可以选择一至三名电脑对手。联机地图由房主设定。
+Starting over replaces the solo save for this region and size.|重新开始会覆盖该地区在所选尺寸下的单人存档。
+Official website|官方网站
+This room server created a Standard map. Large maps are available in solo play.|当前联机服务器创建了标准地图。你可以在单人模式中选择大型地图。
 Planning|规划
 Roster|名册
 Chronicle|战史

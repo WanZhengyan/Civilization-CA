@@ -5,12 +5,12 @@ import {armyHandbook} from './army-handbook.js';
 import {ledgerBody} from './resource-ledger.js';
 import {getResourceLedger} from './rules.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
-import {mapPicker, installMapStyles} from './regions-ui.js';
-import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
+import {mapPicker, sizePicker, sizeName, rivalPicker, installMapStyles} from './regions-ui.js';
+import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
+import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
 
 import {TARGET_SCORE, MAX_ROUNDS} from './rules.js';
 
-const SOLO_KEY = 'angel-basin.solo.v1';
 const SEATS_KEY = 'angel-basin.room-seats.v1';
 const LAST_ROOM_KEY = 'angel-basin.active-room.v1';
 const NAME_KEY = 'angel-basin.name.v1';
@@ -36,38 +36,25 @@ function save(key, value) {
   } catch { /* Play can continue when device storage is unavailable. */ }
 }
 
-function freshSolo(mapId = "la") {
-  return createGame(FACTIONS.map((_, index) => ({
-    name: index ? undefined : 'You',
-    bot: index !== 0
-  })), mapId);
-}
-
-const mapSaveKey = mapId => SOLO_KEY + '.' + mapId;
 function archiveSolo() {
-  if (solo) save(mapSaveKey(getMap(solo).id), solo);
+  if (solo) save(soloSlotKey(getMap(solo).id,solo.mapSize), solo);
 }
-function campaignSave(mapId) {
-  if (solo && getMap(solo).id === mapId) return solo;
-  const saved = read(mapSaveKey(mapId), null);
-  if (!saved || getMap(saved).id !== mapId || !Array.isArray(saved.players) || !saved.board || !Array.isArray(saved.log)) return null;
-  try { return migrateGame(saved); } catch { return null; }
+function campaignSave(mapId, size) {
+  const matches = state => state && getMap(state).id === mapId && (state.mapSize || 'standard') === size;
+  if (matches(solo)) return solo;
+  const saved = read(soloSlotKey(mapId,size),null);
+  return matches(saved) ? restoreSolo(saved) : null;
 }
-
-function storedSolo() {
-  const candidate = read(SOLO_KEY, null);
-  if (candidate?.players?.length === FACTIONS.length && candidate.board &&
-      ['finished', 'playing'].includes(candidate.phase) && Array.isArray(candidate.log)) {
-    try {
-      return migrateGame(candidate);
-    } catch { /* An unreadable device save cannot be resumed. */ }
-  }
-  return null;
+function selectCampaignSettings(state) {
+  selectedMap = getMap(state).id;
+  selectedSize = state?.mapSize || 'standard';
+  selectedRivals = state?.players ? state.players.length - 1 : 3;
 }
 
 let renderView, locateDistrict, toast, dialog, solo, room = null, token = null;
 let mode = 'home', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
+let selectedSize = 'standard', selectedRivals = 3;
 let supplyCity='';
 let pending = false, errorMessage = '', playingBots = false;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
@@ -179,7 +166,7 @@ async function runBots() {
   }
 }
 
-async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId }) {
+async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId, mapSize }) {
   const isGet = !op;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
@@ -193,7 +180,7 @@ async function requestRoom({ op, code, name, revision, action, auth, ticket, map
         ...(!isGet && { 'Content-Type': 'application/json' }),
         ...(auth && { Authorization: 'Bearer ' + auth })
       },
-      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId })
+      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId, mapSize })
     });
     if (response.status === 204 && isGet && revision !== undefined) return { unchanged: true };
     let data;
@@ -326,6 +313,7 @@ async function seatRequest(form) {
   if (pending) return;
   const values = new FormData(form);
   if (values.get('mapId')) selectedMap = values.get('mapId');
+  if (values.get('mapSize')) selectedSize = values.get('mapSize');
   const name = String(values.get('name') || '').trim();
   const code = invitationCode(values.get('code'));
   formName = name;
@@ -349,16 +337,19 @@ async function seatRequest(form) {
         forgetSeat(code);
       }
     }
-    const intent = [roomTab, roomTab === 'join' ? code : selectedMap, name].join('|');
+    const intent = [roomTab, roomTab === 'join' ? code : selectedMap, name].join('|') +
+      (roomTab === 'create' && selectedSize === 'large' ? '|large' : '');
     let ticket = read(TICKET_KEY, null);
     if (ticket?.intent !== intent) {
       const bytes = crypto.getRandomValues(new Uint8Array(24));
       ticket = {intent, token:Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')};
       save(TICKET_KEY, ticket);
     }
-    const data = await requestRoom({ op: roomTab, name, ticket:ticket.token, ...(roomTab === 'join' ? {code} : {mapId:selectedMap}) });
+    const data = await requestRoom({ op: roomTab, name, ticket:ticket.token, ...(roomTab === 'join' ? {code} : {mapId:selectedMap,mapSize:selectedSize}) });
+    const standardOnly = roomTab === 'create' && selectedSize === 'large' && (data.room.mapSize || 'standard') === 'standard';
     connect(data.room, data.token);
     save(TICKET_KEY, null);
+    if (standardOnly) showError('This room server created a Standard map. Large maps are available in solo play.');
   } catch (error) { showError(error.message); }
   finally {
     pending = false;
@@ -428,7 +419,7 @@ function open(kind, tab, code) {
   if (changed) errorMessage = '';
   if (tab) roomTab = tab;
   if (code) joinCode = code;
-  if (changed && ['multiplayer','campaign-atlas','restart'].includes(kind) && previousModal !== 'campaign-atlas' && mode !== 'home') selectedMap = getMap(getState()).id;
+  if (changed && ['multiplayer','campaign-atlas','restart'].includes(kind) && !['campaign-atlas','restart'].includes(previousModal) && mode !== 'home') selectCampaignSettings(getState());
   if (changed && kind === 'multiplayer') inviteOpen = false;
   drawDialog();
   if (!dialog.open) dialog.showModal();
@@ -542,7 +533,7 @@ function multiplayerContent() {
     const footer = lobby && host ? button('start', pending ? 'Starting…' : 'Start campaign', 'primary', pending || room.players.length < 2)
       : (lobby ? '' : button('back', 'Return to map', 'primary'));
     return { title: lobby ? 'Room lobby' : 'Your room', kicker: 'Multiplayer', body:
-      sharing + muted(getMap(room.mapId).name) + list(roster) + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
+      sharing + muted(campaignSummary(room.game ? getMap(room.game) : getMap(room.mapId,room.mapSize),room.mapSize)) + list(roster) + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
   }
   const joining = roomTab === 'join';
   const disabled = pending ? ' disabled' : '';
@@ -551,7 +542,15 @@ function multiplayerContent() {
     `<button type="button" class="modal-tab" role="tab" aria-selected="${t === roomTab}" data-act="tab-${t}"${disabled}>${i ? 'Join room' : 'Create room'}</button>`).join('')}</div>`;
   return { kicker: 'Multiplayer', title: 'Play with friends', body: tabs +
     desc(joining ? 'Enter a room code to join a friend or return to a saved seat.' : 'Create a room for 2–4 players and share its invite link.') +
-    `<form class="modal-form" data-room-form><label class="modal-field">Player name<input class="modal-input" type="text" name="name" placeholder="Your name" maxlength="24" autocomplete="nickname" value="${escapeHTML(formName)}" required${disabled}></label>${codeField}${joining ? '' : mapPicker(selectedMap,pending)}<button class="modal-primary" type="submit"${disabled}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
+    `<form class="modal-form" data-room-form><label class="modal-field">Player name<input class="modal-input" type="text" name="name" placeholder="Your name" maxlength="24" autocomplete="nickname" value="${escapeHTML(formName)}" required${disabled}></label>${codeField}${joining ? '' : campaignPicker(pending)}<button class="modal-primary" type="submit"${disabled}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
+}
+
+function campaignPicker(disabled=false) {
+  return mapPicker(selectedMap,disabled,selectedSize) + sizePicker(selectedMap,selectedSize,disabled);
+}
+
+function campaignSummary(map,size) {
+  return `<span>${escapeHTML(map.name)}</span> · <span>${sizeName(size)}</span> · ${map.tiles.length} <span>playable hexes</span>`;
 }
 
 const guideSections = {
@@ -560,7 +559,7 @@ const guideSections = {
     ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
     ['Explore the fog', 'Each unit sees two hexes in every direction. Dark tiles are uncharted. Shaded tiles keep the terrain you explored, but enemies there are hidden.'],
     ['Survey for deposits', 'Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.'],
-    ['Choose your map', 'Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.'],
+    ['Choose your map', 'Choose a region and map size. Each combination has its own solo save. Choose one to three computer opponents for a new solo campaign. Online, the host sets the map for everyone.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
     ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
     ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.'],
@@ -659,14 +658,14 @@ function content() {
         actions(button('back','Return to map','primary')) };
   }
   if (modal === 'campaign-atlas') {
-    const saved=campaignSave(selectedMap);
-    const status=saved ? getMap(selectedMap).name+' · Round '+saved.round : 'No campaign started on this map.';
+    const saved=campaignSave(selectedMap,selectedSize);
+    const status=saved ? '<span>Round '+saved.round+'</span> · <span>Computer opponents</span> '+(saved.players.length-1) : 'No campaign started on this map.';
     return {kicker:'California campaigns', title:'Campaign atlas',
-      body:mapPicker(selectedMap)+muted(status)+
+      body:campaignPicker()+(saved?'':rivalPicker(selectedRivals))+muted(status)+
         (saved && saved.mapShape!=='regional' ? muted('This save uses the original map. Start a new campaign here to play the regional coastline.') : '')+actions(button('load-region',saved?'Resume campaign':'Start campaign','primary'),saved?button('confirm-restart','Start new campaign'):'')};
   }
   if (modal === 'restart') return {kicker:'Solo campaign', title:'Start a new campaign?',
-    body:muted(getMap(selectedMap).name) + desc('Starting over replaces the saved campaign on the selected map. Your other regions keep their progress.') + actions(button('restart','Start new campaign','primary'),button('campaign-atlas','Keep saved campaign'))};
+    body:muted(campaignSummary(getMap(selectedMap,selectedSize),selectedSize)) + rivalPicker(selectedRivals) + desc('Starting over replaces the solo save for this region and size.') + actions(button('restart','Start new campaign','primary'),button('campaign-atlas','Keep saved campaign'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings','Faction standings'),button('log','Event log'),
     button('help','Field guide'), button('supplies','Supply ledger'), button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Campaign atlas') : '', mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
@@ -744,7 +743,7 @@ function modalAction(act) {
   else if (act === 'start') mutate('start');
   else if (act === 'campaign-atlas') open('campaign-atlas');
   else if (act === 'load-region') {
-    const target=campaignSave(selectedMap)||freshSolo(selectedMap);
+    const target=campaignSave(selectedMap,selectedSize)||newSolo(selectedMap,selectedSize,selectedRivals);
     archiveSolo();
     solo=target;
     save(SOLO_KEY, solo);
@@ -754,7 +753,7 @@ function modalAction(act) {
   else if (act === 'confirm-restart') open('restart');
   else if (act === 'restart') {
     archiveSolo();
-    solo = freshSolo(selectedMap);
+    solo = newSolo(selectedMap,selectedSize,selectedRivals);
     resultShown = '';
     save(SOLO_KEY, solo);
     returnToSolo();
@@ -795,14 +794,16 @@ async function init({ render, locate, toast: showToast }) {
   installLanguage();
   dialog = document.getElementById('modal');
   dialog.addEventListener('change', e => {
-    if (e.target.name !== 'mapId') return;
-    selectedMap=e.target.value;
-    if (modal === 'campaign-atlas') {
-      drawDialog();
-      dialog.querySelector('input[name="mapId"]:checked')?.focus();
-    }
+    const {name,value} = e.target;
+    if (name === 'rivals') { selectedRivals = Number(value); return; }
+    if (name !== 'mapId' && name !== 'mapSize') return;
+    keepForm();
+    if (name === 'mapId') selectedMap=value;
+    else selectedSize=value;
+    drawDialog();
+    dialog.querySelector(`input[name="${name}"]:checked`)?.focus({preventScroll:true});
   });
-  solo = storedSolo();
+  solo = restoreSolo(read(SOLO_KEY,null));
   formName = String(read(NAME_KEY, '') || '');
   const title = document.getElementById('title-screen');
   const syncLocale = () => title.querySelectorAll('[data-title-lang]').forEach(button => {
@@ -816,11 +817,11 @@ async function init({ render, locate, toast: showToast }) {
     if (locale) { setLanguage(locale); return; }
     const action = event.target.closest('[data-title]')?.dataset.title;
     if (pending || !action) return;
-    if (action === 'solo') { selectedMap = getMap(solo).id; open('campaign-atlas'); }
+    if (action === 'solo') { selectCampaignSettings(solo); open('campaign-atlas'); }
     if (action === 'reconnect') reconnectRoom(read(LAST_ROOM_KEY,''));
     if (action === 'create' || action === 'join') {
       joinCode = '';
-      selectedMap = getMap(solo).id;
+      selectCampaignSettings(solo);
       open('multiplayer',action);
     }
   });
@@ -842,6 +843,18 @@ async function init({ render, locate, toast: showToast }) {
   });
   updateRoomShortcut();
   const entry = launchDestination(location.href, Boolean(solo), read(SEATS_KEY,{}));
+  const address = new URL(location.href);
+  if (address.searchParams.has('setup')) {
+    address.searchParams.delete('setup');
+    address.searchParams.delete('region');
+    history.replaceState(null,'',address);
+  }
+  if (entry.screen === 'setup') {
+    selectCampaignSettings(solo);
+    if (entry.region) selectedMap=entry.region;
+    if (entry.mode === 'solo') open('campaign-atlas');
+    else open('multiplayer',entry.mode);
+  }
   if (entry.screen === 'reconnect') await reconnectRoom(entry.code);
   if (entry.screen === 'solo') returnToSolo();
   if (entry.screen === 'join') {

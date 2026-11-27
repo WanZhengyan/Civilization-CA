@@ -48,7 +48,8 @@ export function placeNaturalWonders(state,map) {
   const occupied=new Set(state.units.map(unit=>unit.tile));
   for(const [id,wonder] of Object.entries(NATURAL_WONDERS)){
     if(wonder.region!==map.id)continue;
-    const order=shuffled(candidateSites[id],seededRandom(state.seed,'nature/'+id));
+    const candidates=map.anchorId ? candidateSites[id].map(map.anchorId) : candidateSites[id];
+    const order=shuffled(candidates,seededRandom(state.seed,'nature/'+id));
     const site=order.find(tile=>map.byId[tile] && !occupied.has(tile) && !map.byId[tile].landmark);
     state.board[site]={...state.board[site],naturalWonder:id};
   }
