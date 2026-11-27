@@ -12,6 +12,7 @@ import {wildAt,WILDS} from "./barbarians.js";
 import {addPolicyPanel,updateCivicAgenda} from "./policy-panel.js";
 import {campusPlan} from './campus-plan.js';
 import {getDevelopmentPreview,getWonderSites} from './rules.js';
+import {sameTeam,teamLabel} from './teams.js';
 import {cityKind,developmentPanel,developmentReceipt,foundingLabel} from './district-command.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
 import {mountSurveyControls, showSelectedFrontier} from './survey-controls.js';
@@ -283,7 +284,8 @@ function inspect(){
     image.onerror=()=>{unavailableArt.add(unitArt);image.onerror=null;image.src=fallback;portrait.hidden=false;drawUnitPortrait(portrait,activeUnit.type,gov.color)};
   }else{image.onerror=null;if(activeUnit)drawUnitPortrait(portrait,activeUnit.type,gov.color)}
   if(image.getAttribute("src")!==art)image.src=art;
-  text("entity-kind",activeUnit ? (own?"Your ":"Rival ")+(UNIT_TYPES[activeUnit.type].role||unitRole[activeUnit.type]||"unit") : activeCity ? cityKind(activeCity,view.seat) : (nature?"Natural wonder":campus?"University wonder":port?"Harbor district":tile.landmark?"Landmark":"District"));
+  const allied=owner!==view.seat && sameTeam(state,owner,view.seat);
+  text("entity-kind",activeUnit ? (own?"Your ":allied?"Allied ":"Rival ")+(UNIT_TYPES[activeUnit.type].role||unitRole[activeUnit.type]||"unit") : activeCity ? cityKind(activeCity,view.seat,state) : (nature?"Natural wonder":campus?"University wonder":port?"Harbor district":tile.landmark?"Landmark":"District"));
   el("entity-name").translate=!customCity(activeCity);
   text("entity-name",activeUnit ? (items[activeUnit.type]||activeUnit.type) : activeCity?.name||nature?.name||(campus?WONDERS[campus]?.name:port?"Harbor":tile.name));
   if(activeCity && Number.isInteger(activeCity.originalSeat) && activeCity.originalSeat !== activeCity.seat) {
@@ -328,7 +330,7 @@ function inspect(){
         actions+=actionButton("upgrade","Upgrade to "+items[o.upgrade.to],o.upgrade.cost+" capital","gold",disabled||!o.upgrade.enabled);
         if(!o.upgrade.enabled&&o.upgrade.reason)explanation+=" "+o.upgrade.reason;
       }
-    }else explanation="Select a friendly unit to give orders.";
+    }else explanation=allied?"Your teammate commands this unit.":"Select a friendly unit to give orders.";
   }else if(activeCity){
     const c=activeCity;
     if(!own) {
@@ -585,10 +587,10 @@ function paint(next){
   const finished=state.phase==="finished",myTurn=state.turn===seat,waiting=lobby();
   text("turn-owner",waiting?"Room lobby":finished?"Campaign over":myTurn?"Your turn":faction(state.turn).name);
   text("turn-number",'Turn '+String(state.round).padStart(2,'0'));el("turn-number").title='Up to '+MAX_ROUNDS+' turns';
-  text("end-label",waiting?"Open room":finished?"Standings":myTurn?"End turn":mode==="solo"?"Rivals playing…":"Waiting…");
+  text("end-label",waiting?"Open room":finished?"Standings":myTurn?"End turn":mode==="solo"?"Rivals playing…":state.players[state.turn]?.bot?"Computer playing…":"Waiting…");
   el("end-turn").disabled=!waiting&&!finished&&(!myTurn||view.busy);
   const event=state.log.at(-1);text("event-turn","TURN "+String(event?.round||1).padStart(2,"0"));text("event-text",event?Game.eventText(event):"");
-  el("legend").innerHTML=state.players.map(p=>'<span class="legend-item"><i class="swatch" style="--swatch:'+FACTIONS[p.faction].color+'"></i>'+esc(names[p.faction])+'</span>').join('');
+  el("legend").innerHTML=state.players.map((p,i)=>'<span class="legend-item"><i class="swatch" style="--swatch:'+FACTIONS[p.faction].color+'"></i><span>'+esc(names[p.faction])+'</span>'+(state.teams?' · <span>'+teamLabel(state.teams[i])+'</span>':'')+'</span>').join('');
   const eventKey=event?JSON.stringify(event):"";
   const receipt=previousKey===key ? developmentReceipt(previousState,state,seat,mapRegion) : null;
   if(receipt) toast(receipt);

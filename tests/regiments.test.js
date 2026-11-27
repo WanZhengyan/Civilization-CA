@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {formationChoices} from '../docs/regiments.js';
 import {createClassicGame} from './classic-game.js';
 import {applyAction,combatPreview,getMap,getProductionOptions,getRouteDetail,neighbors,UNIT_TYPES,CIVICS,TECHS} from '../docs/rules.js';
 
@@ -82,4 +83,22 @@ test('specialist shipyards, coastal bombardment and fleet damage use the same ru
   assert.equal(next.units.find(u=>u.id==='b').hp,escort.defenderHpAfter);
   s.units[1]=piece('b','workboat',1,'3,8');
   assert.equal(combatPreview(s,'a','3,8').damage,39);
+});
+
+test('adjacent teammate signals assist a visible attack once without treating friendly riders as enemies',()=>{
+  const state=createClassicGame(['Coast','Valley','Sierras']);
+  state.teams=[0,1,0];
+  state.cities=[];
+  state.units=[piece('a','melee',0,'10,7'),piece('b','melee',1,'11,8')];
+  const solo=combatPreview(state,'a','11,8');
+  state.units.push(piece('ally-signal','signals',2,'10,8'),piece('signal','signals',0,'9,7'));
+  const ally=combatPreview(state,'a','11,8');
+  assert.equal(ally.damage,solo.damage+8);
+  assert.equal(applyAction(state,0,{type:'attack',unit:'a',tile:'11,8'}).units.find(u=>u.id==='b').hp,ally.defenderHpAfter);
+  state.units=[piece('mounted','cavalry',2,'10,7')];
+  state.cities=[{seat:2}];
+  const response=()=>formationChoices(state,{seat:0},[],()=>0,[]);
+  assert.deepEqual(response(),[]);
+  state.teams[2]=1;
+  assert.deepEqual(response(),['sappers','pikes']);
 });

@@ -1,5 +1,13 @@
 # Campaign updates
 
+## Play team matches with friends and computer governors
+
+Create a room for a duel against a computer, two friends against two computers, or a custom match of up to four civilizations. Set teams and computer difficulty by seat. The server takes computer turns, including the opening move if their team wins the draw. An open human lobby still starts as soon as the host has a second player.
+
+Each civilization explores with its own units. Easy patrols near home, Normal balances scouting and growth, and Hard compares attacks across its army and evaluates known expansion sites. All three spend the same resources and use the same sight and movement rules as humans.
+
+Allies can defend each other’s cities and share a capital or civic victory. The civic target scales with the largest starting team, from 125 in a duel to 250 in two-versus-two. The setup, roster and team standings are available in English and Simplified Chinese.
+
 ## Find cities and see what district development buys
 
 City names are anchored to their visible hexes. A gold crown identifies each original capital, including after capture. Its rim follows the owner. Turn geographic names off to clear the map and keep city names in view. Click a nameplate to inspect the city. A selected unit can still move or attack through it.

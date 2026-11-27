@@ -11,6 +11,10 @@ test('city labels distinguish the founder, the current controller, ordinary citi
     assert.equal(cityKind({seat,originalSeat:null},seat),'Your city');
     assert.equal(cityKind({seat},1-seat),'Rival city');
   }
+  const teamGame={players:[{}, {}, {}],teams:[1,2,1]};
+  assert.equal(cityKind({seat:2,originalSeat:2},0,teamGame),'Allied capital city');
+  assert.equal(cityKind({seat:2},0,teamGame),'Allied city');
+  assert.equal(cityKind({seat:1},0,teamGame),'Rival city');
   const fresh={opening:'settlers',cities:[],log:[{type:'start'}]};
   assert.equal(foundingLabel(fresh,0),'Found capital');
   assert.equal(foundingLabel({...fresh,intel:{hasFoundedCapital:true}},0),'Found city');

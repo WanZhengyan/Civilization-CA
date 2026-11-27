@@ -7,6 +7,7 @@ import {getResourceLedger} from './rules.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
 import {mapPicker, sizePicker, sizeName, rivalPicker, victoryPicker, installMapStyles} from './regions-ui.js';
 import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
+import {changeRoomSetup,difficultyField,difficultyLabel,roomPreset,roomSetupFields,teamLabel,validRoomTeams} from './room-setup.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
 
 import {getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
@@ -50,12 +51,14 @@ function selectCampaignSettings(state) {
   selectedSize = state?.mapSize || 'standard';
   selectedRivals = state?.players ? state.players.length - 1 : 3;
   selectedGoal = getScoreTarget(state);
+  selectedDifficulty = state?.difficulty || 'normal';
 }
 
 let renderView, locateDistrict, toast, dialog, solo, room = null, token = null;
 let mode = 'home', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
-let selectedSize = 'standard', selectedRivals = 3, selectedGoal = TARGET_SCORE;
+let selectedSize = 'standard', selectedRivals = 3, selectedGoal = TARGET_SCORE, selectedDifficulty = 'normal';
+let roomSetup=roomPreset('open');
 let supplyCity='';
 let pending = false, errorMessage = '', playingBots = false;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
@@ -167,7 +170,7 @@ async function runBots() {
   }
 }
 
-async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId, mapSize }) {
+async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId, mapSize, seats }) {
   const isGet = !op;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
@@ -181,7 +184,7 @@ async function requestRoom({ op, code, name, revision, action, auth, ticket, map
         ...(!isGet && { 'Content-Type': 'application/json' }),
         ...(auth && { Authorization: 'Bearer ' + auth })
       },
-      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId, mapSize })
+      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId, mapSize, seats })
     });
     if (response.status === 204 && isGet && revision !== undefined) return { unchanged: true };
     let data;
@@ -240,7 +243,8 @@ function connect(incoming, auth, showLobby = true) {
 function schedulePoll() {
   clearTimeout(pollTimer);
   if (mode !== 'online' || !room || room.phase === 'finished') return;
-  pollTimer = setTimeout(poll, document.hidden ? 7000 : 1400);
+  const computerTurn=!offline && room.game?.players[room.game.turn]?.bot;
+  pollTimer = setTimeout(poll, document.hidden ? 7000 : computerTurn ? 450 : 1400);
 }
 
 async function poll() {
@@ -328,6 +332,8 @@ async function seatRequest(form) {
   formName = name;
   if (!name || name.length > 24) return showError('Choose a player name between 1 and 24 characters.');
   if (roomTab === 'join' && !validCode(code)) return showError('Enter the six-character room code.');
+  if (roomTab === 'create' && !validRoomTeams(roomSetup)) return showError('Assign the seats to at least two different teams.');
+  const seats=roomTab==='create' && roomSetup.seats.length ? roomSetup.seats : undefined;
   joinCode = code;
   save(NAME_KEY, name);
   pending = true;
@@ -347,14 +353,18 @@ async function seatRequest(form) {
       }
     }
     const intent = [roomTab, roomTab === 'join' ? code : selectedMap, name].join('|') +
-      (roomTab === 'create' && selectedSize === 'large' ? '|large' : '');
+      (roomTab === 'create' && selectedSize === 'large' ? '|large' : '')+(seats ? '|'+JSON.stringify(seats) : '');
     let ticket = read(TICKET_KEY, null);
     if (ticket?.intent !== intent) {
       const bytes = crypto.getRandomValues(new Uint8Array(24));
       ticket = {intent, token:Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')};
       save(TICKET_KEY, ticket);
     }
-    const data = await requestRoom({ op: roomTab, name, ticket:ticket.token, ...(roomTab === 'join' ? {code} : {mapId:selectedMap,mapSize:selectedSize}) });
+    const data = await requestRoom({ op: roomTab, name, ticket:ticket.token, ...(roomTab === 'join' ? {code} : {mapId:selectedMap,mapSize:selectedSize,seats}) });
+    if (seats && !data.room.configured) {
+      save(TICKET_KEY,null);
+      throw new Error('This room service supports open human lobbies only. Choose the open lobby to play here.');
+    }
     const standardOnly = roomTab === 'create' && selectedSize === 'large' && (data.room.mapSize || 'standard') === 'standard';
     connect(data.room, data.token);
     save(TICKET_KEY, null);
@@ -531,28 +541,34 @@ function multiplayerContent() {
   if (room && mode === 'online') {
     const lobby = room.phase === 'lobby';
     const host = room.you === room.host;
-    const roster = room.players.map(p => row((lobby ? '' : factionMark(p.id)) + '<span translate="no">' + escapeHTML(p.name) + '</span>', lobby ? 'Civilization drawn at start' : FACTION_NAMES[seatFaction(p.id)],
-      [p.id === room.host && 'Host', p.id === room.you && 'You'].filter(Boolean).join(' · ')));
+    const roster = room.players.map(p => {
+      const name=p.open ? '<span>Waiting for player</span>' : p.bot ? '<span>Computer</span> '+(p.id+1) : '<span translate="no">'+escapeHTML(p.name)+'</span>';
+      const attributes=[room.configured && 'Seat '+(p.id+1),room.configured && teamLabel(p.team),p.bot && difficultyLabel(p.difficulty || 'normal'),!lobby && FACTION_NAMES[seatFaction(p.id)]].filter(Boolean);
+      return row((lobby ? '' : factionMark(p.id))+name,attributes.map(word=>'<span>'+escapeHTML(word)+'</span>').join(' · ') || 'Civilization drawn at start',
+        [p.id===room.host && 'Host',p.id===room.you && 'You',room.configured && !lobby && p.id===room.game?.firstSeat && 'Drew first turn'].filter(Boolean).map(word=>'<span>'+word+'</span>').join(' · '));
+    });
     const sharing = `<div class="modal-room"><span class="modal-muted">Room code</span><strong class="modal-code" translate="no">${escapeHTML(room.code)}</strong></div>` +
       actions(button('copy', 'Copy invite link'), button('show-link', inviteOpen ? 'Hide link' : 'Show link')) +
       (inviteOpen ? `<label class="modal-field">Invite link<input class="modal-input" data-invite-link readonly value="${escapeHTML(roomURL(room.code))}"></label>` : '');
+    const ready=room.canStart ?? room.players.length>=2;
     const status = lobby
-      ? host ? (room.players.length >= 2 ? 'Start when everyone has joined.' : 'Send the invite link to a friend. Two players can start a campaign.')
+      ? host ? (ready ? 'All required seats are ready.' : room.configured ? 'Invite a friend to each open human seat before starting.' : 'Send the invite link to a friend. Two players can start a campaign.')
              : 'You have a seat. The host will start the campaign.'
       : room.phase === 'finished' ? 'This campaign has ended.' : 'Campaign in progress.';
-    const footer = lobby && host ? button('start', pending ? 'Starting…' : 'Start campaign', 'primary', pending || room.players.length < 2)
+    const footer = lobby && host ? button('start', pending ? 'Starting…' : 'Start campaign', 'primary', pending || !ready)
       : (lobby ? '' : button('back', 'Return to map', 'primary'));
+    const target=room.configured ? muted('<span>Team civic target</span> · '+getScoreTarget(room.game || {teams:room.players.map(p=>p.team)})) : '';
     return { title: lobby ? 'Room lobby' : 'Your room', kicker: 'Multiplayer', body:
-      sharing + muted(campaignSummary(room.game ? getMap(room.game) : getMap(room.mapId,room.mapSize),room.mapSize)) + list(roster) + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
+      sharing + muted(campaignSummary(room.game ? getMap(room.game) : getMap(room.mapId,room.mapSize),room.mapSize)) +target+ list(roster) + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
   }
   const joining = roomTab === 'join';
   const disabled = pending ? ' disabled' : '';
   const codeField = joining ? `<label class="modal-field">Room code<input class="modal-input" type="text" name="code" aria-label="Room code or invite link" placeholder="Room code or invite link" autocomplete="off" spellcheck="false" autocapitalize="characters" maxlength="2048" value="${escapeHTML(joinCode)}" required${disabled}></label>` : '';
   const tabs = `<div class="modal-tabs" role="tablist" aria-label="Room options">${['create','join'].map((t, i) =>
     `<button type="button" class="modal-tab" role="tab" aria-selected="${t === roomTab}" data-act="tab-${t}"${disabled}>${i ? 'Join room' : 'Create room'}</button>`).join('')}</div>`;
-  return { kicker: 'Multiplayer', title: 'Play with friends', body: tabs +
-    desc(joining ? 'Enter a room code to join a friend or return to a saved seat.' : 'Create a room for 2–4 players and share its invite link.') +
-    `<form class="modal-form" data-room-form><label class="modal-field">Player name<input class="modal-input" type="text" name="name" placeholder="Your name" maxlength="24" autocomplete="nickname" value="${escapeHTML(formName)}" required${disabled}></label>${codeField}${joining ? '' : campaignPicker(pending)}<button class="modal-primary" type="submit"${disabled}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
+  return { kicker: 'Multiplayer', title: joining ? 'Join room' : 'Create room', body: tabs +
+    desc(joining ? 'Enter a room code or invitation link. New players take the first open human seat. This device remembers your seat.' : 'Invite friends, face a computer opponent or form teams.') +
+    `<form class="modal-form" data-room-form><label class="modal-field">Player name<input class="modal-input" type="text" name="name" placeholder="Your name" maxlength="24" autocomplete="nickname" value="${escapeHTML(formName)}" required${disabled}></label>${codeField}${joining ? '' : roomSetupFields(roomSetup,pending)+campaignPicker(pending)}<button class="modal-primary" type="submit"${disabled || (!joining && !validRoomTeams(roomSetup) ? ' disabled' : '')}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
 }
 
 function campaignPicker(disabled=false) {
@@ -563,14 +579,14 @@ function campaignSummary(map,size) {
   return `<span>${escapeHTML(map.name)}</span> · <span>${sizeName(size)}</span> · ${map.tiles.length} <span>playable hexes</span>`;
 }
 
-function soloSettingsSummary(rivals,scoreTarget) {
-  return `<span>Computer opponents</span> ${rivals} · <span>Victory target</span> ${scoreTarget}`;
+function soloSettingsSummary(rivals,scoreTarget,difficulty) {
+  return `<span>Computer opponents</span> ${rivals}${rivals ? ' · <span>'+difficultyLabel(difficulty)+'</span>' : ''} · <span>Victory target</span> ${scoreTarget}`;
 }
 
 function savedCampaignCard(saved,resumable) {
   if (!saved) return '';
   const locality = campaignSummary(getMap(saved),saved.mapSize);
-  const settings = soloSettingsSummary(saved.players.length-1,getScoreTarget(saved));
+  const settings = soloSettingsSummary(saved.players.length-1,getScoreTarget(saved),saved.difficulty);
   const oldCoastline = saved.mapShape !== 'regional' ? muted('This save uses the original map. Start a new campaign here to play the regional coastline.') : '';
   return '<section class="solo-save-card"><div class="solo-save-heading"><h3>Saved campaign</h3>'+
     (resumable ? button('load-region','Resume campaign') : '')+'</div>'+muted(locality)+
@@ -630,8 +646,12 @@ const guideSections = {
     ['Choose a specialization', 'Workshop Engineering opens Steam Power and then Radio Networks. Field Tactics leads to Ballistics. Learn both Steam Power and Ballistics to unlock Motorization and train an Armored Column.'],
     ['Build up science', 'Cities, population and discoveries contribute science. Culture funds a separate civic project at the same time. Switch projects without losing saved points. Surplus science and culture carry over.'],
     ['Choose a civic path', 'Municipal Charter leads to County Federation for another district order, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
-    ['Win by domination', 'In a campaign with rivals, control every participating civilization’s original capital to win immediately.'],
-    ['Win on civic points', state=>state?.practice ? 'Reach the civic target to complete practice. At round 30, practice ends with your final score.' : `If a faction reaches ${getScoreTarget(state)} civic points, finish the current round and compare scores. The same scoring applies after round ${MAX_ROUNDS}. The highest score wins, and a tie shares victory.`],
+    ['Win by domination', state=>state?.teams ? 'A team wins immediately when its members collectively hold every original capital.' : 'In a campaign with rivals, control every participating civilization’s original capital to win immediately.'],
+    ['Win on civic points', state=>{
+      if(state?.teams)return '<span>Living teammates combine their civic points. Compare team totals at the end of the round when a team reaches the target, or after round 30. Tied teams share victory.</span> <strong>Team civic target</strong> · '+getScoreTarget(state);
+      if(state?.practice)return 'Reach the civic target to complete practice. At round 30, practice ends with your final score.';
+      return `If a faction reaches ${getScoreTarget(state)} civic points, finish the current round and compare scores. The same scoring applies after round ${MAX_ROUNDS}. The highest score wins, and a tie shares victory.`;
+    }],
     ['Count civic points', 'Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.']
   ]}
 };
@@ -656,6 +676,29 @@ function wonderJournal(state) {
 function countLabel(n, singular, plural = singular + 's') {
   return n + ' ' + (n === 1 ? singular : plural);
 }
+function teamStandings(state){
+  const finished=state.phase==='finished', winners=new Set((state.winners||[]).map(seat=>state.teams[seat]));
+  const teams=[...new Set(state.teams)].sort((a,b)=>Number(winners.has(b))-Number(winners.has(a)) || a-b);
+  const groups=teams.map(team=>{
+    const members=state.players.map((player,seat)=>({player,seat})).filter(({seat})=>state.teams[seat]===team);
+    const score=finished ? members.reduce((sum,{player})=>sum+(player.eliminated ? 0 : player.score || 0),0) : null;
+    const standing=finished?' · <span>'+score+' pts</span>':'';
+    const relation=team===state.teams[currentSeat()]?' · <span>Your team</span>':'';
+    const rows=members.map(({player,seat})=>{
+      const name=player.bot?'<span>Computer</span>':'<span translate="no">'+escapeHTML(player.name)+'</span>';
+      const you=seat===currentSeat()?' · <span>You</span>':'';
+      const score=finished || seat===currentSeat() ? escapeHTML(player.score ?? getStats(state,seat).score)+' pts' : '';
+      return row(factionMark(seat)+'<span>'+FACTION_NAMES[seatFaction(seat)]+'</span>',name+you,score);
+    });
+    return '<section class="room-team-record"><h3><span>'+teamLabel(team)+'</span>'+relation+standing+'</h3>'+list(rows)+'</section>';
+  });
+  const result=finished ? desc('<span>'+(winners.size>1?'Shared victory':'Winning team')+'</span> · '+
+    [...winners].map(team=>'<span>'+teamLabel(team)+'</span>').join(' · '))+
+    muted(({domination:'All original capitals controlled',survival:'Last surviving team',civic:'Team civic points'})[state.victoryReason] || 'Team civic points')
+    : muted('<span>Team civic target</span> · '+getScoreTarget(state));
+  return {kicker:'Campaign records',title:finished?'Campaign complete':'Team standings',
+    body:result+groups.join('')+actions(button('back','Return to map','primary'))};
+}
 function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
@@ -673,6 +716,7 @@ function content() {
       'Round ' + escapeHTML(entry.round), Number.isInteger(entry.seat) && FACTIONS[entry.seat] ? factionMark(entry.seat) : ''))) : muted('No events yet.'))
   };
   if (modal === 'standings') {
+    if(state.teams) return teamStandings(state);
     if (state.practice) {
       const finished = state.phase === 'finished';
       const score = state.players[0].score ?? getStats(state,0).score;
@@ -697,14 +741,14 @@ function content() {
     const saved=campaignSave(selectedMap,selectedSize);
     return {kicker:'California campaigns', title:'Solo game setup',
       body:savedCampaignCard(saved,true)+'<section class="solo-new-setup"><h3>New campaign settings</h3>'+
-        rivalPicker(selectedRivals)+victoryPicker(selectedGoal)+sizePicker(selectedMap,selectedSize)+
+        rivalPicker(selectedRivals)+(selectedRivals ? difficultyField(selectedDifficulty) : '')+victoryPicker(selectedGoal)+sizePicker(selectedMap,selectedSize)+
         mapPicker(selectedMap,false,selectedSize)+actions(button('start-configured',saved?'Start new campaign':'Start campaign','primary'))+
         '</section>'};
   }
   if (modal === 'restart') return {kicker:'Solo campaign', title:'Replace saved campaign?',
     body:savedCampaignCard(campaignSave(selectedMap,selectedSize),false)+
       '<section class="solo-new-setup"><h3>New campaign settings</h3>'+muted(campaignSummary(getMap(selectedMap,selectedSize),selectedSize))+
-      muted(soloSettingsSummary(selectedRivals,selectedGoal))+'</section>'+
+      muted(soloSettingsSummary(selectedRivals,selectedGoal,selectedDifficulty))+'</section>'+
       desc('Starting over replaces the solo save for this region and size.')+
       actions(button('campaign-atlas','Edit settings'),button('restart','Replace and start','primary'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
@@ -790,7 +834,7 @@ function modalAction(act) {
   } else if ((act === 'start-configured' && modal === 'campaign-atlas') || (act === 'restart' && modal === 'restart')) {
     if (act === 'start-configured' && campaignSave(selectedMap,selectedSize)) open('restart');
     else {
-      enterSoloCampaign(newSolo(selectedMap,selectedSize,selectedRivals,selectedGoal));
+      enterSoloCampaign(newSolo(selectedMap,selectedSize,selectedRivals,selectedGoal,selectedDifficulty));
       toast?.('New campaign started.');
     }
   } else if (['menu','multiplayer','standings','log','help'].includes(act)) open(act);
@@ -830,7 +874,21 @@ async function init({ render, locate, toast: showToast }) {
   dialog = document.getElementById('modal');
   dialog.addEventListener('change', e => {
     const {name,value} = e.target;
-    if (name === 'rivals') { selectedRivals = Number(value); return; }
+    if (name==='rivals' || name==='soloDifficulty') {
+      if(name==='rivals') selectedRivals=Number(value);
+      else selectedDifficulty=value;
+      drawDialog();
+      dialog.querySelector(name==='rivals'?'input[name="rivals"]:checked':'select[name="soloDifficulty"]')?.focus({preventScroll:true});
+      return;
+    }
+    if(modal==='multiplayer' && roomTab==='create' && !room && !pending){
+      const next=changeRoomSetup(roomSetup,name,value);
+      if(next){
+        keepForm();roomSetup=next;errorMessage='';drawDialog();
+        dialog.querySelector('select[name="'+name+'"]')?.focus({preventScroll:true});
+        return;
+      }
+    }
     if (name === 'scoreTarget') { selectedGoal = Number(value); return; }
     if (name !== 'mapId' && name !== 'mapSize') return;
     keepForm();

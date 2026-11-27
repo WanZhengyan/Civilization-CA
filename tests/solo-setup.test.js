@@ -152,3 +152,24 @@ test('the guide and standings use the chosen target and a practice finish report
     assert.doesNotMatch(ended.dialog.innerHTML,/won on civic points|last civilization standing|tie shares victory/);
   }
 });
+
+test('team standings keep other seats’ scores private during play and explain shared victories using final team totals',async()=>{
+  const game=createGame([{name:'West'},{bot:true},{name:'友军'},{bot:true}],'la',{seed:417005,teams:[0,1,0,1]});
+  game.players.forEach((p,i)=>{p.score=[75,65,55,65][i];});
+  const link='https://example.test/Civilization-CA/game.html#campaign';
+  const saved=()=>new Map([[SOLO_KEY,JSON.stringify(game)]]);
+  const active=await openPage(link,saved());
+  active.Game.open('standings');
+  assert.match(active.dialog.innerHTML,/Team standings/);
+  assert.match(active.dialog.innerHTML,/Team civic target/);
+  assert.match(active.dialog.innerHTML,/translate="no">友军/);
+  assert.doesNotMatch(active.dialog.innerHTML,/(55|65|130) pts/);
+  active.Game.open('help');
+  active.click('guide-research');
+  assert.match(active.dialog.innerHTML,/Team civic target<\/strong> · 250/);
+  Object.assign(game,{phase:'finished',round:30,victoryReason:'civic',winners:[0,1,2,3]});
+  const done=await openPage(link,saved());
+  assert.match(done.dialog.innerHTML,/Shared victory/);
+  assert.equal(done.dialog.innerHTML.match(/130 pts/g)?.length,2);
+  assert.ok(done.dialog.innerHTML.includes('Team A') && done.dialog.innerHTML.includes('Team B'));
+});

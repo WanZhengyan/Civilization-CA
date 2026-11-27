@@ -102,3 +102,27 @@ Across the three regions and both map sizes, 36 orders covered two terrain types
 At Los Angeles seed 63, upgrading Westwood from level 1 to 2 cost 8 capital. Treasury income went from 8 to 9 per turn, influence income stayed at 4 and the civic score rose from 21 to 22. An English narrow-screen coastal upgrade and a Chinese urban upgrade also agreed with the forecast. The sharper labels reserve space that geographic labels could otherwise use. Next, ask first-time players in a crowded regional overview to locate a captured capital and name its current owner before opening Field Command. Measure correct choices and time to locate it.
 
 All 200 regression checks passed. The 18 automated campaigns each replayed twice. The candidate and reference reports matched byte for byte.
+
+## Testing team rooms and computer difficulty
+
+On reference `0e4e81c`, the host could pick a region and size, but an empty room had no computer seat and could not start. All rivals used the same policy. With identical computers on both sides, the first seat won 15 of 18 fixed openings. We predicted that exchanging the two policies on the same map would distinguish stronger decisions from lucky starting positions.
+
+Use `node scripts/benchmark-ai.mjs --pairs=hard:normal,normal:easy,hard:easy --seeds=337,5813,727909` to reproduce the final comparison. Each pair played three regions at both map sizes on all three seeds. Both sides played each opening, with factions, units, terrain, starting resources and vision held fixed. Add `--details` for the starts and action hashes. The following seeds were reserved until after the last strategy and coastal-order fixes. Each cell gives wins, draws and losses for the first difficulty.
+
+| Matchup | Standard | Large | Combined |
+| --- | --- | --- | --- |
+| Hard vs Normal | 16 / 0 / 2 | 17 / 0 / 1 | 33 / 0 / 3 |
+| Normal vs Easy | 10 / 0 / 8 | 18 / 0 / 0 | 28 / 0 / 8 |
+| Hard vs Easy | 15 / 0 / 3 | 18 / 0 / 0 | 33 / 0 / 3 |
+
+An early Easy build rushed capitals and beat Normal in 14 of 18 Standard matches. Easy now prioritizes home development and nearby defense. Hard waits for an escort and a surveyed expansion site and compares attack orders across its available units. On the final seeds it founded 71 cities to Normal’s 36. A separate set of 108 games on seeds 239, 3877 and 910033 also completed. Those games caught an attempted harbor on a berth reserved by an unseen rival. The computer now evaluates its known coast and can choose a different project. It can decline a legal but uncertain berth. Changing hidden cities, troops, deposits and research while holding a seat’s observations fixed leaves its choice unchanged in dedicated tests. None of the levels gets extra sight, starting units, income or orders.
+
+Configured rooms draw the first team and then a member using a separate random stream. For 128 fixed seeds with one person facing a three-member team, the one-person side drew 67 first turns and the three-member side drew 61. The draw preserved map layouts, resources and units. Rotating from that seat allowed every survivor one turn per round, including after the opening seat was eliminated. The two-versus-two preset alternates sides.
+
+In 12 paired four-seat games across the three regions and both sizes, a fixed team target of 125 ended games at a median of round 9. A 250-point target ended them at a median of round 19.5. Median attacks rose from 6 to 38.5. Two campaigns ended by domination. The shared threshold now uses the largest team's starting size times the ordinary civic target. A duel stays at 125 and two-versus-two plays to 250. Survival and control of all original capitals can finish earlier.
+
+Five HTTP campaigns with independent member credentials finished across the three California regions. Tests covered a bot opening the match, a human host and bot versus another mixed team, human allies versus computers, an unequal team challenge, repeated requests and 25 reconnects. The largest mixed match reached round 29. Desktop Chrome and a 449 × 312 CSS viewport exercised the bilingual room forms, team assignment and difficulty controls. An existing human lobby and saved solo campaign retained their original setups.
+
+All 230 regression tests passed. The 18 standard playtest campaigns repeated deterministically. Under the revised information boundary, 9 of 18 had the same winners as the reference and total attacks changed from 1127 to 1102.
+
+These are computer matchups and desktop-browser interactions. The next player test should compare a first-time player's first encounter on Standard at Easy and Normal, with the same starting site. Record the encounter round, whether the player could field a defender, and which behavior signaled the change in difficulty.

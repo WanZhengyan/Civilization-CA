@@ -119,7 +119,8 @@ export function projectForSeat(state,seat) {
   // A founder remembers their first capital even after losing sight of it.
   // Campaigns predating the settler opening began with a capital for every seat.
   const hasFoundedCapital=state.opening!=='settlers' || state.cities.some(city=>city.originalSeat===seat);
-  const view={...publicShape(state,['rulesVersion','opening','mapId','mapShape','mapSize','scoreTarget','practice','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
+  const view={...publicShape(state,['rulesVersion','opening','mapId','mapShape','mapSize','scoreTarget','practice','difficulty','firstSeat','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
+    ...(state.teams ? {teams:[...state.teams]} : {}),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
     log:state.log.map(e=>observedEvent(e,seat)).filter(Boolean),intel:{seat,hasFoundedCapital,visible:[...visible],explored:[...explored],battles:state.battleReports?.[seat] || []}};
   if (state.barbarians) {

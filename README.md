@@ -1,8 +1,8 @@
 # Civilization CA
 
-A bilingual, turn-based strategy game for one to four players. Each California campaign begins with one settler, a randomly drawn civilization and a new starting location. Choose Los Angeles, San Francisco Bay or San Diego, then a Standard or Large map. Practice on your own or play against one, two or three computer civilizations.
+A bilingual, turn-based strategy game for one to four players. Each California campaign begins with one settler, a randomly drawn civilization and a new starting location. Choose Los Angeles, San Francisco Bay or San Diego, then a Standard or Large map. Practice on your own, face computer rivals or invite friends to a team match.
 
-[Official website](https://wanzhengyan.github.io/Civilization-CA/) · [Play solo](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Watch a campaign](https://wanzhengyan.github.io/Civilization-CA/#film) · [Campaign updates](./CHANGELOG.md)
+[Official website](https://wanzhengyan.github.io/Civilization-CA/) · [Play solo](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Create a room](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host) · [Watch a campaign](https://wanzhengyan.github.io/Civilization-CA/#film) · [Campaign updates](./CHANGELOG.md)
 
 ![The Civilization CA title screen](./media/campaign-home.webp)
 
@@ -48,11 +48,15 @@ California also has six natural wonders, two in each new regional campaign. A un
 
 A favored site adds one unit of the university’s specialty yield. Existing improvements and resource deposits are protected from campus construction.
 
-Open **Change map** to choose a different region. For 2–4 people, choose **Create room**, select the map and share the invitation. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
+Open **Change map** to choose a different region. In **Create room**, choose an open human lobby or configure two to four seats. You can start as the only human with computer opponents, invite a friend to join your team, or put a computer on each side. Set each computer to Easy, Normal or Hard. Easy develops home districts and patrols nearby. Normal scouts and compares targets. Hard compares attacks across units and looks for an explored site for its next city. Each starts with the same economy, sight and unit rules as a human. Reserved human seats must be filled before the host starts.
+
+Each seat has its own fog of war, including computer players and teammates. Teammates can defend each other’s cities and win together by holding every original capital. At a civic finish, each team's surviving members pool their points. A duel uses a 125-point target. In two-versus-two play the target is 250. Configured rooms draw the opening team and then a member of that team. Assign the same team to friends you want on your side. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
 
 ## 中文快速开始
 
-点击「开始单人战役」可选 0–3 个电脑对手，以及 100、125 或 150 分的市政目标。选 0 可练习建城、探索和发展，地图上仍有野蛮人营地。每个地区的标准和大型地图分别存档。继续旧档会沿用原对手和目标，确认重开后才会替换该存档。联机地图由房主选择。
+点击「开始单人战役」可选 0–3 个电脑对手，以及 100、125 或 150 分的市政目标。选 0 可练习建城、探索和发展，地图上仍有野蛮人营地。每个地区的标准和大型地图分别存档。继续旧档会沿用原对手和目标，确认重开后才会替换该存档。联机地图由房主选择。建房时可保留开放的真人大厅，也可设置 2–4 个席位，逐席选择真人或电脑、所属队伍和电脑难度。想和朋友合作，可以把两名真人分在同一队，给另一队安排电脑。预留的真人到齐后即可开局；房主也可以独自与电脑开战。
+
+同队可协防城市，共同控制全部初始首府即可获胜。按市政积分结算时，队内仍在场的成员合计得分。单挑目标为 125 分，二对二是 250 分。配置房间先抽先手队伍，再从队内抽出先手玩家。简单电脑倾向开发家门口的地块；一般电脑会侦察并挑选交战目标；困难电脑会比较多支部队的进攻顺序，为下一座城寻找已探明的选址。三个难度均沿用相同的视野、资源和单位规则。每个席位都要自己侦察，队友探开的迷雾也不会自动共享。
 
 首页可以开始或继续单人战役、创建房间，也可以用房间码或邀请链接加入多人游戏。地图上的双线为可玩边缘，界外有斜纹，地块格线可以在图层中单独开关。开局只有一名开拓者。所有单位的基础视野都是两格，侦察兵移动更快，研究地形测绘后进入丘陵只需一点移动力。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
 

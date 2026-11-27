@@ -115,3 +115,15 @@ test('both editions explain the map toggle, persistent capitals, costs and terra
     assert.doesNotMatch(zh(heading)+zh(body),/[A-Za-z]/);
   }
 });
+
+test('alliances keep consistent Chinese labels in the field and victory report',()=>{
+  for (const [text,expected] of [
+    ['Allied recon unit','盟友侦察单位'],
+    ['Team B controls every original capital.','B 队占领了所有初始首府。'],
+    ['Team B is the last team standing.','B 队成为最后幸存的队伍。'],
+    ['Team A and Team C shared victory with 125 civic points.','A 队与C 队以 125 分并列获胜。']
+  ]) {
+    assert.equal(zh(text),expected);
+    assert.equal(translate(text,'en'),text);
+  }
+});

@@ -363,3 +363,137 @@ test('private production opens on civic completion and rejects guessed future pr
   const guest=await seats.read(seats.guest);
   assert.ok(!rules.getProductionOptions(guest.game,city.id).length);
 });
+
+test('fixed room seats reserve each human team and computer level across competing joins and reconnects', async t => {
+  const f = roomFixture(t);
+  const seats = [{kind:'human',team:0},{kind:'bot',team:1,difficulty:'hard'},
+    {kind:'human',team:0},{kind:'bot',team:1,difficulty:'easy'}];
+  const host = await f.call('POST',{op:'create',name:'Coast',mapId:'sf',mapSize:'large',seats},null,201);
+  const {code} = host.room;
+  assert.equal(host.room.configured,true);
+  assert.equal(host.room.canStart,false);
+  assert.deepEqual(host.room.players.map(p=>[p.id,p.team,p.bot,p.open,p.difficulty]),[
+    [0,0,false,false,undefined],[1,1,true,false,'hard'],[2,0,false,true,undefined],[3,1,true,false,'easy']]);
+  await f.call('POST',{op:'start',code,revision:1},host.token,409);
+  const concurrent = await Promise.all(['A','B'].map(name=>f.request('POST',{op:'join',code,name,team:3,seat:1,difficulty:'hard'})));
+  assert.deepEqual(concurrent.map(r=>r.status).sort(),[200,409]);
+  const guest = concurrent.find(r=>r.status===200).value;
+  assert.equal(guest.room.you,2);
+  assert.equal(guest.room.canStart,true);
+  assert.equal(guest.room.players[2].team,0);
+  await f.call('POST',{op:'start',code,revision:guest.room.revision,seats},guest.token,403);
+  const started = (await f.call('POST',{op:'start',code,revision:guest.room.revision,seats:[]},host.token)).room;
+  assert.deepEqual(started.game.teams,[0,1,0,1]);
+  assert.deepEqual(started.game.players.map(p=>p.bot),[false,true,false,true]);
+  assert.equal(started.mapSize,'large');
+  assert.equal(started.canStart,false);
+  const restored = await f.call('POST',{op:'join',code,name:'Reconnect',ticket:guest.token});
+  assert.equal(restored.room.you,2);
+  assert.equal(restored.room.game.intel.seat,2);
+  assert.equal(restored.room.game.players[0].stockpile,undefined);
+  assert(!JSON.stringify(restored.room).includes('"hash"'));
+});
+
+test('room layouts reject invalid teams, host type, capacity and computer levels', async t => {
+  const f = roomFixture(t);
+  const human={kind:'human',team:0}, bot={kind:'bot',team:1,difficulty:'normal'};
+  for(const seats of [null,[human],[bot,human],[human,{kind:'bot',team:0}],[human,{...bot,team:4}],
+      [human,{...bot,team:'1'}],[human,{...bot,difficulty:'unlimited'}],[human,{...bot,kind:'visitor'}],
+      [human,bot,bot,bot,human]]) {
+    await f.call('POST',{op:'create',name:'Host',seats},null,400);
+  }
+  assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM game_rooms').get().n,0);
+});
+
+test('server computers execute exactly one authoritative order sequence despite duplicate ends and concurrent polls', async t => {
+  const f = roomFixture(t);
+  const seats=[{kind:'human',team:0},{kind:'bot',team:0,difficulty:'easy'},
+    {kind:'bot',team:1,difficulty:'hard'},{kind:'bot',team:1}];
+  const host = await f.call('POST',{op:'create',name:'Host',seats},null,201);
+  const {code} = host.room;
+  const getRow=()=>f.sqlite.prepare('SELECT revision,members,game FROM game_rooms WHERE code=?').get(code);
+  assert.equal(host.room.canStart,true);
+  await f.call('POST',{op:'join',code,name:'Intruder'},null,409);
+  let room=(await f.call('POST',{op:'start',code,revision:host.room.revision},host.token)).room;
+  assert.equal(room.players[3].difficulty,'normal');
+  for(let n=0;n<32 && room.game.turn!==0;n++){
+    room=(await f.call('GET',{code,revision:room.revision},host.token)).room;
+  }
+  assert.equal(room.game.turn,0);
+  const founder=room.game.units.find(u=>u.seat===0);
+  room=(await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'found',unit:founder.id}},host.token)).room;
+  let expected=rules.applyAction(JSON.parse(getRow().game),0,{type:'end'});
+  for(let i=0;i<200 && expected.phase==='playing' && expected.turn!==0;i++){
+    const seat=expected.turn;
+    try{expected=rules.applyAction(expected,seat,rules.chooseBotAction(expected,seats[seat].difficulty || 'normal'));}
+    catch{expected=rules.applyAction(expected,seat,{type:'end'});}
+  }
+  assert.equal(expected.turn,0);
+  const payload={op:'action',code,revision:room.revision,action:{type:'end'},seat:1,difficulty:'easy'};
+  const writes=await Promise.all([f.request('POST',payload,host.token),f.request('POST',payload,host.token)]);
+  assert.deepEqual(writes.map(r=>r.status).sort(),[200,409]);
+  room=writes.find(r=>r.status===200).value.room;
+  for(let n=0;n<32 && room.game.turn!==0;n++){
+    const polls=await Promise.all([0,1].map(()=>f.request('GET',{code,revision:room.revision},host.token)));
+    for(const poll of polls){
+      assert([200,204].includes(poll.status));
+      if(poll.value?.room.revision>room.revision)room=poll.value.room;
+    }
+  }
+  assert.equal(room.game.turn,0);
+  assert.equal(room.game.round,2);
+  assert.deepEqual(JSON.parse(getRow().game),expected);
+  assert.equal(JSON.parse(getRow().members)[0].botTurn,undefined);
+  assert.equal(room.game.players[1].capital,undefined);
+  assert.equal(room.game.players[2].stockpile,undefined);
+  assert.equal(room.game.exploration,undefined);
+  await f.call('GET',{code,revision:room.revision},host.token,204);
+  const rejoined=await f.call('POST',{op:'join',code,name:'Restored',ticket:host.token});
+  assert.deepEqual(rejoined.room,room);
+});
+
+test('an eliminated human watching a saved computer turn can finish the campaign after reconnecting', async t => {
+  const f=roomFixture(t), seats=[{kind:'human',team:0},{kind:'bot',team:1},{kind:'bot',team:2}];
+  const host=await f.call('POST',{op:'create',name:'Spectator',seats},null,201);
+  const {code}=host.room;
+  const start=(await f.call('POST',{op:'start',code,revision:host.room.revision},host.token)).room;
+  const row=f.sqlite.prepare('SELECT game,members FROM game_rooms WHERE code=?').get(code);
+  const game=JSON.parse(row.game),members=JSON.parse(row.members);
+  game.round=rules.MAX_ROUNDS;game.turn=1;game.players[0].eliminated=true;
+  game.units=game.units.filter(unit=>unit.seat!==0);
+  members[0].botTurn={round:game.round,seat:1,orders:192};
+  f.sqlite.prepare('UPDATE game_rooms SET game=?,members=? WHERE code=?').run(JSON.stringify(game),JSON.stringify(members),code);
+  await f.call('GET',{code,revision:start.revision},undefined,401);
+  assert.equal(f.sqlite.prepare('SELECT revision FROM game_rooms WHERE code=?').get(code).revision,start.revision);
+  await f.call('POST',{op:'action',seat:1,code,revision:start.revision,action:{type:'end'}},host.token,403);
+  let room=start;
+  for(let i=0;i<40 && room.phase!=='finished';i++)room=(await f.call('GET',{code,revision:room.revision},host.token)).room;
+  assert.equal(room.phase,'finished');assert.equal(room.game.round,rules.MAX_ROUNDS);
+  assert(!room.game.winners.includes(0));
+  await f.call('GET',{code,revision:room.revision},host.token,204);
+});
+
+test('a configured bot can win initiative and take its opening turn before the guest and host', async t => {
+  const f=roomFixture(t), teams=[0,1,2];
+  const seats=[{kind:'human',team:0},{kind:'bot',team:1,difficulty:'normal'},{kind:'human',team:2}];
+  const roster=[{name:'Host'},{bot:true},{name:'Guest'}];
+  const seed=Array.from({length:32},(_,n)=>n).find(seed=>
+    rules.createGame(roster,'sf',{seed,teams,drawInitiative:true}).firstSeat===1);
+  assert.notEqual(seed,undefined);
+  const secureRandom=crypto.getRandomValues.bind(crypto);
+  t.mock.method(crypto,'getRandomValues',bytes=>
+    bytes instanceof Uint32Array && bytes.length===1 ? bytes.fill(seed) : secureRandom(bytes));
+  const host=await f.call('POST',{op:'create',name:'Host',seats,mapId:'sf'},null,201);
+  const {code}=host.room;
+  const guest=await f.call('POST',{op:'join',code,name:'Guest'});
+  let room=(await f.call('POST',{op:'start',code,revision:guest.room.revision},host.token)).room;
+  assert.equal(room.game.firstSeat,1);
+  for(let i=0;i<32 && room.game.turn===1;i++)room=(await f.call('GET',{code,revision:room.revision},guest.token)).room;
+  assert.equal(room.game.turn,2);assert.equal(room.game.round,1);
+  const raw=JSON.parse(f.sqlite.prepare('SELECT game FROM game_rooms WHERE code=?').get(code).game);
+  assert(raw.cities.some(city=>city.originalSeat===1));
+  assert(!raw.cities.some(city=>city.originalSeat===0));
+  await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'end'}},host.token,403);
+  room=(await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'end'}},guest.token)).room;
+  assert.equal(room.game.turn,0);assert.equal(room.game.round,1);
+});
