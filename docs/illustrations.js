@@ -10,5 +10,5 @@ export function illustrationPath(id) {
 // The adjacent live label names the subject in the player's language.
 export function illustration(id) {
   const src = illustrationPath(id);
-  return src ? '<img class="item-illustration" src="'+src+'" alt="" decoding="async">' : '';
+  return src ? '<img class="item-illustration" src="'+src+'" alt="" decoding="sync">' : '';
 }
