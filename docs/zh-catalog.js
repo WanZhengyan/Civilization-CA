@@ -55,6 +55,12 @@ function section(pairs) {
   }
 }
 section(`
+Campaign controls|战役控制
+Planning|规划
+Roster|名册
+Chronicle|战史
+Command|指挥
+Close panel|关闭面板
 Claim edge|领地边界
 Shared frontier|文明交界
 `);

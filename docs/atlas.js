@@ -1,7 +1,7 @@
 import {battleMarkers,paintBattleReport} from './battle-overlay.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
 import {drawNaturalWonder} from './natural-wonder-marker.js';
-import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom} from './hex-survey.js';
+import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom,chartViewport} from './hex-survey.js';
 import {politicalPaths, inkPolitics} from './political-borders.js';
 import {drawResource} from './resource-art.js';
 import {drawCampus} from './campus-art.js';
@@ -954,7 +954,7 @@ export function createAtlas(host, options = {}) {
   let replay=null,returnCamera=null,lastCameraInput=-Infinity;
   function manualCamera(){returnCamera=null;lastCameraInput=performance.now();}
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
-  let labels=true,territories=true,grid=true,fresh=true,gesture=null,didDrag=false,disposed=false;
+  let labels=true,territories=true,grid=true,fresh=true,pendingFocus=null,gesture=null,didDrag=false,disposed=false;
   let frame=chartFrame(tiles), mesh=chartMesh(tiles), extent=chartExtent(tiles);
   let landmarkTiles=tiles.filter(tile=>tile.landmark);
   function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'),landmarkTiles);}
@@ -994,22 +994,39 @@ export function createAtlas(host, options = {}) {
   }
   function schedule(){if(!request&&!disposed)request=requestAnimationFrame(draw);}
   document.addEventListener('civitas-language',schedule,{signal:input.signal});
-  function bound(){
-    const hw=boxW/(base*zoom*2), hh=boxH/(base*zoom*2),pad=48;
-    const loX=extent.left+hw-pad,hiX=extent.right-hw+pad,loY=extent.top+hh-pad,hiY=extent.bottom-hh+pad;
-    cx=loX>hiX?(extent.left+extent.right)/2:Math.min(hiX,Math.max(loX,cx));
-    cy=loY>hiY?(extent.top+extent.bottom)/2:Math.min(hiY,Math.max(loY,cy));
+  function clearView(){
+    return chartViewport(boxW,boxH,options.viewInsets?.());
   }
-  function resetCenter(){
-    cx=(extent.left+extent.right)/2;cy=(extent.top+extent.bottom)/2;
+  function bound(){
+    // An edge tile must be pannable into the middle of the open map.
+    // Retain a small strip of the survey at the furthest manual pan.
+    const view=clearView(),s=base*zoom;
+    const shiftX=(boxW/2-view.x)/s,shiftY=(boxH/2-view.y)/s;
+    const padX=.18*view.width/s,padY=.18*view.height/s;
+    cx=Math.max(extent.left+shiftX-padX,Math.min(extent.right+shiftX+padX,cx));
+    cy=Math.max(extent.top+shiftY-padY,Math.min(extent.bottom+shiftY+padY,cy));
+  }
+  function centerAt(x,y){
+    const view=clearView(),s=base*zoom;
+    cx=x+(boxW/2-view.x)/s;cy=y+(boxH/2-view.y)/s;
     bound();
   }
+  function obscured(x,y,pad){
+    const view=clearView(),s=base*zoom;
+    const px=(x-cx)*s+boxW/2,py=(y-cy)*s+boxH/2;
+    return px<view.left+pad || px>view.left+view.width-pad || py<view.top+pad || py>view.top+view.height-pad;
+  }
+  function resetCenter(){centerAt((extent.left+extent.right)/2,(extent.top+extent.bottom)/2);}
   function measure(){
     const rect=host.getBoundingClientRect();boxW=Math.round(rect.width);boxH=Math.round(rect.height);
     if(boxW<2||boxH<2)return;
     base=Math.max(boxW/(worldW+197),boxH/(worldH+175),Math.min(boxW/(W*15.65),boxH/(ROW*12.55)));
     const dpr=Math.min(2,window.devicePixelRatio||1);canvas.width=Math.round(dpr*boxW);canvas.height=Math.round(dpr*boxH);
-    if(fresh){resetCenter();fresh=false;}else bound();schedule();
+    if(pendingFocus){
+      centerAt(...pendingFocus);pendingFocus=null;
+    }else if(fresh)resetCenter();
+    else bound();
+    fresh=false;schedule();
   }
   function hoverTile(id){
     if(model.hoverId===id)return;
@@ -1027,7 +1044,7 @@ export function createAtlas(host, options = {}) {
   function hit(x,y){
     return chartHit(...toWorld(x,y),id=>model.byId.has(id));
   }
-  function overviewZoom(){return regionOverviewZoom(boxW,boxH,extent.width,extent.height,base);}
+  function overviewZoom(){const view=clearView();return regionOverviewZoom(view.width,view.height,extent.width,extent.height,base);}
   function clampZoom(target){return Math.max(Math.min(.75,overviewZoom()),Math.min(3,target));}
   function setZoom(target,x=boxW/2,y=boxH/2) {
     const [wx,wy]=toWorld(x,y);zoom=clampZoom(target);
@@ -1084,7 +1101,7 @@ export function createAtlas(host, options = {}) {
     let target=null;
     const dirs={ArrowRight:1,ArrowLeft:4,ArrowUp:5,ArrowDown:2};
     if(e.key in dirs&&t){target=model.byId.get(idFor(...adjacent(t.q,t.r,dirs[e.key])));e.preventDefault();}
-    if(target){hoverTile(target.id);const [px,py]=pos(target.q,target.r);if(Math.abs(px-cx)>(boxW/2-24)/(base*zoom)||Math.abs(py-cy)>(boxH/2-24)/(base*zoom)){cx=px;cy=py;bound();}schedule();}
+    if(target){hoverTile(target.id);const [px,py]=pos(target.q,target.r);if(obscured(px,py,24))centerAt(px,py);schedule();}
     if(['+','=','-','Home'].includes(e.key)){e.preventDefault();if(e.key==='Home')api.reset();else api.zoomBy(e.key==='-'?1/1.2:1.2);}
     if((e.key==='Enter'||e.key===' ')&&t){e.preventDefault();model.selectedId=t.id;const unit=model.units.find(u=>u.tile===t.id);options.onSelect?.(t.id,unit?.id);if(unit)options.onUnitSelect?.(unit.id,t.id);schedule();}
   });
@@ -1147,19 +1164,21 @@ export function createAtlas(host, options = {}) {
       const still=Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
       const player=model.players[report.attacker.seat];
       replay={report,...points,still,color:player?.color || FACTION[player?.faction] || '#d58a6c',start:performance.now(),duration};
-      const [x,y]=points.to,s=base*zoom;
-      const outside=Math.abs(x-cx)*s>boxW/2-48 || Math.abs(y-cy)*s>boxH/2-48;
-      if(manual){manualCamera();cx=x;cy=y;bound();}
+      const [x,y]=points.to;
+      const outside=obscured(x,y,48);
+      if(manual){manualCamera();centerAt(x,y);}
       else if(outside && !still && !gesture && performance.now()-lastCameraInput>2600){
         if(!returnCamera)returnCamera=[cx,cy];
-        cx=x;cy=y;bound();
+        centerAt(x,y);
       }
       schedule();
     },
     stopBattle(){replay=null;if(returnCamera){[cx,cy]=returnCamera;returnCamera=null;bound();}schedule();},
-    zoomBy(factor){manualCamera();if(Number.isFinite(factor)&&factor>0)animateZoom(zoom*factor,boxW/2,boxH/2);},
+    zoomBy(factor){manualCamera();if(Number.isFinite(factor)&&factor>0){const view=clearView();animateZoom(zoom*factor,view.x,view.y);}},
     reset(){manualCamera();cancelAnimationFrame(tween);zoom=overviewZoom();resetCenter();options.onZoom?.(Math.round(zoom*100));schedule();},
-    focus(id,opening=false){if(!opening)manualCamera();const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} [cx,cy]=pos(t.q,t.r);bound();schedule();}},
+    focus(id,opening=false){if(!opening)manualCamera();const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} const point=pos(t.q,t.r);
+      if(fresh || boxW!==Math.round(host.getBoundingClientRect().width))pendingFocus=point;
+      centerAt(...point);schedule();}},
     setGrid(show){grid=Boolean(show);schedule();},
     setLabels(show){labels=Boolean(show);schedule();},
     setTerritories(show){territories=Boolean(show);schedule();},

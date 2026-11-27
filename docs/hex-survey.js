@@ -141,3 +141,12 @@ export function regionOverviewZoom(viewWidth, viewHeight, worldWidth, worldHeigh
   const availableHeight = Math.max(1, viewHeight - 28);
   return Math.min(availableWidth / worldWidth, availableHeight / worldHeight) / base;
 }
+
+// Camera space remains the full canvas; the focus point and fit use the open
+// rectangle between the fixed controls so every edge hex can be reached.
+export function chartViewport(width,height,insets={}) {
+  const left=insets.left||0,top=insets.top||0;
+  const innerWidth=Math.max(1,width-left-(insets.right||0));
+  const innerHeight=Math.max(1,height-top-(insets.bottom||0));
+  return {left,top,width:innerWidth,height:innerHeight,x:left+innerWidth/2,y:top+innerHeight/2};
+}

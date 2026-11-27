@@ -1,5 +1,6 @@
 import {NATURAL_WONDERS,neighboringWonders} from './natural-wonders.js';
 import {naturalWonderArt} from './natural-wonder-art.js';
+import {mountMapWorkspace, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
 import {illustration, illustrationPath} from './illustrations.js';
 import {mountBattleReports} from './battle-history.js';
 import {researchLinks,syncResearchLens} from './research-catalog.js';
@@ -108,7 +109,7 @@ function selectOpening(){
   else {const city=ownCities()[0];select(city?.tile || view.state.intel?.explored?.[0] || mapRegion.tiles[0].id,null,true)}
 }
 function openMapOnMobile(){
-  if(window.matchMedia("(max-width:700px)").matches)el("map-frame").scrollIntoView({block:"center",behavior:"smooth"});
+  displayMapOnMobile();
 }
 function onMapSelect(tileId,unitId){
   if(!view || !mapRegion.byId[tileId])return;
@@ -122,7 +123,7 @@ function onMapSelect(tileId,unitId){
       Game.doAction({type:"move",unit:unit.id,tile:tileId});return;
     }
   }
-  const keepInspect=order==="inspect";select(tileId,unitId);if(keepInspect)order="inspect";redraw();
+  const keepInspect=order==="inspect";select(tileId,unitId);if(keepInspect)order="inspect";redraw();inspectMapOnMobile();
 }
 function turnsText(value){return value===null?"Awaiting city income":value+" "+(value===1?"turn":"turns")}
 function nearestCityText(test){
@@ -619,7 +620,7 @@ function chooseOrder(key){
 }
 function chooseRoster(id){
   const units=activeRoster==="units",item=(units?ownUnits():ownCities()).find(o=>sameId(o.id,id));
-  if(!item)return;select(item.tile,units?item.id:null,!units);atlas.focus(item.tile);redraw();openMapOnMobile();
+  if(!item)return;closeMapPanel();select(item.tile,units?item.id:null,!units);atlas.focus(item.tile);redraw();openMapOnMobile();
 }
 function nextReady(){
   const ready=ownUnits().filter(u=>u.moves>0);if(!ready.length)return;
@@ -628,15 +629,16 @@ function nextReady(){
 function showRoster(type){activeRoster=type;roster()}
 function toggleLayers(open){el("layers-menu").hidden=!open;el("layers").setAttribute("aria-expanded",String(open))}
 function mount(){
-  atlas=createAtlas(el("atlas"),{onSelect:onMapSelect,onHover:updateHint,onZoom:percent=>text("map-zoom",Math.round(percent)+"%")});
+  atlas=createAtlas(el("atlas"),{viewInsets:chartViewInsets,onSelect:onMapSelect,onHover:updateHint,onZoom:percent=>text("map-zoom",Math.round(percent)+"%")});
   battleReports=mountBattleReports(atlas);
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>Game.open(b.dataset.open));
-  el("board-nav").onclick=()=>el("map-frame").scrollIntoView({block:"nearest"});
+  el("board-nav").onclick=()=>{closeMapPanel();el("atlas").querySelector("canvas")?.focus({preventScroll:true})};
   el("end-turn").onclick=()=>{if(lobby())Game.open("multiplayer");else if(view.state.phase==="finished")Game.open("standings");else{order="";Game.endTurn()}};
   el("zoom-out").onclick=()=>atlas.zoomBy(.8);el("zoom-in").onclick=()=>atlas.zoomBy(1.25);el("recenter").onclick=()=>atlas.reset();
   el("inspect-map").onclick=()=>{order=order==="inspect"?"":"inspect";hoverId=null;redraw()};
   el("layers").onclick=()=>toggleLayers(el("layers-menu").hidden);
   mountSurveyControls(atlas);
+  mountMapWorkspace();
   el("map-labels").onchange=e=>atlas.setLabels(e.currentTarget.checked);
   el("territory-lines").onchange=e=>atlas.setTerritories(e.currentTarget.checked);
   document.addEventListener("click",e=>{if(!e.target.closest(".layers-wrap"))toggleLayers(false)});
@@ -691,7 +693,7 @@ function mount(){
     closeProduction();Game.doAction(action);
   };
   el("roster-units").onclick=()=>showRoster("units");el("roster-cities").onclick=()=>showRoster("cities");
-  for(const [id,type] of [["units-summary","units"],["cities-summary","cities"]])el(id).onclick=()=>{showRoster(type);el("roster-panel").scrollIntoView({block:"nearest",behavior:"smooth"})};
+  for(const [id,type] of [["units-summary","units"],["cities-summary","cities"]])el(id).onclick=()=>{showRoster(type);showMapPanel("roster")};
   el("roster").onclick=e=>{const b=e.target.closest("[data-roster-id]");if(b)chooseRoster(b.dataset.rosterId)};
   el("next-unit").onclick=nextReady;
   function locateDistrict(tile){

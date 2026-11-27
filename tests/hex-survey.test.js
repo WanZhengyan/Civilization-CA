@@ -81,3 +81,16 @@ test('both localized city nameplates fit inside the staggered easternmost row',a
     }
   }
 });
+
+test('fit and focus use the open play area beneath floating map controls',async()=>{
+  const {chartViewport,regionOverviewZoom}=await import('../docs/hex-survey.js');
+  for (const [w,h,insets] of [[1363,936,{left:196,right:250,top:114,bottom:70}],[390,844,{top:98,bottom:84}],[844,390,{top:96,bottom:82}]]) {
+    const view=chartViewport(w,h,insets),scale=regionOverviewZoom(view.width,view.height,1240,760,1);
+    assert.ok(view.x-1240*scale/2>=view.left+13.99);
+    assert.ok(view.y-760*scale/2>=view.top+13.99);
+    for(const [x,y] of [[0,0],[1240,760]]) {
+      const cx=x+(w/2-view.x)/scale,cy=y+(h/2-view.y)/scale;
+      assert.ok(Math.abs((x-cx)*scale+w/2-view.x)<1e-8 && Math.abs((y-cy)*scale+h/2-view.y)<1e-8);
+    }
+  }
+});
