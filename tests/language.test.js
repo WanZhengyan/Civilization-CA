@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { translate, loadLanguage, languageControl, setLanguage, observeCityNames } from '../docs/i18n.js';
 import * as rules from '../docs/rules.js';
 
@@ -74,4 +75,43 @@ test('all campaign regions and renamed settlement messages keep their intended l
     assert.equal(zh('Upgrade to Rifle Company'),'升级为步枪连');
     assert.equal(zh('Requires Ballistics + Steam Power.'),'前置条件：弹道学、蒸汽动力');
   } finally { observeCityNames([],{}); }
+});
+
+
+test('city ownership, district decisions and the map key use distinct terms in both languages',()=>{
+  const terms={
+    'City':'城市','Landmark':'地标','Original capital':'初始首府','Captured original capital':'已易主的初始首府',
+    'Controlled by':'当前控制方','Original capital of':'建都阵营','District development':'地区开发',
+    'Develop district':'开发地区','District developed':'地区已开发','District level':'开发等级',
+    'Maximum district level':'已达最高开发等级','1 district order':'1 次地区指令',
+    'Capital per turn':'每回合资金收入','Influence per turn':'每回合影响力收入',
+    'Your capital city':'己方首府','Rival capital city':'敌方首府','Map key':'地图图例'
+  };
+  for(const [source,chinese] of Object.entries(terms)){
+    assert.equal(translate(source,'zh-CN'),chinese);
+    assert.equal(translate(source,'en'),source);
+  }
+});
+
+test('both editions explain the map toggle, persistent capitals, costs and terrain income',()=>{
+  const file=name=>readFileSync(new URL('../docs/'+name,import.meta.url),'utf8');
+  const toggle=file('game.html').match(/id="map-labels"[^>]*title="([^"]+)"[^>]*>([^<]+)<\/label>/);
+  assert.ok(toggle,'map layers must expose a label and a hint');
+  assert.equal(translate(toggle[2],'en'),'Geographic labels');
+  assert.equal(zh(toggle[2]),'地名与地标名称');
+  assert.match(toggle[1],/city names stay enabled/i);
+  assert.match(zh(toggle[1]),/城市名称不受此开关影响/);
+
+  const chapters=new Map([...file('game.js').matchAll(/\['([^']+)', '([^']+)'\]/g)].map(match=>[match[1],match[2]]));
+  const cases=[
+    ['Read city markers',/stays with that city after capture/,/占领后仍保留王冠/],
+    ['Develop a district',/5, 8 and 11 capital/,/5、8、11 资金/],
+    ['Compare development returns',/base influence income/,/基础影响力收入/]
+  ];
+  for(const [heading,english,chinese] of cases){
+    const body=chapters.get(heading);
+    assert.match(translate(body,'en'),english);
+    assert.match(zh(body),chinese);
+    assert.doesNotMatch(zh(heading)+zh(body),/[A-Za-z]/);
+  }
 });

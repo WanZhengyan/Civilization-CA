@@ -1,4 +1,5 @@
 import {battleMarkers,paintBattleReport} from './battle-overlay.js';
+import {boxesOverlap,cityFont,cityLabelAt,paintCityLabels,planCityLabels} from './city-labels.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
 import {drawNaturalWonder} from './natural-wonder-marker.js';
 import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom,chartViewport,atlasRasterLayout} from './hex-survey.js';
@@ -545,7 +546,7 @@ function drawHarbor(g,city,model,shipyard) {
 }
 
 function drawCity(g,city,model) {
-  const t=model.byId.get(city.tile);if(!t)return;
+  const t=model.byId.get(city.tile);if(!t || (model.fog && !model.fog.visible.has(city.tile)))return;
   const [x,y]=pos(t.q,t.r),color=factionColor(model,city.seat);
   const buildings=city.buildings||[];
   if(buildings.includes('harbor'))drawHarbor(g,city,model,buildings.includes('shipyard'));
@@ -632,19 +633,6 @@ function projectedRoute(g,model,scale) {
   const [x,y]=positions.at(-1);
   g.strokeStyle='#e5f7d4';g.fillStyle='#387a77';g.lineWidth=1.7;
   g.beginPath();g.arc(x,y+4,5.4,0,Math.PI*2);g.fill();g.stroke();
-  g.restore();
-}
-function cityCaption(g,city,x,y,name,color,scale) {
-  g.save();g.translate(x,y);g.scale(scale,scale);
-  g.font='600 12px Georgia, serif';const width=g.measureText(name).width+28;
-  g.shadowColor='#15232abd';g.shadowBlur=3;g.shadowOffsetY=1;
-  g.beginPath();g.roundRect(-width/2,-9.2,width,18.3,2.2);g.fillStyle='#223239';g.fill();
-  g.shadowBlur=0;g.shadowColor='transparent';g.strokeStyle=color;g.lineWidth=1.1;g.stroke();
-  const bx=-width/2+7;poly(g,[bx-3,2,bx-3,-3,bx-1.5,-1,bx,-4,bx+1.5,-1,bx+3,-3,bx+3,2],color);
-  g.textBaseline='middle';g.textAlign='left';g.fillStyle='#f5ead1';g.fillText(name,bx+8,.5);
-  if(city.maxHp&&city.hp<city.maxHp){
-    g.fillStyle='#2b3639';g.fillRect(-width/2,9,width,2.5);g.fillStyle='#e58974';g.fillRect(-width/2,9,width*Math.max(0,city.hp/city.maxHp),2.5);
-  }
   g.restore();
 }
 function updateBattleMotion(model,state,now) {
@@ -859,7 +847,22 @@ export function fitAtlasCaption(x,y,halfWidth,halfHeight,region=getMap('la')) {
   return best;
 }
 
-function renderOverlay(g,tiles,model,scale,labels,territories) {
+function overlayUnitBoxes(model,scale) {
+  const boxes=[];
+  for(const u of model.units){
+    const a=unitAnchor(model,u.tile);if(!a)continue;
+    const f=u.id===model.selectedUnitId?1.48:1.30, badge=Math.max(1,Math.min(1.4,1.04/scale));
+    boxes.push([a[0]-16*f,a[1]-40*f,a[0]+16*f,a[1]+5]);
+    boxes.push([a[0]+13.2*f-9*badge,a[1]-29*f-8*badge,a[0]+13.2*f+9*badge,a[1]-29*f+11*badge]);
+  }
+  if(model.motions.length)for(const u of model.hitUnits){
+    boxes.push([u.x-u.width,u.y-u.height,u.x+u.width,u.y+5]);
+    boxes.push([u.bx-9*u.badgeScale,u.by-8*u.badgeScale,u.bx+9*u.badgeScale,u.by+11*u.badgeScale]);
+  }
+  return boxes;
+}
+
+function renderOverlay(g,tiles,model,scale,labels,territories,unitBoxes,cityBoxes) {
   const {board={},players=[]}=model;
   const getFaction=owner=>players[owner]?.color||FACTION[owner%4]||FACTION[0];
   if(territories){
@@ -890,7 +893,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   tacticalLayer(g,model,scale);projectedRoute(g,model,scale);settlementMarkers(g,model,scale);
   const lookup=model.byId;
   for(const city of model.cities || [])if(city.originalSeat!=null){
-    const t=lookup.get(city.tile);
+    const t=lookup.get(city.tile);if(!t || (model.fog && !model.fog.visible.has(city.tile)))continue;
     const [x,y]=pos(t.q,t.r);flag(g,x+22,y+8,getFaction(city.seat));
   }
   if(!labels)return;
@@ -909,28 +912,24 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     g.save();g.translate(large?2*bx-W/2:bx,large?2*by-H/2:by);g.rotate(.22);
     g.shadowColor='#234651';g.shadowBlur=2;smallCaps(g,'SAN DIEGO BAY',0,0,9*labelScale,1.4,'#f5eac4');g.restore();
   }
-  const labelObstacles=[], labelBounds=[];
-  for(const u of model.units){
-    const a=unitAnchor(model,u.tile);if(!a)continue;
-    const f=u.id===model.selectedUnitId?1.48:1.30, badge=Math.max(1,Math.min(1.4,1.04/scale));
-    labelObstacles.push([a[0]-11*f,a[1]-31*f,a[0]+11*f,a[1]+4]);
-    labelObstacles.push([a[0]+13.2*f-9*badge,a[1]-29*f-8*badge,a[0]+13.2*f+9*badge,a[1]-29*f+11*badge]);
-  }
-  function placeLabel(x,y,name,city=false){
+  const labelBounds=[];
+  function placeLabel(x,y,name){
     g.save();g.font='600 12.2px Georgia,serif';
-    const half=(g.measureText(name).width+(city?30:16))*labelScale/2,height=9.5*labelScale;g.restore();
+    const half=(g.measureText(name).width+16)*labelScale/2,height=9.5*labelScale;g.restore();
     let best,minimum=Infinity;
     for(const [dx,dy] of [[0,0],[12,-7],[-12,-7],[23,-4],[-23,-4],[9,11],[-9,11],[25,8],[-25,8],[0,-11]]){
       const [xx,yy]=fitAtlasCaption(x+dx,y+dy,half,height,region);
       const rect=[xx-half,yy-height,xx+half,yy+height];
+      if(cityBoxes.some(box=>boxesOverlap(rect,box,2/scale)))continue;
       let score=Math.abs(xx-x)*.7+Math.abs(yy-y);
-      for(const box of labelObstacles.concat(labelBounds)){
+      for(const box of unitBoxes.concat(labelBounds)){
         score+=Math.max(0,Math.min(rect[2],box[2])-Math.max(rect[0],box[0]))*
                Math.max(0,Math.min(rect[3],box[3])-Math.max(rect[1],box[1]))*2.4;
       }
       if(score<minimum){minimum=score;best={xx,yy,rect};}
       if(score===0)break;
     }
+    if(!best)return null;
     labelBounds.push(best.rect);return [best.xx,best.yy];
   }
   for(const t of tiles){
@@ -940,18 +939,18 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     const name=translate(place.name);
     const lx=x+(place.landmark==='hollywood'?-22:place.landmark==='griffith'?15:0);
     const ly=y+(place.landmark==='hollywood'?18:place.landmark==='griffith'?28:24);
-    const [nx,ny]=placeLabel(lx,ly,name);label(g,name,nx,ny,owner!=null && territories?getFaction(owner):'#a5997a',labelScale);
-  }
-  for(const city of model.cities){
-    const t=lookup.get(city.tile);if(!t)continue;
-    const [x,y]=pos(t.q,t.r);
-    const name=city.name && city.name!==t.name ? city.name : translate(t.name),[cx,cy]=placeLabel(x,y+26,name,true);cityCaption(g,city,cx,cy,name,getFaction(city.seat),labelScale);
+    const point=placeLabel(lx,ly,name);
+    if(point)label(g,name,...point,owner!=null && territories?getFaction(owner):'#a5997a',labelScale);
   }
   if(scale>1.02){
     const names=region.districts;
     for(const t of tiles) if(t.namedCenter!==false && names.includes(t.name)&&!getAtlasPlace(t,board[t.id])&&!model.cityTiles.has(t.id)){
       const [x,y]=pos(t.q,t.r);g.save();g.font='italic 13px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
-      g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(translate(t.name),x,y+14);g.fillStyle='#eee1bd';g.fillText(translate(t.name),x,y+14);g.restore();
+      const name=translate(t.name),half=g.measureText(name).width/2+2;
+      if(!cityBoxes.some(box=>boxesOverlap(box,[x-half,y+5,x+half,y+23]))){
+        g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(name,x,y+14);g.fillStyle='#eee1bd';g.fillText(name,x,y+14);
+      }
+      g.restore();
     }
   }
 }
@@ -971,11 +970,21 @@ export function createAtlas(host, options = {}) {
   let labels=true,territories=true,grid=true,fresh=true,pendingFocus=null,gesture=null,didDrag=false,disposed=false;
   let frame=chartFrame(tiles), mesh=chartMesh(tiles), extent=chartExtent(tiles);
   let landmarkTiles=tiles.filter(tile=>tile.landmark);
+  let cityMarks=[],cityCamera=null;
   function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'),landmarkTiles);}
   function draw(){
     request=0;if(disposed||boxW<2||boxH<2)return;ensureBackground();
     const dpi=canvas.width/boxW,s=base*zoom;
     ctx.setTransform(dpi,0,0,dpi,0,0);paintChartMargin(ctx,boxW,boxH);
+    const project=(x,y)=>[(x-cx)*s+boxW/2,(y-cy)*s+boxH/2];
+    const unitBoxes=overlayUnitBoxes(model,s);
+    ctx.font=cityFont(s);
+    cityMarks=planCityLabels({cities:model.cities,byId:model.byId,visible:model.fog?.visible,seat:model.state?.intel?.seat,
+      selectedTile:model.selectedId,project,view:clearView(),scale:s,
+      unitBoxes:unitBoxes.map(([a,b,c,d])=>[...project(a,b),...project(c,d)]),measure:name=>ctx.measureText(name).width});
+    cityCamera={s,cx,cy,boxW,boxH};
+    const cityBoxes=cityMarks.flatMap(({x,y,radius,box})=>[[x-radius,y-radius,x+radius,y+radius],...(box?[box]:[])])
+      .map(([a,b,c,d])=>[...toWorld(a,b),...toWorld(c,d)]);
     ctx.save();ctx.translate(boxW/2,boxH/2);ctx.scale(s,s);ctx.translate(-cx,-cy);
     ctx.save();ctx.clip(frame);
     const {buffer,margin,resolution}=background;
@@ -993,14 +1002,20 @@ export function createAtlas(host, options = {}) {
     if(model.fog)ctx.restore();
     if(grid)inkHexGrid(ctx,mesh,s);
     if(model.fog){ctx.save();ctx.clip(model.fog.window);}
-    renderOverlay(ctx,model.fog ? model.fog.knownTiles : tiles,model,s,labels,territories);
+    renderOverlay(ctx,model.fog ? model.fog.knownTiles : tiles,model,s,labels,territories,unitBoxes,cityBoxes);
     if(model.fog){ctx.fillStyle='#24333c9c';ctx.fill(model.fog.memory);}
     if(paintUnits(ctx,model,s,performance.now()))schedule();
     if(model.fog)ctx.restore();
     paintHexFocus(ctx,model,s);
-    if(replay && paintBattleReport(ctx,replay,s,performance.now()))schedule();
     ctx.restore();
     inkChartFrame(ctx,frame,s);
+    // The pin must be in sight; its linked nameplate may extend beyond the
+    // explored terrain or the coast without disclosing neighbouring tiles.
+    ctx.save();ctx.setTransform(dpi,0,0,dpi,0,0);
+    paintCityLabels(ctx,cityMarks,s,seat=>factionColor(model,seat));ctx.restore();
+    ctx.save();ctx.clip(frame);
+    if(replay && paintBattleReport(ctx,replay,s,performance.now()))schedule();
+    ctx.restore();
     ctx.restore();
     // A very light vignette holds together all the terrain colours at the edge of the atlas.
     const shadow=ctx.createRadialGradient(boxW*.49,boxH*.45,Math.min(boxW,boxH)*.34,boxW*.5,boxH*.49,Math.hypot(boxW,boxH)*.57);
@@ -1061,6 +1076,15 @@ export function createAtlas(host, options = {}) {
   function hit(x,y){
     return chartHit(...toWorld(x,y),id=>model.byId.has(id));
   }
+  function pointerTarget(x,y) {
+    const unit=hitUnitAt(x,y);
+    if(unit)return {id:unit.tile,unit};
+    const tile=hit(x,y);
+    const current=cityCamera && cityCamera.s===base*zoom && cityCamera.cx===cx && cityCamera.cy===cy &&
+      cityCamera.boxW===boxW && cityCamera.boxH===boxH;
+    const city=current && cityLabelAt(cityMarks,x,y,tile,model);
+    return {id:city||tile,city:Boolean(city)};
+  }
   function overviewZoom(){const view=clearView();return regionOverviewZoom(view.width,view.height,extent.width,extent.height,base);}
   function clampZoom(target){return Math.max(Math.min(.75,overviewZoom()),Math.min(3,target));}
   function setZoom(target,x=boxW/2,y=boxH/2) {
@@ -1086,7 +1110,7 @@ export function createAtlas(host, options = {}) {
   on('pointermove',e=>{
     const xy=local(e);
     if(!pointers.has(e.pointerId)){
-      const id=hitUnitAt(...xy)?.tile||hit(...xy);if(model.hoverId!==id){hoverTile(id);canvas.style.cursor=id?'pointer':'grab';}return;
+      const {id}=pointerTarget(...xy);if(model.hoverId!==id){hoverTile(id);canvas.style.cursor=id?'pointer':'grab';}return;
     }
     pointers.set(e.pointerId,xy);
     if(pointers.size===2 && gesture?.dist) {
@@ -1101,8 +1125,8 @@ export function createAtlas(host, options = {}) {
   function finishPointer(e,allowSelect) {
     if(!pointers.has(e.pointerId))return;
     if(!didDrag && allowSelect && pointers.size===1){
-      const xy=local(e),unit=hitUnitAt(...xy),id=unit?.tile||hit(...xy);
-      if(id){model.selectedId=id;schedule();options.onSelect?.(id,unit?.id);if(unit)options.onUnitSelect?.(unit.id,id);}
+      const {id,unit,city}=pointerTarget(...local(e));
+      if(id){model.selectedId=id;schedule();options.onSelect?.(id,unit?.id,city);if(unit)options.onUnitSelect?.(unit.id,id);}
     }
     pointers.delete(e.pointerId);
     if(pointers.size===1)gesture={start:[...pointers.values()][0],center:[cx,cy]};else if(!pointers.size){gesture=null;canvas.style.cursor='grab';}
@@ -1135,7 +1159,7 @@ export function createAtlas(host, options = {}) {
       if(tilesChanged){
         tiles=nextTiles;extent=chartExtent(tiles);frame=chartFrame(tiles);mesh=chartMesh(tiles);model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
         model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
-        pendingFocus=null;returnCamera=null;replay=null;
+        pendingFocus=null;returnCamera=null;replay=null;cityCamera=null;
         base=referenceScale();zoom=1;resetCenter();options.onZoom?.(100);
       }
       const state=o.state||o;if(o.state)model.state=o.state;
@@ -1174,6 +1198,7 @@ export function createAtlas(host, options = {}) {
       if(o.moveTiles||o.moveIds)model.moveTiles=[...(o.moveTiles||o.moveIds)];
       if(o.attackTiles||o.attackIds)model.attackTiles=[...(o.attackTiles||o.attackIds)];
       if(Object.hasOwn(o,'selectedId'))model.selectedId=o.selectedId;
+      if(Object.hasOwn(o,'cityLabelPicking'))model.cityLabelPicking=o.cityLabelPicking;
       if(model.previewPath?.length && !model.moveTiles.includes(model.previewPath.at(-1)))model.previewPath=[];
       schedule();return api;
     },

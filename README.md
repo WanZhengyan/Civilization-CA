@@ -18,6 +18,12 @@ Standard maps have 149–172 playable hexes. Large maps divide the same coast in
 
 Drag the map or pinch to zoom. Technology and Civics sit on the left, with Field Command on the right. **Fit region** shows the whole playable coastline. A double line marks the last playable hex, and a shared border shows the color of each civilization on its own side. Select a frontier district to identify its neighbors.
 
+Visible cities carry a nameplate on their own hex. A gold crown marks an original capital and stays with it after capture. The rim shows the current owner. Select a nameplate to inspect the city. Turning off geographic names keeps city names on the board.
+
+Select owned land and open **District development** in Field Command. Compare the treasury cost, the district order spent, income per turn and civic points before you commit. In the Westwood opening below, upgrading the city tile from level 1 to 2 spends 8 capital and one order. Capital income goes from 8 to 9 per turn, influence income stays at 4 and civic points rise from 21 to 22.
+
+![Westwood's original capital on the Los Angeles map, with its district upgrade and observed returns](./media/city-development.webp)
+
 The city production menu shows the units, buildings and universities your civilization has unlocked. The science and civic trees show what you can unlock next. Open **Battle reports** to see who attacked, how much damage each side took and where the fight happened. **Replay on map** returns to that district. When the attacker fired from beyond your sight, the report identifies the impact location and keeps the source hidden.
 
 The visitor footer counts anonymous browser profiles on each site from the day the counter launched. Refreshing or opening a second tab on the same site does not add another visitor. The public totals are shared between the two hosts. Day and month follow Los Angeles time.
@@ -49,6 +55,10 @@ Open **Change map** to choose a different region. For 2–4 people, choose **Cre
 点击「开始单人战役」可选 0–3 个电脑对手，以及 100、125 或 150 分的市政目标。选 0 可练习建城、探索和发展，地图上仍有野蛮人营地。每个地区的标准和大型地图分别存档。继续旧档会沿用原对手和目标，确认重开后才会替换该存档。联机地图由房主选择。
 
 首页可以开始或继续单人战役、创建房间，也可以用房间码或邀请链接加入多人游戏。地图上的双线为可玩边缘，界外有斜纹，地块格线可以在图层中单独开关。开局只有一名开拓者。所有单位的基础视野都是两格，侦察兵移动更快，研究地形测绘后进入丘陵只需一点移动力。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
+
+有视野的城市会在本格显示城名。金色王冠代表初始首府，易手后保留王冠，边框颜色随现任控制方改变。点击城名即可查看城市，关闭地理名称图层后仍可辨认城市。
+
+选中己方陆地，在战场指挥中打开「地区开发」，就能比较升级前后的每回合资金、每回合影响力和市政积分。升到 1、2、3 级分别花费 5、8、11 资金，每次消耗一次地区指令。上图的韦斯特伍德升到 2 级后，每回合资金从 8 增至 9，影响力收入维持 4，市政积分从 21 增至 22。开采资源要另派建造者修建对应设施。
 
 科技与市政位于地图左侧，战场指挥位于右侧。在城市生产里可以查看当前已解锁的选项，后续解锁条件可在科技树和市政树中查看。打开「战报」可回放敌袭、查看伤害和反击。新战役中每个地区有两处自然奇观，市民在相邻地块工作会获得加成。在「游戏指南 → 奇观」中可以定位自己发现的地点。
 

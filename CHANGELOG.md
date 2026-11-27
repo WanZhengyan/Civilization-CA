@@ -1,5 +1,11 @@
 # Campaign updates
 
+## Find cities and see what district development buys
+
+City names are anchored to their visible hexes. A gold crown identifies each original capital, including after capture. Its rim follows the owner. Turn geographic names off to clear the map and keep city names in view. Click a nameplate to inspect the city. A selected unit can still move or attack through it.
+
+Open **District development** on owned land, including a city or a garrison. Compare the cost, district order, income per turn and civic score before spending. The preview includes terrain, policy effects and rounding. A confirmed order shows its result. Fully developed land displays its level cap. The map key, guide and commands are available in English and Simplified Chinese.
+
 ## Set your solo opponents and civic goal
 
 Choose practice with zero opponents, a duel with one or a contest with two or three. Set the civic target to 100, 125 or 150 points. Practice keeps exploration, city building and neutral camps. Reaching the target completes the challenge. If round 30 ends first, you see your final score.
