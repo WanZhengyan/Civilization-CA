@@ -1,4 +1,4 @@
-import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartFrame,paintChartMargin,inkChartFrame} from './hex-survey.js';
+import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid} from './hex-survey.js';
 import {drawResource} from './resource-art.js';
 import {drawCampus} from './campus-art.js';
 import {WONDERS} from './wonders.js';
@@ -400,12 +400,6 @@ function renderAtlas(tiles,map,landmarkTiles) {
     }});
   }
   scene.sort((a,b)=>a.y-b.y);for(const item of scene)item.run();
-  // Fine survey geometry remains visible beneath ownership and movement overlays.
-  for(const t of extended){
-    const sea=t.terrain==='ocean',activeBounds=t.q>=0&&t.q<COLS&&t.r>=0&&t.r<ROWS;
-    if(!activeBounds)continue;
-    g.lineWidth=sea?.72:.80;g.strokeStyle=sea?'#a6d6dc39':'#4254444a';g.stroke(hexPath(t.q,t.r));
-  }
   const boats=map.id==='la'?[[.8,7,1.1],[3,11,1.15],[1,10,.73],[4,9,.9]]:tiles.filter(t=>t.terrain==='ocean'&&(t.q*73+t.r*37)%31===0).map(t=>[t.q,t.r,.82]);
   for(const [q,r,s] of boats){const [x,y]=pos(q,r);seaBoat(g,x+4,y+5,s);}
   return {buffer,margin,resolution};
@@ -794,7 +788,13 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
       const color=getFaction(owner),[x,y]=pos(t.q,t.r);g.lineCap='round';
       for(let k=0;k<6;k++){const [q,r]=adjacent(t.q,t.r,k);if(board[idFor(q,r)]?.owner===owner)continue;
         const next=(k+1)%6,e=[x+dX[k],y+dY[k],x+dX[next],y+dY[next]];
-        line(g,e,'#273335bb',3.5);line(g,e,color,2);
+        const neighbor=board[idFor(q,r)]?.owner;
+        if(neighbor!=null){
+          const inset=1.2/(scale*Math.hypot(e[2]-e[0],e[3]-e[1]));
+          const dx=(e[1]-e[3])*inset,dy=(e[2]-e[0])*inset;
+          e[0]+=dx;e[1]+=dy;e[2]+=dx;e[3]+=dy;
+        }
+        line(g,e,'#273335e0',3.2/scale);line(g,e,color,1.8/scale);
       }
       if(board[t.id].level>0 && !t.landmark){
         const level=board[t.id].level;
@@ -904,7 +904,7 @@ export function createAtlas(host, options = {}) {
   let tiles=options.tiles||defaultTiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
   let labels=true,territories=true,fresh=true,gesture=null,didDrag=false,disposed=false;
-  let frame=chartFrame(tiles);
+  let frame=chartFrame(tiles), mesh=chartMesh(tiles);
   let landmarkTiles=tiles.filter(tile=>tile.landmark);
   function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'),landmarkTiles);}
   function draw(){
@@ -920,12 +920,14 @@ export function createAtlas(host, options = {}) {
       for(const tile of tiles) if(!model.fog.explored.has(tile.id)){
         const path=hexPath(tile.q,tile.r);
         ctx.fillStyle=(tile.q+tile.r)%3===0?'#263944':'#263843';ctx.fill(path);
-        ctx.strokeStyle='#314650';ctx.lineWidth=.65;ctx.stroke(path);
         const [x,y]=pos(tile.q,tile.r);ctx.fillStyle='#64757a';ctx.fillRect(x-.65,y-.65,1.3,1.3);
       }
       ctx.save();ctx.clip(model.fog.window);
     }
     ctx.drawImage(buffer,-margin,-margin,buffer.width/resolution,buffer.height/resolution);
+    if(model.fog)ctx.restore();
+    inkHexGrid(ctx,mesh,s);
+    if(model.fog){ctx.save();ctx.clip(model.fog.window);}
     renderOverlay(ctx,model.fog ? model.fog.knownTiles : tiles,model,s,labels,territories);
     if(model.fog){ctx.fillStyle='#24333c9c';ctx.fill(model.fog.memory);}
     if(paintUnits(ctx,model,s,performance.now()))schedule();
@@ -1047,7 +1049,7 @@ export function createAtlas(host, options = {}) {
       }
       const tilesChanged=nextTiles && nextTiles!==tiles;
       if(tilesChanged){
-        tiles=nextTiles;frame=chartFrame(tiles);model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
+        tiles=nextTiles;frame=chartFrame(tiles);mesh=chartMesh(tiles);model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
         model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
         zoom=1;resetCenter();options.onZoom?.(100);
       }

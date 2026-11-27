@@ -75,3 +75,40 @@ export function inkChartFrame(ctx, frame, scale) {
   ctx.stroke(frame);
   ctx.restore();
 }
+
+// Each shared edge has exactly one north-east, east or south-east half-edge.
+export function interiorEdges(tiles) {
+  const present = new Set(tiles.map(t => idFor(t.q,t.r)));
+  const segments = [];
+  for (const {q,r} of tiles) {
+    const [x,y] = pos(q,r);
+    for (let side = 0; side < 3; side++) {
+      if (!present.has(idFor(...adjacent(q,r,side)))) continue;
+      segments.push([x+dX[side],y+dY[side],x+dX[side+1],y+dY[side+1]]);
+    }
+  }
+  return segments;
+}
+
+export function chartMesh(tiles) {
+  const mesh = new Path2D();
+  for (const [x1,y1,x2,y2] of interiorEdges(tiles)) {
+    mesh.moveTo(x1,y1);
+    mesh.lineTo(x2,y2);
+  }
+  return mesh;
+}
+
+export function inkHexGrid(ctx, mesh, scale) {
+  // Use screen-pixel widths for surveying at either an overview or a close zoom.
+  // Two inks retain contrast on both dark water and pale inland terrain.
+  ctx.save();
+  ctx.strokeStyle = 'rgba(18,40,43,.64)';
+  ctx.lineWidth = 1.45 / scale;
+  ctx.stroke(mesh);
+  ctx.translate(0,.47 / scale);
+  ctx.strokeStyle = 'rgba(228,226,191,.53)';
+  ctx.lineWidth = .8 / scale;
+  ctx.stroke(mesh);
+  ctx.restore();
+}
