@@ -1,4 +1,6 @@
 import {getVisibleTiles, projectForSeat, rememberVision} from './vision.js';
+import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey} from './resources.js';
+export {RESOURCES, canSeeDeposits, canSurvey};
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
@@ -250,7 +252,14 @@ function addResearch(state) {
 }
 export function migrateGame(state) {
   if (state?.intel) return state;
-  const migrated=migrateCore(state);
+  let migrated=migrateCore(state);
+  if (migrated?.opening==='settlers' && migrated.resourceVersion!==1 && Number.isInteger(migrated.seed)) {
+    migrated={...migrated,board:{...migrated.board},players:migrated.players.map((p,seat)=>({
+      ...p,surveyEnabled:p.surveyEnabled ?? migrated.cities.some(city=>city.seat===seat)
+    }))};
+    populateDeposits(migrated,getMap(migrated),migrated.seed,neighbors);
+    return rememberVision(migrated);
+  }
   return migrated && !migrated.exploration ? rememberVision(migrated) : migrated;
 }
 function migrateCore(state) {
@@ -287,6 +296,8 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
     })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
   starts.forEach(([site],seat)=>spawn(next,seat,'settler',site));
   refreshScores(next);
+  for (const player of next.players) player.surveyEnabled=false;
+  populateDeposits(next,getMap(mapId),seed,neighbors);
   return rememberVision(addResearch(next));
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
@@ -772,6 +783,11 @@ function unitOrder(state,seat,action) {
     unit.moves-=path.slice(1).reduce((sum,k,i)=>sum+routeStepCost(state,unit,path[i],k),0);
     unit.tile=action.tile;
     record(state,seat,'move',label+' moved to '+getMap(state).byId[unit.tile].name+'.',unit.tile,{from:id,unit:unit.id,path});
+  } else if (action.type==='survey') {
+    if (!canSurvey(state,unit)) throw new Error('This unit cannot start a resource survey.');
+    unit.moves--;
+    state.players[seat].surveyEnabled=true;
+    record(state,seat,'survey','Resource survey completed.',id,{unit:unit.id});
   } else if (action.type==='upgrade') {
     const upgrade=fieldUpgrade(state,unit);
     if (!upgrade?.enabled) throw new Error(upgrade?.reason || 'No field upgrade is available.');
@@ -788,6 +804,7 @@ function unitOrder(state,seat,action) {
     if (unit.type!=='settler' || !canSettle(state,seat,id)) throw new Error('Found a city on friendly or neutral land at least three hexes from every other city.');
     const first=state.opening==='settlers' && !state.cities.some(c=>c.originalSeat===seat);
     const city=establish(state,seat,id,first);
+    state.players[seat].surveyEnabled=true;
     state.units=state.units.filter(u=>u.id!==unit.id);
     record(state,seat,'found',FACTIONS[state.players[seat].faction].name+' founded a city at '+city.name+'.',id,{city:city.id,unit:unit.id});
   } else {
@@ -823,7 +840,7 @@ function resolveOrder(source,seat,action) {
     const berth=option.item==='harbor' ? getPortSite(next,city.id) : null;
     city.queue={item:option.item,required:option.required,progress:0,...(berth ? {portTile:berth} : {})};
     record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
-  } else if (['move','attack','found','improve','upgrade'].includes(action.type)) {
+  } else if (['move','attack','found','improve','upgrade','survey'].includes(action.type)) {
     unitOrder(next,seat,action);
   } else {
     if (typeof action.tile!=='string') throw new Error('Choose a district.');

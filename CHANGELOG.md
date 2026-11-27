@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.9 · Survey the land for resources
+
+Knowing every deposit at the opening removed the value of exploration. Each seed distributes resources appropriate to land and water. The opening settler has no identified deposits. Surveying or founding starts local discovery.
+
+66 checks passed. 18 fixed campaigns replayed identically twice. Test what a builder can do on an actual controlled deposit.
+
 ## 4.8 · Private intelligence for every online seat
 
 Hiding graphics alone would still hand an opponent the underlying state. The room service returns a seat-specific board and history. Private seeds, hidden positions and unseen orders stay with the authoritative game; launching and rejoining a room both use the same projection.

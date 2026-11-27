@@ -219,3 +219,4 @@ main{max-width:1680px;margin:auto;padding:0 clamp(20px,3.2vw,55px)}.campaign-hea
 html[lang="zh-CN"] :is(.section-label,.eyebrow,.modal-kicker,.resource-label,.entity-stat small,.agenda-title){letter-spacing:.05em}
 
 .unit-sight{display:flex;align-items:center;justify-content:space-between;padding:5px 0;color:#b6c9cd;font-size:12px}.unit-sight span{display:flex;gap:5px;align-items:center}.unit-sight svg{width:13px;height:13px}.unit-sight small{font-weight:normal}
+.deposit-strip{display:flex;align-items:center;gap:.45rem;margin:.5rem 0 .2rem;padding:.4rem .45rem;border:1px solid #454a43;border-radius:3px}.deposit-strip i{width:.55rem;height:.55rem;transform:rotate(45deg)}.deposit-strip small{color:#acb7ad}.deposit-strip strong{font-size:.8rem;color:#e7d6b2;margin-left:auto}

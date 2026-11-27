@@ -1,3 +1,4 @@
+import {drawResource} from './resource-art.js';
 import {translate} from './i18n.js';
 /* Illustrated, pointy-top, odd-row-offset California campaign maps. */
 const W = 72, H = 76, ROW = H * .75, COLS = 17, ROWS = 13;
@@ -785,6 +786,10 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     }
   }
   for(const t of tiles){const improvement=board[t.id]?.improvement;if(improvement)drawImprovement(g,t,improvement);}
+  if(model.showResources) for(const tile of tiles) {
+    const resource=board[tile.id]?.resource;
+    if(resource)drawResource(g,...pos(tile.q,tile.r),resource);
+  }
   for(const c of model.cities||[])drawCity(g,c,model);
   tacticalLayer(g,model,scale);projectedRoute(g,model,scale);settlementMarkers(g,model,scale);
   const lookup=model.byId;
@@ -1029,6 +1034,7 @@ export function createAtlas(host, options = {}) {
       }
       if(Array.isArray(state.cities)){model.cities=state.cities;model.cityTiles=new Set(state.cities.map(c=>c.tile));}
       if(Object.hasOwn(o,'selectedUnitId')&&o.selectedUnitId!==model.selectedUnitId){model.selectedUnitId=o.selectedUnitId;model.previewPath=[];}
+      if(Object.hasOwn(o,'showResources'))model.showResources=o.showResources;
       if(Object.hasOwn(o,'settlementSites'))model.settlementSites=o.settlementSites;
       else if(Object.hasOwn(o,'settlementSurvey')){
         const sites=o.settlementSurvey||[];

@@ -686,6 +686,17 @@ Outside current sight|目前没有视野
 Only the city owner can inspect its economy.|只有城市所属文明可以查看其经济情况。
 Explore the fog|探索迷雾
 Dark tiles are uncharted. Move a Scout to see three hexes in every direction. The shaded terrain behind it stays on your map, but enemy positions disappear when your units lose sight.|深色地块尚未探索。侦察兵可以看见周围三格。走过的地形会留在地图上，离开视野的敌军位置将被隐藏。
+Grain|谷物
+Citrus|柑橘
+Timber|木材
+Stone|石料
+Iron ore|铁矿
+Fish shoal|鱼群
+Resource|资源
+Survey resources|勘探资源
+1 movement|1 点移动力
+Resource survey completed.|资源勘探已开启。
+This unit cannot start a resource survey.|此单位无法开始资源勘探。
 `);
 
 section(`

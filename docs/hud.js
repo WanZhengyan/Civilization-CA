@@ -1,4 +1,5 @@
 import {getSightRadius} from './vision.js';
+import {RESOURCES, canSeeDeposits, canSurvey} from './resources.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -267,6 +268,7 @@ function inspect(){
         const definition=UNIT_TYPES[u.type];
         explanation=definition.description||itemDesc[u.type]||("Attack range · "+definition.range+" hexes.");
       }
+      if(canSurvey(state,u)) actions+=actionButton('survey','Survey resources','1 movement','gold',disabled);
       if(o.upgrade){
         actions+=actionButton("upgrade","Upgrade to "+items[o.upgrade.to],o.upgrade.cost+" capital","gold",disabled||!o.upgrade.enabled);
         if(!o.upgrade.enabled&&o.upgrade.reason)explanation+=" "+o.upgrade.reason;
@@ -300,6 +302,8 @@ function inspect(){
       explanation=territory.reason || state.actionsLeft+" district orders remain this turn.";
     }else explanation=tile.terrain==="ocean"?"Land units cannot cross open water.":"Select a unit to give orders or a city to set production.";
   }
+  const deposit=canSeeDeposits(state,view.seat) && RESOURCES[state.board[tile.id]?.resource];
+  if(deposit)info+='<div class="deposit-strip"><i style="background:'+deposit.color+'"></i><small>Resource</small><strong>'+esc(deposit.name)+'</strong></div>';
   if(order==="attack")explanation="Select an enemy outlined in red to review the combat forecast.";
   el("entity-info").innerHTML=info;
   el("entity-commands").innerHTML='<div class="orders">'+actions+'</div>'+note(explanation);
@@ -311,7 +315,7 @@ function updateMap(){
     if(assessment.status==="now")settlementSites.now.push(id);
     else if(assessment.status==="next-turn")settlementSites.nextTurn.push(id);
   }
-  atlas.update({settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  atlas.update({showResources:canSeeDeposits(view.state,view.seat),settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -487,6 +491,7 @@ function chooseOrder(key){
     if(targets.length===1){openCombat(u.id,targets[0]);return}
     order=order==="attack"?"":"attack";redraw();if(order)openMapOnMobile();return;
   }
+  if(key==="survey"){Game.doAction({type:"survey",unit:u.id});return}
   if(key==="upgrade"){order="";Game.doAction({type:"upgrade",unit:u.id});return}
   if(key==="found"){order="";Game.doAction({type:"found",unit:u.id});return}
   if(["farm","mine","fishery"].includes(key)){order="";Game.doAction({type:"improve",unit:u.id,item:key})}
