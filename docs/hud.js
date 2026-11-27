@@ -691,6 +691,14 @@ function mount(){
   for(const [id,type] of [["units-summary","units"],["cities-summary","cities"]])el(id).onclick=()=>{showRoster(type);el("roster-panel").scrollIntoView({block:"nearest",behavior:"smooth"})};
   el("roster").onclick=e=>{const b=e.target.closest("[data-roster-id]");if(b)chooseRoster(b.dataset.rosterId)};
   el("next-unit").onclick=nextReady;
-  Game.init({render:paint,toast}).catch(error=>{console.error(error);toast("The game could not load. Refresh to try again.")});
+  function locateDistrict(tile){
+    if(!explored.has(tile))return;
+    select(tile,null,true);
+    atlas.focus(tile);
+    redraw();
+    openMapOnMobile();
+    el("atlas").querySelector("canvas")?.focus({preventScroll:true});
+  }
+  Game.init({render:paint,locate:locateDistrict,toast}).catch(error=>{console.error(error);toast("The game could not load. Refresh to try again.")});
 }
 mount();

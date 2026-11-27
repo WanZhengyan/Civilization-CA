@@ -1,3 +1,5 @@
+import {naturalWonderArt} from './natural-wonder-art.js';
+import {discoveredNaturalWonders} from './natural-wonders.js';
 import {invitationCode, launchDestination} from './launch.js';
 import {armyHandbook} from './army-handbook.js';
 import {ledgerBody} from './resource-ledger.js';
@@ -63,7 +65,7 @@ function storedSolo() {
   return null;
 }
 
-let renderView, toast, dialog, solo, room = null, token = null;
+let renderView, locateDistrict, toast, dialog, solo, room = null, token = null;
 let mode = 'home', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
 let supplyCity='';
@@ -586,7 +588,7 @@ const guideSections = {
     ['Clear a camp', 'Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.'],
     ['Recover', 'Units regain movement at the start of their faction’s turn. A unit in a friendly city heals up to 12 health. Each friendly city recovers up to 6.']
   ]},
-  universities: {label:'Universities', entries:[
+  universities: {label:'Wonders', entries:[
     ['Charter a university', 'Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.'],
     ['Survey the campus', 'Choose an empty land tile in your territory within two hexes of the host city. Deposits, improvements, city centers and reserved sites are protected. A matching terrain grants one additional point in the listed specialty every turn.'],
     ['Compete for a charter', 'Pay the charter fee and assign city production. The first campus of its kind to open wins the charter for this world. A competing city stops work and recovers its fee. Its spent production is lost.'],
@@ -607,6 +609,24 @@ const guideSections = {
     ['Count civic points', 'Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.']
   ]}
 };
+function wonderJournal(state) {
+  const discoveries=state ? discoveredNaturalWonders(state) : [];
+  const region=getMap(state || 'la');
+  const entries=discoveries.map(site=>{
+    const label=region.byId[site.tile]?.name;
+    const coordinate='('+site.tile.split(',').join(', ')+')';
+    return '<li class="journal-entry">'+
+      '<img src="'+escapeHTML(naturalWonderArt(site.id))+'" width="72" height="72" alt="">'+
+      '<div><strong>'+escapeHTML(site.name)+'</strong><small>'+escapeHTML(site.effect)+'</small>'+
+      '<span>'+(label?'<span>'+escapeHTML(label)+'</span> · ':'')+coordinate+'</span></div>'+
+      button('locate-wonder-'+site.id,'Show on map')+'</li>';
+  });
+  const intro=state && !state.naturalWonderVersion ? 'Start a new campaign to discover natural wonders. This save keeps its original terrain.' :
+    'Explore to record natural wonders here. Work a district next to a discovered site to gain its local bonus.';
+  return '<h3 class="journal-heading">Natural wonders</h3>'+desc(intro)+
+    (entries.length?'<ul class="wonder-journal">'+entries.join('')+'</ul>':'')+
+    '<h3 class="journal-heading">University wonders</h3>';
+}
 function countLabel(n, singular, plural = singular + 's') {
   return n + ' ' + (n === 1 ? singular : plural);
 }
@@ -618,6 +638,7 @@ function content() {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
     return {kicker:'Field guide', title:'How to play', body:tabs +
+      (guideTab === 'universities' ? wonderJournal(state) : '') +
       (guideTab === 'formations' ? armyHandbook(escapeHTML) : list(guideSections[guideTab].entries.map(([title, text]) => row(title, text)))) + actions(button('back', 'Return to map', 'primary'))};
   }
   if (modal === 'log') return {
@@ -641,7 +662,8 @@ function content() {
     const saved=campaignSave(selectedMap);
     const status=saved ? getMap(selectedMap).name+' · Round '+saved.round : 'No campaign started on this map.';
     return {kicker:'California campaigns', title:'Campaign atlas',
-      body:mapPicker(selectedMap)+muted(status)+actions(button('load-region',saved?'Resume campaign':'Start campaign','primary'),saved?button('confirm-restart','Start new campaign'):'')};
+      body:mapPicker(selectedMap)+muted(status)+
+        (saved && saved.mapShape!=='regional' ? muted('This save uses the original map. Start a new campaign here to play the regional coastline.') : '')+actions(button('load-region',saved?'Resume campaign':'Start campaign','primary'),saved?button('confirm-restart','Start new campaign'):'')};
   }
   if (modal === 'restart') return {kicker:'Solo campaign', title:'Start a new campaign?',
     body:muted(getMap(selectedMap).name) + desc('Starting over replaces the saved campaign on the selected map. Your other regions keep their progress.') + actions(button('restart','Start new campaign','primary'),button('campaign-atlas','Keep saved campaign'))};
@@ -679,6 +701,14 @@ async function copyInvite() {
   }
 }
 function modalAction(act) {
+  if (act.startsWith('locate-wonder-')) {
+    const match=discoveredNaturalWonders(getState()).find(site=>site.id===act.slice('locate-wonder-'.length));
+    if (match) {
+      dismissDialog();
+      locateDistrict?.(match.tile);
+    }
+    return;
+  }
   if(act==='battle-reports'){dismissDialog();document.dispatchEvent(new Event('civitas-battle-history'));return;}
   if(act==='title-screen'){enterTitle();return}
   if(act==='supplies'){open('supplies');return}
@@ -755,8 +785,9 @@ async function reconnectRoom(code) {
   }
 }
 
-async function init({ render, toast: showToast }) {
+async function init({ render, locate, toast: showToast }) {
   renderView = render;
+  locateDistrict = locate;
   toast = showToast;
   if (initialized) { emit(); return; }
   initialized = true;

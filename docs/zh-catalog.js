@@ -1011,4 +1011,9 @@ Tidal channels wind between salt-tolerant plants at the shallow southern end of 
 Wind-shaped pines cling to sandstone bluffs above the Pacific near La Jolla.|在拉霍亚附近，海风塑造的松树扎根于俯瞰太平洋的砂岩峭壁。
 At the foot of Point Loma, receding water leaves small rock pools alive with intertidal creatures.|在洛马角的崖脚，潮水退去后，岩池中仍可看到丰富的潮间带生物。
 This protected site cannot host a city, improvement or campus.|这里是受保护的自然奇观，无法建城、改良地块或建设大学。
+Wonders|奇观
+Show on map|在地图上查看
+Start a new campaign to discover natural wonders. This save keeps its original terrain.|开始新战役即可探索自然奇观，这个存档保留了原来的地形。
+Explore to record natural wonders here. Work a district next to a discovered site to gain its local bonus.|探索地图后，发现的自然奇观会记录在这里。让市民在奇观旁的地块工作，即可获得当地加成。
+This save uses the original map. Start a new campaign here to play the regional coastline.|这个存档使用原来的地图。选择「开始新战役」即可体验本地区的新海岸线。
 `);
