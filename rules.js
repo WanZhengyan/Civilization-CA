@@ -1,6 +1,12 @@
 // Shared rules for the browser and the authoritative room service.
+import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
+import {TECHS, CIVICS, ERA_UNITS, eraFor} from './progression.js';
+export {TECHS, CIVICS, ERAS} from './progression.js';
+export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
+import {LOS_ANGELES, regionalMaps, validMapId} from './maps.js';
+export {CAMPAIGN_MAPS, validMapId} from './maps.js';
 export const MAX_ROUNDS = 30;
-export const TARGET_SCORE = 100;
+export const TARGET_SCORE = 125;
 export const ACTIONS_PER_TURN = 2;
 export const FACTIONS = [
   { id: "republic", nameZh:"加州共和国", name: "California Republic", color: "#efbb62", capital: "11,7", capitalName: "Downtown LA" },
@@ -153,6 +159,11 @@ for (const {id, q, r} of TILES) {
     [q - 1 + shift, r + 1], [q + shift, r + 1]
   ].map(([x, y]) => x + "," + y).filter(key => TILE_BY_ID[key]);
 }
+const losAngeles = {...LOS_ANGELES, tiles:TILES, byId:TILE_BY_ID, starts:STARTING_TERRITORY};
+export function getMap(stateOrId) {
+  const id = typeof stateOrId === 'string' ? stateOrId : stateOrId?.mapId;
+  return id && Object.hasOwn(regionalMaps,id) ? regionalMaps[id] : losAngeles;
+}
 export function neighbors(id) {
   return adjacent[id] ? [...adjacent[id]] : [];
 }
@@ -160,28 +171,38 @@ function isProductive(terrain) {
   return terrain === "coast" || terrain === "plains" || terrain === "urban";
 }
 export const UNIT_TYPES = {
-  settler: {name:"Settler", maxHp:60, moves:2, range:0, strength:0, required:14},
-  builder: {name:"Builder", maxHp:60, moves:2, range:0, strength:0, required:9},
-  melee: {name:"Militia", maxHp:100, moves:2, range:1, strength:42, required:10},
-  ranged: {name:"Rangers", maxHp:80, moves:2, range:2, strength:35, required:12}
+  settler: {name:"Settler", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:14},
+  builder: {name:"Builder", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:9},
+  melee: {name:"Militia", era:"frontier", captures:true, upgrade:"riflemen", upgradeCost:10, maxHp:100, moves:2, range:1, strength:42, required:10},
+  ranged: {name:"Rangers", era:"frontier", captures:false, upgrade:"artillery", upgradeCost:12, maxHp:80, moves:2, range:2, strength:35, required:12},
+  ...ERA_UNITS,
+  ...VESSELS
 };
 export const BUILDINGS = {
+  ...PORT_BUILDINGS,
   granary: {name:"Granary", required:10},
   workshop: {name:"Workshop", required:13},
   monument: {name:"Monument", required:10},
   walls: {name:"City walls", required:14}
 };
 export const IMPROVEMENTS = {
-  farm: {name:"Farm"}, mine: {name:"Mine"}
-};
-export const TECHS = {
-  agronomy: {name: "Agronomy", cost: 12, description: "Each city produces 2 more food per turn."},
-  industry: {name: "Industrial Engineering", cost: 16, description: "Each city produces 2 more production per turn."},
-  tactics: {name: "Field Tactics", cost: 15, description: "Military units deal 7 more attack damage and 3 more retaliation damage."},
-  civics: {name: "Civic Administration", cost: 14, description: "Each city earns 2 more capital and 1 more influence per turn."}
+  farm: {name:"Farm"}, mine: {name:"Mine"}, fishery: {name:"Fishery"}
 };
 function knows(state, seat, technology) {
   return state.players[seat]?.technologies?.includes(technology) === true;
+}
+function adopted(state, seat, civic) {
+  return state.players[seat]?.civics?.includes(civic) === true;
+}
+function tradesBySea(state, city) {
+  if (!knows(state,city.seat,'navigation')) return false;
+  const {byId}=getMap(state);
+  return city.buildings.includes('harbor') || byId[city.tile].terrain==='coast'
+    || neighbors(city.tile).some(id=>byId[id].terrain==='ocean');
+}
+function hasPark(state, city) {
+  return [city.tile,...adjacent[city.tile]].some(id => state.board[id].owner===city.seat
+    && ['forest','hills'].includes(getMap(state).byId[id].terrain));
 }
 const PRODUCTS = {...UNIT_TYPES, ...BUILDINGS};
 const terrainCost = {coast:1, urban:1, plains:1, hills:2, forest:2};
@@ -195,17 +216,18 @@ export function hexDistance(a, b) {
 function mint(state, prefix) { return prefix + state.nextId++; }
 function spawn(state,seat,type,tile) {
   const def = UNIT_TYPES[type];
-  const unit = {id:mint(state,'u'),seat,type,tile,hp:def.maxHp,maxHp:def.maxHp,moves:def.moves,maxMoves:def.moves,charges:type === 'builder' ? 3 : 0};
+  const maxHp = def.maxHp + (def.strength && adopted(state,seat,'mobilization') ? 20 : 0);
+  const unit = {id:mint(state,'u'),seat,type,tile,hp:maxHp,maxHp,moves:def.moves,maxMoves:def.moves,charges:type === 'builder' ? 3 : def.charges || 0};
   state.units.push(unit);
   return unit;
 }
 function establish(state,seat,tile,original = false) {
-  const city = {id:mint(state,'c'),name:TILE_BY_ID[tile].name,seat,tile,hp:100,maxHp:100,population:1,food:0,buildings:[],queue:null,originalSeat:original ? seat : null};
+  const city = {id:mint(state,'c'),name:getMap(state).byId[tile].name,seat,tile,hp:100,maxHp:100,population:1,food:0,buildings:[],queue:null,originalSeat:original ? seat : null};
   state.cities.push(city);
   state.board[tile] = {...state.board[tile],owner:seat,level:Math.max(1,state.board[tile].level)};
   if (!original) for (const next of adjacent[tile]) {
     const holding = state.board[next];
-    if (holding.owner === null && terrainCost[TILE_BY_ID[next].terrain] && !state.units.some(u=>u.tile===next && u.seat!==seat)) {
+    if (holding.owner === null && terrainCost[getMap(state).byId[next].terrain] && !state.units.some(u=>u.tile===next && u.seat!==seat)) {
       state.board[next] = {...holding,owner:seat};
     }
   }
@@ -218,69 +240,81 @@ function addResearch(state) {
     let name = player.name;
     if (player.bot && player.name === faction.nameZh) name = faction.name;
     if (hasBots && seat === 0 && !player.bot && player.name === "你") name = "You";
-    return {...player, name, research: null, science: 0, technologies: []};
+    return {...player, name, research: null, science: 0, technologies: [], culture: 0, civic: null, civics: []};
   });
   return {...state, rulesVersion: 3, players};
 }
 export function migrateGame(state) {
-  if (!state || state.rulesVersion === 3) return state;
+  if (!state) return state;
+  if (state.rulesVersion === 3) {
+    if (state.players.every(p => Array.isArray(p.civics) && Number.isFinite(p.culture) && Object.hasOwn(p,'civic'))) return state;
+    return {...state, players: state.players.map(p => ({culture: 0, civic: null, civics: [], ...p}))};
+  }
   if (state.rulesVersion === 2) return addResearch(state);
   const next = {...state,rulesVersion:2,nextId:1,units:[],cities:[],
     board:Object.fromEntries(Object.entries(state.board).map(([id,tile])=>[id,{...tile,improvement:null}])),
     players:state.players.map(player=>({...player}))};
   next.players.forEach((player,seat)=>{
-    const home = FACTIONS[player.faction].capital;
+    const home = getMap(state).starts[player.faction][0];
     establish(next,seat,home,true);
-    spawn(next,seat,'settler',STARTING_TERRITORY[seat][1]);
-    spawn(next,seat,'melee',STARTING_TERRITORY[seat][2]);
+    spawn(next,seat,'settler',getMap(state).starts[seat][1]);
+    spawn(next,seat,'melee',getMap(state).starts[seat][2]);
   });
   if (state.phase === 'playing') refreshScores(next);
   else next.legacyFinalScores = state.players.map(p=>p.score);
   return addResearch(next);
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(f=>({name:f.name,bot:true}))]) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(f=>({name:f.name,bot:true}))], mapId = "la") {
+  if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!Array.isArray(players) || players.length < 2 || players.length > 4) throw new Error("A campaign needs two to four factions.");
-  const next = {round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
-    board:Object.fromEntries(TILES.map(tile=>[tile.id,{owner:null,level:0}])),
+  const next = {mapId,round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
+    board:Object.fromEntries(getMap(mapId).tiles.map(tile=>[tile.id,{owner:null,level:0}])),
     players:players.map((player,seat)=>({
       name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[seat].name,
       bot:player?.bot===true,faction:seat,color:FACTIONS[seat].color,capital:12,influence:6,score:0
     })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
-  next.players.forEach((p,seat)=>{for (const id of STARTING_TERRITORY[seat]) next.board[id].owner = seat;});
+  next.players.forEach((p,seat)=>{for (const id of getMap(mapId).starts[seat]) next.board[id].owner = seat;});
   return migrateGame(next);
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
+export function getPortSite(state, cityId) {
+  return findPortSite(state, cityOrNull(state, cityId), getMap(state).byId, neighbors);
+}
 function unitOrNull(state,id) { return state.units.find(u=>u.id === id); }
 export function getCityYield(state,cityId) {
   const city = cityOrNull(state,cityId);
   if (!city) return {food:0,production:0,capital:0,influence:0};
   const has = key=>city.buildings.includes(key);
   // Improvements within two hexes work the closest city; city id order breaks ties.
-  let farms = 0, mines = 0;
-  for (const tile of TILES) {
+  let farms = 0, mines = 0, fisheries = 0;
+  for (const tile of getMap(state).tiles) {
     const holding = state.board[tile.id];
     if (holding.owner !== city.seat || !holding.improvement) continue;
+    if (holding.improvement==='fishery' && holding.portCity===city.id) fisheries++;
     const d = hexDistance(tile.id,city.tile);
     if (d>2 || state.cities.some(c=>c.seat===city.seat && c.id!==city.id && (hexDistance(c.tile,tile.id)<d || (hexDistance(c.tile,tile.id)===d && c.id<city.id)))) continue;
     if (holding.improvement==='farm') farms++;
     if (holding.improvement==='mine') mines++;
   }
   const civics = knows(state, city.seat, 'civics');
+  const steam = has('workshop') && knows(state, city.seat, 'steam');
+  const trade = tradesBySea(state,city);
   return {
-    food: 2 + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
-    production: 3 + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0),
-    capital: city.population + (civics ? 2 : 0),
+    food: 2 + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
+    production: 3 + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
+    capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
 }
 export function getStats(state,seat) {
-  let territories=0,developments=0,landmarks=0,improvements=0,productive=0;
-  for (const tile of TILES) {
+  let territories=0,developments=0,landmarks=0,improvements=0,productive=0,fisheries=0;
+  for (const tile of getMap(state).tiles) {
     const holding = state.board[tile.id];
     if (holding.owner !== seat) continue;
     territories++; developments+=holding.level;
     if (tile.landmark) landmarks++;
     if (holding.improvement) improvements++;
+    if (holding.improvement==='fishery') fisheries++;
     if (isProductive(tile.terrain)) productive+=holding.level;
   }
   const cities=(state.cities||[]).filter(c=>c.seat===seat);
@@ -290,8 +324,12 @@ export function getStats(state,seat) {
   const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
   return {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
     score:state.legacyFinalScores?.[seat] ?? score,
-    scienceIncome:2+count+Math.floor(population/3),
-    capitalIncome:3+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0),
+    cultureIncome:1+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
+      +(adopted(state,seat,'conservation') ? cities.filter(c=>hasPark(state,c)).length : 0),
+    scienceIncome:2+count+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
+      +(adopted(state,seat,'publicRadio') ? 2*count : 0),
+    capitalIncome:3+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
+      +2*cities.filter(c=>tradesBySea(state,c)).length,
     influenceIncome:2+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
 }
 function refreshScores(state) { state.players.forEach((p,i)=>{p.score=getStats(state,i).score;}); }
@@ -308,18 +346,39 @@ function territoryOrder(state,seat,tile) {
   return {type:'contest',label:'Contest district',cost:{capital:4,influence:5+level*2}};
 }
 export function getActions(state,seat,id) {
-  const tile=TILE_BY_ID[id], player=state.players[seat];
+  const tile=getMap(state).byId[id], player=state.players[seat];
   if (!tile || !player) return [];
   const order=territoryOrder(state,seat,tile);
   if (!order) return [];
   let reason='';
   if (state.phase!=='playing') reason='The campaign has ended.';
   else if (state.turn!==seat) reason='Wait for your turn.';
-  else if (state.actionsLeft<=0) reason='You have used both civic actions this turn.';
+  else if (state.actionsLeft<=0) reason='You have used all district orders this turn.';
   else if (order.type!=='develop' && !adjacent[id].some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
   else if (player.capital<order.cost.capital) reason='You need '+order.cost.capital+' capital.';
   else if (player.influence<order.cost.influence) reason='You need '+order.cost.influence+' influence.';
   return [{...order,enabled:!reason,reason}];
+}
+function movementCost(state,unit, tileId) {
+  const terrain=getMap(state).byId[tileId].terrain;
+  return UNIT_TYPES[unit.type].domain==='sea' ? Number(terrain==='ocean') : terrainCost[terrain];
+}
+function bridgeTo(state,from,to) {
+  return getMap(state).bridgesByTile?.[from]?.find(bridge=>bridge.to===to);
+}
+function routeStepCost(state,unit,from,to) {
+  return UNIT_TYPES[unit.type].domain!=='sea' && bridgeTo(state,from,to) ? 2 : movementCost(state,unit,to);
+}
+export function getRouteDetail(state,unitId,target) {
+  const unit=unitOrNull(state,unitId),path=getMovePath(state,unitId,target);
+  if(!unit || !path.length)return null;
+  let cost=0;
+  const crossings=[];
+  for(let i=1;i<path.length;i++){
+    cost+=routeStepCost(state,unit,path[i-1],path[i]);
+    const bridge=bridgeTo(state,path[i-1],path[i]);if(bridge)crossings.push(bridge.name);
+  }
+  return {path,cost,crossings};
 }
 // The search budget is the unit's remaining movement on this turn.
 function findRoutes(state,unit) {
@@ -328,8 +387,10 @@ function findRoutes(state,unit) {
   for (const c of state.cities) if (c.seat!==unit.seat) blocked.add(c.tile);
   for (let i=0;i<queue.length;i++) {
     const here=queue[i];
-    for (const next of adjacent[here]) {
-      const step=terrainCost[TILE_BY_ID[next].terrain];
+    const bridges=UNIT_TYPES[unit.type].domain!=='sea' && getMap(state).bridgesByTile?.[here];
+    const directions=bridges ? [...adjacent[here],...bridges.map(link=>link.to)] : adjacent[here];
+    for (const next of directions) {
+      const step=routeStepCost(state,unit,here,next);
       if (!step || blocked.has(next)) continue;
       const cost=costs.get(here)+step;
       if (cost>unit.moves || cost>=(costs.get(next)??Infinity)) continue;
@@ -366,11 +427,11 @@ function settlementRestriction(state, seat, tile, nearest) {
   return null;
 }
 function canSettle(state, seat, id) {
-  return !settlementRestriction(state, seat, TILE_BY_ID[id], nearestSettlement(state, id));
+  return !settlementRestriction(state, seat, getMap(state).byId[id], nearestSettlement(state, id));
 }
 export function getSettlementAssessment(state, unitId, tileId) {
   const unit = unitOrNull(state, unitId);
-  const tile = TILE_BY_ID[tileId];
+  const tile = getMap(state).byId[tileId];
   const nearest = tile ? nearestSettlement(state, tileId) : null;
   const assessment = {
     status: 'invalid', reason: '', canFoundThisTurn: false, canFoundNextTurn: false,
@@ -414,21 +475,38 @@ export function getSettlementAssessment(state, unitId, tileId) {
 }
 function improvementAt(state,seat,id) {
   if (state.board[id].owner!==seat || state.board[id].improvement || state.cities.some(c=>c.tile===id)) return null;
-  const terrain=TILE_BY_ID[id].terrain;
+  const terrain=getMap(state).byId[id].terrain;
   return isProductive(terrain) ? 'farm' : terrain==='forest' || terrain==='hills' ? 'mine' : null;
+}
+function unitImprovement(state,unit,tile) {
+  if (!unit.charges) return null;
+  if (unit.type==='workboat') return fisheryPort(state,unit.seat,tile,getMap(state).byId, neighbors) ? 'fishery' : null;
+  return unit.type==='builder' ? improvementAt(state,unit.seat,tile) : null;
 }
 function attackTargets(state,unit) {
   const range=UNIT_TYPES[unit.type].range;
   if (!range) return [];
-  const occupied=state.units.filter(u=>u.seat!==unit.seat && hexDistance(unit.tile,u.tile)<=range).map(u=>u.tile);
-  const cities=state.cities.filter(c=>c.seat!==unit.seat && hexDistance(unit.tile,c.tile)<=range && (unit.type!=='ranged' || c.hp>1)).map(c=>c.tile);
+  // A land melee unit can contest a defended end of a bridge with a full crossing order.
+  const inRange=tile=>hexDistance(unit.tile,tile)<=range || (UNIT_TYPES[unit.type].captures && unit.moves>=2 && Boolean(bridgeTo(state,unit.tile,tile)));
+  const occupied=state.units.filter(u=>u.seat!==unit.seat && inRange(u.tile)).map(u=>u.tile);
+  const cities=state.cities.filter(c=>c.seat!==unit.seat && inRange(c.tile) && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
   return [...new Set([...occupied,...cities])];
 }
+function fieldUpgrade(state, unit) {
+  const source = UNIT_TYPES[unit.type];
+  if (!source.upgrade) return null;
+  const next = UNIT_TYPES[source.upgrade];
+  if (!knows(state,unit.seat,next.tech)) return null;
+  let reason = '';
+  if (state.board[unit.tile].owner !== unit.seat) reason = 'Move into your territory to upgrade.';
+  else if (state.players[unit.seat].capital < source.upgradeCost) reason = 'Your treasury cannot cover this upgrade.';
+  return {to:source.upgrade, cost:source.upgradeCost, enabled:!reason, reason};
+}
 export function getUnitOptions(state,unitId) {
-  const empty={moves:[],attacks:[],canFound:false,improvements:[]},unit=unitOrNull(state,unitId);
+  const empty={moves:[],attacks:[],canFound:false,improvements:[],upgrade:null},unit=unitOrNull(state,unitId);
   if (!active(state,unit)) return empty;
-  const improvement=unit.type==='builder' && unit.charges>0 ? improvementAt(state,unit.seat,unit.tile) : null;
-  return {moves:[...findRoutes(state,unit).parents.keys()],attacks:attackTargets(state,unit),
+  const improvement=unitImprovement(state,unit,unit.tile);
+  return {moves:[...findRoutes(state,unit).parents.keys()],attacks:attackTargets(state,unit),upgrade:fieldUpgrade(state,unit),
     canFound:unit.type==='settler' && canSettle(state,unit.seat,unit.tile),improvements:improvement ? [improvement]:[]};
 }
 export function getProductionOptions(state,cityId) {
@@ -442,39 +520,57 @@ export function getProductionOptions(state,cityId) {
     else if (city.seat!==state.turn) reason='Wait for the city owner’s turn.';
     else if (city.queue) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
-    return {item,label:def.name,kind,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
+    else if (item==='harbor' && !getPortSite(state,city.id)) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
+    else if ((item==='shipyard' || def.domain==='sea') && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
+    else if (item==='frigate' && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
+    else if (def.tech && !knows(state,city.seat,def.tech)) reason='Requires '+TECHS[def.tech].name+'.';
+    return {item,label:def.name,kind,era:def.era || null,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
   });
 }
-export function getResearchOptions(state, seat) {
+const SCIENCE = {tree: TECHS, bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
+  order:'research', event:'discovery', verb:'discovered'};
+const CULTURE = {tree: CIVICS, bank:'culture', income:'cultureIncome', known:'civics', focus:'civic',
+  order:'civic', event:'adoption', verb:'adopted'};
+
+function councilOptions(state, seat, track) {
   const player = state.players[seat];
   if (!player) return [];
-  const income = getStats(state, seat).scienceIncome;
-  return Object.entries(TECHS).map(([item, tech]) => {
-    const completed = knows(state, seat, item);
-    const active = player.research === item;
+  const known = player[track.known] || [];
+  const bank = player[track.bank] || 0;
+  const income = getStats(state, seat)[track.income];
+  return Object.entries(track.tree).map(([item, project]) => {
+    const completed = known.includes(item);
+    const active = player[track.focus] === item;
+    const missing = project.requires.filter(key => !known.includes(key));
     let reason = "";
     if (state.phase !== "playing") reason = "The campaign has ended.";
     else if (state.turn !== seat) reason = "Wait for your turn.";
-    else if (completed) reason = "Your faction already knows this technology.";
-    else if (active) reason = "This is your current research project.";
-    const turns = completed ? 0 : Math.max(0, Math.ceil((tech.cost - player.science) / income));
-    return {item, label: tech.name, description: tech.description, cost: tech.cost, completed, active, turns, enabled: !reason, reason};
+    else if (completed) reason = "Your faction has already completed this project.";
+    else if (active) reason = "This is your current project.";
+    else if (missing.length) reason = "Requires " + missing.map(key=>track.tree[key].name).join(" + ") + ".";
+    const turns = completed ? 0 : Math.max(0, Math.ceil((project.cost - bank) / income));
+    return {item, label: project.name, description: project.description, cost: project.cost, era: project.era,
+      requires: project.requires, locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
   });
 }
-function checkDiscovery(state, seat) {
-  const player = state.players[seat], item = player.research;
-  if (!item || player.science < TECHS[item].cost) return;
-  player.science -= TECHS[item].cost;
-  player.technologies = [...player.technologies, item];
-  player.research = null;
-  record(state, seat, 'discovery', FACTIONS[seat].name+' discovered '+TECHS[item].name+'.', null, {item});
+export function getResearchOptions(state, seat) { return councilOptions(state,seat,SCIENCE); }
+export function getCivicOptions(state, seat) { return councilOptions(state,seat,CULTURE); }
+
+function finishProject(state, seat, track) {
+  const player = state.players[seat], item = player[track.focus];
+  if (!item || player[track.bank] < track.tree[item].cost) return;
+  player[track.bank] -= track.tree[item].cost;
+  player[track.known] = [...player[track.known], item];
+  player[track.focus] = null;
+  record(state, seat, track.event, FACTIONS[seat].name+' '+track.verb+' '+track.tree[item].name+'.', null, {item});
 }
-function setResearch(state, seat, item) {
-  const option = getResearchOptions(state, seat).find(tech => tech.item === item);
-  if (!option?.enabled) throw new Error(option?.reason || "Choose an available technology.");
-  state.players[seat].research = item;
-  record(state, seat, 'research', FACTIONS[seat].name+' began researching '+option.label+'.', null, {item});
-  checkDiscovery(state, seat);
+function selectProject(state, seat, item, track) {
+  const option = councilOptions(state, seat, track).find(project => project.item === item);
+  if (!option?.enabled) throw new Error(option?.reason || "Choose an available council project.");
+  state.players[seat][track.focus] = item;
+  const verb = track === SCIENCE ? ' began researching ' : ' began debating ';
+  record(state, seat, track.order, FACTIONS[seat].name+verb+option.label+'.', null, {item});
+  finishProject(state, seat, track);
 }
 function cloneGame(state) {
   // Records are cloned at the action boundary so optimistic retries cannot mutate the old revision.
@@ -491,12 +587,20 @@ function produceCityTurn(state,city) {
   queue.progress=Math.min(queue.required,queue.progress+yieldNow.production);
   if (queue.progress<queue.required) return;
   if (Object.hasOwn(UNIT_TYPES,queue.item)) {
-    const spawnTile=[city.tile,...adjacent[city.tile]].find(id=>terrainCost[TILE_BY_ID[id].terrain] &&
+    const vessel=UNIT_TYPES[queue.item].domain==='sea';
+    const origin=vessel ? city.portTile : city.tile;
+    if (!origin) return;
+    const spawnTile=[origin,...adjacent[origin]].find(id=>(vessel ? getMap(state).byId[id].terrain==='ocean' : terrainCost[getMap(state).byId[id].terrain]) &&
       !state.units.some(u=>u.tile===id) && !state.cities.some(c=>c.tile===id && c.seat!==city.seat) &&
       (state.board[id].owner===null || state.board[id].owner===city.seat));
     if (!spawnTile) return;
     spawn(state,city.seat,queue.item,spawnTile).moves=0;
   } else {
+    if (queue.item==='harbor') {
+      const tile = queue.portTile || getPortSite(state,city.id);
+      if (!tile) return;
+      city.portTile = tile;
+    }
     city.buildings.push(queue.item);
     if (queue.item==='walls') {city.maxHp+=50; city.hp=Math.min(city.maxHp,city.hp+50);}
   }
@@ -514,7 +618,9 @@ function endTurn(state,seat) {
   player.capital+=income.capitalIncome;player.influence+=income.influenceIncome;
   for (const city of state.cities) if (city.seat===seat) produceCityTurn(state,city);
   player.science += income.scienceIncome;
-  checkDiscovery(state, seat);
+  player.culture += income.cultureIncome;
+  finishProject(state, seat, SCIENCE);
+  finishProject(state, seat, CULTURE);
   refreshScores(state);
   record(state,seat,'end',FACTIONS[seat].name+' ended its turn.');
   const next=(seat+1)%state.players.length;
@@ -526,12 +632,13 @@ function endTurn(state,seat) {
     }
     state.round++;
   }
-  state.turn=next;state.actionsLeft=ACTIONS_PER_TURN;
+  state.turn=next;state.actionsLeft=ACTIONS_PER_TURN+Number(adopted(state,next,'federation'));
   const towns=state.cities.filter(c=>c.seat===next);
   for (const city of towns) city.hp=Math.min(city.maxHp,city.hp+6);
   for (const unit of state.units) if (unit.seat===next) {
     unit.moves=unit.maxMoves;
-    if (towns.some(c=>c.tile===unit.tile)) unit.hp=Math.min(unit.maxHp,unit.hp+12);
+    const repairs=towns.some(c=>c.tile===unit.tile || (UNIT_TYPES[unit.type].domain==='sea' && c.portTile && hexDistance(c.portTile,unit.tile)<=1));
+    if (repairs) unit.hp=Math.min(unit.maxHp,unit.hp+12);
   }
 }
 export function combatPreview(state, unitId, target) {
@@ -542,12 +649,13 @@ export function combatPreview(state, unitId, target) {
   const defender = state.units.find(other => other.tile === target && other.seat !== unit.seat);
   const town = state.cities.find(city => city.tile === target && city.seat !== unit.seat);
   const opponent = defender || town;
-  const melee = unit.type === 'melee';
+  const melee = UNIT_TYPES[unit.type].captures === true;
   const walls = !!town?.buildings.includes('walls');
-  const terrain = TILE_BY_ID[target].terrain;
+  const terrain = getMap(state).byId[target].terrain;
   const terrainDefense = terrain === 'hills' || terrain === 'forest' ? 4 : 0;
   const strength = Math.round(UNIT_TYPES[unit.type].strength * (0.75 + 0.25 * unit.hp / unit.maxHp));
-  const attackBonus = knows(state, unit.seat, 'tactics') ? 7 : 0;
+  const attackBonus = (knows(state, unit.seat, 'tactics') ? 7 : 0)
+    + (UNIT_TYPES[unit.type].range > 1 && knows(state, unit.seat, 'ballistics') ? 5 : 0);
   let damage = Math.min(opponent.hp, Math.max(1, strength + attackBonus - terrainDefense - (walls ? 7 : 0)));
   let retaliation = 0;
   if (melee) {
@@ -565,7 +673,7 @@ export function combatPreview(state, unitId, target) {
   const defenderHpAfterHit = opponent.hp - damage;
   const capture = !defender && defenderHpAfterHit === 0;
   const defeated = !!defender && defenderHpAfterHit === 0;
-  const advances = melee && attackerHpAfter > 0 && (capture || (defeated && !town));
+  const advances = melee && movementCost(state,unit,target)>0 && attackerHpAfter > 0 && (capture || (defeated && !town));
   return {
     defenderType: defender ? 'unit' : 'city', defenderId: opponent.id,
     damage, retaliation, capture, defeated, advances, attackerDefeated: attackerHpAfter === 0,
@@ -579,11 +687,16 @@ function resolveAttack(state, unit, target) {
   const from = unit.tile;
   const isUnit = result.defenderType === 'unit';
   const defender = isUnit ? unitOrNull(state, result.defenderId) : cityOrNull(state, result.defenderId);
-  const name = isUnit ? UNIT_TYPES[defender.type].name+' in '+TILE_BY_ID[target].name : defender.name;
+  const name = isUnit ? UNIT_TYPES[defender.type].name+' in '+getMap(state).byId[target].name : defender.name;
   defender.hp = result.defenderHpAfter;
   if (result.capture) {
     defender.seat = unit.seat;
     defender.queue = null;
+    if (defender.portTile) {
+      for (const [tile,holding] of Object.entries(state.board)) {
+        if (holding.improvement==='fishery' && holding.portCity===defender.id) state.board[tile]={...holding,owner:unit.seat};
+      }
+    }
     state.board[target] = {...state.board[target], owner: unit.seat};
   }
   unit.hp = result.attackerHpAfter;
@@ -592,7 +705,7 @@ function resolveAttack(state, unit, target) {
   if (result.attackerDefeated || result.defeated) state.units = state.units.filter(other => other.hp > 0);
   const text = UNIT_TYPES[unit.type].name+(result.capture ? ' captured ' : ' attacked ')+name+' for '+result.damage+' damage.';
   record(state, unit.seat, 'attack', text, target, {unit: unit.id, from, ...result});
-  if (result.capture && state.players.every(p => state.cities.some(c => c.tile === FACTIONS[p.faction].capital && c.seat === unit.seat))) {
+  if (result.capture && state.players.every(p => state.cities.some(c => c.tile === getMap(state).starts[p.faction][0] && c.seat === unit.seat))) {
     refreshScores(state);
     finish(state, [unit.seat], 'domination');
   }
@@ -605,9 +718,19 @@ function unitOrder(state,seat,action) {
   if (action.type==='move') {
     const path=getMovePath(state,unit.id,action.tile);
     if (!path.length) throw new Error('Choose an unoccupied tile within movement range.');
-    unit.moves-=path.slice(1).reduce((sum,k)=>sum+terrainCost[TILE_BY_ID[k].terrain],0);
+    unit.moves-=path.slice(1).reduce((sum,k,i)=>sum+routeStepCost(state,unit,path[i],k),0);
     unit.tile=action.tile;
-    record(state,seat,'move',label+' moved to '+TILE_BY_ID[unit.tile].name+'.',unit.tile,{from:id,unit:unit.id,path});
+    record(state,seat,'move',label+' moved to '+getMap(state).byId[unit.tile].name+'.',unit.tile,{from:id,unit:unit.id,path});
+  } else if (action.type==='upgrade') {
+    const upgrade=fieldUpgrade(state,unit);
+    if (!upgrade?.enabled) throw new Error(upgrade?.reason || 'No field upgrade is available.');
+    const def=UNIT_TYPES[upgrade.to];
+    const trainingBonus=unit.maxHp-UNIT_TYPES[unit.type].maxHp;
+    const maxHp=def.maxHp+trainingBonus;
+    const hp=Math.max(1,Math.floor(unit.hp/unit.maxHp*maxHp));
+    Object.assign(unit,{type:upgrade.to,maxHp,hp,moves:0,maxMoves:def.moves});
+    state.players[seat].capital-=upgrade.cost;
+    record(state,seat,'upgrade',label+' upgraded to '+def.name+'.',id,{unit:unit.id,item:upgrade.to});
   } else if (action.type==='attack') {
     resolveAttack(state,unit,action.tile);
   } else if (action.type==='found') {
@@ -616,11 +739,15 @@ function unitOrder(state,seat,action) {
     state.units=state.units.filter(u=>u.id!==unit.id);
     record(state,seat,'found',FACTIONS[seat].name+' founded a city at '+city.name+'.',id,{city:city.id,unit:unit.id});
   } else {
-    const item=improvementAt(state,seat,id);
-    if (unit.type!=='builder' || !unit.charges || !item || item!==action.item) throw new Error('Build a suitable improvement on one of your unimproved districts.');
-    state.board[id]={...state.board[id],improvement:item};unit.moves=0;unit.charges--;
+    const item=unitImprovement(state,unit,id);
+    if (!item || item!==action.item) throw new Error(unit.type==='workboat'
+      ? 'Build a fishery on open water within two water hexes of a friendly harbor.'
+      : 'Build a suitable improvement on one of your unimproved districts.');
+    const port=item==='fishery' ? fisheryPort(state,seat,id,getMap(state).byId, neighbors) : null;
+    state.board[id]={...state.board[id],improvement:item,...(port ? {owner:seat,portCity:port.id} : {})};
+    unit.moves=0;unit.charges--;
     if (!unit.charges) state.units=state.units.filter(u=>u.id!==unit.id);
-    record(state,seat,'improve',label+' built a '+IMPROVEMENTS[item].name.toLowerCase()+' in '+TILE_BY_ID[id].name+'.',id,{unit:unit.id,item});
+    record(state,seat,'improve',label+' built a '+IMPROVEMENTS[item].name.toLowerCase()+' in '+getMap(state).byId[id].name+'.',id,{unit:unit.id,item});
   }
 }
 export function applyAction(source,seat,action) {
@@ -630,23 +757,24 @@ export function applyAction(source,seat,action) {
   if (!action || typeof action!=='object') throw new Error('Choose an action.');
   const next=cloneGame(state);
   if (action.type==='end') {endTurn(next,seat);return next;}
-  if (action.type==='research') {
-    setResearch(next, seat, action.item);
+  if (action.type==='research' || action.type==='civic') {
+    selectProject(next, seat, action.item, action.type==='research' ? SCIENCE : CULTURE);
   } else if (action.type==='produce') {
     const city=cityOrNull(next,action.city);
     if (!city || city.seat!==seat) throw new Error('Choose one of your cities.');
     const option=getProductionOptions(next,city.id).find(o=>o.item===action.item);
     if (!option || !option.enabled) throw new Error(option?.reason || 'Choose an available production project.');
-    city.queue={item:option.item,required:option.required,progress:0};
+    const berth=option.item==='harbor' ? getPortSite(next,city.id) : null;
+    city.queue={item:option.item,required:option.required,progress:0,...(berth ? {portTile:berth} : {})};
     record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
-  } else if (['move','attack','found','improve'].includes(action.type)) {
+  } else if (['move','attack','found','improve','upgrade'].includes(action.type)) {
     unitOrder(next,seat,action);
   } else {
     if (typeof action.tile!=='string') throw new Error('Choose a district.');
     const [order]=getActions(next,seat,action.tile);
     if (!order || action.type!==order.type) throw new Error('That order is unavailable in this district.');
     if (!order.enabled) throw new Error(order.reason);
-    const tile=TILE_BY_ID[action.tile],prior=next.board[tile.id],player=next.players[seat];
+    const tile=getMap(state).byId[action.tile],prior=next.board[tile.id],player=next.players[seat];
     player.capital-=order.cost.capital;player.influence-=order.cost.influence;
     next.board[tile.id]={...prior,owner:seat,level:order.type==='develop' ? prior.level+1:prior.level};
     next.actionsLeft--;
@@ -661,10 +789,21 @@ function botProject(state,city) {
   const cities=state.cities.filter(c=>c.seat===city.seat);
   const count=type=>units.filter(u=>u.type===type).length+cities.filter(c=>c.queue?.item===type).length;
   const choices=[];
+  if (!city.buildings.includes('harbor') && getPortSite(state,city.id)) choices.push('harbor');
+  if (city.buildings.includes('harbor')) {
+    const worked=Object.values(state.board).filter(tile=>tile.portCity===city.id).length;
+    if (worked<2 && count('workboat')===0) choices.push('workboat');
+    if (count('cutter')===0) choices.push('cutter');
+    if (city.buildings.includes('shipyard') && knows(state,city.seat,'steam') && count('frigate')===0) choices.push('frigate');
+  }
   if (count('builder')===0) choices.push('builder');
+  for (const type of ['armor','artillery','riflemen','cavalry']) {
+    if (knows(state,city.seat,UNIT_TYPES[type].tech) && !count(type)) choices.push(type);
+  }
   if (count('ranged')<Math.max(1,cities.length-1)) choices.push('ranged');
   if (count('melee')<2) choices.push('melee');
   if (cities.length<3 && count('settler')===0) choices.push('settler');
+  if (city.buildings.includes('harbor')) choices.push('shipyard');
   choices.push('workshop','walls','monument','granary');
   if (count('melee')<4) choices.push('melee');
   const option=choices.find(key=>!city.buildings.includes(key));
@@ -676,16 +815,24 @@ function botMovement(state,unit,options) {
   const candidates=[unit.tile,...options.moves];
   const towns=state.cities.filter(c=>c.seat===unit.seat);
   let goals;
-  if (settle) goals=TILES.filter(t=>canSettle(state,unit.seat,t.id)).map(t=>t.id);
-  else if (builder) goals=TILES.filter(t=>improvementAt(state,unit.seat,t.id) && towns.some(c=>hexDistance(c.tile,t.id)<=2)).map(t=>t.id);
-  else goals=state.cities.filter(c=>c.seat!==unit.seat).map(c=>c.tile);
+  if (settle) goals=getMap(state).tiles.filter(t=>canSettle(state,unit.seat,t.id)).map(t=>t.id);
+  else if (unit.type==='workboat') {
+    const site=options.moves.find(id=>unitImprovement(state,unit,id));
+    return site ? {type:'move',unit:unit.id,tile:site} : null;
+  } else if (builder) goals=getMap(state).tiles.filter(t=>improvementAt(state,unit.seat,t.id) && towns.some(c=>hexDistance(c.tile,t.id)<=2)).map(t=>t.id);
+  else if (UNIT_TYPES[unit.type].domain==='sea') {
+    const range=UNIT_TYPES[unit.type].range;
+    goals=[...state.units,...state.cities].filter(target=>target.seat!==unit.seat && (
+      movementCost(state,unit,target.tile) || (getMap(state).tiles.some(t=>t.terrain==='ocean' && hexDistance(t.id,target.tile)<=range))
+    )).map(target=>target.tile);
+  } else goals=state.cities.filter(c=>c.seat!==unit.seat).map(c=>c.tile);
   if (!goals.length) return null;
   const costs=findRoutes(state,unit).costs;
   function value(tile) {
     const distance=Math.min(...goals.map(g=>hexDistance(g,tile)));
     if (settle && distance===0) {
-      const territory=adjacent[tile].filter(k=>terrainCost[TILE_BY_ID[k].terrain] && state.board[k].owner===null).length;
-      return 20+territory*0.3+(TILE_BY_ID[tile].landmark ? 1:0)-costs.get(tile)*0.2;
+      const territory=adjacent[tile].filter(k=>terrainCost[getMap(state).byId[k].terrain] && state.board[k].owner===null).length;
+      return 20+territory*0.3+(getMap(state).byId[tile].landmark ? 1:0)-costs.get(tile)*0.2;
     }
     if (!builder && !settle) {
       const inRange=state.units.some(u=>u.seat!==unit.seat && hexDistance(u.tile,tile)<=UNIT_TYPES[unit.type].range) ||
@@ -705,10 +852,10 @@ function botMovement(state,unit,options) {
 function botDistrict(state) {
   if (!state.actionsLeft) return null;
   let choice=null,best=-Infinity;
-  for (const tile of TILES) {
+  for (const tile of getMap(state).tiles) {
     const [order]=getActions(state,state.turn,tile.id);
     if (!order?.enabled) continue;
-    const frontier=adjacent[tile.id].filter(id=>terrainCost[TILE_BY_ID[id].terrain] && state.board[id].owner===null).length;
+    const frontier=adjacent[tile.id].filter(id=>terrainCost[getMap(state).byId[id].terrain] && state.board[id].owner===null).length;
     const variety=((tile.q*67+tile.r*31+state.round*19+state.turn*11+state.actionsLeft*7)%29)/29;
     const value=order.type==='develop' ? 0.5 : 2+Number(Boolean(tile.landmark))*3+frontier*0.1+(order.type==='contest'?1.5:0);
     if (value+variety>best) {best=value+variety;choice={type:order.type,tile:tile.id};}
@@ -723,8 +870,15 @@ export function chooseBotAction(source) {
     const threatened = state.cities.some(city => city.seat === seat && state.units.some(
       unit => unit.seat !== seat && UNIT_TYPES[unit.type].range > 0 && hexDistance(unit.tile, city.tile) <= 2));
     const opening = ['industry', 'agronomy', 'tactics', 'civics'][seat];
-    const priorities = [threatened ? 'tactics' : opening, 'industry', 'tactics', 'agronomy', 'civics'];
-    return {type: 'research', item: priorities.find(item => !knows(state, seat, item))};
+    const priorities = [threatened ? 'tactics' : opening, 'ballistics', 'industry', 'steam', 'tactics', 'motorization', 'radio', 'agronomy', 'navigation', 'civics'];
+    const project = priorities.find(key => !knows(state, seat, key) && TECHS[key].requires.every(parent => knows(state, seat, parent)));
+    if (project) return {type: 'research', item: project};
+  }
+  if (!player.civic && player.civics.length < Object.keys(CIVICS).length) {
+    const opening = seat%2 ? 'publicWorks' : 'charter';
+    const priorities = [opening,'charter','federation','publicWorks','mobilization','conservation','publicRadio'];
+    const project = priorities.find(key => !adopted(state,seat,key) && CIVICS[key].requires.every(parent=>adopted(state,seat,parent)));
+    if (project) return {type:'civic',item:project};
   }
   const available=state.units.filter(u=>u.seat===seat && u.moves>0);
   const plans=available.map(u=>[u,getUnitOptions(state,u.id)]);
@@ -743,6 +897,8 @@ export function chooseBotAction(source) {
       return {type:'attack',unit:unit.id,tile:target};
     }
   }
+  const veteran=plans.find(([,options])=>options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
+  if (veteran) return {type:'upgrade',unit:veteran[0].id};
   for (const city of state.cities) if (city.seat===seat && !city.queue) {
     const order=botProject(state,city);
     if (order) return order;

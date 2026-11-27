@@ -1,4 +1,5 @@
-/* Illustrated, pointy-top, odd-row-offset map of the Los Angeles basin. */
+import {translate} from './i18n.js';
+/* Illustrated, pointy-top, odd-row-offset California campaign maps. */
 const W = 72, H = 76, ROW = H * .75, COLS = 17, ROWS = 13;
 const worldW = COLS * W + W / 2, worldH = (ROWS - 1) * ROW + H;
 const dX = [0, W / 2, W / 2, 0, -W / 2, -W / 2];
@@ -131,14 +132,29 @@ function naturalShore(y){
 }
 function blendRGB(a,b,k){return a.map((v,i)=>v+(b[i]-v)*k);}
 function rangeValue(v,a,b){let z=Math.max(0,Math.min(1,(v-a)/(b-a)));return z*z*(3-2*z);}
-function terrainGround(geo,margin,step=3.1){
+// Interpolate the land mask between neighboring hex centers. Waterways and islands
+// keep the same playable centers as the rules, with soft shores between them.
+function regionalShore(geo) {
+  const mask=new Map([...geo].map(([id,tile])=>[id,tile.terrain==='ocean'?-1:1]));
+  function rowMask(x,r) {
+    const q=(x-W/2)/W-(r&1)*.5, left=Math.floor(q);
+    const a=mask.get(idFor(left,r))??1,b=mask.get(idFor(left+1,r))??a;
+    return a+(b-a)*(q-left);
+  }
+  return (x,y)=>{
+    const r=(y-H/2)/ROW,top=Math.floor(r);
+    const a=rowMask(x,top),b=rowMask(x,top+1);
+    return (a+(b-a)*(r-top))*53 + 2.3*Math.sin(x*.058+y*.031)+1.2*Math.sin(y*.081);
+  };
+}
+function terrainGround(geo,margin,shore,step=3.1){
   const w=Math.ceil((worldW+margin*2)/step),h=Math.ceil((worldH+margin*2)/step);
   const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),pixels=g.createImageData(w,h),data=pixels.data;
   const sin=Math.sin;
   for(let row=0;row<h;row++){
-    const y=row*step-margin,edge=naturalShore(y);
+    const y=row*step-margin;
     for(let col=0;col<w;col++){
-      const x=col*step-margin,dx=x-edge,r0=Math.round((y-H/2)/ROW),current=[0,0,0];
+      const x=col*step-margin,dx=shore(x,y),r0=Math.round((y-H/2)/ROW),current=[0,0,0];
       let total=0,high=0,woods=0,urban=0;
       for(let r=r0-1;r<=r0+1;r++){
         const yy=H/2+r*ROW,q0=Math.round((x-W/2)/W-(r&1)*.5);
@@ -232,7 +248,7 @@ function roadNetwork(g){
   bezierRoute(g,river,[['#77977096',13],['#a5b486',8],['#c6bd99',6.1],['#4d9293',4.5],['#a2d0bd',1.35]]);
   g.restore();
 }
-function figuresOnTerrain(g,geo,extended,landmarks){
+function figuresOnTerrain(g,geo,extended,landmarks,shore){
   const scene=[], nearLandmark=(x,y,rx,ry)=>landmarks.some(([lx,ly])=>Math.abs(x-lx)<rx&&Math.abs(y-ly)<ry);
 
   // The two oblique streets of a city block share world coordinates across all districts.
@@ -240,7 +256,7 @@ function figuresOnTerrain(g,geo,extended,landmarks){
 
   for(let i=-23;i<119;i++)for(let j=-82;j<93;j++){
     const [x,y]=block(i,j);
-    if(x< -120||x>worldW+125||y< -118||y>worldH+135||x<naturalShore(y)+15)continue;
+    if(x< -120||x>worldW+125||y< -118||y>worldH+135||shore(x,y)<15)continue;
     const tile=nearTile(geo,x,y);if(!tile)continue;
     const rnd=generator(i,j,71),major=tile.terrain==='urban';
     const districtArea=valueNoise(x,y,97,82);
@@ -279,7 +295,7 @@ function figuresOnTerrain(g,geo,extended,landmarks){
     if(type==='forest'){
       for(let j=0;j<29;j++){
         const xx=x+(rnd()-.5)*72,yy=y+(rnd()-.5)*54;
-        if(xx<naturalShore(yy)+7||nearLandmark(xx,yy,25,14))continue;
+        if(shore(xx,yy)<7||nearLandmark(xx,yy,25,14))continue;
         const s=.60+rnd()*1.12,evergreen=rnd()>.81,a=rnd();
         scene.push({y:yy,run:()=>evergreen?conifer(g,xx,yy,s*1.15,a>.4):parkTree(g,xx,yy,s,a>.52)});
       }
@@ -287,21 +303,21 @@ function figuresOnTerrain(g,geo,extended,landmarks){
       const count=type==='mountains'?3:1;
       for(let j=0;j<count;j++){
         const xx=x+(rnd()-.5)*65,yy=y+(rnd()-.5)*30;
-        if(xx<naturalShore(yy)+4||nearLandmark(xx,yy,30,13))continue;
+        if(shore(xx,yy)<4||nearLandmark(xx,yy,30,13))continue;
         const s=(type==='mountains'?.85:.45)+rnd()*.48;
         const ridgeRng=generator(t.q+j*72,t.r,80);
         scene.push({y:yy,run:()=>ridgeSilhouette(g,xx,yy,s,ridgeRng)});
       }
       for(let j=0;j<8;j++){
         const xx=x+(rnd()-.5)*W,yy=y+(rnd()-.5)*54;
-        if(nearLandmark(xx,yy,27,17)||xx<naturalShore(yy)+4)continue;
+        if(nearLandmark(xx,yy,27,17)||shore(xx,yy)<4)continue;
         const s=.43+rnd()*.48,v=rnd();
         scene.push({y:yy,run:()=>v>.4?parkTree(g,xx,yy,s,v>.75):shrub(g,xx,yy,s,true)});
       }
     }else{
       for(let j=0;j<(type==='coast'?9:5);j++){
         const xx=x+(rnd()-.5)*65,yy=y+(rnd()-.5)*49;
-        if(nearLandmark(xx,yy,24,13)||xx<naturalShore(yy)+4)continue;
+        if(nearLandmark(xx,yy,24,13)||shore(xx,yy)<4)continue;
         const s=.57+rnd()*.6,v=rnd();
         scene.push({y:yy,run:()=>type==='coast'&&v>.28?palm(g,xx,yy,s*1.45):parkTree(g,xx,yy,s*.8,v>.6)});
       }
@@ -328,7 +344,7 @@ function ridgeSilhouette(g,x,y,s,rng) {
   line(g,[peak+2,-h+1,peak+5,-h*.58,peak+4,-h*.31,peak+9,-1],'#b3ab80',.8);
   g.restore();
 }
-function renderAtlas(tiles) {
+function renderAtlas(tiles,map) {
   const margin=144,resolution=1.55,buffer=document.createElement('canvas');
   buffer.width=Math.ceil((worldW+2*margin)*resolution);buffer.height=Math.ceil((worldH+2*margin)*resolution);
   const g=buffer.getContext('2d');g.scale(resolution,resolution);g.translate(margin,margin);
@@ -336,19 +352,20 @@ function renderAtlas(tiles) {
   for(let r=-4;r<ROWS+4;r++)for(let q=-4;q<COLS+4;q++){
     if(q>=0&&q<COLS&&r>=0&&r<ROWS)continue;
     const clamp=(v,n)=>Math.max(0,Math.min(n,v)),nearest=geo.get(idFor(clamp(q,COLS-1),clamp(r,ROWS-1)));
-    const [x,y]=pos(q,r),terrain=x<naturalShore(y)?'ocean':nearest?.terrain==='ocean'?'plains':nearest?.terrain||'plains';
+    const [x,y]=pos(q,r),terrain=map.id==='la'?(x<naturalShore(y)?'ocean':nearest?.terrain==='ocean'?'plains':nearest?.terrain||'plains'):nearest.terrain;
     const t={id:idFor(q,r),q,r,terrain};extended.push(t);geo.set(t.id,t);
   }
-  const base=terrainGround(geo,margin);
+  const shore=map.id==='la'?(x,y)=>x-naturalShore(y):regionalShore(geo);
+  const base=terrainGround(geo,margin,shore);
   g.drawImage(base,-margin,-margin,worldW+2*margin,worldH+2*margin);
   g.save();g.lineCap='round';g.lineJoin='round';
   // Soft breaker lines and the sandy tide mark follow a continuous coastline.
   for(const [offset,w,col] of [[-45,.9,'#a6d2c353'],[-29,.95,'#acd8cd78'],[-19,.85,'#c2e1d19b'],[-9,1.4,'#d4e9cda8'],[-3.5,2.5,'#e8efccd9'],[0,1.8,'#e9d9ac'],[2.8,.9,'#c6b385a6']]){
-    g.lineWidth=w;g.strokeStyle=col;g.stroke(coastPath(offset));
+    if(map.id==='la'){g.lineWidth=w;g.strokeStyle=col;g.stroke(coastPath(offset));}
   }
   const rnd=generator(900,900,117);
   for(let i=0;i<5800;i++){
-    const x=rnd()*(worldW+margin*2)-margin,y=rnd()*(worldH+margin*2)-margin,edge=naturalShore(y),distance=edge-x;
+    const x=rnd()*(worldW+margin*2)-margin,y=rnd()*(worldH+margin*2)-margin,distance=-shore(x,y);
     if(distance>5){
       const l=.9+rnd()*(distance>55?5.4:3.4);
       g.beginPath();g.moveTo(x-l*.5,y);g.quadraticCurveTo(x,y+.6,x+l*.5,y-.31);
@@ -358,8 +375,20 @@ function renderAtlas(tiles) {
     }
   }
   g.restore();
-  const scene=figuresOnTerrain(g,geo,extended,landmarks);
-  roadNetwork(g);
+  const scene=figuresOnTerrain(g,geo,extended,landmarks,shore);
+  if(map.routes)for(const route of map.routes)bezierRoute(g,route,[['#847964',4.7],['#e7d4ae',3.2],['#b69e78',.7]]);
+  else roadNetwork(g);
+  for(const bridge of map.crossings||[]) {
+    const a=map.byId[bridge.a],b=map.byId[bridge.b], pa=pos(a.q,a.r),pb=pos(b.q,b.r);
+    const span=[...pa,...pb];
+    line(g,span,'#394c4e',6);
+    line(g,span,bridge.color,4.6);
+    line(g,span,'#dcc7a0',1.05);
+    for(const f of [.23,.77]){
+      const x=pa[0]+(pb[0]-pa[0])*f,y=pa[1]+(pb[1]-pa[1])*f;
+      line(g,[x-2,y+2,x-2,y-8,x+1,y-9,x+1,y],bridge.color,1.6);
+    }
+  }
   for(const t of tiles.filter(t=>t.landmark)){
     const [x,y]=pos(t.q,t.r),scales={downtown:1.97,griffith:1.76,hollywood:1.52,pier:1.73,ucla:1.66,studios:1.69,airport:1.65,rosebowl:1.73};
     scene.push({y:y+4,run:()=>{
@@ -374,11 +403,13 @@ function renderAtlas(tiles) {
     if(!activeBounds)continue;
     g.lineWidth=sea?.72:.80;g.strokeStyle=sea?'#a6d6dc39':'#4254444a';g.stroke(hexPath(t.q,t.r));
   }
-  for(const [q,r,s] of [[.8,7,1.1],[3,11,1.15],[1,10,.73],[4,9,.9]]){const [x,y]=pos(q,r);seaBoat(g,x+4,y+5,s);}
+  const boats=map.id==='la'?[[.8,7,1.1],[3,11,1.15],[1,10,.73],[4,9,.9]]:tiles.filter(t=>t.terrain==='ocean'&&(t.q*73+t.r*37)%31===0).map(t=>[t.q,t.r,.82]);
+  for(const [q,r,s] of boats){const [x,y]=pos(q,r);seaBoat(g,x+4,y+5,s);}
   return {buffer,margin,resolution};
 }
 
 function smallCaps(g,txt,x,y,size,tracking,color) {
+  txt=translate(txt);
   g.save();g.font='500 '+size+'px Georgia, serif';g.textAlign='left';g.textBaseline='middle';
   const widths=[...txt].map(ch=>g.measureText(ch).width),whole=widths.reduce((a,b)=>a+b,0)+(txt.length-1)*tracking;
   let left=x-whole/2;
@@ -418,6 +449,17 @@ function drawImprovement(g,tile,kind) {
     }
     town(g,9,2,5,4,6,0);
     poly(g,[4,-5.7,8,-10.2,13,-7.8,13,-6.2,9,-4.6],'#bd7859','#614f41',.8);
+  }else if(kind==='fishery'){
+    // The mesh reads as a floating pen, distinct from solid rows on farmland.
+    poly(g,[-13,-1,0,-7,14,-1,1,6],'#6c9687','#cdb27d',1.65);
+    for(const t of [.24,.5,.76]){
+      line(g,[-13+13*t,-1-6*t,1+13*t,6-7*t],'#c9c594',.8);
+      line(g,[-13+14*t,-1+7*t,14*t,-7+6*t],'#c9c594',.8);
+    }
+    for(const [a,b] of [[-13,-1],[0,-7],[14,-1],[1,6]]){
+      line(g,[a,b+.8,a,b-3],'#72533a',1.1);ellipse(g,a,b-2.5,1.9,1.3,'#e7a164');
+      line(g,[a-2,b+2.65,a+2.4,b+2.1],'#b6d4c7',.6);
+    }
   }else if(kind==='mine'){
     mountain(g,-1,5,1.02,generator(tile.q,tile.r,124));
     poly(g,[-9,3,-9,-3,-5,-6,2,-5,5,-1,4,4],'#353e3a','#d3a570',2);
@@ -427,17 +469,54 @@ function drawImprovement(g,tile,kind) {
   }
   g.restore();
 }
+function drawHarbor(g,city,model,shipyard) {
+  const berth=model.byId.get(city.portTile);
+  if(!berth)return;
+  const [px,py]=pos(berth.q,berth.r);
+  const land=model.byId.get(city.tile),[lx,ly]=pos(land.q,land.r);
+  // Keep the port on the shore-facing edge of its assigned ocean hex, leaving
+  // the center clear for a ship and its selection ring.
+  const length=Math.max(1,Math.hypot(lx-px,ly-py)),bias=14;
+  g.save();g.translate(px+bias*(lx-px)/length,py+bias*(ly-py)/length+2);
+  const ink='#4a493e',timber='#ad8b5b',light='#e4c28a';
+  for(const [x,y] of [[-15,0],[-4,4],[12,-2],[17,-5]]) {
+    line(g,[x,y-1,x,y+5],ink,2.2);
+    line(g,[x+.55,y-.2,x+.55,y+4],timber,.85);
+    line(g,[x-3.2,y+5.6,x-1,y+5.8,x+2,y+5.3],'#c1d7c4',.87);
+  }
+  poly(g,[-18,-1,-1,-8,18,-5,0,3],timber,ink,1);
+  for(let i=0;i<6;i++)line(g,[-14+i*4,-2.8-i*.52,-8+i*3.7,.6-i*.6],light,.67);
+  poly(g,[-16,-3,-15,-9,-9,-12,-2,-8.7,-2,-3,-8,-.7],'#c39f71',ink,.72);
+  poly(g,[-16.8,-8.2,-10,-13.3,-1.1,-9.4,-8.1,-6.8],'#a25e47',ink,.7);
+  poly(g,[-13.4,-6,-10.4,-5.1,-10.2,-2,-13.2,-3],'#584e40');
+  const color=factionColor(model,city.seat);
+  if(shipyard){
+    line(g,[3,-6,4.6,-20,12,-8],ink,2.8);
+    line(g,[3,-6,4.6,-20,12,-8],'#e7ba6e',1.5);
+    line(g,[4.6,-20,15.6,-25.2,11.4,-18.1,4.6,-20],ink,2.2);
+    line(g,[4.6,-20,15.6,-25.2,11.4,-18.1,4.6,-20],'#e6b875',1.2);
+    line(g,[14.7,-24.3,14.7,-13],ink,.8);
+    poly(g,[12.2,-13,16,-14.3,18,-11.8,14,-10],'#aa7753',ink,.65);
+  }else{
+    line(g,[8,-5,8,-16],ink,1.45);
+    poly(g,[8.3,-16,14,-15.1,12.2,-13.5,8.4,-13.1],color,ink,.48);
+    ellipse(g,3,-5.6,2.0,1.2,'#8a6651');
+  }
+  g.restore();
+}
+
 function drawCity(g,city,model) {
   const t=model.byId.get(city.tile);if(!t)return;
   const [x,y]=pos(t.q,t.r),color=factionColor(model,city.seat);
   const buildings=city.buildings||[];
+  if(buildings.includes('harbor'))drawHarbor(g,city,model,buildings.includes('shipyard'));
   if(!t.landmark){
     town(g,x-11,y+2,8,7,11,3,true);town(g,x+3,y-1,7.5,9,14,1,true);
     town(g,x-2,y+9,8,6,8,5,true);
     poly(g,[x-10,y-1,x-5,y-5,x+4,y-1,x-2,y+2],'#b37657','#625345',.6);
   }
   if(buildings.length){
-    buildings.slice(0,4).forEach((name,i)=>{
+    buildings.filter(name=>name!=='harbor'&&name!=='shipyard').slice(0,4).forEach((name,i)=>{
       const [a,b]=[[-23,8],[17,10],[-16,-8],[19,-6]][i];
       const xx=x+a,yy=y+b;
       if(name==='walls'){
@@ -585,6 +664,18 @@ function battleFX(g,e,model,f) {
     line(g,[-12,0,1,0],'#352f2b',2.6);line(g,[-12,0,0,0],'#fff1bc',1.15);
     poly(g,[2,0,-3,-2,-2,0,-3,2],'#f6e3b5');g.restore();
   }
+  if((e.unit.type==='artillery'||e.unit.type==='frigate'||e.unit.type==='armor'||e.unit.type==='riflemen')&&f>=.22&&f<.52){
+    const k=(f-.22)/.30,arc=e.unit.type==='artillery'?17:4;
+    const x=ax+dx*k,y=ay-18+dy*k-Math.sin(k*Math.PI)*arc;
+    g.save();g.globalAlpha=1-k*.35;
+    line(g,[x-dx*.042,y-dy*.042,x,y],'#ffe0a2',1.7);
+    ellipse(g,x,y,2.55,1.75,'#e7b76e');
+    if(k<.28){
+      const side=Math.sign(dx)||1;
+      poly(g,[ax+side*9,ay-17,ax+side*17,ay-21,ax+side*15,ay-17,ax+side*22,ay-16,ax+side*11,ay-14],'#ffe1a2');
+    }
+    g.restore();
+  }
   if(f>.42 && f<.79){
     const a=(f-.42)/.37,ix=bx,iy=by-12;
     g.save();g.globalAlpha=Math.max(0,1-a);
@@ -602,6 +693,10 @@ function battleFX(g,e,model,f) {
     g.restore();
   }
 }
+const UNIT_INSIGNIA = {
+  melee:'M', ranged:'R', settler:'S', builder:'B', scout:'S', cavalry:'C', riflemen:'R',
+  artillery:'A', armor:'T', cutter:'C', frigate:'F', workboat:'W'
+};
 function paintUnits(g,model,scale,now) {
   let motion=model.motions.filter(e=>e.end>now);model.motions=motion;model.hitUnits=[];
   const data=new Map(model.units.map(u=>[u.id,u]));
@@ -633,7 +728,7 @@ function paintUnits(g,model,scale,now) {
           }
         }
       }else{
-        const ranged=u.type==='ranged',phase=Math.max(0,Math.min(1,(f-.10)/.70));
+        const ranged=u.type==='ranged'||u.type==='artillery'||u.type==='frigate',phase=Math.max(0,Math.min(1,(f-.10)/.70));
         const a=!ranged&&u.tile===active.tile
           ? (f<.48?.56*Math.sin(Math.min(1,Math.max(0,(f-.1)/.38))*Math.PI/2):.56+.44*Math.min(1,(f-.48)/.52))
           : Math.sin(Math.PI*phase)*(ranged?.085:.54);
@@ -659,7 +754,7 @@ function paintUnits(g,model,scale,now) {
     }
     drawUnitArt(g,u.type,x,y,{color:colour,facing,stride,strike,scale:factor});
     const badgeScale=Math.max(1.0,Math.min(1.4,1.04/scale)),bx=x+13.2*factor,by=y-29*factor;
-    shield(g,bx,by,colour,({melee:'M',ranged:'R',settler:'S',builder:'B',scout:'S'})[u.type]||'U',selected,u.hp,u.maxHp,badgeScale);
+    shield(g,bx,by,colour,UNIT_INSIGNIA[u.type]||'U',selected,u.hp,u.maxHp,badgeScale);
     if(!defeated)model.hitUnits.push({id:u.id,tile:u.tile,x,y,width:16*factor,height:40*factor,bx,by,badgeScale});
     g.restore();
   }
@@ -710,12 +805,19 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   if(!labels)return;
   // Wide ocean lettering uses two lines, like a small-scale nautical chart.
-  const [ox,oy]=pos(2,9);
+  const region=model.region||getMap('la');
+  const [oq,or,topLine,bottomLine]=region.oceanLabel;
+  const [ox,oy]=pos(oq,or);
   g.save();g.translate(ox-3,oy+7);g.rotate(-.15);
-  g.shadowColor='#22576a';g.shadowBlur=2;smallCaps(g,'PACIFIC',0,-10,21,4,'#d6e3cf');smallCaps(g,'OCEAN',0,14,17,4.1,'#d0e1d1');g.restore();
+  g.shadowColor='#22576a';g.shadowBlur=2;smallCaps(g,topLine,0,-10,21,4,'#d6e3cf');smallCaps(g,bottomLine,0,14,17,4.1,'#d0e1d1');g.restore();
   const labelScale=Math.max(.78,Math.min(1.30,.96/scale));
-  const [mountX,mountY]=pos(3.4,3);g.save();g.translate(mountX,mountY+20);g.rotate(.022);
-  g.shadowColor='#405b48';g.shadowBlur=2.3;smallCaps(g,'SANTA MONICA MTNS',0,0,9.3*labelScale,1.4,'#f9e9bd');g.restore();
+  const [rq,rr,ridge]=region.ridgeLabel;
+  const [mountX,mountY]=pos(rq,rr);g.save();g.translate(mountX,mountY+20);g.rotate(.022);
+  g.shadowColor='#405b48';g.shadowBlur=2.3;smallCaps(g,ridge,0,0,9.3*labelScale,1.4,'#f9e9bd');g.restore();
+  if(region.id==='sd'){
+    const [bx,by]=pos(9.6,8.6);g.save();g.translate(bx,by);g.rotate(.22);
+    g.shadowColor='#234651';g.shadowBlur=2;smallCaps(g,'SAN DIEGO BAY',0,0,9*labelScale,1.4,'#f5eac4');g.restore();
+  }
   const labelObstacles=[], labelBounds=[];
   for(const u of model.units){
     const a=unitAnchor(model,u.tile);if(!a)continue;
@@ -741,7 +843,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   for(const t of tiles)if(t.landmark){
     const [x,y]=pos(t.q,t.r),owner=board[t.id]?.owner;
-    const name=t.landmark==='studios'?'Burbank':places[t.landmark]||t.name;
+    const name=translate(t.landmark==='studios'?'Burbank':places[t.landmark]||t.name);
     const lx=x+(t.landmark==='hollywood'?-22:t.landmark==='griffith'?15:0);
     const ly=y+(t.landmark==='hollywood'?18:t.landmark==='griffith'?28:24);
     if(model.cityTiles.has(t.id))continue;
@@ -750,17 +852,17 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   for(const city of model.cities){
     const t=lookup.get(city.tile);if(!t)continue;
     const [x,y]=pos(t.q,t.r);
-    const name=city.name||t.name,[cx,cy]=placeLabel(x,y+26,name,true);cityCaption(g,city,cx,cy,name,getFaction(city.seat),labelScale);
+    const name=city.name && city.name!==t.name ? city.name : translate(t.name),[cx,cy]=placeLabel(x,y+26,name,true);cityCaption(g,city,cx,cy,name,getFaction(city.seat),labelScale);
   }
   if(scale>1.02){
-    const names=['Malibu','Beverly Hills','Culver City','Inglewood','Compton','Venice','Glendale','Van Nuys','Altadena','Montebello'];
+    const names=region.districts;
     for(const t of tiles) if(names.includes(t.name)&&!t.landmark&&!model.cityTiles.has(t.id)){
       const [x,y]=pos(t.q,t.r);g.save();g.font='italic 13px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
-      g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(t.name,x,y+14);g.fillStyle='#eee1bd';g.fillText(t.name,x,y+14);g.restore();
+      g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(translate(t.name),x,y+14);g.fillStyle='#eee1bd';g.fillText(translate(t.name),x,y+14);g.restore();
     }
   }
 }
-import { TILES as defaultTiles, getMovePath } from './rules.js';
+import { TILES as defaultTiles, getMap, getMovePath } from './rules.js';
 import { drawUnitArt } from './unit-art.js';
 export function createAtlas(host, options = {}) {
   const canvas=document.createElement('canvas');
@@ -772,7 +874,7 @@ export function createAtlas(host, options = {}) {
   let tiles=options.tiles||defaultTiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
   let labels=true,territories=true,fresh=true,gesture=null,didDrag=false,disposed=false;
-  function ensureBackground() {if(!background)background=renderAtlas(tiles);}
+  function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'));}
   function draw(){
     request=0;if(disposed||boxW<2||boxH<2)return;ensureBackground();
     const dpi=canvas.width/boxW,s=base*zoom;
@@ -788,6 +890,7 @@ export function createAtlas(host, options = {}) {
     shadow.addColorStop(0,'#13212700');shadow.addColorStop(1,'#15283236');ctx.fillStyle=shadow;ctx.fillRect(0,0,boxW,boxH);
   }
   function schedule(){if(!request&&!disposed)request=requestAnimationFrame(draw);}
+  document.addEventListener('civitas-language',schedule,{signal:input.signal});
   function bound(){
     const hw=boxW/(base*zoom*2), hh=boxH/(base*zoom*2),pad=48;
     const loX=hw-pad,hiX=worldW-hw+pad,loY=hh-pad,hiY=worldH-hh+pad;
@@ -888,7 +991,17 @@ export function createAtlas(host, options = {}) {
   const observer=new ResizeObserver(()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(measure);});observer.observe(host);
   const api={
     update(o={}){
-      if(o.tiles && o.tiles!==tiles){tiles=o.tiles;model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;}
+      const region=o.state?getMap(o.state):model.region;
+      const nextTiles=o.tiles||region?.tiles;
+      if(region && region!==model.region){
+        model.region=region;
+        canvas.setAttribute('aria-label',region.name+' strategy map. Use arrow keys to preview a district. Press Enter or Space to select it. Use plus and minus to zoom, and Home to reset the view.');
+      }
+      if(nextTiles && nextTiles!==tiles){
+        tiles=nextTiles;model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
+        model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
+        zoom=1;resetCenter();options.onZoom?.(100);
+      }
       const state=o.state||o;if(o.state)model.state=o.state;
       if(state.board)model.board=state.board;if(state.players)model.players=state.players;
       if(Array.isArray(state.units)){
@@ -996,7 +1109,61 @@ function drawLandmark(g, kind, x, y, scale = 1) {
   };
   const shade = (rx,ry) => oval(2,1,rx,ry,'rgba(22,25,28,.4)',null,0,-.06);
 
-  if (kind === 'griffith') {
+  if (kind === 'goldengate') {
+    shade(25,7);
+    for(const a of [-13,13]){
+      solid(a,1,1.1,1.35,23,['#eb7652','#b94c38','#833b2e']);
+      line([[a-2,-18],[a+2,-18],[a+2,-15],[a-2,-15]],'#b94c38',1);
+    }
+    line([[-27,2],[26,-2]],'#854a3b',2.3);
+    curve(-27,1,-21,-7,-17,-13,-13,-22,'#d35c40',1);
+    curve(-13,-22,-9,-7,9,-4,13,-22,'#d35c40',1);
+    curve(13,-22,17,-15,22,-5,26,-3,'#d35c40',1);
+    for(let a=-9;a<=10;a+=4)line([[a,-9-Math.abs(a)*.39],[a,.6-a*.08]],'#ab513a',.65);
+  } else if (kind === 'cranes') {
+    shade(21,7);
+    for(const a of [-10,3,12]){
+      line([[a-3,1],[a-3,-11],[a+8,-21],[a+13,-20]],'#9b523f',1.6);
+      line([[a+3,3],[a+3,-14],[a-3,-14],[a+8,-21]],'#bd7452',1.8);
+      line([[a+11,-20],[a+11,-12]],'#514d43',.75);
+      solid(a-2,5,4,2.3,2.6,['#9aa9a6','#688789','#526b74']);
+    }
+  } else if (kind === 'campanile' || kind === 'ferry' || kind === 'mission') {
+    shade(17,6);
+    if(kind!=='campanile')solid(0,3,13,6,5,cream);
+    solid(0,1,2.8,3.3,kind==='campanile'?24:16,cream);
+    const top=kind==='campanile'?-23:-15;
+    solid(0,top,3.4,4,3,cream);oval(0,top-1,1.3,1.3,'#eee0ad',ink);
+    line([[0,top-3],[0,top-8]],'#697777',1.55);
+  } else if (kind === 'lighthouse') {
+    shade(14,5); solid(6,3,6,4,4,cream);
+    put([[-3,2],[-2,-14],[2,-14],[3,2]],'#e8e1ca',ink,.65);
+    solid(0,-14,2.7,2.7,3,['#e9cb94','#98775c','#765e4e']);
+    line([[-3,-18],[0,-20],[3,-18]],'#7f4e3a',1.6);
+  } else if (kind === 'hotel') {
+    shade(22,6); solid(0,4,13,6,7,cream);
+    for(const a of [-10,1,11]){
+      solid(a,2,3.7,4.5,8,cream);
+      put([[a-5,-5],[a,-14],[a+5,-6]],'#b65b44','#813f32',.6);
+    }
+  } else if (kind === 'balboa') {
+    shade(17,6); solid(0,3,12,6,6,cream);
+    solid(7,-2,3.2,3.5,17,['#ecd9ac','#b79670','#927658']); dome(7,-20,3.1,4.3);
+    dome(-4,-6,6,6.8);line([[7,-23],[7,-27]],rim,.65);
+  } else if (kind === 'depot') {
+    shade(19,5); solid(0,3,13,7,6,cream);
+    for(const a of [-8,8]){solid(a,1,3.5,3.7,9,cream);dome(a,-9,3.8,3.8);}
+  } else if (kind === 'marina' || kind === 'scripps') {
+    shade(21,5);
+    line([[-16,5],[16,-5]],'#8d7457',3.3);
+    for(const a of [-13,-4,5,13])line([[a,-a*.3],[a,-a*.3+3.8]],'#584f41',1);
+    if(kind==='scripps')solid(8,-3,6,3.5,4,cream);
+    else for(const a of [-9,1,9]){
+      line([[a,1],[a,-9]],'#e8d0a1',.8);
+      put([[a-.4,-8],[a-4,.5],[a-.4,0]],'#e8ddba',ink,.45);
+      line([[a-5,1],[a+3,.6]],'#985748',1.6);
+    }
+  } else if (kind === 'griffith') {
     shade(29,8);
     solid(-1,7,22,24,2.5,['#dbc9a4','#998f79','#71786e']);
     solid(-2,4,16,18,7,cream);
