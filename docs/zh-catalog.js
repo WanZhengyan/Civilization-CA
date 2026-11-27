@@ -10,6 +10,10 @@ function section(pairs) {
 }
 section(`
 Civitas LA · The Los Angeles Campaign|Civitas LA · 洛杉矶战役
+Scout|侦察兵
+Light reconnaissance infantry. Moves three points per turn, can skirmish with units, and cannot occupy cities.|轻装侦察步兵。每回合有三点移动力，可以与敌军交战，不能占领城市。
+Train a scout|训练侦察兵
+A Scout is available as soon as you found a city. It has three movement points to a Militia unit’s two. Forests and hills still cost two points to enter.|建城后即可训练侦察兵。侦察兵每回合有三点移动力，民兵有两点。进入林地或丘陵需要两点。
 Choose your first city site|选择首都的位置
 Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.|每个文明都从一名开拓者起步。你可以就地建都，也可以先去探索。建城后可获得收入并训练单位。
 Found capital|建立首都

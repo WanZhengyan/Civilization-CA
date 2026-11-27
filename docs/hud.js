@@ -22,6 +22,7 @@ const symbols={
   cutter:'<path d="M2 15h20l-4 5H6zM6 14l2-5h7l3 5m-7-5V4h4M3 22h18"/>',
   frigate:'<path d="M2 15h20l-3 5H6zM6 14l3-5h7l2 5m-7-5V3h4m-1 9h6M4 22h16"/>',
   fishery:'<path d="M3 13q5-8 12-3l5-3v10l-5-3q-8 6-12-1z"/><circle cx="8" cy="12" r=".5"/>',
+  scout:'<path d="m3 15 3-8h3l1 6m4 0 1-6h3l3 8M9 14h6"/><circle cx="6" cy="16" r="4"/><circle cx="18" cy="16" r="4"/>',
   cavalry:'<path d="M4 21h16m-13-3 3-5-4 1-2-3 5-6 3-1 5-1-1 3c4 4 3 9 3 12z"/>',
   riflemen:'<path d="m4 18 3 3 4-6 3-1 7-9-2-2-8 9-3 1z"/>',
   artillery:'<circle cx="8" cy="17" r="4"/><path d="m8 13 11-8 3 4-10 7m-1 2 8 3"/>',
@@ -418,7 +419,7 @@ function closeCombat(){
 function paint(next){
   const previousKey=matchKey;view=next;const {state,seat,mode,room}=next;
   mapRegion=getMap(state);
-  const key=mapRegion.id+':'+mode+':'+(room?.code||'')+':'+seat;
+  const key=mapRegion.id+':'+mode+':'+(room?.code||state.seed||'')+':'+seat;
   if(key!==matchKey||!selectedTile){matchKey=key;activeRoster="units";selectOpening()}
   if(kind==="unit"){
     const u=getUnit();if(u)selectedTile=u.tile;else select(selectedTile,null,Boolean(cityAt(selectedTile)));

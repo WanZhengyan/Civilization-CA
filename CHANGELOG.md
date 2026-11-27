@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.5 · Train a dedicated land scout
+
+Settlers were costly to risk just to examine another valley. Cities can train a foot scout with three movement points; militia have two. The early scout is separate from mounted scouts.
+
+59 checks passed. 18 fixed campaigns replayed identically twice. Measure how far each formation can actually see.
+
 ## 4.4 · One settler and no inherited capital
 
 The old opening handed players territory, an army and an established city. Each seat now begins with a single settler on neutral land. Founding consumes that unit and establishes the first capital at the chosen site. An unfounded surviving rival counts as a participant.

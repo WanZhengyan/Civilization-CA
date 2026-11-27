@@ -1,6 +1,7 @@
 /* Production choices use the same plates as the field command. Names, costs,
    availability and descriptions remain live text in either interface language. */
 #production-options [data-produce="settler"] { --plate: url("./art/settler.webp"); }
+#production-options [data-produce="scout"] { --plate: url("./art/scout.webp"); }
 #production-options [data-produce="builder"] { --plate: url("./art/builder.webp"); }
 #production-options [data-produce="melee"] { --plate: url("./art/melee.webp"); }
 #production-options [data-produce="ranged"] { --plate: url("./art/ranged.webp"); }

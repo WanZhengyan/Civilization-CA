@@ -59,7 +59,7 @@ const phraseRules = [
   [/^(\d+) (incoming damage|retaliation damage)$/,(n,k)=>(k==='incoming damage'?'受到伤害 ':'反击伤害 ')+n],
   [/^(Frontier|Industrial|Modern) Era$/i,n=>zh(n)],
   [/^Requires (.+?)\.?$/i,n=>'前置条件：'+zh(n)],
-  [/^(.+) (ended its turn|won on civic points|controls every original capital|captured every original capital|tied on civic points and share victory)\.$/,(n,verb)=>zh(n)+({'ended its turn':'结束了回合。','won on civic points':'取得了积分胜利。','controls every original capital':'占领了所有初始首府。','captured every original capital':'占领了所有初始首府。','tied on civic points and share victory':'积分并列，共享胜利。'}[verb])],
+  [/^(.+) (is the last civilization standing|ended its turn|won on civic points|controls every original capital|captured every original capital|tied on civic points and share victory)\.$/,(n,verb)=>zh(n)+({'is the last civilization standing':'成为最后幸存的文明。','ended its turn':'结束了回合。','won on civic points':'取得了积分胜利。','controls every original capital':'占领了所有初始首府。','captured every original capital':'占领了所有初始首府。','tied on civic points and share victory':'积分并列，共享胜利。'}[verb])],
   [/^(.+) (won|shared victory) with (\d+) (?:civic )?points\.$/,(n,v,points)=>zh(n)+'以 '+points+' 分'+(v==='won'?'获胜。':'并列获胜。')],
   [/^(.+) (began debating|adopted) (.+)\.$/,(n,v,item)=>zh(n)+(v==='adopted'?'通过了':'开始审议')+zh(item)+'。'],
   [/^Upgrade to (.+)$/,n=>'升级为'+zh(n)],

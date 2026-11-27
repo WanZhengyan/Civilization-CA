@@ -73,3 +73,27 @@ test('a living unfounded rival prevents domination and losing the last unprotect
   game=applyAction(game,0,{type:'attack',unit:'army',tile:settler.tile});
   assert.deepEqual(game.winners,[0]);assert.equal(game.victoryReason,'survival');
 });
+
+test('a first city can train a Scout; it travels farther than militia and cannot besiege a city',async()=>{
+ const {applyAction,getUnitOptions,getProductionOptions,getRouteDetail,UNIT_TYPES}=await import('../docs/rules.js');
+ let state=createGame(['West','East'],'la',{seed:22});
+ for(let i=0;i<2;i++){
+   state=applyAction(state,i,{type:'found',unit:state.units.find(u=>u.seat===i).id});
+   state=applyAction(state,i,{type:'end'});
+ }
+ const city=state.cities[0];
+ assert.ok(getProductionOptions(state,city.id).find(p=>p.item==='scout').enabled);
+ state=applyAction(state,0,{type:'produce',city:city.id,item:'scout'});
+ for(let i=0;i<4 && !state.units.length;i++){
+   state=applyAction(state,0,{type:'end'});state=applyAction(state,1,{type:'end'});
+ }
+ const scout=state.units.find(u=>u.type==='scout');
+ assert.equal(scout.moves,3);assert.equal(UNIT_TYPES.melee.moves,2);
+ const farther=getUnitOptions(state,scout.id).moves.find(id=>getRouteDetail(state,scout.id,id).cost===3);
+ assert.ok(farther);const walk=applyAction(state,0,{type:'move',unit:scout.id,tile:farther});
+ assert.equal(walk.units.find(u=>u.id===scout.id).moves,0);
+ const twin={...state,units:[{...scout,moves:2,type:'melee'}]};
+ assert.ok(!getUnitOptions(twin,scout.id).moves.includes(farther));
+ const rival=state.cities[1]; scout.tile=neighbors(rival.tile).find(id=>getMap(state).byId[id].terrain==='urban')||neighbors(rival.tile)[0];
+ assert.ok(!getUnitOptions(state,scout.id).attacks.includes(rival.tile));
+});

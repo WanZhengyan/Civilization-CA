@@ -173,6 +173,8 @@ function isProductive(terrain) {
 }
 export const UNIT_TYPES = {
   settler: {name:"Settler", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:14},
+  scout: {name:"Scout", era:"frontier", role:"Recon unit", moves:3, maxHp:65, range:1, strength:22, required:7, captures:false,
+    description:"Light reconnaissance infantry. Moves three points per turn, can skirmish with units, and cannot occupy cities."},
   builder: {name:"Builder", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:9},
   melee: {name:"Militia", era:"frontier", captures:true, upgrade:"riflemen", upgradeCost:10, maxHp:100, moves:2, range:1, strength:42, required:10},
   ranged: {name:"Rangers", era:"frontier", captures:false, upgrade:"artillery", upgradeCost:12, maxHp:80, moves:2, range:2, strength:35, required:12},
@@ -496,7 +498,7 @@ function attackTargets(state,unit) {
   const inRange=tile=>hexDistance(unit.tile,tile)<=range || (UNIT_TYPES[unit.type].captures && unit.moves>=2 && Boolean(bridgeTo(state,unit.tile,tile)));
   const occupied=state.units.filter(u=>u.seat!==unit.seat && inRange(u.tile)).map(u=>u.tile);
   const cities=state.cities.filter(c=>c.seat!==unit.seat && inRange(c.tile) && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
-  return [...new Set([...occupied,...cities])];
+  return unit.type==='scout' ? occupied : [...new Set([...occupied,...cities])];
 }
 function fieldUpgrade(state, unit) {
   const source = UNIT_TYPES[unit.type];
@@ -656,7 +658,8 @@ export function combatPreview(state, unitId, target) {
   const defender = state.units.find(other => other.tile === target && other.seat !== unit.seat);
   const town = state.cities.find(city => city.tile === target && city.seat !== unit.seat);
   const opponent = defender || town;
-  const melee = UNIT_TYPES[unit.type].captures === true;
+  const canCapture = UNIT_TYPES[unit.type].captures === true;
+  const melee = canCapture || unit.type==='scout';
   const walls = !!town?.buildings.includes('walls');
   const terrain = getMap(state).byId[target].terrain;
   const terrainDefense = terrain === 'hills' || terrain === 'forest' ? 4 : 0;
@@ -676,7 +679,7 @@ export function combatPreview(state, unitId, target) {
   }
   retaliation = Math.min(retaliation, unit.hp);
   const attackerHpAfter = unit.hp - retaliation;
-  if (!defender && (!melee || attackerHpAfter === 0)) damage = Math.min(damage, town.hp - 1);
+  if (!defender && (!canCapture || attackerHpAfter === 0)) damage = Math.min(damage, town.hp - 1);
   const defenderHpAfterHit = opponent.hp - damage;
   const capture = !defender && defenderHpAfterHit === 0;
   const defeated = !!defender && defenderHpAfterHit === 0;
@@ -810,6 +813,7 @@ function botProject(state,city) {
   const cities=state.cities.filter(c=>c.seat===city.seat);
   const count=type=>units.filter(u=>u.type===type).length+cities.filter(c=>c.queue?.item===type).length;
   const choices=[];
+  if (state.opening==='settlers' && count('scout')===0 && state.round<8) choices.push('scout');
   if (!city.buildings.includes('harbor') && getPortSite(state,city.id)) choices.push('harbor');
   if (city.buildings.includes('harbor')) {
     const worked=Object.values(state.board).filter(tile=>tile.portCity===city.id).length;
@@ -836,6 +840,23 @@ function botMovement(state,unit,options) {
   const candidates=[unit.tile,...options.moves];
   const towns=state.cities.filter(c=>c.seat===unit.seat);
   let goals;
+  if (unit.type==='scout') {
+    const footprints=new Set([unit.tile]);
+    for(const event of state.log) if(event.unit===unit.id && event.type==='move') {
+      for(const tile of event.path || [event.tile]) footprints.add(tile);
+    }
+    const rating=tile=>{
+      const frontier=neighbors(tile).filter(n=>!footprints.has(n)).length;
+      const home=towns.length ? Math.min(...towns.map(c=>hexDistance(c.tile,tile))) : 0;
+      return Number(!footprints.has(tile))*12+frontier+Math.min(home,6)*.5;
+    };
+    const unexplored=options.moves.filter(tile=>!footprints.has(tile));
+    if(unexplored.length){
+      const best=unexplored.reduce((a,b)=>rating(a)>=rating(b)?a:b);
+      return {type:'move',unit:unit.id,tile:best};
+    }
+    return null;
+  }
   if (settle) goals=getMap(state).tiles.filter(t=>canSettle(state,unit.seat,t.id)).map(t=>t.id);
   else if (unit.type==='workboat') {
     const site=options.moves.find(id=>unitImprovement(state,unit,id));
