@@ -60,11 +60,11 @@ function storedSolo() {
       return upgraded;
     } catch { /* An unreadable device save cannot be resumed. */ }
   }
-  return freshSolo();
+  return null;
 }
 
 let renderView, toast, dialog, solo, room = null, token = null;
-let mode = 'solo', modal = '', roomTab = 'create', joinCode = '', formName = '';
+let mode = 'home', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
 let supplyCity='';
 let pending = false, errorMessage = '', playingBots = false;
@@ -82,7 +82,14 @@ function getState() {
   return renderedView;
 }
 const currentSeat = () => mode === 'online' && room ? room.you : 0;
+function showTitle(visible) {
+  const screen = document.getElementById('title-screen');
+  screen.hidden = !visible;
+  document.body.classList.toggle('on-title', visible);
+}
+
 function emit() {
+  if (mode === 'home' || (mode === 'online' && !room?.game)) return;
   if (modal==='supplies' && dialog?.open) drawDialog();
   const state = getState();
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
@@ -126,7 +133,7 @@ function checkFinished() {
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 async function runBots() {
-  if (playingBots || mode !== 'solo' || solo.phase !== 'playing' || !solo.players[solo.turn].bot) return;
+  if (playingBots || mode !== 'solo' || !solo || solo.phase !== 'playing' || !solo.players[solo.turn].bot) return;
   playingBots = true;
   emit();
   let activeSeat = -1, orders = 0;
@@ -190,6 +197,7 @@ function syncRoom(incoming) {
   const previousPhase = room?.phase;
   room = incoming;
   mode = 'online';
+  showTitle(!room.game);
   emit();
   if (room.phase === 'lobby') {
     if (modal === 'multiplayer') drawDialog();
@@ -262,6 +270,8 @@ function returnToSolo() {
   clearTimeout(pollTimer);
   polling = false;
   mode = 'solo';
+  solo ||= storedSolo() || freshSolo(selectedMap);
+  showTitle(false);
   room = token = null;
   offline = inviteOpen = false;
   save(LAST_ROOM_KEY, null);
@@ -344,7 +354,7 @@ async function mutate(op, action) {
 
 function doAction(type, tile) {
   const state = getState();
-  if (pending || state.phase !== 'playing' || state.turn !== currentSeat()) return;
+  if (mode === 'home' || pending || !state || state.phase !== 'playing' || state.turn !== currentSeat()) return;
   if (type === 'end') tile = undefined;
   const action = typeof type === 'object' && type ? type : tile === undefined ? {type} : {type, tile};
   if (mode === 'online') {
@@ -689,6 +699,12 @@ async function init({ render, toast: showToast }) {
   });
   solo = storedSolo();
   formName = String(read(NAME_KEY, '') || '');
+  document.getElementById('title-screen').addEventListener('click', event => {
+    const action = event.target.closest('[data-title]')?.dataset.title;
+    if (pending || !action) return;
+    if (action === 'solo') open('campaign-atlas');
+    if (action === 'create' || action === 'join') open('multiplayer',action);
+  });
   dialog.addEventListener('click', e => {
     const btn = e.target.closest('button[data-act]');
     if (btn) modalAction(btn.dataset.act);
@@ -729,7 +745,7 @@ async function init({ render, toast: showToast }) {
     if (!validCode(invite)) showError('This invitation has an invalid room code.');
   }
   if (mode === 'solo') runBots();
-  if (!modal) checkFinished();
+  if (!modal && mode !== 'home') checkFinished();
 }
 export const Game = {init, doAction, eventText, endTurn:()=>doAction('end'), open, close};
 window.Game = Game;
