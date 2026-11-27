@@ -6,6 +6,8 @@ Civitas LA is a turn-based strategy game set on a 221-hex map of the Los Angeles
 
 ![Los Angeles hex map showing districts, terrain, cities and units](./media/board-preview.webp)
 
+The **Settlement survey** marks legal founding sites and shows how far they are from the nearest city. You can choose a destination directly from the list.
+
 ## Your first turns
 
 1. Select your settler, then click a highlighted hex to move it. Forests and hills cost two movement points. A settler can found a city on suitable land at least three hexes from every existing city.

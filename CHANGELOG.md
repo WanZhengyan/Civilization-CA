@@ -1,5 +1,13 @@
 # Release notes
 
+## 3.1 · Settlement survey
+
+**Playtest finding.** The opening settler can reach 14 destinations. The original command panel showed a single generic spacing rule, which left players to guess how many of those destinations would make a good city site. At desktop width the command panel could also crop the End turn button.
+
+**Changes and result.** The map marks surveyed sites with a solid gold flag for this turn or a hollow blue flag for next turn. The site list gives the movement cost, closest city and distance, and accepts movement orders directly. In the standard opening there are five next-turn sites and no immediate sites. In an interactive playtest, moving from Pico-Union to Pico-Robertson used both movement points and the survey correctly explained that founding becomes available next turn. The repaired turn panel measured 61 pixels high and fully contained its 35-pixel button at a 1,363-pixel viewport. The four settlement regression checks cover timing, spacing, terrain and occupancy. All six scripted campaigns finished with the same outcomes before and after the survey.
+
+**Next question.** Can a first-time player compare two cities' production queues and tell when a new defender will be ready? Play the same opening on a phone and a laptop, then decide what changes would help.
+
 ## 3.0 · The Los Angeles Campaign
 
 **What changed.** The command panel, city production, multiplayer rooms, field guide and campaign history now use English. Selecting a friendly unit reveals its reachable tiles. An attack forecast shows both sides' expected hit points before the player confirms the order. The Research Council lets each faction invest science in Agronomy, Industry, Tactics and Civics. Each choice affects the shared game rules in solo and online games.

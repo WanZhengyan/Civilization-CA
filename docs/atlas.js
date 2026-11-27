@@ -477,6 +477,31 @@ function tacticalLayer(g,model,scale) {
   }
   g.save();overlay(moveTiles,false);overlay(attackTiles,true);g.restore();
 }
+function settlementMarkers(g,model,scale){
+  const sites=model.settlementSites;
+  if(!sites)return;
+  const size=Math.min(1.38,Math.max(.92,.96/scale));
+  function draw(ids,immediate){
+    for(const id of ids||[]){
+      const t=model.byId.get(id);if(!t)continue;
+      const [x,y]=pos(t.q,t.r);
+      g.save();g.translate(x-21,y+10);g.scale(size,size);
+      const cloth=[-.15,-6.8,7.15,-5.5,5.35,-3.4,7.3,-1.85,-.15,-2.75];
+      const ink='#23373a',color=immediate?'#ffdc89':'#a3dfed';
+      g.lineCap='round';g.lineJoin='round';
+      line(g,[-.25,4.8,-.25,-7.4],ink,2.95);
+      if(immediate){poly(g,cloth,color,ink,2.15);}
+      else{
+        g.beginPath();g.moveTo(cloth[0],cloth[1]);
+        for(let i=2;i<cloth.length;i+=2)g.lineTo(cloth[i],cloth[i+1]);
+        g.closePath();g.lineWidth=2.65;g.strokeStyle=ink;g.stroke();
+        g.lineWidth=1.2;g.strokeStyle=color;g.stroke();
+      }
+      line(g,[-.25,4.75,-.25,-7.35],color,1.1);g.restore();
+    }
+  }
+  draw(sites.nextTurn,false);draw(sites.now,true);
+}
 function projectedRoute(g,model,scale) {
   const path=model.previewPath;
   if(!path?.length||path.length<2)return;
@@ -666,7 +691,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   for(const t of tiles){const improvement=board[t.id]?.improvement;if(improvement)drawImprovement(g,t,improvement);}
   for(const c of model.cities||[])drawCity(g,c,model);
-  tacticalLayer(g,model,scale);projectedRoute(g,model,scale);
+  tacticalLayer(g,model,scale);projectedRoute(g,model,scale);settlementMarkers(g,model,scale);
   const lookup=model.byId;
   for(const [id,hover] of [[model.targetId||hoverId,true],[selectedId,false]]){
     const t=lookup.get(id);if(!t || (hover && id===selectedId))continue;
@@ -739,7 +764,7 @@ import { TILES as defaultTiles, getMovePath } from './rules.js';
 import { drawUnitArt } from './unit-art.js';
 export function createAtlas(host, options = {}) {
   const canvas=document.createElement('canvas');
-  canvas.setAttribute('aria-label','Los Angeles strategy map. Use arrow keys to select a district. Use plus and minus to zoom, and Home to reset the view.');
+  canvas.setAttribute('aria-label','Los Angeles strategy map. Use arrow keys to preview a district. Press Enter or Space to select it. Use plus and minus to zoom, and Home to reset the view.');
   canvas.setAttribute('role','group');canvas.tabIndex=0;
   Object.assign(canvas.style,{display:'block',height:'100%',width:'100%',touchAction:'none',cursor:'grab',position:'absolute',inset:'0'});
   host.appendChild(canvas);
@@ -852,13 +877,13 @@ export function createAtlas(host, options = {}) {
   on('pointerleave',()=>hoverTile(null));
   on('wheel',e=>{e.preventDefault();const xy=local(e);cancelAnimationFrame(tween);setZoom(zoom*Math.exp(-Math.max(-100,Math.min(100,e.deltaY))*.0019),...xy);},{passive:false});
   on('keydown',e=>{
-    const t=model.byId.get(model.selectedId)||model.byId.get('11,7');
+    const t=model.byId.get(model.hoverId)||model.byId.get(model.selectedId)||model.byId.get('11,7');
     let target=null;
     const dirs={ArrowRight:1,ArrowLeft:4,ArrowUp:5,ArrowDown:2};
     if(e.key in dirs&&t){target=model.byId.get(idFor(...adjacent(t.q,t.r,dirs[e.key])));e.preventDefault();}
-    if(target){model.selectedId=target.id;options.onSelect?.(target.id);const [px,py]=pos(target.q,target.r);if(Math.abs(px-cx)>(boxW/2-24)/(base*zoom)||Math.abs(py-cy)>(boxH/2-24)/(base*zoom)){cx=px;cy=py;bound();}schedule();}
+    if(target){hoverTile(target.id);const [px,py]=pos(target.q,target.r);if(Math.abs(px-cx)>(boxW/2-24)/(base*zoom)||Math.abs(py-cy)>(boxH/2-24)/(base*zoom)){cx=px;cy=py;bound();}schedule();}
     if(['+','=','-','Home'].includes(e.key)){e.preventDefault();if(e.key==='Home')api.reset();else api.zoomBy(e.key==='-'?1/1.2:1.2);}
-    if((e.key==='Enter'||e.key===' ')&&t){e.preventDefault();model.selectedId=t.id;options.onSelect?.(t.id);schedule();}
+    if((e.key==='Enter'||e.key===' ')&&t){e.preventDefault();model.selectedId=t.id;const unit=model.units.find(u=>u.tile===t.id);options.onSelect?.(t.id,unit?.id);if(unit)options.onUnitSelect?.(unit.id,t.id);schedule();}
   });
   const observer=new ResizeObserver(()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(measure);});observer.observe(host);
   const api={
@@ -871,6 +896,11 @@ export function createAtlas(host, options = {}) {
       }
       if(Array.isArray(state.cities)){model.cities=state.cities;model.cityTiles=new Set(state.cities.map(c=>c.tile));}
       if(Object.hasOwn(o,'selectedUnitId')&&o.selectedUnitId!==model.selectedUnitId){model.selectedUnitId=o.selectedUnitId;model.previewPath=[];}
+      if(Object.hasOwn(o,'settlementSites'))model.settlementSites=o.settlementSites;
+      else if(Object.hasOwn(o,'settlementSurvey')){
+        const sites=o.settlementSurvey||[];
+        model.settlementSites={now:sites.filter(s=>s.timing==='now').map(s=>s.tile),nextTurn:sites.filter(s=>s.timing==='next'||s.timing==='next-turn').map(s=>s.tile)};
+      }
       if(Object.hasOwn(o,'previewPath'))model.previewPath=o.previewPath||[];
       if(Object.hasOwn(o,'targetId'))model.targetId=o.targetId;
       if(o.moveTiles||o.moveIds)model.moveTiles=[...(o.moveTiles||o.moveIds)];

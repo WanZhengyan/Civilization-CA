@@ -348,9 +348,69 @@ export function getMovePath(state,unitId,target) {
   while (path[0]!==unit.tile) path.unshift(parents.get(path[0]));
   return path;
 }
-function canSettle(state,seat,id) {
-  const owner=state.board[id].owner;
-  return Boolean(terrainCost[TILE_BY_ID[id].terrain]) && (owner===null || owner===seat) && state.cities.every(c=>hexDistance(c.tile,id)>=3);
+function nearestSettlement(state, tileId) {
+  let nearest = null;
+  for (const city of state.cities) {
+    const distance = hexDistance(city.tile, tileId);
+    if (!nearest || distance < nearest.distance) {
+      nearest = {id: city.id, name: city.name, tile: city.tile, distance};
+    }
+  }
+  return nearest;
+}
+function settlementRestriction(state, seat, tile, nearest) {
+  if (!terrainCost[tile.terrain]) return 'terrain';
+  const owner = state.board[tile.id].owner;
+  if (owner !== null && owner !== seat) return 'ownership';
+  if (nearest && nearest.distance < 3) return 'spacing';
+  return null;
+}
+function canSettle(state, seat, id) {
+  return !settlementRestriction(state, seat, TILE_BY_ID[id], nearestSettlement(state, id));
+}
+export function getSettlementAssessment(state, unitId, tileId) {
+  const unit = unitOrNull(state, unitId);
+  const tile = TILE_BY_ID[tileId];
+  const nearest = tile ? nearestSettlement(state, tileId) : null;
+  const assessment = {
+    status: 'invalid', reason: '', canFoundThisTurn: false, canFoundNextTurn: false,
+    reachable: false, nearestCity: nearest, distanceToNearestCity: nearest?.distance ?? null,
+    terrainCost: tile ? terrainCost[tile.terrain] ?? null : null, moveCost: null, movesAfter: null
+  };
+  if (!tile) return {...assessment, reason: 'Select a tile on the map.'};
+  if (unit?.type !== 'settler') return {...assessment, reason: 'Select a settler to survey this tile.'};
+  if (state.phase !== 'playing') return {...assessment, reason: 'The campaign has ended.'};
+  if (unit.seat !== state.turn) return {...assessment, reason: 'Wait for the settler’s turn.'};
+
+  const cost = tileId === unit.tile ? 0 : findRoutes(state, unit).costs.get(tileId);
+  assessment.reachable = cost !== undefined;
+  assessment.moveCost = cost ?? null;
+  assessment.movesAfter = assessment.reachable ? unit.moves - cost : null;
+
+  const restriction = settlementRestriction(state, unit.seat, tile, nearest);
+  if (restriction === 'terrain') {
+    assessment.reason = tile.terrain === 'ocean' ? 'Cities need land. This tile is open water.' : 'Mountain terrain is impassable.';
+  } else if (restriction === 'ownership') {
+    const owner = state.board[tileId].owner;
+    assessment.reason = FACTIONS[state.players[owner].faction].name+' owns this tile. Settle on friendly or neutral land.';
+  } else if (restriction === 'spacing') {
+    assessment.reason = nearest.distance === 0
+      ? nearest.name+' already occupies this tile. Cities must be at least 3 hexes apart.'
+      : nearest.name+' is '+nearest.distance+(nearest.distance === 1 ? ' hex' : ' hexes')+' away. Cities must be at least 3 hexes apart.';
+  } else if (state.units.some(other => other.id !== unitId && other.tile === tileId)) {
+    assessment.reason = 'Another unit occupies this tile.';
+  } else if (!assessment.reachable) {
+    assessment.reason = 'This tile is outside the settler’s remaining movement range.';
+  } else if (assessment.movesAfter === 0) {
+    assessment.status = 'next-turn';
+    assessment.canFoundNextTurn = true;
+    assessment.reason = cost === 0 ? 'Movement is spent. Found here next turn.' : 'Reaching this tile uses all movement. Found here next turn.';
+  } else {
+    assessment.status = 'now';
+    assessment.canFoundThisTurn = true;
+    assessment.reason = cost === 0 ? 'Found a city here this turn.' : 'Move here and found a city this turn.';
+  }
+  return assessment;
 }
 function improvementAt(state,seat,id) {
   if (state.board[id].owner!==seat || state.board[id].improvement || state.cities.some(c=>c.tile===id)) return null;

@@ -1,7 +1,7 @@
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
-import {FACTIONS,TILE_BY_ID,MAX_ROUNDS,getMovePath,getResearchOptions,combatPreview,getActions,getStats,getCityYield,getProductionOptions,getUnitOptions,UNIT_TYPES,BUILDINGS,IMPROVEMENTS} from "./rules.js";
+import {FACTIONS,TILE_BY_ID,MAX_ROUNDS,getMovePath,getSettlementAssessment,getResearchOptions,combatPreview,getActions,getStats,getCityYield,getProductionOptions,getUnitOptions,UNIT_TYPES,BUILDINGS,IMPROVEMENTS} from "./rules.js";
 
 const el=id=>document.getElementById(id);
 const names=FACTIONS.map(f=>f.name);
@@ -50,6 +50,8 @@ function mayOrder(){return view.state.phase==="playing"&&view.state.turn===view.
 let view,atlas,selectedTile,selectedUnit,kind="tile",order="",matchKey="",activeRoster="units",timer,productionCity=null;
 let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEvent="";
 const unavailableArt=new Set();
+let surveyUnitId=null;
+let survey=new Map();
 function toast(message){text("toast",message);el("toast").hidden=false;clearTimeout(timer);timer=setTimeout(()=>el("toast").hidden=true,3200)}
 function select(tile,unit=null,city=false){
   if(!TILE_BY_ID[tile])return;
@@ -81,6 +83,49 @@ function onMapSelect(tileId,unitId){
   const keepInspect=order==="inspect";select(tileId,unitId);if(keepInspect)order="inspect";redraw();
 }
 function turnsText(value){return value+" "+(value===1?"turn":"turns")}
+function nearestCityText(test){
+  const c=test?.nearestCity;
+  return c ? c.name+" is "+c.distance+" "+(c.distance===1?"hex":"hexes")+" away." : "";
+}
+function surveySummary(test,here){
+  if(!test)return "";
+  if(test.status==="invalid")return test.reason;
+  if(test.status==="now")return here?"You can found a city here this turn.":"Move here and found a city this turn.";
+  return here?"End your turn to restore movement, then found a city here.":"Move here and found a city next turn.";
+}
+function updateSurvey(){
+  const u=kind==="unit"?getUnit():null;
+  survey=new Map();
+  surveyUnitId=u?.type==="settler" && u.seat===view.seat && mayOrder() ? u.id:null;
+  if(surveyUnitId){
+    for(const tile of [u.tile,...(selectedOptions?.moves||[])]){
+      survey.set(tile,getSettlementAssessment(view.state,u.id,tile));
+    }
+  }
+  el("settlement-key").hidden=!surveyUnitId;
+  if(surveyUnitId)text("survey-sites","View sites ("+[...survey.values()].filter(s=>s.status!=="invalid").length+")");
+  if(el("survey-modal").open)renderSurveyDialog();
+}
+function renderSurveyDialog(){
+  const u=getUnit();
+  if(!u || !sameId(surveyUnitId,u.id)){el("survey-modal").close();return}
+  const source=survey.get(u.tile);
+  const now=[...survey].filter(([,data])=>data.status==="now"),later=[...survey].filter(([,data])=>data.status==="next-turn");
+  let html='<p class="survey-current"><strong>Current site · '+esc(TILE_BY_ID[u.tile].name)+'</strong><span>'+esc(surveySummary(source,true))+'</span></p>';
+  if(!now.length && !later.length)html+='<p class="survey-empty">No suitable sites are within this turn’s movement range.</p>';
+  for(const [heading,sites] of [["Found this turn",now],["Found next turn",later]]){
+    if(!sites.length)continue;
+    html+='<h3 class="production-group">'+heading+'</h3><div class="survey-options-group">';
+    for(const [id,data] of sites){
+      const here=u.tile===id;
+      const label=here?(data.status==="now"?"Found city":"Wait here"):"Move here";
+      const cost=here?"Current hex":data.moveCost+" movement";
+      html+='<div class="survey-option"><div><strong>'+esc(TILE_BY_ID[id].name)+'</strong><small>'+esc(cost)+' · '+esc(terrain[TILE_BY_ID[id].terrain])+'</small><small>'+esc(nearestCityText(data))+'</small></div><button class="modal-secondary" data-survey-site="'+esc(id)+'" '+(here && data.status!=="now"?"disabled":"")+'>'+label+'</button></div>';
+    }
+    html+='</div>';
+  }
+  el("survey-options").innerHTML=html;
+}
 function updateHint(id){
   hoverId=id;
   if(!view)return;
@@ -98,6 +143,19 @@ function updateHint(id){
       hint+=" · Move here for "+cost+" movement";
     }
   }
+  if(surveyUnitId){
+    const surveyInfo=tile ? (survey.get(id) || getSettlementAssessment(view.state,surveyUnitId,id)) : survey.get(selectedTile);
+    if(tile && surveyInfo){
+      const details=surveySummary(surveyInfo,id===selectedTile);
+      hint=tile.name+" · "+(Number.isFinite(surveyInfo.moveCost) && id!==selectedTile?surveyInfo.moveCost+" movement · ":"")+details;
+    }else if(!tile){
+      const tests=[...survey.values()],now=tests.filter(v=>v.status==="now").length,later=tests.filter(v=>v.status==="next-turn").length;
+      if(now)hint=now+" "+(now===1?"site is":"sites are")+" ready to settle this turn. Follow a gold flag or open View sites.";
+      else if(later)hint=later+" "+(later===1?"site":"sites")+" within reach. Follow a blue flag to settle next turn.";
+      else hint="No suitable sites are within the settler’s current movement range.";
+    }
+  }
+  if(order==="inspect" && surveyUnitId)hint="Inspect mode · "+hint;
   text("map-hint",hint);
 }
 function flash(message){
@@ -150,6 +208,7 @@ function inspect(){
   const disabled=!mayOrder()||!own;
   let info="",actions="",explanation="";
   selectedOptions=activeUnit?getUnitOptions(state,activeUnit.id):null;
+  updateSurvey();
   if(activeUnit){
     const u=activeUnit,o=selectedOptions;
     info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+(u.type==="builder"?stat("Charges",u.charges):stat("Terrain",terrain[tile.terrain]))+'</div>'+healthBar(u.hp,u.maxHp);
@@ -158,7 +217,9 @@ function inspect(){
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
       if(u.type==="settler"){
         actions+=actionButton("found","Found city",o.canFound?"Settle here":"Unavailable","gold",disabled||!o.canFound);
-        explanation=o.canFound?"Settle here to establish a city and claim nearby land.":u.moves===0?"Restore movement by ending your turn.":"Settle at least three hexes from every city, with movement remaining.";
+        const assessment=survey.get(u.tile);
+        explanation=assessment?surveySummary(assessment,true):"Settle at least three hexes from every city, with movement remaining.";
+        if(assessment?.nearestCity && !explanation.includes(assessment.nearestCity.name))explanation+=" "+nearestCityText(assessment);
       }else if(u.type==="builder"){
         for(const item of ['farm','mine']){
           const ok=o.improvements.includes(item);
@@ -193,7 +254,12 @@ function inspect(){
 }
 function updateMap(){
   const u=getUnit(),ready=u && u.seat===view.seat && mayOrder() && order!=="inspect";
-  atlas.update({state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  const settlementSites={now:[],nextTurn:[]};
+  for(const [id,assessment] of survey){
+    if(assessment.status==="now")settlementSites.now.push(id);
+    else if(assessment.status==="next-turn")settlementSites.nextTurn.push(id);
+  }
+  atlas.update({settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -331,6 +397,17 @@ function mount(){
   document.addEventListener("click",e=>{if(!e.target.closest(".layers-wrap"))toggleLayers(false)});
   el("entity-commands").onclick=e=>{const b=e.target.closest("[data-order]");if(b&&!b.disabled)chooseOrder(b.dataset.order)};
   el("entity-tabs").onclick=e=>{const key=e.target.closest("[data-entity]")?.dataset.entity;if(!key)return;if(key==="land"){kind="tile";selectedUnit=null;order=""}else select(selectedTile,key.startsWith("u")?key.slice(1):null,key==="city");redraw()};
+  el("survey-sites").onclick=()=>{if(surveyUnitId){renderSurveyDialog();el("survey-modal").showModal()}};
+  el("close-survey").onclick=()=>el("survey-modal").close();
+  el("survey-modal").onclick=e=>{if(e.target===el("survey-modal"))el("survey-modal").close()};
+  el("survey-options").onclick=e=>{
+    const button=e.target.closest("[data-survey-site]"),u=getUnit();
+    if(!button||button.disabled||!mayOrder()||!sameId(u?.id,surveyUnitId))return;
+    const tile=button.dataset.surveySite,assessment=getSettlementAssessment(view.state,u.id,tile);
+    if(assessment.status==="invalid" || (tile===u.tile && assessment.status!=="now"))return;
+    const action=tile===u.tile?{type:"found",unit:u.id}:{type:"move",unit:u.id,tile};
+    el("survey-modal").close();order="";Game.doAction(action);
+  };
   el("research-card").onclick=()=>{el("research-modal").showModal();paintResearch()};
   el("close-research").onclick=()=>el("research-modal").close();
   el("research-modal").onclick=e=>{if(e.target===el("research-modal"))el("research-modal").close()};
