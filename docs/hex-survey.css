@@ -30,3 +30,31 @@
   .map-survey-key { gap: .2rem .55rem; padding-inline: .55rem; }
   .map-survey-key button, .layers-menu label { min-height: 36px; }
 }
+
+.map-survey-key .frontier-sample {
+  position: relative;
+  height: 7px;
+  width: 22px;
+  border-block: 1px solid #102126;
+  background: linear-gradient(to bottom, #e3b567 45%, #82b9c6 45%);
+}
+.map-survey-key .frontier-sample::after {
+  content: '';
+  position: absolute;
+  inset: 2px 0 auto;
+  height: 1px;
+  background: repeating-linear-gradient(to right, #ffefca 0 3px, #263237 3px 6px);
+}
+#frontier-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .25rem .6rem;
+  margin: .5rem 0;
+  padding: .42rem .5rem;
+  background: #202b2d;
+  line-height: 1.25;
+}
+#frontier-readout[hidden] { display: none; }
+#frontier-readout small { flex-basis: 100%; color: #d6c8a8; font-size: .68rem; }
+#frontier-readout span { padding-inline-start: .35rem; border-inline-start: 3px solid var(--faction-color); font-size: .75rem; }

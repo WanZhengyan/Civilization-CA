@@ -8,7 +8,7 @@ import {addPolicyPanel,updateCivicAgenda} from "./policy-panel.js";
 import {campusPlan} from './campus-plan.js';
 import {getWonderSites} from './rules.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
-import {mountSurveyControls} from './survey-controls.js';
+import {mountSurveyControls, showSelectedFrontier} from './survey-controls.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -346,6 +346,7 @@ function inspect(){
   el("entity-commands").innerHTML='<div class="orders">'+actions+'</div>'+note(explanation);
 }
 function updateMap(){
+  showSelectedFrontier(selectedTile,view.state.board,visible,mapRegion.byId,faction);
   const u=getUnit(),ready=u && u.seat===view.seat && mayOrder() && order!=="inspect";
   const settlementSites={now:[],nextTurn:[]};
   for(const [id,assessment] of survey){

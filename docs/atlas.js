@@ -1,4 +1,5 @@
 import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom} from './hex-survey.js';
+import {politicalPaths, inkPolitics} from './political-borders.js';
 import {drawResource} from './resource-art.js';
 import {drawCampus} from './campus-art.js';
 import {WONDERS} from './wonders.js';
@@ -807,26 +808,13 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   const getFaction=owner=>players[owner]?.color||FACTION[owner%4]||FACTION[0];
   if(territories){
     for(const t of tiles){
-      const owner=board[t.id]?.owner;if(owner==null)continue;
-      const color=getFaction(owner);g.save();g.globalAlpha=.15;g.fillStyle=color;g.fill(hexPath(t.q,t.r));g.restore();
-    }
-    for(const t of tiles){
-      const owner=board[t.id]?.owner;if(owner==null)continue;
-      const color=getFaction(owner),[x,y]=pos(t.q,t.r);g.lineCap='round';
-      for(let k=0;k<6;k++){const [q,r]=adjacent(t.q,t.r,k);if(board[idFor(q,r)]?.owner===owner)continue;
-        const next=(k+1)%6,e=[x+dX[k],y+dY[k],x+dX[next],y+dY[next]];
-        const neighbor=board[idFor(q,r)]?.owner;
-        if(neighbor!=null){
-          const inset=1.2/(scale*Math.hypot(e[2]-e[0],e[3]-e[1]));
-          const dx=(e[1]-e[3])*inset,dy=(e[2]-e[0])*inset;
-          e[0]+=dx;e[1]+=dy;e[2]+=dx;e[3]+=dy;
-        }
-        line(g,e,'#273335e0',3.2/scale);line(g,e,color,1.8/scale);
-      }
-      if(board[t.id].level>0 && !t.landmark){
-        const level=board[t.id].level;
-        town(g,x+1,y+5,5.5,5.3,5+level*2,2,true);
-        if(level>1)town(g,x-5,y+8,4,4,5,3,true);
+      if(model.fog && !model.fog.visible.has(t.id))continue;
+      const holding=board[t.id];if(holding?.owner==null)continue;
+      g.save();g.globalAlpha=.15;g.fillStyle=getFaction(holding.owner);g.fill(hexPath(t.q,t.r));g.restore();
+      if(holding.level>0 && !t.landmark){
+        const [x,y]=pos(t.q,t.r);
+        town(g,x+1,y+5,5.5,5.3,5+holding.level*2,2,true);
+        if(holding.level>1)town(g,x-5,y+8,4,4,5,3,true);
       }
     }
   }
@@ -841,6 +829,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   for(const c of model.cities||[])drawCity(g,c,model);
   drawBarbarians(g,model,pos);
+  if(territories)inkPolitics(g,model.politics,scale,getFaction);
   tacticalLayer(g,model,scale);projectedRoute(g,model,scale);settlementMarkers(g,model,scale);
   const lookup=model.byId;
   for(const city of model.cities || [])if(city.originalSeat!=null){
@@ -1073,13 +1062,18 @@ export function createAtlas(host, options = {}) {
         zoom=1;resetCenter();options.onZoom?.(100);
       }
       const state=o.state||o;if(o.state)model.state=o.state;
-      if(state.intel && model.intel!==state.intel) {
+      const priorFog=model.fog;
+      if(state.intel && (model.intel!==state.intel || tilesChanged)) {
         const explored=new Set(state.intel.explored), visible=new Set(state.intel.visible);
         const window=new Path2D(),memory=new Path2D(),knownTiles=tiles.filter(t=>explored.has(t.id));
         for(const t of knownTiles){window.addPath(hexPath(t.q,t.r));if(!visible.has(t.id)) memory.addPath(hexPath(t.q,t.r));}
         model.intel=state.intel;model.fog={explored,visible,window,memory,knownTiles};
       } else if(!state.intel){model.fog=null;model.intel=null;}
-      if(tilesChanged || (state.board && state.board!==model.board)){
+      const boardChanged=state.board && state.board!==model.board;
+      if(tilesChanged || boardChanged || priorFog!==model.fog){
+        model.politics=politicalPaths(tiles,state.board||model.board,model.fog?.visible,hexPath);
+      }
+      if(tilesChanged || boardChanged){
         if(state.board)model.board=state.board;
         // Only the seat's observed parcels may replace the printed landmark artwork.
         const next=tiles.filter(t=>t.landmark && getAtlasPlace(t,model.board[t.id])?.landmark);

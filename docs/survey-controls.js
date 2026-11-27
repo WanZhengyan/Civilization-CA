@@ -1,3 +1,5 @@
+import {frontierSeatsAt} from './political-borders.js';
+
 const gridPreference = 'civilization-ca.map-grid';
 
 export function mountSurveyControls(atlas) {
@@ -13,7 +15,8 @@ export function mountSurveyControls(atlas) {
   key.setAttribute('aria-label','Map line key');
   key.innerHTML = '<span data-grid-key><i class="grid-sample" aria-hidden="true"></i>Hex grid</span>'
     + '<span><i class="frame-sample" aria-hidden="true"></i>Map edge</span>'
-    + '<span data-territory-key><i class="claim-sample" aria-hidden="true"></i>Territory border</span>'
+    + '<span data-territory-key><i class="claim-sample" aria-hidden="true"></i>Claim edge</span>'
+    + '<span data-territory-key><i class="frontier-sample" aria-hidden="true"></i>Shared frontier</span>'
     + '<button type="button">Fit region</button>';
   document.getElementById('legend').closest('.map-key').before(key);
   key.querySelector('button').onclick = () => atlas.reset();
@@ -28,8 +31,35 @@ export function mountSurveyControls(atlas) {
     showGrid();
     try { localStorage.setItem(gridPreference, input.checked ? 'on' : 'off'); } catch {}
   });
+  const readout = document.createElement('div');
+  readout.id = 'frontier-readout';
+  readout.hidden = true;
+  readout.setAttribute('role','status');
+  document.getElementById('entity-tabs').after(readout);
+
   const territory = document.getElementById('territory-lines');
   territory.addEventListener('change',()=>{
-    key.querySelector('[data-territory-key]').hidden = !territory.checked;
+    for (const entry of key.querySelectorAll('[data-territory-key]')) entry.hidden = !territory.checked;
   });
+}
+
+export function showSelectedFrontier(id, board, visible, byId, faction) {
+  const readout = document.getElementById('frontier-readout');
+  if (!readout) return;
+  const factions = frontierSeatsAt(id, board, visible, byId).map(faction);
+  const signature = factions.map(entry => entry.name).join('|');
+  if (readout.dataset.factions === signature) return;
+  readout.dataset.factions = signature;
+  readout.hidden = !factions.length;
+  readout.replaceChildren();
+  if (!factions.length) return;
+  const heading = document.createElement('small');
+  heading.textContent = 'Shared frontier';
+  readout.append(heading);
+  for (const entry of factions) {
+    const tag = document.createElement('span');
+    tag.textContent = entry.name;
+    tag.style.setProperty('--faction-color', entry.color);
+    readout.append(tag);
+  }
 }

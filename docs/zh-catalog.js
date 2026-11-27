@@ -54,6 +54,11 @@ function section(pairs) {
   }
 }
 section(`
+Claim edge|领地边界
+Shared frontier|文明交界
+`);
+
+section(`
 Research era|筛选时代
 All eras|所有时代
 Available research only|仅看可研究的科技
