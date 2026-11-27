@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.9 · Compete for a unique world wonder
+
+Different cities can pursue the same charter, so finishing a race must settle conflicts consistently. The first completion awards the world wonder. Competing queues resolve by the same rules online and in solo games.
+
+88 checks passed. 18 fixed campaigns replayed identically twice. Improve recognition of completed universities at board scale.
+
 ## 5.8 · Choose the campus district
 
 Hard-coded real-world addresses would repeat the same wonder location across campaigns. A survey lets a city select eligible controlled land for a campus. Terrain suitability changes its specialty yield and occupied sites are excluded.

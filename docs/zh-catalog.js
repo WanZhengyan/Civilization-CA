@@ -806,3 +806,14 @@ Choose a campus site in this city’s territory.|请选择这座城市领土内�
 Claim an empty land tile within two hexes of the city.|请先控制距该城市两格以内的空闲陆地。
 Choose a surveyed campus site.|请选择一处可用的校园地块。
 `);
+
+section(`
+Charter fee|筹建费
+Available worldwide.|尚未被建成
+Under construction|正在筹建
+Already opened|已建成
+A rival charter is underway.|已有其他阵营在筹建这所大学。
+A competing campus opened first. The charter fee was returned.|对手抢先建成了这所大学，筹建费已全额退还。
+This university has already opened.|这所大学已在本局建成。
+One of your cities already holds this charter.|己方已有城市正在筹建这所大学。
+`);

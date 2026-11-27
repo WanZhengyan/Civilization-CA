@@ -70,3 +70,42 @@ test('campus survey excludes deposits, improved or occupied sites and allows dif
     assert.equal(state.cities[0].queue,null);
   }
 });
+
+test('rivals race on distinct parcels; the loser recovers only the paid charter, once',()=>{
+  let state=fixture();
+  if(!state.cities.some(c=>c.seat===1)) {
+    state=applyAction(state,0,{type:'end'});
+    const pioneer=state.units.find(u=>u.seat===1&&u.type==='settler');
+    state=applyAction(state,1,{type:'found',unit:pioneer.id});
+    state=applyAction(state,1,{type:'end'});
+  }
+  for(const city of state.cities) {
+    const terrain=getMap(state).tiles.find(t=>t.id!==city.tile&&hexDistance(t.id,city.tile)===1&&!['ocean','mountains'].includes(t.terrain));
+    state.board[terrain.id]={owner:city.seat,level:0};
+    state.players[city.seat].civics=['charter'];
+    state.players[city.seat].capital=32;
+  }
+  function commission(state,seat) {
+    const city=state.cities.find(c=>c.seat===seat),site=getWonderSites(state,city.id,'ucla')[0];
+    return applyAction(state,seat,{type:'produce',item:'ucla',city:city.id,site:site.id});
+  }
+  const unaffordable=structuredClone(state);unaffordable.players[0].capital=0;
+  assert.throws(()=>commission(unaffordable,0),/capital/);
+  state=commission(state,0);
+  assert.equal(state.players[0].capital,32-WONDERS.ucla.grant);
+  assert.deepEqual(state.wonderRegistry,{ucla:'commissioned'});
+  state=applyAction(state,0,{type:'end'});
+  state=commission(state,1);
+  state=applyAction(state,1,{type:'end'});
+  const a=state.cities.find(c=>c.seat===0),b=state.cities.find(c=>c.seat===1);
+  const lostSite=b.queue.site,purse=state.players[1].capital;
+  a.queue.progress=a.queue.required-1;
+  state=applyAction(state,0,{type:'end'});
+  assert.deepEqual(state.wonderRegistry,{ucla:'complete'});
+  assert.equal(state.cities.find(c=>c.id===b.id).queue,null);
+  assert.equal(state.board[lostSite].wonder,undefined);
+  assert.equal(state.players[1].capital,purse+WONDERS.ucla.grant);
+  assert.equal(state.cities.filter(c=>c.buildings.includes('ucla')).length,1);
+  assert.match(getProductionOptions(state,b.id).find(o=>o.item==='ucla').reason,/already opened/);
+  assert.equal(state.log.filter(e=>e.type==='wonder-refund').length,1);
+});

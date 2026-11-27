@@ -1,4 +1,4 @@
-import {WONDERS, universityYield, surveyCampus} from './wonders.js';
+import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
 import {getVisibleTiles, projectForSeat, rememberVision} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
@@ -598,11 +598,14 @@ export function getProductionOptions(state,cityId) {
     else if (city.seat!==state.turn) reason='Wait for the city owner’s turn.';
     else if (city.queue) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
+    else if (WONDERS[item] && campusStatus(state,item)==='complete') reason='This university has already opened.';
+    else if (WONDERS[item] && state.cities.some(c=>c.seat===city.seat && c.queue?.item===item)) reason='One of your cities already holds this charter.';
     else if (def.civic && !adopted(state,city.seat,def.civic)) reason='Requires '+CIVICS[def.civic].name+'.';
     else if (item==='harbor' && !getPortSite(state,city.id)) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
     else if ((item==='shipyard' || def.domain==='sea') && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
     else if (item==='frigate' && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
     else if (def.tech && !knows(state,city.seat,def.tech)) reason='Requires '+TECHS[def.tech].name+'.';
+    else if (WONDERS[item] && state.players[city.seat].capital<def.grant) reason='You need '+def.grant+' capital.';
     else if (WONDERS[item] && !getWonderSites(state,city.id,item).length) reason='Claim an empty land tile within two hexes of the city.';
     return {item,label:def.name,kind,era:def.era || null,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
   });
@@ -689,6 +692,7 @@ function produceCityTurn(state,city) {
       state.board[queue.site]={...state.board[queue.site],wonder:queue.item,wonderCity:city.id};
       if (WONDERS[queue.item].terrain.includes(terrain)) city.campusHonors=[...(city.campusHonors||[]),queue.item];
     }
+    if(WONDERS[queue.item]) settleCampusRace(state,city,queue.item,record);
     city.buildings.push(queue.item);
     if (queue.item==='walls') {city.maxHp+=50; city.hp=Math.min(city.maxHp,city.hp+50);}
   }
@@ -807,7 +811,9 @@ function resolveAttack(state, unit, target) {
   defender.hp = result.defenderHpAfter;
   if (result.capture) {
     defender.seat = unit.seat;
+    const lostCharter=WONDERS[defender.queue?.item];
     defender.queue = null;
+    if(lostCharter) updateCampusRegistry(state);
     for (const [id,holding] of Object.entries(state.board)) {
       if (holding.wonderCity===defender.id) state.board[id]={...holding,owner:unit.seat};
     }
@@ -921,9 +927,11 @@ function resolveOrder(source,seat,action) {
       const candidate=getWonderSites(next,city.id,option.item).find(s=>s.id===action.site);
       if (!candidate) throw new Error('Choose a surveyed campus site.');
       site=candidate.id;
+      next.players[seat].capital-=WONDERS[option.item].grant;
+      next.wonderRegistry={...next.wonderRegistry,[option.item]:'commissioned'};
     }
     const berth=option.item==='harbor' ? getPortSite(next,city.id) : null;
-    city.queue={item:option.item,required:option.required,progress:0,...(site ? {site} : {}),...(berth ? {portTile:berth} : {})};
+    city.queue={item:option.item,required:option.required,progress:0,...(site ? {site,grant:WONDERS[option.item].grant} : {}),...(berth ? {portTile:berth} : {})};
     record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
   } else if (['move','attack','found','improve','upgrade','survey'].includes(action.type)) {
     unitOrder(next,seat,action);
