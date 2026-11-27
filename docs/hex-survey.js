@@ -112,3 +112,10 @@ export function inkHexGrid(ctx, mesh, scale) {
   ctx.stroke(mesh);
   ctx.restore();
 }
+
+export function regionOverviewZoom(viewWidth, viewHeight, worldWidth, worldHeight, base) {
+  // Keep a small margin in CSS pixels even on tall phones and ultra-wide displays.
+  const availableWidth = Math.max(1, viewWidth - 28);
+  const availableHeight = Math.max(1, viewHeight - 28);
+  return Math.min(availableWidth / worldWidth, availableHeight / worldHeight) / base;
+}

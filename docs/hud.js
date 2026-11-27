@@ -6,6 +6,7 @@ import {wildAt,WILDS} from "./barbarians.js";
 import {campusPlan} from './campus-plan.js';
 import {getWonderSites} from './rules.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
+import {mountSurveyControls} from './survey-controls.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -584,6 +585,7 @@ function mount(){
   el("zoom-out").onclick=()=>atlas.zoomBy(.8);el("zoom-in").onclick=()=>atlas.zoomBy(1.25);el("recenter").onclick=()=>atlas.reset();
   el("inspect-map").onclick=()=>{order=order==="inspect"?"":"inspect";hoverId=null;redraw()};
   el("layers").onclick=()=>toggleLayers(el("layers-menu").hidden);
+  mountSurveyControls(atlas);
   el("map-labels").onchange=e=>atlas.setLabels(e.currentTarget.checked);
   el("territory-lines").onchange=e=>atlas.setTerritories(e.currentTarget.checked);
   document.addEventListener("click",e=>{if(!e.target.closest(".layers-wrap"))toggleLayers(false)});
@@ -622,7 +624,7 @@ function mount(){
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};
   el("confirm-combat").onclick=()=>{if(!battle||!drawCombat())return;const {unit,tile}=battle;closeCombat();order="";Game.doAction({type:"attack",unit,tile})};
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"){toggleLayers(false);if(order){order="";redraw()}}});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(el("layers-menu").contains(document.activeElement))el("layers").focus();toggleLayers(false);if(order){order="";redraw()}}});
   el("close-production").onclick=closeProduction;
   el("production-modal").addEventListener("close",()=>{productionCity=null});
   el("production-modal").onclick=e=>{if(e.target===el("production-modal"))closeProduction()};

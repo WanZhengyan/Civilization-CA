@@ -1,4 +1,4 @@
-import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid} from './hex-survey.js';
+import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom} from './hex-survey.js';
 import {drawResource} from './resource-art.js';
 import {drawCampus} from './campus-art.js';
 import {WONDERS} from './wonders.js';
@@ -554,7 +554,7 @@ function tacticalLayer(g,model,scale) {
         if(region.has(idFor(...adjacent(t.q,t.r,k))))continue;
         const j=(k+1)%6,e=[x+dX[k],y+dY[k],x+dX[j],y+dY[j]];
         g.setLineDash([]);line(g,e,'#1d494ecc',3.3/Math.max(.82,scale));
-        g.setLineDash(attack?[]:[3.7,3.0]);line(g,e,attack?'#ffa884':'#bbf5e5',1.8/Math.max(.82,scale));g.setLineDash([]);
+        g.setLineDash(attack?[]:[4/scale,3/scale]);line(g,e,attack?'#ffa884':'#bbf5e5',1.8/Math.max(.82,scale));g.setLineDash([]);
       }
       if(attack){
         g.save();g.translate(x-22,y-10);g.lineCap='round';ellipse(g,0,0,6.8,6.8,'#763e38');
@@ -775,8 +775,26 @@ function paintUnits(g,model,scale,now) {
 
 import {drawBarbarians} from "./barbarian-art.js";
 
+function paintHexFocus(g,model,scale) {
+  const {selectedId,hoverId,byId:lookup}=model;
+  for(const [id,hover] of [[model.targetId||hoverId,true],[selectedId,false]]){
+    const t=lookup.get(id);if(!t || (hover && id===selectedId))continue;
+    const p=hexPath(t.q,t.r);g.save();
+    const [cx,cy]=pos(t.q,t.r);g.translate(cx,cy);g.scale(.89,.89);g.translate(-cx,-cy);
+    if(!hover){g.strokeStyle='#665634';g.lineWidth=4.1/Math.max(scale,.7);g.stroke(p);}
+    g.strokeStyle=hover?'#e9ecd7e0':'#ffe197';g.lineWidth=(hover?1.6:2.4)/Math.max(scale,.7);
+    if(!hover){g.shadowColor='#ffe9a6';g.shadowBlur=3;}
+    g.stroke(p);g.shadowBlur=0;g.fillStyle=hover?'#ffefc51b':'#ffcd6728';g.fill(p);
+    if(!hover){
+      const [x,y]=pos(t.q,t.r);
+      for(let k=0;k<6;k++){const xx=x+dX[k],yy=y+dY[k];ellipse(g,xx,yy,1.7/scale,1.7/scale,'#ffedb8');}
+    }
+    g.restore();
+  }
+}
+
 function renderOverlay(g,tiles,model,scale,labels,territories) {
-  const {board={},players=[],selectedId,hoverId}=model;
+  const {board={},players=[]}=model;
   const getFaction=owner=>players[owner]?.color||FACTION[owner%4]||FACTION[0];
   if(territories){
     for(const t of tiles){
@@ -816,18 +834,6 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   drawBarbarians(g,model,pos);
   tacticalLayer(g,model,scale);projectedRoute(g,model,scale);settlementMarkers(g,model,scale);
   const lookup=model.byId;
-  for(const [id,hover] of [[model.targetId||hoverId,true],[selectedId,false]]){
-    const t=lookup.get(id);if(!t || (hover && id===selectedId))continue;
-    const p=hexPath(t.q,t.r);g.save();
-    if(!hover){g.strokeStyle='#665634';g.lineWidth=4.1/Math.max(scale,.7);g.stroke(p);}
-    g.strokeStyle=hover?'#e9ecd7e0':'#ffe197';g.lineWidth=(hover?1.6:2.4)/Math.max(scale,.7);
-    if(!hover){g.shadowColor='#ffe9a6';g.shadowBlur=3;}
-    g.stroke(p);g.shadowBlur=0;g.fillStyle=hover?'#ffefc51b':'#ffcd6728';g.fill(p);g.restore();
-    if(!hover){
-      const [x,y]=pos(t.q,t.r);
-      for(let k=0;k<6;k++){const xx=x+dX[k],yy=y+dY[k];ellipse(g,xx,yy,1.7,1.7,'#ffedb8');}
-    }
-  }
   for(const city of model.cities || [])if(city.originalSeat!=null){
     const t=lookup.get(city.tile);
     const [x,y]=pos(t.q,t.r);flag(g,x+22,y+8,getFaction(city.seat));
@@ -903,7 +909,7 @@ export function createAtlas(host, options = {}) {
   const ctx=canvas.getContext('2d'), input=new AbortController(), pointers=new Map();
   let tiles=options.tiles||defaultTiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
-  let labels=true,territories=true,fresh=true,gesture=null,didDrag=false,disposed=false;
+  let labels=true,territories=true,grid=true,fresh=true,gesture=null,didDrag=false,disposed=false;
   let frame=chartFrame(tiles), mesh=chartMesh(tiles);
   let landmarkTiles=tiles.filter(tile=>tile.landmark);
   function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'),landmarkTiles);}
@@ -926,12 +932,13 @@ export function createAtlas(host, options = {}) {
     }
     ctx.drawImage(buffer,-margin,-margin,buffer.width/resolution,buffer.height/resolution);
     if(model.fog)ctx.restore();
-    inkHexGrid(ctx,mesh,s);
+    if(grid)inkHexGrid(ctx,mesh,s);
     if(model.fog){ctx.save();ctx.clip(model.fog.window);}
     renderOverlay(ctx,model.fog ? model.fog.knownTiles : tiles,model,s,labels,territories);
     if(model.fog){ctx.fillStyle='#24333c9c';ctx.fill(model.fog.memory);}
     if(paintUnits(ctx,model,s,performance.now()))schedule();
     if(model.fog)ctx.restore();
+    paintHexFocus(ctx,model,s);
     ctx.restore();
     inkChartFrame(ctx,frame,s);
     ctx.restore();
@@ -981,14 +988,16 @@ export function createAtlas(host, options = {}) {
       if(ax<=W/2 && ay<=H/2-ax*H/(2*W))return t.id;
     }return null;
   }
+  function overviewZoom(){return regionOverviewZoom(boxW,boxH,worldW,worldH,base);}
+  function clampZoom(target){return Math.max(Math.min(.75,overviewZoom()),Math.min(3,target));}
   function setZoom(target,x=boxW/2,y=boxH/2) {
-    const [wx,wy]=toWorld(x,y);zoom=Math.max(.75,Math.min(3,target));
+    const [wx,wy]=toWorld(x,y);zoom=clampZoom(target);
     cx=wx-(x-boxW/2)/(base*zoom);cy=wy-(y-boxH/2)/(base*zoom);
     bound();options.onZoom?.(Math.round(zoom*100));schedule();
   }
   function animateZoom(target,x,y) {
     cancelAnimationFrame(tween);
-    const from=zoom,to=Math.max(.75,Math.min(3,target)),start=performance.now();
+    const from=zoom,to=clampZoom(target),start=performance.now();
     if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){setZoom(to,x,y);return;}
     function tick(now){const f=Math.min(1,(now-start)/145);setZoom(from+(to-from)*(1-(1-f)**3),x,y);if(f<1)tween=requestAnimationFrame(tick);}
     tween=requestAnimationFrame(tick);
@@ -1088,8 +1097,9 @@ export function createAtlas(host, options = {}) {
       schedule();return api;
     },
     zoomBy(factor){if(Number.isFinite(factor)&&factor>0)animateZoom(zoom*factor,boxW/2,boxH/2);},
-    reset(){cancelAnimationFrame(tween);zoom=1;resetCenter();options.onZoom?.(100);schedule();},
+    reset(){cancelAnimationFrame(tween);zoom=overviewZoom();cx=worldW/2;cy=worldH/2;bound();options.onZoom?.(Math.round(zoom*100));schedule();},
     focus(id,opening=false){const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} [cx,cy]=pos(t.q,t.r);bound();schedule();}},
+    setGrid(show){grid=Boolean(show);schedule();},
     setLabels(show){labels=Boolean(show);schedule();},
     setTerritories(show){territories=Boolean(show);schedule();},
     destroy(){disposed=true;observer.disconnect();input.abort();cancelAnimationFrame(request);cancelAnimationFrame(tween);cancelAnimationFrame(resizeFrame);canvas.remove();background=null;}

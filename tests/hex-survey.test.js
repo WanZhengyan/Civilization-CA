@@ -51,3 +51,17 @@ test('grid pens keep the same visible width throughout camera zoom',()=>{
     assert.ok(Math.abs(widths[0]-1.45)<1e-9 && Math.abs(widths[1]-.8)<1e-9);
   }
 });
+
+test('fit region includes the whole campaign and a margin on phones and wide canvases',async()=>{
+  const {regionOverviewZoom}=await import('../docs/hex-survey.js');
+  for (const [width,height] of [[320,410],[390,340],[920,415],[1770,680]]) {
+    const base=Math.max(width/(1260+197),height/(760+175),Math.min(width/(72*15.65),height/(57*12.55)));
+    const zoom=regionOverviewZoom(width,height,1260,760,base);
+    assert.ok(base*zoom*1260<=width-28+1e-8);
+    assert.ok(base*zoom*760<=height-28+1e-8);
+  }
+  const {translate}=await import('../docs/i18n.js');
+  for (const label of ['Fit region','Hex grid','Territory border','Map edge','Map line key']) {
+    assert.notEqual(translate(label,'zh-CN'),label);
+  }
+});

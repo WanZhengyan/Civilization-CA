@@ -77,6 +77,11 @@ Drag to pan|拖动平移
 Inspect hexes without moving|只查看地块，不移动单位
 Inspect|查看
 Layers|图层
+Hex grid|六角格线
+Map edge|地图边界
+Territory border|领土边界
+Fit region|查看全图
+Map line key|地图线型图例
 Place names|地名
 Territories|领土
 Zoom out|缩小
