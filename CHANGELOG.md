@@ -1,5 +1,11 @@
 # Release notes
 
+## 3.9 · A map-first command screen
+
+The field inspector consumed map space while major research decisions and city queues were scattered. Technology and Civics now share the left edge of the map, with active choices, prerequisites and production timing. Field command measured 245 pixels wide on desktop. At a 390-pixel phone viewport both council targets measured 59 by 52 pixels.
+
+45 checks passed. 18 fixed campaigns replayed identically twice. Next test both councils, map switching, the guide and an online room with different language choices.
+
 ## 3.8 · Southern California and navigable crossings
 
 The first Bay Area playtest exposed a serious terrain problem: the Marin capital was on an island for land armies, making conquest impossible in a four-player game. Golden Gate, Bay and Coronado bridges now let land troops cross or contest the far end while ships can pass underneath. San Diego adds a sheltered inner bay and Mission Bay. Each region keeps its own solo save.
