@@ -68,7 +68,8 @@ Run `npm run playtest` to replay 18 campaigns twice across all three maps. See t
 
 | File | Purpose |
 | --- | --- |
-| `docs/index.html`, `docs/styles.css` | Game board, controls and layout |
+| `docs/index.html`, `docs/official.js`, `docs/official.css` | Bilingual official website and campaign entry links |
+| `docs/game.html`, `docs/styles.css` | Game board, controls and layout |
 | `docs/hud.js`, `docs/game.js` | Map interaction, solo sessions, room membership and synchronization |
 | `docs/atlas.js`, `docs/unit-art.js` | Regional map and unit rendering |
 | `docs/rules.js` | Rules shared by the browser and the authoritative room service |
@@ -79,7 +80,7 @@ Run `npm run playtest` to replay 18 campaigns twice across all three maps. See t
 
 This repository publishes the contents of `docs/` at the root of its `gh-pages` branch. For a fork, you can instead select **Deploy from a branch → main → /docs** in **Settings → Pages**. GitHub displays the published URL after deployment. Asset paths are relative, so the game works under the repository path selected by GitHub Pages. [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
-Solo play runs entirely in the browser. The `civitas-api-origin` meta tag in `docs/index.html` selects the room service for multiplayer. The maintained service allows the project's GitHub Pages origin, `https://wanzhengyan.github.io`. For a fork under a different account or a custom domain, configure the room service for that origin using the steps below.
+Solo play runs entirely in the browser. Set the `civitas-api-origin` meta tag in both `docs/game.html` and `docs/index.html` to connect the game rooms and website visitor counts to the same service. The maintained service allows the project's GitHub Pages origin, `https://wanzhengyan.github.io`. For a fork under a different account or a custom domain, configure the room service for that origin using the steps below.
 
 ## Deploy an independent room service
 
@@ -101,6 +102,6 @@ A Cloudflare Worker handles `/api/room` and `/api/visits`. D1 stores room member
    npx wrangler@4 deploy
    ```
 
-4. Set `civitas-api-origin` in `docs/index.html` to the deployed Worker's HTTPS origin and push your change. Use separate browser sessions to create and join a room, move a unit, and confirm the active turn is synchronized and each player sees their own explored area. [Cloudflare D1 migration documentation](https://developers.cloudflare.com/d1/reference/migrations/)
+4. Set `civitas-api-origin` in both HTML entry points to the deployed Worker's HTTPS origin and push your change. Use separate browser sessions to create and join a room, move a unit, and confirm the active turn is synchronized and each player sees their own explored area. [Cloudflare D1 migration documentation](https://developers.cloudflare.com/d1/reference/migrations/)
 
 The interface uses Lucide icons. [Third-party notices](./THIRD-PARTY-NOTICES.txt)
