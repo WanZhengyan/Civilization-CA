@@ -746,6 +746,17 @@ Build quarry|建造采石场
 Build to harvest|所需设施
 Supplying city|供应城市
 Work an owned site connected to a city within two land steps.|在与己方城市相连、两格以内的领土上施工。
+Barbarian camp|野蛮人营地
+Barbarian lookout|野蛮人哨探
+Neutral forces|中立部队
+Send a close-combat unit to clear the camp for 12 capital.|派近战单位清剿营地，可获得 12 资金。
+This lookout belongs to a nearby barbarian camp.|这名哨探来自附近的野蛮人营地。
+Clearing the camp adds 12 capital to your treasury.|清剿营地后，国库将增加 12 资金。
+Camp cleared. Your treasury gains 12 capital.|营地已清剿，国库增加 12 资金。
+A barbarian patrol was dispersed.|已击溃野蛮人巡逻队。
+Your unit engaged the barbarians.|你的部队与野蛮人交战。
+Clear a camp|清剿营地
+Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.|带红旗的帐篷是营地，遇到哨探意味着附近可能有营地。选中部队可预览攻击。远程单位可以削弱营地，幸存的近战单位可以清剿营地并获得 12 资金。
 `);
 
 section(`

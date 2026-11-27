@@ -777,6 +777,8 @@ function paintUnits(g,model,scale,now) {
   return motion.length>0;
 }
 
+import {drawBarbarians} from "./barbarian-art.js";
+
 function renderOverlay(g,tiles,model,scale,labels,territories) {
   const {board={},players=[],selectedId,hoverId}=model;
   const getFaction=owner=>players[owner]?.color||FACTION[owner%4]||FACTION[0];
@@ -805,6 +807,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     if(resource)drawResource(g,...pos(tile.q,tile.r),resource);
   }
   for(const c of model.cities||[])drawCity(g,c,model);
+  drawBarbarians(g,model,pos);
   tacticalLayer(g,model,scale);projectedRoute(g,model,scale);settlementMarkers(g,model,scale);
   const lookup=model.byId;
   for(const [id,hover] of [[model.targetId||hoverId,true],[selectedId,false]]){

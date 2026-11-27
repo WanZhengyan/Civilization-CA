@@ -11,6 +11,8 @@ export {TECHS, CIVICS, ERAS} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
 import {LOS_ANGELES, regionalMaps, validMapId} from './maps.js';
 export {CAMPAIGN_MAPS, validMapId} from './maps.js';
+import {seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
+
 export const MAX_ROUNDS = 30;
 export const TARGET_SCORE = 125;
 export const ACTIONS_PER_TURN = 2;
@@ -237,7 +239,7 @@ function establish(state,seat,tile,original = false) {
   state.board[tile] = {...state.board[tile],owner:seat,level:Math.max(1,state.board[tile].level)};
   if (!original || state.opening==='settlers') for (const next of adjacent[tile]) {
     const holding = state.board[next];
-    if (holding.owner === null && terrainCost[getMap(state).byId[next].terrain] && !state.units.some(u=>u.tile===next && u.seat!==seat)) {
+    if (!wildAt(state,next) && holding.owner === null && terrainCost[getMap(state).byId[next].terrain] && !state.units.some(u=>u.tile===next && u.seat!==seat)) {
       state.board[next] = {...holding,owner:seat};
     }
   }
@@ -299,6 +301,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
       bot:player?.bot===true,faction:allocation[seat],color:FACTIONS[allocation[seat]].color,capital:12,influence:6,score:0
     })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
   starts.forEach(([site],seat)=>spawn(next,seat,'settler',site));
+  seedCamps(next,getMap(next),neighbors,hexDistance);
   refreshScores(next);
   for (const player of next.players) player.surveyEnabled=false;
   populateDeposits(next,getMap(mapId),seed,neighbors);
@@ -395,7 +398,7 @@ function record(state,seat,type,text,tile,detail={}) {
   if (state.log.length>160) state.log.shift();
 }
 function territoryOrder(state,seat,tile) {
-  if (tile.terrain==='ocean') return null;
+  if (tile.terrain==='ocean' || wildAt(state,tile.id)) return null;
   const {owner,level}=state.board[tile.id];
   if (owner===seat) return level<3 ? {type:'develop',label:'Develop district',cost:{capital:5+level*3,influence:0}} : null;
   if (state.cities.some(c=>c.tile===tile.id) || state.units.some(u=>u.tile===tile.id && u.seat!==seat)) return null;
@@ -443,6 +446,7 @@ function findRoutes(state,unit) {
   const costs=new Map([[unit.tile,0]]),parents=new Map(),queue=[unit.tile];
   const blocked=new Set(state.units.filter(u=>u.id!==unit.id).map(u=>u.tile));
   for (const c of state.cities) if (c.seat!==unit.seat) blocked.add(c.tile);
+  for (const group of [state.barbarians?.camps,state.barbarians?.parties]) for (const p of group || []) blocked.add(p.tile);
   for (let i=0;i<queue.length;i++) {
     const here=queue[i];
     const bridges=UNIT_TYPES[unit.type].domain!=='sea' && getMap(state).bridgesByTile?.[here];
@@ -556,7 +560,8 @@ function attackTargets(state,unit) {
   const inRange=tile=>(!sight||sight.has(tile)) && (hexDistance(unit.tile,tile)<=range || (UNIT_TYPES[unit.type].captures && unit.moves>=2 && Boolean(bridgeTo(state,unit.tile,tile))));
   const occupied=state.units.filter(u=>u.seat!==unit.seat && inRange(u.tile)).map(u=>u.tile);
   const cities=state.cities.filter(c=>c.seat!==unit.seat && inRange(c.tile) && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
-  return unit.type==='scout' ? occupied : [...new Set([...occupied,...cities])];
+  const wilds=[...(state.barbarians?.camps||[]),...(state.barbarians?.parties||[])].filter(t=>inRange(t.tile) && (t.type!=="camp" || unit.type!=="scout" && (t.hp>1 || UNIT_TYPES[unit.type].captures)));
+  return [...new Set([...occupied,...(unit.type==='scout'?[]:cities),...wilds.map(p=>p.tile)])];
 }
 function fieldUpgrade(state, unit) {
   const source = UNIT_TYPES[unit.type];
@@ -660,7 +665,7 @@ function produceCityTurn(state,city) {
     const origin=vessel ? city.portTile : city.tile;
     if (!origin) return;
     const spawnTile=[origin,...adjacent[origin]].find(id=>(vessel ? getMap(state).byId[id].terrain==='ocean' : terrainCost[getMap(state).byId[id].terrain]) &&
-      !state.units.some(u=>u.tile===id) && !state.cities.some(c=>c.tile===id && c.seat!==city.seat) &&
+      !wildAt(state,id) && !state.units.some(u=>u.tile===id) && !state.cities.some(c=>c.tile===id && c.seat!==city.seat) &&
       (state.board[id].owner===null || state.board[id].owner===city.seat));
     if (!spawnTile) return;
     spawn(state,city.seat,queue.item,spawnTile).moves=0;
@@ -736,6 +741,9 @@ export function combatPreview(state, unitId, target) {
   const unit = unitOrNull(state, unitId);
   if (!active(state, unit) || !attackTargets(state, unit).includes(target)) return null;
 
+  const wild=wildAt(state,target);
+  if (wild) return wildForecast(unit,UNIT_TYPES[unit.type],wild);
+
   // A garrison absorbs the hit before the city can be damaged.
   const defender = state.units.find(other => other.tile === target && other.seat !== unit.seat);
   const town = state.cities.find(city => city.tile === target && city.seat !== unit.seat);
@@ -776,6 +784,7 @@ export function combatPreview(state, unitId, target) {
 function resolveAttack(state, unit, target) {
   const result = combatPreview(state, unit.id, target);
   if (!result) throw new Error('Choose an enemy unit or city within range.');
+  if (result.defenderType==="wild") return resolveWildAttack(state,unit,wildAt(state,target),result,record);
   const from = unit.tile;
   const isUnit = result.defenderType === 'unit';
   const defender = isUnit ? unitOrNull(state, result.defenderId) : cityOrNull(state, result.defenderId);

@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.5 · Discover barbarian outposts
+
+Exploration had no independent opponent outside the rival capitals. Reachable neutral camps and lookouts are generated outside the starting buffer. A military unit can clear a camp for a treasury reward.
+
+81 checks passed. 18 fixed campaigns replayed identically twice. Check that a sighting leaves time to intercept an approaching raid.
+
 ## 5.4 · Plan housing before growth stalls
 
 A stocked city could reach its capacity without explaining what would help it grow. City reports show housing, reserves and growth timing. Granaries and residential quarters expand capacity. Governors can respond to shortages and housing pressure.

@@ -2,6 +2,7 @@ import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
+import {wildAt,WILDS} from "./barbarians.js";
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -182,6 +183,8 @@ function updateHint(id){
   if(order==="inspect" && surveyUnitId)hint="Inspect mode · "+hint;
   if(tile && !visible.has(id))hint=tile.name+" · "+terrain[tile.terrain]+" · Outside current sight";
   if(tile && mapRegion.bridgesByTile?.[tile.id])hint+=" · "+mapRegion.bridgesByTile[tile.id].map(b=>b.name).join(", ");
+  const neutral=tile && wildAt(view.state,tile.id);
+  if (neutral) hint+=" · "+WILDS[neutral.type].name;
   text("map-hint",hint);
 }
 function flash(message){
@@ -307,6 +310,13 @@ function inspect(){
       explanation=territory.reason || state.actionsLeft+" district orders remain this turn.";
     }else explanation=tile.terrain==="ocean"?"Land units cannot cross open water.":"Select a unit to give orders or a city to set production.";
   }
+  const neutral=!activeUnit && !activeCity && wildAt(state,tile.id);
+  if(neutral){
+    text("entity-kind","Neutral forces");text("entity-name",WILDS[neutral.type].name);text("entity-location",tile.name);
+    info='<div class="entity-stats">'+stat("Health",neutral.hp,neutral.maxHp)+'</div>'+healthBar(neutral.hp,neutral.maxHp);
+    actions="";
+    explanation=neutral.type==="camp"?"Send a close-combat unit to clear the camp for 12 capital.":"This lookout belongs to a nearby barbarian camp.";
+  }
   const deposit=canSeeDeposits(state,view.seat) && RESOURCES[state.board[tile.id]?.resource];
   if(deposit)info+='<div class="deposit-strip"><i style="background:'+deposit.color+'"></i><small>Resource</small><strong>'+esc(deposit.name)+'</strong></div>';
   if(deposit){
@@ -431,13 +441,13 @@ function drawCombat(){
   if(!battle)return false;
   const u=view.state.units.find(u=>sameId(u.id,battle.unit)), forecast=u&&combatPreview(view.state,u.id,battle.tile);
   if(!mayOrder()||!forecast){closeCombat();return false}
-  const defender=forecast.defenderType==="city"?view.state.cities.find(c=>sameId(c.id,forecast.defenderId)):view.state.units.find(u=>sameId(u.id,forecast.defenderId));
+  const defender=forecast.defenderType==="wild"?wildAt(view.state,battle.tile):forecast.defenderType==="city"?view.state.cities.find(c=>sameId(c.id,forecast.defenderId)):view.state.units.find(u=>sameId(u.id,forecast.defenderId));
   if(!defender){closeCombat();return false}
   text("combat-where",mapRegion.byId[battle.tile].name);
-  const enemy=defender.type?items[defender.type]:defender.name;
+  const enemy=forecast.defenderType==="wild"?WILDS[defender.type].name:defender.type?items[defender.type]:defender.name;
   const attack=forecastRow("Attacker",items[u.type],forecast.attackerHpBefore,forecast.attackerHpAfter,u.maxHp,forecast.retaliation?forecast.retaliation+" retaliation damage":"No retaliation",faction(u.seat).color);
-  const defend=forecastRow("Defender",enemy,forecast.defenderHpBefore,forecast.defenderHpAfterHit??forecast.defenderHpAfter,defender.maxHp,forecast.damage+" incoming damage",faction(defender.seat).color);
-  const outcome=forecast.capture?"Your unit will capture this city.":forecast.attackerDefeated&&forecast.defeated?"Both units will fall.":forecast.attackerDefeated?"Your unit will fall in this attack.":forecast.defeated?"The defending unit will fall.":"Both sides will hold their positions.";
+  const defend=forecastRow("Defender",enemy,forecast.defenderHpBefore,forecast.defenderHpAfterHit??forecast.defenderHpAfter,defender.maxHp,forecast.damage+" incoming damage",forecast.defenderType==="wild"?"#c38566":faction(defender.seat).color);
+  const outcome=forecast.defenderType==="wild" && defender.type==="camp" && forecast.defeated?"Clearing the camp adds 12 capital to your treasury.":forecast.capture?"Your unit will capture this city.":forecast.attackerDefeated&&forecast.defeated?"Both units will fall.":forecast.attackerDefeated?"Your unit will fall in this attack.":forecast.defeated?"The defending unit will fall.":"Both sides will hold their positions.";
   el("combat-preview").innerHTML='<div class="forecast-grid">'+attack+defend+'</div><p class="forecast-outcome">'+esc(outcome)+'</p>';
   return true;
 }
