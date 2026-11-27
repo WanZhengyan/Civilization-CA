@@ -33,6 +33,8 @@ const phraseRules = [
   [/^(.+) (grew to|fell to) (\d+) residents\.$/,(city,verb,n)=>cityLabel(city)+(verb==='grew to'?'的人口增至':'的人口减至')+n+'。'],
   [/^Holding every original capital wins immediately\. Civic points are compared at the end of the round when a faction reaches (\d+), or after round (\d+)\.$/,(score,round)=>'占领所有初始首府即可立刻获胜。有阵营达到 '+score+' 分时，在本轮结束后比较积分；最迟于第 '+round+' 轮结算。'],
   [/^If a faction reaches (\d+) civic points, finish the current round and compare scores\. The same scoring applies after round (\d+)\. The highest score wins, and a tie shares victory\.$/,(score,round)=>'当任一阵营达到 '+score+' 分，在当前轮结束后比较积分。第 '+round+' 轮结束后也按此规则结算。最高分获胜，同分者共享胜利。'],
+  [/^Practice goal reached with (\d+) civic points\.$/,score=>'练习目标已达成，最终积分为 '+score+' 分。'],
+  [/^Practice complete with (\d+) civic points\.$/,score=>'练习结束，最终积分为 '+score+' 分。'],
   [/^(?:TURN|Turn) (\d+)$/i, n=>'第 '+n+' 回合'],
   [/^Round (\d+)$/i,n=>'第 '+n+' 轮'],
   [/^Up to (\d+) turns$/i,n=>'最多 '+n+' 回合'],

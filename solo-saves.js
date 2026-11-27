@@ -1,4 +1,4 @@
-import {createGame, migrateGame} from './rules.js';
+import {createGame, migrateGame, TARGET_SCORE} from './rules.js';
 
 export const SOLO_KEY = 'angel-basin.solo.v1';
 
@@ -8,12 +8,16 @@ export function soloSlotKey(region, size = 'standard') {
 }
 
 export function restoreSolo(state) {
-  if (!Array.isArray(state?.players) || state.players.length < 2 || state.players.length > 4 ||
-      !state.board || !Array.isArray(state.log) || !['finished','playing'].includes(state.phase)) return null;
+  if (!Array.isArray(state?.players) || !state.board || !Array.isArray(state.log) || !['finished','playing'].includes(state.phase)) return null;
+  const validRoster = state.practice === true
+    ? state.players.length === 1 && state.players[0] && !state.players[0].bot
+    : state.players.length >= 2 && state.players.length <= 4;
+  if (!validRoster) return null;
   try { return migrateGame(state); } catch { return null; }
 }
 
-export function newSolo(region, mapSize, rivals) {
+export function newSolo(region, mapSize, rivals = 3, scoreTarget = TARGET_SCORE) {
+  if (!Number.isInteger(rivals) || rivals < 0 || rivals > 3) throw new RangeError('Choose zero to three computer opponents.');
   const players = [{name:'You'}, ...Array.from({length:rivals}, ()=>({bot:true}))];
-  return createGame(players, region, {mapSize});
+  return createGame(players, region, {mapSize, scoreTarget, practice:rivals === 0});
 }

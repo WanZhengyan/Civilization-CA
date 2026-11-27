@@ -69,8 +69,37 @@ Standard|标准
 Large|大型
 playable hexes|块可玩地块
 Computer opponents|电脑对手
+0 rivals|0 名对手
+Solo practice|单人练习
+Solo game setup|单人游戏设置
+In practice, neutral camps remain on the map and you can still earn civic points.|练习中仍会出现中立营地，你也可以赚取市政积分。
+1 rival|1 名对手
+2 rivals|2 名对手
+3 rivals|3 名对手
+2 civilizations total|共 2 个文明
+3 civilizations total|共 3 个文明
+4 civilizations total|共 4 个文明
+Victory target|胜利分数
+Short|短局
+Long|长局
+100 civic points|100 市政积分
+125 civic points|125 市政积分
+150 civic points|150 市政积分
+Choose a valid civic victory target.|请选择有效的积分胜利目标。
+Practice needs one human player.|练习模式需要一名真人玩家。
+Practice complete|练习结束
+Practice goal reached|已达成练习目标
+Civic points|市政积分
+Reach the civic target to complete practice. At round 30, practice ends with your final score.|达到胜利分数即可完成练习。第 30 轮结束时，系统会结算你的最终积分。
+New campaign settings|新战役设置
+Saved campaign|已保存的战役
+Replace saved campaign?|替换已保存的战役？
+Replace and start|替换并开始
+Edit settings|返回设置
 Choose a valid map size.|请选择有效的地图尺寸。
 Choose a region and map size. Each combination has its own solo save. Choose one to three computer opponents for a new solo campaign. Online, the host sets the map for everyone.|选择地区和地图尺寸，每种组合都有独立的单人存档。开始新的单人战役时，可以选择一至三名电脑对手。联机地图由房主设定。
+Choose a region and map size. Each combination has its own solo save. Set the civic victory target and choose practice or up to three computer opponents. Online, the host sets the map for everyone.|选择地区和地图尺寸，每种组合都有独立的单人存档。设定胜利所需的市政积分，再选择单人练习或与最多三名电脑对手交战。联机地图由房主设定。
+In a campaign with rivals, control every participating civilization’s original capital to win immediately.|在有对手的战役中，占领所有参战文明的初始首府即可立即获胜。
 Starting over replaces the solo save for this region and size.|重新开始会覆盖该地区在所选尺寸下的单人存档。
 Official website|官方网站
 This room server created a Standard map. Large maps are available in solo play.|当前联机服务器创建了标准地图。你可以在单人模式中选择大型地图。
