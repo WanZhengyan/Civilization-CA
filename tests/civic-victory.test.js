@@ -1,9 +1,10 @@
+import {createClassicGame} from './classic-game.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {applyAction,createGame,getStats,getMap,TARGET_SCORE} from '../docs/rules.js';
+import {applyAction, getStats, getMap, TARGET_SCORE} from '../docs/rules.js';
 
 function boardWithScore(score) {
-  const state=createGame(['West','East']);
+  const state=createClassicGame(['West','East']);
   let remaining=score-getStats(state,0).score;
   for(const tile of getMap(state).tiles){
     if(remaining<2)break;

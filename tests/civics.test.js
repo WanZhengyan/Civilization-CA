@@ -1,7 +1,8 @@
+import {createClassicGame} from './classic-game.js';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {applyAction, createGame, getCityYield, getCivicOptions, getStats, migrateGame} from '../docs/rules.js';
-const fresh=()=>createGame(['West','East']);
+import {applyAction, getCityYield, getCivicOptions, getStats, migrateGame} from '../docs/rules.js';
+const fresh=()=>createClassicGame(['West','East']);
 const act=(s,type,item)=>applyAction(s,s.turn,{type,item});
 const round=s=>act(act(s,'end'),'end');
 

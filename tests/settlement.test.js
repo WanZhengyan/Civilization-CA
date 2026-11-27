@@ -1,9 +1,10 @@
+import {createClassicGame} from './classic-game.js';
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {applyAction, createGame, getSettlementAssessment, getUnitOptions} from "../docs/rules.js";
+import {applyAction, getSettlementAssessment, getUnitOptions} from "../docs/rules.js";
 
 function opening() {
-  const state = createGame();
+  const state = createClassicGame();
   const settler = state.units.find(unit => unit.seat === 0 && unit.type === "settler");
   return {state, settler};
 }

@@ -1,7 +1,8 @@
+import {createClassicGame} from './classic-game.js';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {applyAction, createGame, getCityYield, getEra, getResearchOptions, getStats} from '../docs/rules.js';
-const fresh = () => createGame(['West', 'East']);
+import {applyAction, getCityYield, getEra, getResearchOptions, getStats} from '../docs/rules.js';
+const fresh = () => createClassicGame(['West', 'East']);
 const learn = (s,item) => applyAction(s,0,{type:'research',item});
 
 test('science cannot skip either prerequisite and a technology advances the era only on completion', () => {
@@ -42,13 +43,13 @@ test('branch benefits match their required city and terrain', () => {
 
 test('navigation credits waterfront urban capitals and working ports in both city and treasury yields',()=>{
   for (const mapId of ['sf','sd']) {
-    const s=createGame(['West','East'],mapId), city=s.cities[0];
+    const s=createClassicGame(['West','East'],mapId), city=s.cities[0];
     const previous=getCityYield(s,city.id).capital, income=getStats(s,0).capitalIncome;
     s.players[0].technologies=['navigation'];
     assert.equal(getCityYield(s,city.id).capital,previous+2);
     assert.equal(getStats(s,0).capitalIncome,income+2);
   }
-  const bay=createGame(['West','East'],'sf'), oakland=bay.cities[1];
+  const bay=createClassicGame(['West','East'],'sf'), oakland=bay.cities[1];
   bay.players[1].technologies=['navigation'];
   const previous=getStats(bay,1).capitalIncome;
   const request=applyAction({...bay, turn:1},1,{type:'produce',city:oakland.id,item:'harbor'});

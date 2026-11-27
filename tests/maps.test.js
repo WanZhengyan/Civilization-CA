@@ -1,6 +1,7 @@
+import {createClassicGame} from './classic-game.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame, getMap, migrateGame, getUnitOptions, applyAction, neighbors, getPortSite, getRouteDetail, combatPreview} from '../docs/rules.js';
+import {getMap, migrateGame, getUnitOptions, applyAction, neighbors, getPortSite, getRouteDetail, combatPreview} from '../docs/rules.js';
 import {mapPicker} from '../docs/regions-ui.js';
 
 function connectedWater(map,start,end) {
@@ -15,18 +16,18 @@ function connectedWater(map,start,end) {
 }
 
 test('San Francisco Bay opens at four local cities with a navigable Golden Gate',()=>{
-  const bay=createGame(undefined,'sf'), map=getMap(bay);
+  const bay=createClassicGame(undefined,'sf'), map=getMap(bay);
   assert.equal(map.tiles.length,221);
   assert.deepEqual(bay.cities.map(c=>c.name),['San Francisco','Oakland','Richmond','San Rafael']);
   assert.ok(connectedWater(map,'0,3','10,5'));
   assert.ok(map.tiles.filter(t=>t.terrain==='ocean').length>60);
   assert.ok(mapPicker('sf').includes('value="sf" checked'));
-  assert.throws(()=>createGame(undefined,'unknown'));
+  assert.throws(()=>createClassicGame(undefined,'unknown'));
   for(const unit of bay.units)assert.ok(!['mountains','ocean'].includes(map.byId[unit.tile].terrain));
 });
 
 test('map terrain and event text are isolated across interleaved games and restored saves',()=>{
-  const bay=createGame(undefined,'sf'), la=createGame();
+  const bay=createClassicGame(undefined,'sf'), la=createClassicGame();
   const unit=bay.units.find(u=>u.type==='settler'&&u.seat===0);
   const moves=getUnitOptions(bay,unit.id).moves;
   assert.deepEqual(getMap(la).name,'The Los Angeles Basin');
@@ -42,10 +43,10 @@ test('map terrain and event text are isolated across interleaved games and resto
 });
 
 function checkRegionalFleet(mapId) {
-  let state=createGame([{name:'Port'},{name:'Rival'}], mapId);
+  let state=createClassicGame([{name:'Port'},{name:'Rival'}], mapId);
   const region=getMap(state),cityId=state.cities[0].id;
-  for(const city of createGame(undefined,mapId).cities){
-    const site=getPortSite(createGame(undefined,mapId),city.id);
+  for(const city of createClassicGame(undefined,mapId).cities){
+    const site=getPortSite(createClassicGame(undefined,mapId),city.id);
     assert.ok(site,city.name+' can reach a port with its opening districts');
     assert.equal(region.byId[site].terrain,'ocean');
   }
@@ -69,7 +70,7 @@ function checkRegionalFleet(mapId) {
 
 test('Bay Area harbors commission ships into the Bay Area water network',()=>checkRegionalFleet('sf'));
 test('San Diego Bay has its own capitals, harbor mouth and accessible coastal settlements',()=>{
-  const state=createGame(undefined,'sd'), map=getMap(state);
+  const state=createClassicGame(undefined,'sd'), map=getMap(state);
   assert.equal(map.tiles.length,221);
   assert.deepEqual(state.cities.map(c=>c.name),['Downtown San Diego','La Jolla','Coronado','Chula Vista']);
   assert.ok(connectedWater(map,'0,7','10,8'));
@@ -86,7 +87,7 @@ test('San Diego fleets stay in their own connected waterways',()=>checkRegionalF
 
 test('every campaign has a traversable land route between all participating capitals',()=>{
   for(const mapId of ['la','sf','sd']) for(const count of [2,3,4]){
-    const state=createGame(Array.from({length:count},(_,i)=>({name:'Seat '+i})),mapId);
+    const state=createClassicGame(Array.from({length:count},(_,i)=>({name:'Seat '+i})),mapId);
     const capitals=state.cities.map(c=>c.tile);
     const unit=state.units.find(u=>u.type==='melee');
     // Terrain reachability ignores temporary garrisons. Traverse the same moves offered by the game.
@@ -101,7 +102,7 @@ test('every campaign has a traversable land route between all participating capi
 });
 
 test('the Golden Gate carries land units and its shipping channel remains navigable',()=>{
-  let state=createGame([{name:'Host'},{name:'Guest'}],'sf');
+  let state=createClassicGame([{name:'Host'},{name:'Guest'}],'sf');
   const map=getMap(state), bridge=map.crossings[0], unit=state.units.find(u=>u.type==='melee'&&u.seat===0);
   unit.tile=bridge.a;
   const detail=getRouteDetail(state,unit.id,bridge.b);

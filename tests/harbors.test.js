@@ -1,6 +1,7 @@
+import {createClassicGame} from './classic-game.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {applyAction, createGame, getCityYield, getPortSite, getProductionOptions, getStats, TILE_BY_ID} from '../docs/rules.js';
+import {applyAction, getCityYield, getPortSite, getProductionOptions, getStats, TILE_BY_ID} from '../docs/rules.js';
 
 function turn(state, action) { return applyAction(state,state.turn,action); }
 function finishQueue(state, id) {
@@ -14,7 +15,7 @@ function nextSeat(state, seat) {
 }
 
 test('a coastal harbor reserves a water hex, adds tax income, and enables a production shipyard', () => {
-  let state = nextSeat(createGame(['Inland','Coast']),1);
+  let state = nextSeat(createClassicGame(['Inland','Coast']),1);
   const city=state.cities[1], port=getPortSite(state,city.id);
   assert.equal(TILE_BY_ID[port].terrain,'ocean');
   assert.equal(getPortSite(state,state.cities[0].id),null);
@@ -35,7 +36,7 @@ test('a coastal harbor reserves a water hex, adds tax income, and enables a prod
 });
 
 test('an inland city needs a connected chain of owned land to its shoreline', () => {
-  const state=createGame(['Inland','Coast']), city=state.cities[0];
+  const state=createClassicGame(['Inland','Coast']), city=state.cities[0];
   assert.match(getProductionOptions(state,city.id).find(o=>o.item==='harbor').reason,/shore/);
   city.tile='7,9';
   assert.equal(getPortSite(state,city.id),null);

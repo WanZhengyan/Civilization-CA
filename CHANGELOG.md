@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.2 · Seeded starts across California
+
+A familiar capital and the same adjacent districts gave away each opening. The host now draws a seed. Each map chooses connected, separated founding sites; 120 four-player setups had at least five hexes between opponents.
+
+55 checks passed. 18 fixed campaigns replayed identically twice. Next, separate starting region and player identity.
+
 ## 4.1 · Illustrated forces and a longer modern campaign
 
 Advanced troops shared silhouettes and the initial 100-point limit often ended a game before armor arrived. Seven military and maritime formations have their own map pieces, animations and painted portraits. Ports, shipyards and fisheries appear on their water hexes. Waterfront trade now reaches urban ports, and the 125-point target allowed armor to reach all six reference two- and four-player standard games, up from three.

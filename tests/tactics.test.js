@@ -1,8 +1,9 @@
+import {createClassicGame} from './classic-game.js';
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import * as rules from "../docs/rules.js";
 
-const game = () => rules.createGame([{name:"West"},{name:"East"}]);
+const game = () => createClassicGame([{name:"West"},{name:"East"}]);
 const order = (state, action) => rules.applyAction(state,state.turn,action);
 const unitBy = (state, type, seat=0) => state.units.find(u=>u.type===type && u.seat===seat);
 const findUnit = (state,id) => state.units.find(u=>u.id===id);
@@ -154,7 +155,7 @@ test("a ranged siege leaves city ownership intact and melee captures a weakened 
 });
 
 test("four AI seats complete a campaign through legal tactical orders", () => {
-  let state=rules.createGame(["A","B","C","D"].map(name=>({name,bot:true})));
+  let state=createClassicGame(["A","B","C","D"].map(name=>({name,bot:true})));
   const events=new Set(), limit=6000;
   let n=0;
   for(;n<limit && state.phase==="playing";++n) {

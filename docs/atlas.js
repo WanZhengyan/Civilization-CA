@@ -800,8 +800,9 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
       for(let k=0;k<6;k++){const xx=x+dX[k],yy=y+dY[k];ellipse(g,xx,yy,1.7,1.7,'#ffedb8');}
     }
   }
-  for(const t of tiles)if(t.capitalFor!=null&&board[t.id]?.owner!=null){
-    const [x,y]=pos(t.q,t.r);flag(g,x+22,y+8,getFaction(board[t.id].owner));
+  for(const city of model.cities || [])if(city.originalSeat!=null){
+    const t=lookup.get(city.tile);
+    const [x,y]=pos(t.q,t.r);flag(g,x+22,y+8,getFaction(city.seat));
   }
   if(!labels)return;
   // Wide ocean lettering uses two lines, like a small-scale nautical chart.

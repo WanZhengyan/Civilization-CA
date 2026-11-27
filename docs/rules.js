@@ -1,4 +1,5 @@
 // Shared rules for the browser and the authoritative room service.
+import {campaignSeed, selectStarts} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
 import {TECHS, CIVICS, ERA_UNITS, eraFor} from './progression.js';
 export {TECHS, CIVICS, ERAS} from './progression.js';
@@ -264,17 +265,25 @@ export function migrateGame(state) {
   else next.legacyFinalScores = state.players.map(p=>p.score);
   return addResearch(next);
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(f=>({name:f.name,bot:true}))], mapId = "la") {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(f=>({name:f.name,bot:true}))], mapId = "la", {seed: requestedSeed} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!Array.isArray(players) || players.length < 2 || players.length > 4) throw new Error("A campaign needs two to four factions.");
-  const next = {mapId,round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
-    board:Object.fromEntries(getMap(mapId).tiles.map(tile=>[tile.id,{owner:null,level:0}])),
+  const seed = campaignSeed(requestedSeed);
+  const starts = selectStarts(getMap(mapId), players.length, seed, neighbors, hexDistance);
+  const next = {seed, mapId, rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
+    board:Object.fromEntries(getMap(mapId).tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
     players:players.map((player,seat)=>({
       name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[seat].name,
       bot:player?.bot===true,faction:seat,color:FACTIONS[seat].color,capital:12,influence:6,score:0
     })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
-  next.players.forEach((p,seat)=>{for (const id of getMap(mapId).starts[seat]) next.board[id].owner = seat;});
-  return migrateGame(next);
+  starts.forEach(([home,settler,militia],seat)=>{
+    for (const id of [home,settler,militia]) next.board[id].owner = seat;
+    establish(next,seat,home,true);
+    spawn(next,seat,'settler',settler);
+    spawn(next,seat,'melee',militia);
+  });
+  refreshScores(next);
+  return addResearch(next);
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
 export function getPortSite(state, cityId) {
@@ -705,7 +714,7 @@ function resolveAttack(state, unit, target) {
   if (result.attackerDefeated || result.defeated) state.units = state.units.filter(other => other.hp > 0);
   const text = UNIT_TYPES[unit.type].name+(result.capture ? ' captured ' : ' attacked ')+name+' for '+result.damage+' damage.';
   record(state, unit.seat, 'attack', text, target, {unit: unit.id, from, ...result});
-  if (result.capture && state.players.every(p => state.cities.some(c => c.tile === getMap(state).starts[p.faction][0] && c.seat === unit.seat))) {
+  if (result.capture && state.players.every((p,seat) => state.cities.some(c => c.originalSeat === seat && c.seat === unit.seat))) {
     refreshScores(state);
     finish(state, [unit.seat], 'domination');
   }

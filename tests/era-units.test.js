@@ -1,7 +1,8 @@
+import {createClassicGame} from './classic-game.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {UNIT_TYPES,applyAction,combatPreview,createGame,getEra,getProductionOptions,getUnitOptions,hexDistance} from '../docs/rules.js';
-const fresh=()=>createGame(['West','East']);
+import {UNIT_TYPES, applyAction, combatPreview, getEra, getProductionOptions, getUnitOptions, hexDistance} from '../docs/rules.js';
+const fresh=()=>createClassicGame(['West','East']);
 const act=(s,a)=>applyAction(s,s.turn,a);
 const nextRound=s=>act(act(s,{type:'end'}),{type:'end'});
 const city=s=>s.cities.find(c=>c.seat===0);

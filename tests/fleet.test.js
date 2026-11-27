@@ -1,9 +1,10 @@
+import {createClassicGame} from './classic-game.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,applyAction,getProductionOptions,getUnitOptions,getMovePath,getPortSite,getCityYield,getStats,neighbors,TILE_BY_ID,UNIT_TYPES,combatPreview,chooseBotAction} from '../docs/rules.js';
+import {applyAction, getProductionOptions, getUnitOptions, getMovePath, getPortSite, getCityYield, getStats, neighbors, TILE_BY_ID, UNIT_TYPES, combatPreview, chooseBotAction} from '../docs/rules.js';
 const order=(s,a)=>applyAction(s,s.turn,a);
 function portGame() {
-  const s=createGame(['Interior','Coast']), c=s.cities[1];
+  const s=createClassicGame(['Interior','Coast']), c=s.cities[1];
   s.turn=1; c.portTile=getPortSite(s,c.id); c.buildings.push('harbor');
   return s;
 }
@@ -103,7 +104,7 @@ test('sea and shore combat honors hit forecasts, coastlines and the last city hi
 });
 
 test('in the fixed LA opening the AI builds an actual working fishing fleet',()=>{
-  let s=createGame([{name:'A',bot:true},{name:'B',bot:true}]);
+  let s=createClassicGame([{name:'A',bot:true},{name:'B',bot:true}]);
   const launched=new Set();
   let fisheries=0;
   while(s.phase==='playing') {

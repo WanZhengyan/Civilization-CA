@@ -1,8 +1,9 @@
+import {createClassicGame} from './classic-game.js';
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import * as rules from "../docs/rules.js";
 
-const fresh = () => rules.createGame([{name:"West"},{name:"East"}]);
+const fresh = () => createClassicGame([{name:"West"},{name:"East"}]);
 const order = (s,a) => rules.applyAction(s,s.turn,a);
 const learn = (s,tech) => order(s,{type:"research",item:tech});
 function fullRound(s) {

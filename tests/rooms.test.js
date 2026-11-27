@@ -213,6 +213,7 @@ test("a host chooses the region before inviting players and both seats recover t
   assert.equal(guest.room.mapId,"sf");
   const {room}=await fixture.call("POST",{op:"start",code,mapId:"la",revision:guest.room.revision},host.token);
   assert.equal(room.game.mapId,"sf");
-  assert.deepEqual(room.game.cities.map(city=>city.name),["San Francisco","Oakland"]);
+  assert.equal(room.game.cities.length,2);
+  assert.ok(room.game.cities.every(city=>rules.getMap("sf").byId[city.tile].name===city.name));
   assert.deepEqual((await fixture.call("GET",{code},guest.token)).room.game,room.game);
 });
