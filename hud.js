@@ -539,7 +539,8 @@ function paint(next){
   const previousKey=matchKey;view=next;const {state,seat,mode,room}=next;
   mapRegion=getMap(state);
   visible=new Set(state.intel?.visible??Object.keys(state.board));explored=new Set(state.intel?.explored??Object.keys(state.board));
-  const key=mapRegion.id+':'+mode+':'+(room?.code||next.session||'')+':'+seat;
+  const regionKey=state.mapSize==='large' ? mapRegion.id+'-large' : mapRegion.id;
+  const key=regionKey+':'+mode+':'+(room?.code||next.session||'')+':'+seat;
   const focusOpening=key!==matchKey||!selectedTile||(state.round===1&&!explored.has(selectedTile));
   if(focusOpening){matchKey=key;activeRoster="units";selectOpening()}
   if(kind==="unit"){

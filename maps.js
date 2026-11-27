@@ -42,10 +42,10 @@ const BAY_AREA = {
     [[12,4],[12,5],[13,6]]
   ],
   crossings: [
-    {name:'Golden Gate Bridge', a:'5,2', b:'5,4', color:'#be5c42'},
+    {name:'Golden Gate Bridge', a:'5,2', b:'5,4', largeLandings:['10,5','11,7'], color:'#be5c42'},
     {name:'Bay Bridge', a:'6,5', b:'12,4', color:'#73848a'}
   ],
-  regionalCrossings: [{name:'Angel Island ferry',kind:'ferry',a:'7,2',b:'8,3'}],
+  regionalCrossings: [{name:'Angel Island ferry',kind:'ferry',a:'7,2',b:'8,3',largeLandings:['15,4','16,5']}],
   oceanName(q,r) { return q < 4 ? 'Pacific Ocean' : r < 2 ? 'San Pablo Bay' : 'San Francisco Bay'; }
 };
 
@@ -117,3 +117,4 @@ function chart(config) {
 export const regionalMaps = {sf:chart(BAY_AREA),sd:chart(SAN_DIEGO)};
 export const CAMPAIGN_MAPS = [LOS_ANGELES, ...Object.values(regionalMaps)];
 export function validMapId(id) { return CAMPAIGN_MAPS.some(map=>map.id===id); }
+export function validMapSize(size) { return size==='standard' || size==='large'; }

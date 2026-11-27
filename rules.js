@@ -16,9 +16,9 @@ import {nextTechnology} from './applied-science.js';
 import {TECHS, CIVICS, ERAS, ERA_UNITS, eraFor} from './progression.js';
 export {TECHS, CIVICS, ERAS} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
-import {campaignChart, REGIONAL_SHAPE} from './region-shapes.js';
-import {LOS_ANGELES, regionalMaps, validMapId} from './maps.js';
-export {CAMPAIGN_MAPS, validMapId} from './maps.js';
+import {campaignChart, largeCampaignChart, neighborCoordinates, REGIONAL_SHAPE} from './region-shapes.js';
+import {LOS_ANGELES, regionalMaps, validMapId, validMapSize} from './maps.js';
+export {CAMPAIGN_MAPS, validMapId, validMapSize} from './maps.js';
 import {prepareBattle} from './battle-reports.js';
 import {barbarianRound,seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
 
@@ -170,21 +170,21 @@ for (let r = 0; r < ROWS; r++) {
   }
 }
 for (const {id, q, r} of TILES) {
-  const shift = r % 2;
-  adjacent[id] = [
-    [q - 1, r], [q + 1, r], [q - 1 + shift, r - 1], [q + shift, r - 1],
-    [q - 1 + shift, r + 1], [q + shift, r + 1]
-  ].map(([x, y]) => x + "," + y).filter(key => TILE_BY_ID[key]);
+  adjacent[id] = neighborCoordinates(q,r).map(([x,y])=>x+','+y).filter(key=>TILE_BY_ID[key]);
 }
 const losAngeles = {...LOS_ANGELES, tiles:TILES, byId:TILE_BY_ID, starts:STARTING_TERRITORY};
 const sources = [losAngeles,...Object.values(regionalMaps)];
 const classicCharts = Object.fromEntries(sources.map(map=>[map.id,campaignChart(map,adjacent,false)]));
 const regionalCharts = Object.fromEntries(sources.map(map=>[map.id,campaignChart(map,adjacent,true)]));
-export function getMap(stateOrId) {
+const largeCharts = new Map();
+export function getMap(stateOrId, mapSize='standard') {
   const isState = stateOrId && typeof stateOrId === 'object';
-  const charts = isState && stateOrId.mapShape !== REGIONAL_SHAPE ? classicCharts : regionalCharts;
   const id = isState ? stateOrId.mapId : stateOrId;
-  return Object.hasOwn(charts,id) ? charts[id] : charts.la;
+  const key = Object.hasOwn(regionalCharts,id) ? id : 'la';
+  if (isState && stateOrId.mapShape !== REGIONAL_SHAPE) return classicCharts[key];
+  if ((isState ? stateOrId.mapSize : mapSize) !== 'large') return regionalCharts[key];
+  if (!largeCharts.has(key)) largeCharts.set(key,largeCampaignChart(regionalCharts[key]));
+  return largeCharts.get(key);
 }
 export function neighbors(id,stateOrId) {
   return [...(stateOrId ? getMap(stateOrId).neighbors(id) : adjacent[id] || [])];
@@ -236,11 +236,16 @@ function hasPark(state, city) {
 }
 const PRODUCTS = {...UNIT_TYPES, ...BUILDINGS};
 const terrainCost = {coast:1, urban:1, plains:1, hills:2, forest:2};
+// Coordinates are shared geometry. Distance checks can be made before a
+// campaign starts, independent of the region, footprint or current view.
+const distanceGrid=Object.create(null);
+for(let r=0;r<ROWS*2;r++) for(let q=0;q<COLUMNS*2;q++) {
+  distanceGrid[q+','+r]={x:q-Math.floor(r/2),z:r};
+}
 export function hexDistance(a, b) {
-  const t = TILE_BY_ID[a], u = TILE_BY_ID[b];
+  const t = distanceGrid[a], u = distanceGrid[b];
   if (!t || !u) return Infinity;
-  const x = t.q - Math.floor(t.r / 2) - u.q + Math.floor(u.r / 2);
-  const z = t.r - u.r;
+  const x = t.x-u.x, z=t.z-u.z;
   return Math.max(Math.abs(x), Math.abs(z), Math.abs(x + z));
 }
 function mint(state, prefix) { return prefix + state.nextId++; }
@@ -308,14 +313,15 @@ function migrateCore(state) {
   else next.legacyFinalScores = state.players.map(p=>p.score);
   return addResearch(next);
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard'} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
+  if (!validMapSize(mapSize)) throw new Error("Choose a valid map size.");
   if (!Array.isArray(players) || players.length < 2 || players.length > 4) throw new Error("A campaign needs two to four factions.");
   const seed = campaignSeed(requestedSeed);
   const allocation = shuffled(FACTIONS.map((_,i)=>i), seededRandom(seed,'civilizations'));
-  const map = getMap(mapId);
+  const map = getMap(mapId,mapSize);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
+  const next = {seed, mapId, ...(mapSize==='large' ? {mapSize} : {}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
     players:players.map((player,seat)=>({
       name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[allocation[seat]].name,
