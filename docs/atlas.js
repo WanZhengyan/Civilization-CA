@@ -793,6 +793,15 @@ function paintHexFocus(g,model,scale) {
   }
 }
 
+// All rows contain these inner bounds, including the inset on alternating rows.
+// Keep the complete nameplate inside the campaign's stepped cutline.
+export function fitAtlasCaption(x,y,halfWidth,halfHeight) {
+  const horizontal = W/2 + halfWidth + 3;
+  const vertical = H/4 + halfHeight + 4;
+  return [Math.max(horizontal,Math.min(worldW-horizontal,x)),
+    Math.max(vertical,Math.min(worldH-vertical,y))];
+}
+
 function renderOverlay(g,tiles,model,scale,labels,territories) {
   const {board={},players=[]}=model;
   const getFaction=owner=>players[owner]?.color||FACTION[owner%4]||FACTION[0];
@@ -865,8 +874,9 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     const half=(g.measureText(name).width+(city?30:16))*labelScale/2,height=9.5*labelScale;g.restore();
     let best,minimum=Infinity;
     for(const [dx,dy] of [[0,0],[12,-7],[-12,-7],[23,-4],[-23,-4],[9,11],[-9,11],[25,8],[-25,8],[0,-11]]){
-      const xx=x+dx,yy=y+dy,rect=[xx-half,yy-height,xx+half,yy+height];
-      let score=Math.abs(dx)*.7+Math.abs(dy);
+      const [xx,yy]=fitAtlasCaption(x+dx,y+dy,half,height);
+      const rect=[xx-half,yy-height,xx+half,yy+height];
+      let score=Math.abs(xx-x)*.7+Math.abs(yy-y);
       for(const box of labelObstacles.concat(labelBounds)){
         score+=Math.max(0,Math.min(rect[2],box[2])-Math.max(rect[0],box[0]))*
                Math.max(0,Math.min(rect[3],box[3])-Math.max(rect[1],box[1]))*2.4;

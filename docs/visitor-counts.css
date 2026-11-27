@@ -1,5 +1,11 @@
 #visitor-counts {
-  position: relative;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 0 4px 0 0;
+  background: #11191de8;
   width: fit-content;
   max-width: 100%;
   padding: 4px max(12px, env(safe-area-inset-left)) max(5px, env(safe-area-inset-bottom));
@@ -35,11 +41,5 @@
   color: #e0e5e2;
   font-size: .75rem;
 }
-body.on-title #visitor-counts {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  z-index: 3;
-  border-radius: 0 4px 0 0;
-  background: #11191de8;
-}
+#visitor-counts :is(summary, p) { pointer-events: auto; }
+body:not(.on-title) .app > footer { padding-bottom: max(30px, calc(17px + env(safe-area-inset-bottom))); }

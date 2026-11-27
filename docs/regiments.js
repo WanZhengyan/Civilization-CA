@@ -2,12 +2,12 @@
 // authoritative order use the same modifiers so the two views stay in sync.
 export const REGIMENTS = {
   ironclad: {
-    name:'Harbor Ironclad', role:'Coastal siege unit', domain:'sea', era:'industrial', tech:'steam',
+    name:'Harbor Ironclad', role:'Coastal siege unit', domain:'sea', era:'industrial', tech:'metallurgy',
     shipyard:true, moves:2, range:2, maxHp:125, strength:40, required:19, captures:false,
     description:'A slow armored ship that deals 14 extra damage to cities and their garrisons. Requires a shipyard.'
   },
   destroyer: {
-    name:'Escort Destroyer', role:'Fleet escort unit', domain:'sea', era:'modern', tech:'motorization',
+    name:'Escort Destroyer', role:'Fleet escort unit', domain:'sea', era:'modern', tech:'radar',
     shipyard:true, moves:4, range:2, maxHp:90, strength:39, required:19, captures:false,
     description:'A fast escort with four movement points. It deals 18 extra damage to armed ships. Requires a shipyard.'
   },
@@ -27,7 +27,7 @@ export const REGIMENTS = {
     description:'Light ranged infantry. Woodland and foothills cost only one movement point.'
   },
   pikes: {
-    name:'Pike Guard', role:'Defensive infantry unit', era:'frontier', civic:'charter',
+    name:'Pike Guard', role:'Defensive infantry unit', era:'frontier', civic:'mutualAid',
     moves:2, range:1, maxHp:95, strength:34, required:12, captures:true,
     description:'Guards gain 14 attack damage against mounted scouts and cut their incoming charge damage by 14.'
   }

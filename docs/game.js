@@ -1,4 +1,5 @@
 import {invitationCode, launchDestination} from './launch.js';
+import {armyHandbook} from './army-handbook.js';
 import {ledgerBody} from './resource-ledger.js';
 import {getResourceLedger} from './rules.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
@@ -571,6 +572,7 @@ const guideSections = {
     ['Choose a building', 'A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.'],
     ['Make room for recruits', 'Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.']
   ]},
+  formations: {label:'Unit handbook'},
   battle: {label:'Field tactics', entries:[
     ['Train a scout', 'A Scout is available as soon as you found a city. It has three movement points to a Militia unit’s two. Forests and hills still cost two points to enter.'],
     ['Choose a frontier formation', 'Trail skirmishers cross woods and hills for one movement point. Pike Guards make poor targets for cavalry and gain a bonus when attacking mounted scouts.'],
@@ -615,7 +617,7 @@ function content() {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
     return {kicker:'Field guide', title:'How to play', body:tabs +
-      list(guideSections[guideTab].entries.map(([title, text]) => row(title, text))) + actions(button('back', 'Return to map', 'primary'))};
+      (guideTab === 'formations' ? armyHandbook(escapeHTML) : list(guideSections[guideTab].entries.map(([title, text]) => row(title, text)))) + actions(button('back', 'Return to map', 'primary'))};
   }
   if (modal === 'log') return {
     kicker: 'Campaign records', title: 'Event log',

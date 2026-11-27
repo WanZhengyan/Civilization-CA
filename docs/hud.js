@@ -458,7 +458,7 @@ function paintResearch(){
         if (id==='research') {
           const links=researchLinks(o.item,c.options,UNIT_TYPES);
           for (const [label,items] of [['Trains',links.formations],['Leads to',links.discoveries]]) {
-            if (items.length) researchNotes+='<span class="research-links"><span>'+esc(label)+'</span> · <span>'+esc(items.join(', '))+'</span></span>';
+            if (items.length) researchNotes+='<span class="research-links"><span>'+esc(label)+'</span> · <span>'+items.map(name=>'<span>'+esc(name)+'</span>').join(', ')+'</span></span>';
           }
         }
         return '<button class="project-option" data-project="'+esc(o.item)+'" data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+prereq+researchNotes+'<span class="project-meta"><span>'+esc(o.cost+" "+c.resource)+'</span><b>'+esc(label)+'</b></span></button>';

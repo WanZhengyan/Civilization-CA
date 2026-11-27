@@ -2,11 +2,21 @@
 
 A bilingual, turn-based strategy game for one to four players. Each California campaign begins with a single settler, an independently drawn civilization and a new starting location. Choose Los Angeles, San Francisco Bay or San Diego. Single-player games can be saved separately for each region.
 
-[Play Civilization CA](https://wanzhengyan.github.io/Civilization-CA/) · [Hosted game](https://angel-basin-civilization.gifteddream3.chatgpt.site/) · [Version history](./CHANGELOG.md)
+[Play Civilization CA](https://wanzhengyan.github.io/Civilization-CA/) · [Hosted game](https://angel-basin-civilization.gifteddream3.chatgpt.site/) · [Campaign updates](./CHANGELOG.md)
 
-![Civilization CA campaign board](./media/board-preview.webp)
+![The Civilization CA title screen](./media/campaign-home.webp)
+
+[English campaign board](./media/board-preview.webp)
 
 [中文实机画面](./media/board-zh.webp)
+
+## Enter a campaign
+
+Choose **Play solo** on the title screen to select a region and start or resume its local save. **Create room** opens the host setup. **Join room** accepts a room code or an invitation link. The same menu can reconnect a saved seat. Switch between English and 简体中文 on the title screen or during play.
+
+On the board, use **Fit region** to see the playable perimeter. The double line marks the last playable hex and hatching marks the area outside. The **Layers** menu controls the hex grid. Each side of a contested border carries its civilization’s color.
+
+The visitor footer counts anonymous browser profiles on each site from the day the counter launched. Refreshing or opening a second tab on the same site does not add another visitor. The public totals are shared between the two hosts. Day and month follow Los Angeles time.
 
 ## Your first expedition
 
@@ -26,11 +36,11 @@ A bilingual, turn-based strategy game for one to four players. Each California c
 
 A favored site adds one unit of the university’s specialty yield. Existing improvements and resource deposits are protected from campus construction.
 
-Open **Change map** to choose a different region. For 2–4 people, choose **Multiplayer**, select the map and share the invitation. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
+Open **Change map** to choose a different region. For 2–4 people, choose **Create room**, select the map and share the invitation. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
 
 ## 中文快速开始
 
-开局只有一名开拓者。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
+首页可以开始或继续单人战役、创建房间，也可以用房间码或邀请链接加入多人游戏。地图上的双线为可玩边缘，界外有斜纹，地块格线可以在图层中单独开关。开局只有一名开拓者。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
 
 ## Run locally
 
@@ -65,7 +75,7 @@ Solo play runs entirely in the browser. The `civitas-api-origin` meta tag in `do
 
 ## Deploy an independent room service
 
-A Cloudflare Worker handles `/api/room`, and D1 stores room membership, turns and game state.
+A Cloudflare Worker handles `/api/room` and `/api/visits`. D1 stores room membership, turns, game state and the anonymous visit counters.
 
 1. Sign in with Wrangler, create the D1 database and copy the example configuration.
 

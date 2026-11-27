@@ -65,3 +65,19 @@ test('fit region includes the whole campaign and a margin on phones and wide can
     assert.notEqual(translate(label,'zh-CN'),label);
   }
 });
+
+test('both localized city nameplates fit inside the staggered easternmost row',async()=>{
+  const {fitAtlasCaption}=await import('../docs/atlas.js');
+  const {tiles}=getMap('la');
+  const interior=(x,y)=>tiles.some(tile=>{
+    const [tx,ty]=pos(tile.q,tile.r),dx=Math.abs(tx-x),dy=Math.abs(ty-y);
+    return dx<=36 && dy<=38-dx*76/144;
+  });
+  for (const id of ['16,3','16,12','0,0','0,11']) {
+    const [q,r]=id.split(',').map(Number),[x,y]=pos(q,r);
+    for (const half of [49,72]) {
+      const [cx,cy]=fitAtlasCaption(x,y+26,half,12);
+      for(const side of [-1,1]) for(const end of [-1,1]) assert.ok(interior(cx+side*half,cy+end*12));
+    }
+  }
+});

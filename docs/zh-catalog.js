@@ -969,4 +969,19 @@ Support an assault|支援进攻
 Siege Engineers can capture a walled city after its garrison falls. Keep a Signal Corps one hex from a friendly attacker to add 8 damage against rival civilizations. Check the forecast to see the active bonuses.|击败驻军后，攻城工兵可以夺取有城墙的城市。让通信队站在友军旁边一格，友军攻击其他文明时可多造成 8 点伤害。战斗预估会列出当前加成。
 Choose a warship|选择作战舰船
 An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.|港防铁甲舰速度较慢，耐久性高，擅长近岸攻城。护航驱逐舰可移动四格，攻击武装舰船时有额外伤害。两种船都需要船厂。
+Unit handbook|兵种手册
+Compare base movement, sight, attack range and production cost. Select a formation to see its role and requirements.|比较各兵种的基础移动力、视野、射程和生产成本。点开兵种可查看用途和训练条件。
+Formation|兵种
+Base unit statistics|兵种基础数值
+Move|移动
+Sight|视野
+Range|射程
+Cost|成本
+Train with|训练条件
+Upgrades to|可升级为
+City center|城市中心
+Founds a city on a legal settlement site.|在符合条件的地块建立城市。
+Spends charges to improve land connected to a friendly city.|消耗建造次数，改良与己方城市相连的土地。
+Captures a weakened city through an adjacent attack.|可从相邻地块进攻并占领被削弱的城市。
+Can attack from two hexes away.|可以从两格外发动攻击。
 `);
