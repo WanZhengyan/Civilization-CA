@@ -950,3 +950,23 @@ Supports adjacent friendly formations. They deal 8 more damage against rival civ
 Siege engineers at the walls · +18 damage|工兵攻城 · 伤害 +18
 Adjacent signal corps · +8 damage|邻近通信队 · 伤害 +8
 `);
+
+section(`
+Harbor Ironclad|港防铁甲舰
+Escort Destroyer|护航驱逐舰
+Coastal siege unit|近岸攻城舰
+Fleet escort unit|舰队护航单位
+A slow armored ship that deals 14 extra damage to cities and their garrisons. Requires a shipyard.|低速装甲舰，对城市和城内驻军额外造成 14 点伤害。需要船厂。
+A fast escort with four movement points. It deals 18 extra damage to armed ships. Requires a shipyard.|高速护航舰，拥有四点移动力，对武装舰船额外造成 18 点伤害。需要船厂。
+Coastal bombardment · +14 damage|近岸炮击 · 伤害 +14
+Escort against a warship · +18 damage|护航舰对敌舰 · 伤害 +18
+`);
+
+section(`
+Choose a frontier formation|挑选边疆兵种
+Trail skirmishers cross woods and hills for one movement point. Pike Guards make poor targets for cavalry and gain a bonus when attacking mounted scouts.|山径散兵穿过林地和丘陵只需一点移动力。长枪卫队能抵御骑兵冲锋，攻击骑马侦察兵时也有加成。
+Support an assault|支援进攻
+Siege Engineers can capture a walled city after its garrison falls. Keep a Signal Corps one hex from a friendly attacker to add 8 damage against rival civilizations. Check the forecast to see the active bonuses.|击败驻军后，攻城工兵可以夺取有城墙的城市。让通信队站在友军旁边一格，友军攻击其他文明时可多造成 8 点伤害。战斗预估会列出当前加成。
+Choose a warship|选择作战舰船
+An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.|港防铁甲舰速度较慢，耐久性高，擅长近岸攻城。护航驱逐舰可移动四格，攻击武装舰船时有额外伤害。两种船都需要船厂。
+`);

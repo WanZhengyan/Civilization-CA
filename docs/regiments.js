@@ -1,6 +1,16 @@
 // Definitions and combat roles for specialized formations. The forecast and
 // authoritative order use the same modifiers so the two views stay in sync.
 export const REGIMENTS = {
+  ironclad: {
+    name:'Harbor Ironclad', role:'Coastal siege unit', domain:'sea', era:'industrial', tech:'steam',
+    shipyard:true, moves:2, range:2, maxHp:125, strength:40, required:19, captures:false,
+    description:'A slow armored ship that deals 14 extra damage to cities and their garrisons. Requires a shipyard.'
+  },
+  destroyer: {
+    name:'Escort Destroyer', role:'Fleet escort unit', domain:'sea', era:'modern', tech:'motorization',
+    shipyard:true, moves:4, range:2, maxHp:90, strength:39, required:19, captures:false,
+    description:'A fast escort with four movement points. It deals 18 extra damage to armed ships. Requires a shipyard.'
+  },
   sappers: {
     name:'Siege Engineers', role:'Siege infantry unit', era:'industrial', tech:'steam',
     moves:2, range:1, maxHp:90, strength:40, required:16, captures:true,
@@ -23,7 +33,7 @@ export const REGIMENTS = {
   }
 };
 
-export function matchup(unit, defender, town, state, distance) {
+export function matchup(unit, defender, town, state, distance, definitions) {
   const notes=[];
   let damage=0;
   if (unit.type==='pikes' && defender?.type==='cavalry') {
@@ -37,6 +47,14 @@ export function matchup(unit, defender, town, state, distance) {
   if (unit.type==='sappers' && town?.buildings.includes('walls') && !defender) {
     damage+=18;
     notes.push('Siege engineers at the walls · +18 damage');
+  }
+  if (unit.type==='ironclad' && town) {
+    damage+=14;
+    notes.push('Coastal bombardment · +14 damage');
+  }
+  if (unit.type==='destroyer' && defender && definitions[defender.type].domain==='sea' && definitions[defender.type].strength>0) {
+    damage+=18;
+    notes.push('Escort against a warship · +18 damage');
   }
   const hasSignal=state.units.some(other=>other.seat===unit.seat && other.type==='signals'
     && distance(other.tile,unit.tile)===1);

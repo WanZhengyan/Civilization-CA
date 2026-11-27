@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createClassicGame} from './classic-game.js';
-import {applyAction,combatPreview,getMap,getProductionOptions,getRouteDetail,neighbors,UNIT_TYPES} from '../docs/rules.js';
+import {applyAction,combatPreview,getMap,getProductionOptions,getRouteDetail,neighbors,UNIT_TYPES,CIVICS,TECHS} from '../docs/rules.js';
 
 const game=()=>createClassicGame(['Coast','Valley']);
 function piece(id,type,seat,tile) {
@@ -26,7 +26,7 @@ test('woodland and foothill routes have a lower cost for light infantry',()=>{
 test('pike and cavalry forecasts show their asymmetric modifiers and match the actual battle',()=>{
   const s=game();
   assert.equal(canTrain(s,'pikes'),false);
-  s.players[0].civics=['charter'];
+  s.players[0].civics=Object.keys(CIVICS);
   assert.ok(canTrain(s,'pikes'));
   for (const [attacker,defender,adjust] of [['pikes','cavalry',14],['cavalry','pikes',-14]]) {
     s.units=[piece('a',attacker,0,'10,7'),piece('b',defender,1,'11,8')];
@@ -55,4 +55,31 @@ test('engineers exploit walls after the garrison falls and friendly signal cover
   assert.equal(garrison.damage,40-7+8);
   const next=applyAction(s,0,{type:'attack',unit:'a',tile:town.tile});
   assert.equal(next.units.find(u=>u.id==='g').hp,garrison.defenderHpAfter);
+});
+
+test('specialist shipyards, coastal bombardment and fleet damage use the same rules in orders and forecasts',()=>{
+  const s=game();
+  s.players[0].technologies=Object.keys(TECHS);
+  s.cities[0].buildings=['harbor'];
+  for (const type of ['ironclad','destroyer']) assert.ok(!canTrain(s,type));
+  s.cities[0].buildings.push('shipyard');
+  for (const type of ['ironclad','destroyer']) assert.ok(canTrain(s,type));
+  // Isolate the unit matchup from the flat bonuses offered by researched combat doctrines.
+  s.players[0].technologies=[];
+  const town=s.cities[1];
+  town.tile='4,7';
+  s.units=[piece('a','ironclad',0,'3,7')];
+  const siege=combatPreview(s,'a',town.tile);
+  assert.equal(siege.damage,54);
+  assert.equal(siege.roleNotes.length,1);
+  town.hp=12;
+  assert.equal(combatPreview(s,'a',town.tile).defenderHpAfter,1);
+  s.units=[piece('a','destroyer',0,'3,7'),piece('b','frigate',1,'3,8')];
+  const escort=combatPreview(s,'a','3,8');
+  assert.equal(escort.damage,57);
+  assert.equal(escort.roleNotes.length,1);
+  const next=applyAction(s,0,{type:'attack',unit:'a',tile:'3,8'});
+  assert.equal(next.units.find(u=>u.id==='b').hp,escort.defenderHpAfter);
+  s.units[1]=piece('b','workboat',1,'3,8');
+  assert.equal(combatPreview(s,'a','3,8').damage,39);
 });

@@ -653,7 +653,7 @@ export function getProductionOptions(state,cityId) {
     else if (def.civic && !adopted(state,city.seat,def.civic)) reason='Requires '+CIVICS[def.civic].name+'.';
     else if (item==='harbor' && !getPortSite(state,city.id)) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
     else if ((item==='shipyard' || def.domain==='sea') && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
-    else if (item==='frigate' && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
+    else if ((item==='frigate' || def.shipyard) && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
     else if (def.tech && !knows(state,city.seat,def.tech)) reason='Requires '+TECHS[def.tech].name+'.';
     else if (WONDERS[item] && state.players[city.seat].capital<def.grant) reason='You need '+def.grant+' capital.';
     else if (WONDERS[item] && !getWonderSites(state,city.id,item).length) reason='Claim an empty land tile within two hexes of the city.';
@@ -844,7 +844,7 @@ export function combatPreview(state, unitId, target) {
   const strength = Math.round(UNIT_TYPES[unit.type].strength * (0.75 + 0.25 * unit.hp / unit.maxHp));
   const attackBonus = (knows(state, unit.seat, 'tactics') ? 7 : 0)
     + (UNIT_TYPES[unit.type].range > 1 && knows(state, unit.seat, 'ballistics') ? 5 : 0);
-  const role=matchup(unit,defender,town,state,hexDistance);
+  const role=matchup(unit,defender,town,state,hexDistance,UNIT_TYPES);
   let damage = Math.min(opponent.hp, Math.max(1, strength + role.damage + attackBonus - terrainDefense - (walls ? 7 : 0)));
   let retaliation = 0;
   if (melee) {
@@ -1051,7 +1051,11 @@ function botProject(state,city) {
     const worked=Object.values(state.board).filter(tile=>tile.portCity===city.id).length;
     if (worked<2 && count('workboat')===0) choices.push('workboat');
     if (count('cutter')===0) choices.push('cutter');
-    if (city.buildings.includes('shipyard') && knows(state,city.seat,'steam') && count('frigate')===0) choices.push('frigate');
+    if (city.buildings.includes('shipyard')) {
+      if (!count('destroyer') && (state.round>=14 || state.units.some(u=>u.seat!==city.seat && UNIT_TYPES[u.type].domain==='sea'))) choices.push('destroyer');
+      if (!count('ironclad') && state.cities.some(c=>c.seat!==city.seat)) choices.push('ironclad');
+      if (!count('frigate')) choices.push('frigate');
+    } else if (knows(state,city.seat,'steam')) choices.push('shipyard');
   }
   if (count('builder')===0) choices.push('builder');
   const nearby=neighbors(city.tile).filter(id=>state.board[id]).map(id=>getMap(state).byId[id].terrain);

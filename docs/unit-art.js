@@ -1,4 +1,4 @@
-import {drawRegiment} from './regiment-art.js';
+import {drawRegiment, drawFleetSpecialist} from './regiment-art.js';
 // Hand-drawn map-scale miniatures. Each pose uses feet-level local coordinates.
 const EDGE = '#28262c';
 const BOOT = '#554437';
@@ -461,7 +461,7 @@ function vessel(g,b,type,color,phase,strike) {
 }
 
 const KINDS = new Map([
-  ['sappers','sappers'],['signals','signals'],['pikes','pikes'],['skirmisher','skirmisher'],['settler','settler'],['scout','scout'],['builder','builder'],
+  ['ironclad','ironclad'],['destroyer','destroyer'],['sappers','sappers'],['signals','signals'],['pikes','pikes'],['skirmisher','skirmisher'],['settler','settler'],['scout','scout'],['builder','builder'],
   ['warrior','guard'],['guard','guard'],['melee','guard'],
   ['archer','archer'],['ranger','archer'],['ranged','archer'],
   ['cavalry','cavalry'],['horseman','cavalry'],['riflemen','riflemen'],['artillery','artillery'],
@@ -479,7 +479,8 @@ export function drawUnitArt(g,kind,x,y,options={}) {
   g.scale((options.facing<0?-1:1)*scale,scale);
   g.lineCap='round';g.lineJoin='round';
   const b=brush(g);
-  if(['pikes','skirmisher','sappers','signals'].includes(type)) drawRegiment(g,b,type,pigment(color),phase,strike);
+  if(type==='ironclad'||type==='destroyer') drawFleetSpecialist(g,b,type,pigment(color),phase,strike);
+  else if(['pikes','skirmisher','sappers','signals'].includes(type)) drawRegiment(g,b,type,pigment(color),phase,strike);
   else if(type==='cavalry') horseAndRider(g,b,color,phase,strike);
   else if(type==='riflemen') rifleCompany(g,b,color,phase,strike);
   else if(type==='artillery') fieldArtillery(g,b,color,phase,strike);

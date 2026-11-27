@@ -1,7 +1,7 @@
 // All regions use the same odd-row, point-up hex grid. Cached footprints contain
 // only public geometry; never cache occupancy, observations, or player data here.
 const sight = {
-  sappers:2, signals:3, skirmisher:3, pikes:2, settler:1, builder:1, scout:3, melee:2, ranged:2, cavalry:3, riflemen:2,
+  ironclad:2, destroyer:3, sappers:2, signals:3, skirmisher:3, pikes:2, settler:1, builder:1, scout:3, melee:2, ranged:2, cavalry:3, riflemen:2,
   artillery:2, armor:2, workboat:2, cutter:3, frigate:3, city:2
 };
 const footprints = new Map();

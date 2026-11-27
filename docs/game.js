@@ -573,6 +573,8 @@ const guideSections = {
   ]},
   battle: {label:'Field tactics', entries:[
     ['Train a scout', 'A Scout is available as soon as you found a city. It has three movement points to a Militia unit’s two. Forests and hills still cost two points to enter.'],
+    ['Choose a frontier formation', 'Trail skirmishers cross woods and hills for one movement point. Pike Guards make poor targets for cavalry and gain a bonus when attacking mounted scouts.'],
+    ['Support an assault', 'Siege Engineers can capture a walled city after its garrison falls. Keep a Signal Corps one hex from a friendly attacker to add 8 damage against rival civilizations. Check the forecast to see the active bonuses.'],
     ['Read the terrain', 'Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.'],
     ['Preview an attack', 'Select a military unit and click a highlighted enemy. The combat forecast shows the damage and possible losses. Choose Confirm attack to commit, or return to the map to reconsider. An attack spends the unit’s remaining movement.'],
     ['Take a city', 'Melee units strike adjacent targets and can take counterdamage. Rangers can strike from two hexes away without a counterattack. Defeat the garrison first. A ranged attack can reduce a city to one health point. A surviving melee attacker can capture it.'],
@@ -590,6 +592,7 @@ const guideSections = {
   coast: {label:'At sea', entries:[
     ['Choose a harbor site', 'Found on the shore or connect a city to your own coast within two hexes. Choose Harbor in city production. The harbor reserves an adjacent water hex and earns capital.'],
     ['Put a crew to work', 'Train a Fishing crew at a harbor. Sail to open water within two water hexes of a friendly harbor and build a Fishery. Each crew has two charges.'],
+    ['Choose a warship', 'An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.'],
     ['Launch a fleet', 'A harbor trains Revenue cutters. Add a Shipyard and research Steam Power to build Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.']
   ]},
   research: {label:'Research & victory', entries:[

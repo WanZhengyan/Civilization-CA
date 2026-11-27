@@ -60,3 +60,5 @@
 #production-options [data-produce="pikes"] { --plate: url("./art/pikes.webp"); }
 #production-options [data-produce="sappers"] { --plate: url("./art/sappers.webp"); }
 #production-options [data-produce="signals"] { --plate: url("./art/signals.webp"); }
+#production-options [data-produce="ironclad"] { --plate: url("./art/ironclad.webp"); }
+#production-options [data-produce="destroyer"] { --plate: url("./art/destroyer.webp"); }

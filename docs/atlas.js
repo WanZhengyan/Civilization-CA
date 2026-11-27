@@ -669,13 +669,13 @@ function shield(g,x,y,color,letter,selected,hp,maxHp,unitScale) {
 function battleFX(g,e,model,f) {
   const from=unitAnchor(model,e.from),to=unitAnchor(model,e.tile);if(!from||!to)return;
   const [ax,ay]=from,[bx,by]=to,dx=bx-ax,dy=by-ay;
-  if(e.unit.type==='ranged' && f>=.20 && f<.57) {
+  if((e.unit.type==='ranged'||e.unit.type==='skirmisher') && f>=.20 && f<.57) {
     const k=(f-.20)/.37,xx=ax+k*dx,yy=ay-19+k*dy-Math.sin(k*Math.PI)*15;
     g.save();g.translate(xx,yy);g.rotate(Math.atan2(dy-15*Math.PI*Math.cos(k*Math.PI),dx));
     line(g,[-12,0,1,0],'#352f2b',2.6);line(g,[-12,0,0,0],'#fff1bc',1.15);
     poly(g,[2,0,-3,-2,-2,0,-3,2],'#f6e3b5');g.restore();
   }
-  if((e.unit.type==='artillery'||e.unit.type==='frigate'||e.unit.type==='armor'||e.unit.type==='riflemen')&&f>=.22&&f<.52){
+  if((e.unit.type==='artillery'||e.unit.type==='frigate'||e.unit.type==='ironclad'||e.unit.type==='destroyer'||e.unit.type==='armor'||e.unit.type==='riflemen')&&f>=.22&&f<.52){
     const k=(f-.22)/.30,arc=e.unit.type==='artillery'?17:4;
     const x=ax+dx*k,y=ay-18+dy*k-Math.sin(k*Math.PI)*arc;
     g.save();g.globalAlpha=1-k*.35;
@@ -705,7 +705,7 @@ function battleFX(g,e,model,f) {
   }
 }
 const UNIT_INSIGNIA = {
-  sappers:'E', signals:'S', pikes:'P', skirmisher:'K', melee:'M', ranged:'R', settler:'S', builder:'B', scout:'◈', cavalry:'C', riflemen:'R',
+  ironclad:'I', destroyer:'D', sappers:'E', signals:'S', pikes:'P', skirmisher:'K', melee:'M', ranged:'R', settler:'S', builder:'B', scout:'◈', cavalry:'C', riflemen:'R',
   artillery:'A', armor:'T', cutter:'C', frigate:'F', workboat:'W'
 };
 function paintUnits(g,model,scale,now) {
@@ -739,7 +739,7 @@ function paintUnits(g,model,scale,now) {
           }
         }
       }else{
-        const ranged=u.type==='ranged'||u.type==='artillery'||u.type==='frigate',phase=Math.max(0,Math.min(1,(f-.10)/.70));
+        const ranged=['ranged','skirmisher','artillery','frigate','ironclad','destroyer'].includes(u.type),phase=Math.max(0,Math.min(1,(f-.10)/.70));
         const a=!ranged&&u.tile===active.tile
           ? (f<.48?.56*Math.sin(Math.min(1,Math.max(0,(f-.1)/.38))*Math.PI/2):.56+.44*Math.min(1,(f-.48)/.52))
           : Math.sin(Math.PI*phase)*(ranged?.085:.54);

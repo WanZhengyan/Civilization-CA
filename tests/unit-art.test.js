@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {drawUnitArt} from '../docs/unit-art.js';
 
-const pieces = ['sappers','signals','skirmisher','pikes','cavalry','riflemen','artillery','armor','cutter','frigate','workboat'];
+const pieces = ['ironclad','destroyer','sappers','signals','skirmisher','pikes','cavalry','riflemen','artillery','armor','cutter','frigate','workboat'];
 
 // A recorded drawing catches accidentally routing an unfamiliar unit through
 // the settler fallback. Avoid a platform-specific canvas dependency in Node.

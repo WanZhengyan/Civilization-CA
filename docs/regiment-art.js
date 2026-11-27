@@ -54,3 +54,40 @@ export function drawRegiment(g,b,type,p,phase,strike) {
   }
   g.restore();
 }
+
+export function drawFleetSpecialist(g,b,type,p,phase,strike) {
+  const monitor=type==='ironclad', half=monitor?21:23, wave=Math.sin(phase);
+  g.save();
+  g.translate(0,wave*.45);
+  g.rotate(wave*.018);
+  const edge='#303c43', steel='#788b8d', lit='#c4c9bb', shadow='#495a62';
+  b.polygon([[-half,-8],[-half+7,-10],[-1,-11],[half-2,-12],[half,-10],[half-7,-5],[-half+3,-4]],'#a5a99a',edge,.75);
+  if(monitor){
+    b.polygon([[-14,-10],[-11,-15],[-6,-16],[-2,-11]],'#727f7d',edge,.7);
+    b.polygon([[-10,-15],[-10.8,-22],[-8.1,-22],[-7,-15]],shadow,edge,.6);
+    b.oval(-9.4,-22,1.8,.65,'#35454b',lit,.4);
+    b.polygon([[-3,-11],[-3,-15.8],[2.2,-17.2],[8.3,-15.9],[8.3,-11.5],[4,-10.3]],steel,edge,.75);
+    b.oval(2.6,-16.2,5.7,1.45,lit,edge,.55);
+    b.line([[6.4,-14.4],[15.3-strike*1.5,-15.6]],edge,1.9);
+    for(const x of [0,3.2,6.1])b.oval(x,-12.7,.48,.44,lit);
+  }else{
+    b.polygon([[-14,-9.7],[-12.8,-14.2],[-3,-15.6],[1,-12.2],[.4,-10]],shadow,edge,.7);
+    for(const x of [-9,-5]){
+      b.polygon([[x-1.3,-13],[x-2.4,-19.6],[x-.1,-20],[x+1.5,-13.4]],steel,edge,.55);
+      b.line([[x-2.25,-19.1],[x,-19.6]],'#414f55',.9);
+    }
+    b.polygon([[0,-11],[.5,-16.3],[6,-16.9],[9,-13],[7,-10.8]],lit,edge,.65);
+    b.line([[1.3,-15.1],[5.6,-15.7]],'#3c5c65',1.1);
+    b.line([[1,-16.6],[1.3,-26.7]],'#54666a',.85);
+    b.line([[-2.2,-23],[5.2,-23.8]],'#687678',.85);
+    b.polygon([[10.2,-11.2],[11.8,-13.2],[14.5,-13],[16,-11.3]],steel,edge,.5);
+    b.line([[14,-12.2],[19-strike*.8,-13.4]],edge,1.1);
+  }
+  b.polygon([[-half,-8],[-half+5,-6.5],[4,-6.8],[half,-10],[half-4,-4],[half-10,-1.4],[-5,.3],[-half+5,-.8]],monitor?shadow:steel,edge,.85);
+  b.line([[-half+2,-7.4],[-half+6,-6.1],[4.2,-6.3],[half-1,-9.1]],lit,.65);
+  b.polygon([[-half+4,-5.6],[3,-5.4],[half-3,-7.9],[half-5,-6.6],[2,-3.9],[-half+5,-4.2]],p.base,null);
+  b.line([[-half+2,-8],[-half+2,-15]],edge,.8);
+  b.polygon([[-half+2,-15],[-half-2,-14.4],[-half-4,-15.6],[-half-2.6,-12],[-half+2,-12.7]],p.lit,edge,.4);
+  b.curve([-half+6,.4],[-half,.2],[-half-1,2.4+wave],[-half-4,1.4],'#c8ddd7',.95);
+  g.restore();
+}
