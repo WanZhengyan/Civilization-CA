@@ -29,6 +29,7 @@ test('actual owner turn feeds the city, carries surplus beyond a growth threshol
   assert.equal(before.consumption,2);assert.equal(before.growthTurns,1);
   const next=applyAction(state,0,{type:'end'}), updated=next.cities.find(c=>c.id===city.id);
   assert.equal(updated.population,2);
+  assert.ok(next.log.some(entry=>entry.type==='population' && entry.city===city.id && entry.tile===city.tile));
   assert.equal(updated.food,before.food + before.surplus - before.threshold);
   assert.equal(city.food,7); assert.equal(city.population,1);
 });

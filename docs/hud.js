@@ -486,13 +486,13 @@ function paint(next){
 }
 function populationLedger() {
   paintCitizenLedger(view.state,view.seat,mayOrder(),city=>({
-    population:getPopulationReport(view.state,city.id),workforce:getCitizenWorkforce(view.state,city.id)
+    population:getPopulationReport(view.state,city.id),workforce:getCitizenWorkforce(view.state,city.id),projects:getProductionOptions(view.state,city.id)
   }));
 }
 function chooseOrder(key){
   if(key==="citizens"){
     const c=cityAt(selectedTile);
-    if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}));populationLedger()}
+    if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}),(city,item)=>Game.doAction({type:"produce",city,item}));populationLedger()}
     return;
   }
   if(key==="port-production"){

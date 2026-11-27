@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.4 · Plan housing before growth stalls
+
+A stocked city could reach its capacity without explaining what would help it grow. City reports show housing, reserves and growth timing. Granaries and residential quarters expand capacity. Governors can respond to shortages and housing pressure.
+
+77 checks passed. 18 fixed campaigns replayed identically twice. Add a neutral threat that a young city can scout and defend against.
+
 ## 5.3 · Assign the city workforce
 
 More residents previously gave the governor little control over which yields increased. Residents work eligible city land or specialist jobs. The city focus changes assignments and therefore actual food, production or science.

@@ -188,7 +188,8 @@ export const UNIT_TYPES = {
 };
 export const BUILDINGS = {
   ...PORT_BUILDINGS,
-  granary: {name:"Granary", required:10},
+  granary: {name:"Granary", required:10, description:"Provides 2 food and housing for 2 more citizens."},
+  neighborhood: {name:"Residential quarter", required:16, description:"Provides housing for 3 more citizens."},
   workshop: {name:"Workshop", required:13},
   monument: {name:"Monument", required:10},
   walls: {name:"City walls", required:14}
@@ -644,7 +645,12 @@ function cloneGame(state) {
 }
 function produceCityTurn(state,city) {
   const yieldNow=getCityYield(state,city.id);
-  feedCity(city, foodForecast(city, yieldNow.food));
+  const previousPopulation=city.population;
+  feedCity(city, foodForecast(city,yieldNow.food));
+  if (city.population!==previousPopulation) {
+    const verb=city.population>previousPopulation?' grew to ':' fell to ';
+    record(state,city.seat,'population',city.name+verb+city.population+' residents.',city.tile,{city:city.id});
+  }
   const queue=city.queue;
   if (!queue) return;
   queue.progress=Math.min(queue.required,queue.progress+yieldNow.production);
@@ -909,6 +915,9 @@ function botProject(state,city) {
   const count=type=>units.filter(u=>u.type===type).length+cities.filter(c=>c.queue?.item===type).length;
   const choices=[];
   if (state.opening==='settlers' && count('scout')===0 && state.round<8) choices.push('scout');
+  const forecast=getPopulationReport(state,city.id);
+  if (forecast.housingLimited && !city.buildings.includes('granary')) choices.push('granary');
+  if (forecast.housingLimited && !city.buildings.includes('neighborhood')) choices.push('neighborhood');
   if (!city.buildings.includes('harbor') && getPortSite(state,city.id)) choices.push('harbor');
   if (city.buildings.includes('harbor')) {
     const worked=Object.values(state.board).filter(tile=>tile.portCity===city.id).length;
@@ -1044,6 +1053,12 @@ export function chooseBotAction(source) {
   }
   const shipment=planShipment(state,seat);
   if(shipment)return shipment;
+  for (const city of state.cities) if (city.seat===seat && city.focusRound!==state.round) {
+    const food=getPopulationReport(state,city.id);
+    const focus=food.surplus<0 ? 'food' : food.housingLimited ? 'industry' :
+      (city.population>=3 && player.research ? 'science' : 'balanced');
+    if ((city.focus || 'balanced')!==focus) return {type:'focus',city:city.id,item:focus};
+  }
   const veteran=plans.find(([,options])=>options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
   if (veteran) return {type:'upgrade',unit:veteran[0].id};
   for (const city of state.cities) if (city.seat===seat && !city.queue) {

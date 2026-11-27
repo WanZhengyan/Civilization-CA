@@ -24,6 +24,16 @@ Study hall|研习室
 Assign citizens|分配居民
 Select your city and open Manage citizens. Food, industry and science priorities change which controlled districts are worked. Each citizen works one district or a specialist job in town. The same district cannot support two cities.|选中城市后打开「管理居民」。粮食、工业或科研优先级会改变居民使用的领土地块。每名居民可工作一块土地或在城内担任专职工作。同一地块只能服务一座城市。
 Choose a valid citizen focus.|请选择有效的居民工作重心。
+Residents / housing|居民 / 住房
+Completed|已建成
+Housing full|住房已满
+Residential quarter|住宅区
+Housing investments|住房建设
+Plan housing|规划住房
+Under construction|正在建设
+Provides housing for 3 more citizens.|为三名额外居民提供住房。
+Provides 2 food and housing for 2 more citizens.|提供两份粮食和两名额外居民的住房。
+A new city has room for three citizens. A granary adds two places and a residential quarter adds three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.|新城可容纳三名居民。粮仓增加两处住房，住宅区增加三处。住房满额时，城市可以储备下一次人口增长所需的粮食；扩建住房后即可继续增长。可在「管理居民」中启动住房项目。
 Stored food|存粮
 Harvest|粮食产量
 Consumption|粮食消耗
