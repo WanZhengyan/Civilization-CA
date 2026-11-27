@@ -1,9 +1,9 @@
 .region-picker{margin:0 0 .8rem;padding:0;border:0;display:grid;gap:.42rem;min-width:0}
 .region-picker legend{margin:0 0 .5rem;padding:0;color:#e4d2a6;font:600 .88rem/1.4 system-ui}
-.region-choice{display:grid;grid-template-columns:1rem 4.2rem 1fr;align-items:center;gap:.7rem;padding:.5rem .7rem;border:1px solid #6c6c58;border-radius:6px;cursor:pointer}
+.region-choice{display:grid;grid-template-columns:1rem clamp(4.7rem, 9vw, 6.5rem) minmax(0,1fr);align-items:center;gap:.7rem;padding:.5rem .7rem;border:1px solid #6c6c58;border-radius:6px;cursor:pointer}
 .region-choice:has(:checked){border-color:#d4b66e;background:#c9a56318}
 .region-choice:focus-within{outline:2px solid #e3c17b;outline-offset:1px}
 .region-choice input{margin:0;accent-color:#b7934f}
-.region-chart{display:flex;flex-direction:column;overflow:hidden;aspect-ratio:1.6;border-radius:3px;background:#357787;box-shadow:0 0 0 1px #99947769}
-.region-chart>span{flex:1;display:flex}.region-details strong,.region-details small{display:block}
+.region-chart{display:block;width:100%;aspect-ratio:1.48;background:#192b32;border-radius:3px;box-shadow:inset 0 0 0 1px #516269;overflow:visible}
+.region-details strong,.region-details small{display:block}
 .region-details strong{font-size:.94rem}.region-details small{font-size:.8rem;line-height:1.35;margin-top:.17rem;opacity:.84}
