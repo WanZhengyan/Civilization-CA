@@ -1,0 +1,16 @@
+{
+  "name": "civitas-la-rooms",
+  "main": "worker.js",
+  "compatibility_date": "2026-01-01",
+  "vars": {
+    "PROJECT_ORIGIN": "https://wanzhengyan.github.io"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "civitas-la-rooms",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}

@@ -1,0 +1,695 @@
+// Shared rules for the browser and the authoritative room service.
+export const MAX_ROUNDS = 30;
+export const TARGET_SCORE = 100;
+export const ACTIONS_PER_TURN = 2;
+export const FACTIONS = [
+  { id: "republic", nameZh:"加州共和国", name: "California Republic", color: "#efbb62", capital: "11,7", capitalName: "Downtown LA" },
+  { id: "pacific", nameZh:"太平洋联盟", name: "Pacific Union", color: "#69b7c7", capital: "4,7", capitalName: "Santa Monica" },
+  { id: "valley", nameZh:"山谷联盟", name: "Valley Coalition", color: "#8ab98a", capital: "10,2", capitalName: "Burbank" },
+  { id: "arroyo", nameZh:"阿罗约同盟", name: "Arroyo League", color: "#dc8c9f", capital: "15,3", capitalName: "Pasadena" }
+];
+export const TERRAIN_NAMES = {
+  ocean: "Open water", coast: "Coast", plains: "Lowlands", urban: "Urban",
+  forest: "Woodland", hills: "Foothills", mountains: "Mountains"
+};
+const COLUMNS = 17;
+const ROWS = 13;
+const SHORE = [0, 0, 0, 0, 0, 1, 2, 4, 5, 5, 6, 6, 7];
+const STARTING_TERRITORY = [
+  ["11,7", "10,7", "11,8"],
+  ["4,7", "5,7", "5,8"],
+  ["10,2", "9,2", "10,1"],
+  ["15,3", "14,3", "15,4"]
+];
+// A district can mark a landmark, override its terrain, or both.
+const DISTRICTS = {
+  "0,4": ["Malibu", "coast"],
+  "2,3": ["Topanga", "mountains"],
+  "3,4": ["Topanga Canyon", "forest"],
+  "3,5": ["Pacific Palisades", "hills"],
+  "4,6": ["Palisades Park", "forest"],
+  "4,7": ["Santa Monica", "coast", "pier"],
+  "5,7": ["Wilshire Montana", "urban"],
+  "5,8": ["Venice", "coast"],
+  "5,9": ["Marina del Rey", "coast"],
+  "6,10": ["Playa del Rey", "coast"],
+  "6,11": ["El Segundo", "coast"],
+  "7,12": ["Manhattan Beach", "coast"],
+  "6,5": ["Brentwood", "hills"],
+  "6,6": ["Westwood", "urban", "ucla"],
+  "7,4": ["Bel Air", "hills"],
+  "7,7": ["Century City", "urban"],
+  "7,8": ["Culver City", "urban"],
+  "8,6": ["Beverly Hills", "urban"],
+  "8,5": ["West Hollywood", "urban"],
+  "8,7": ["Pico-Robertson", "urban"],
+  "8,8": ["Baldwin Hills", "hills"],
+  "8,9": ["View Park", "hills"],
+  "6,9": ["Playa Vista", "plains"],
+  "7,10": ["Westchester", "plains"],
+  "7,11": ["Los Angeles International", "plains", "airport"],
+  "8,11": ["Hawthorne", "plains"],
+  "8,10": ["Inglewood", "urban"],
+  "9,8": ["West Adams", "urban"],
+  "10,9": ["Exposition Park", "forest"],
+  "9,6": ["Fairfax", "urban"],
+  "10,6": ["Koreatown", "urban"],
+  "10,7": ["Pico-Union", "urban"],
+  "11,7": ["Downtown LA", "urban", "downtown"],
+  "11,8": ["South Park", "urban"],
+  "12,7": ["Boyle Heights", "urban"],
+  "12,8": ["Arts District", "urban"],
+  "13,7": ["East Los Angeles", "urban"],
+  "11,6": ["Echo Park", "urban"],
+  "12,6": ["Lincoln Heights", "urban"],
+  "11,5": ["Silver Lake", "hills"],
+  "9,5": ["Hollywood", "urban"],
+  "9,4": ["Hollywood Hills", "hills", "hollywood"],
+  "10,4": ["Los Feliz", "hills"],
+  "11,4": ["Griffith Park", "forest", "griffith"],
+  "11,3": ["Verdugo Hills", "mountains"],
+  "12,3": ["Glendale", "urban"],
+  "13,4": ["Eagle Rock", "hills"],
+  "14,4": ["Highland Park", "urban"],
+  "13,5": ["Mount Washington", "hills"],
+  "15,4": ["South Pasadena", "urban"],
+  "15,3": ["Pasadena", "urban", "rosebowl"],
+  "14,3": ["Arroyo Seco", "hills"],
+  "15,2": ["Altadena", "forest"],
+  "16,3": ["San Marino", "plains"],
+  "15,5": ["Alhambra", "urban"],
+  "16,6": ["San Gabriel", "urban"],
+  "9,2": ["North Hollywood", "urban"],
+  "10,2": ["Burbank", "urban", "studios"],
+  "10,1": ["Sun Valley", "plains"],
+  "8,3": ["Studio City", "urban"],
+  "6,3": ["Sherman Oaks", "urban"],
+  "5,2": ["Encino", "urban"],
+  "7,1": ["Van Nuys", "urban"],
+  "3,2": ["Woodland Hills", "hills"],
+  "3,1": ["Canoga Park", "urban"],
+  "1,2": ["Calabasas", "hills"],
+  "2,0": ["Chatsworth", "hills"],
+  "13,2": ["La Cañada Flintridge", "hills"],
+  "13,0": ["Angeles National Forest", "mountains"],
+  "14,8": ["Montebello", "urban"],
+  "13,9": ["Commerce", "urban"],
+  "12,9": ["Vernon", "urban"],
+  "12,10": ["Huntington Park", "urban"],
+  "14,11": ["Downey", "urban"],
+  "11,11": ["Watts", "urban"],
+  "10,12": ["Gardena", "plains"],
+  "12,12": ["Compton", "urban"],
+  "13,12": ["Lynwood", "urban"]
+};
+function terrainAt(q, r) {
+  if (q < SHORE[r]) return "ocean";
+  if (r >= 4 && q === SHORE[r]) return "coast";
+  if ((r === 0 && q > 9) || (r <= 1 && q >= 13)) return "mountains";
+  if (r <= 1 && q >= 9) return "hills";
+  if (q < 10 && (r === 4 || (r === 3 && q < 6))) {
+    return (q + r) % 3 === 0 ? "forest" : "mountains";
+  }
+  if ((r === 3 && q >= 10) || (r === 5 && q < 6) || (r < 3 && q === 0)) {
+    return (q + r) % 3 === 0 ? "forest" : "hills";
+  }
+  if (r < 3 || (r >= 9 && (q * 3 + r) % 5 < 3)) return "plains";
+  if (r === 4 && q >= 11) return "forest";
+  return (q * 3 + r) % 7 === 0 ? "plains" : "urban";
+}
+const namedDistricts = Object.entries(DISTRICTS).map(([id, [name]]) => {
+  const [q, r] = id.split(",").map(Number);
+  return { q, r, name };
+});
+function nearbyName(q, r, terrain) {
+  if (terrain === "ocean") return "Pacific Ocean";
+  let nearest, best = Infinity;
+  for (const district of namedDistricts) {
+    const dx = q + (r % 2) / 2 - district.q - (district.r % 2) / 2;
+    const distance = dx * dx + 0.75 * (r - district.r) ** 2;
+    if (distance < best) { best = distance; nearest = district.name; }
+  }
+  const label = { urban: "district", hills: "foothills", mountains: "ridge", forest: "woodland", plains: "lowlands", coast: "coast" }[terrain];
+  return nearest + " " + label;
+}
+export const TILES = [];
+export const TILE_BY_ID = Object.create(null);
+const adjacent = Object.create(null);
+for (let r = 0; r < ROWS; r++) {
+  for (let q = 0; q < COLUMNS; q++) {
+    const id = q + "," + r;
+    const district = DISTRICTS[id];
+    const terrain = district?.[1] || terrainAt(q, r);
+    const seat = FACTIONS.findIndex(faction => faction.capital === id);
+    const tile = { id, q, r, name: district?.[0] || nearbyName(q, r, terrain), terrain, landmark: district?.[2] || null, capitalFor: seat < 0 ? null : seat };
+    TILES.push(tile);
+    TILE_BY_ID[id] = tile;
+  }
+}
+for (const {id, q, r} of TILES) {
+  const shift = r % 2;
+  adjacent[id] = [
+    [q - 1, r], [q + 1, r], [q - 1 + shift, r - 1], [q + shift, r - 1],
+    [q - 1 + shift, r + 1], [q + shift, r + 1]
+  ].map(([x, y]) => x + "," + y).filter(key => TILE_BY_ID[key]);
+}
+export function neighbors(id) {
+  return adjacent[id] ? [...adjacent[id]] : [];
+}
+function isProductive(terrain) {
+  return terrain === "coast" || terrain === "plains" || terrain === "urban";
+}
+export const UNIT_TYPES = {
+  settler: {name:"Settler", maxHp:60, moves:2, range:0, strength:0, required:14},
+  builder: {name:"Builder", maxHp:60, moves:2, range:0, strength:0, required:9},
+  melee: {name:"Militia", maxHp:100, moves:2, range:1, strength:42, required:10},
+  ranged: {name:"Rangers", maxHp:80, moves:2, range:2, strength:35, required:12}
+};
+export const BUILDINGS = {
+  granary: {name:"Granary", required:10},
+  workshop: {name:"Workshop", required:13},
+  monument: {name:"Monument", required:10},
+  walls: {name:"City walls", required:14}
+};
+export const IMPROVEMENTS = {
+  farm: {name:"Farm"}, mine: {name:"Mine"}
+};
+export const TECHS = {
+  agronomy: {name: "Agronomy", cost: 12, description: "Each city produces 2 more food per turn."},
+  industry: {name: "Industrial Engineering", cost: 16, description: "Each city produces 2 more production per turn."},
+  tactics: {name: "Field Tactics", cost: 15, description: "Military units deal 7 more attack damage and 3 more retaliation damage."},
+  civics: {name: "Civic Administration", cost: 14, description: "Each city earns 2 more capital and 1 more influence per turn."}
+};
+function knows(state, seat, technology) {
+  return state.players[seat]?.technologies?.includes(technology) === true;
+}
+const PRODUCTS = {...UNIT_TYPES, ...BUILDINGS};
+const terrainCost = {coast:1, urban:1, plains:1, hills:2, forest:2};
+export function hexDistance(a, b) {
+  const t = TILE_BY_ID[a], u = TILE_BY_ID[b];
+  if (!t || !u) return Infinity;
+  const x = t.q - Math.floor(t.r / 2) - u.q + Math.floor(u.r / 2);
+  const z = t.r - u.r;
+  return Math.max(Math.abs(x), Math.abs(z), Math.abs(x + z));
+}
+function mint(state, prefix) { return prefix + state.nextId++; }
+function spawn(state,seat,type,tile) {
+  const def = UNIT_TYPES[type];
+  const unit = {id:mint(state,'u'),seat,type,tile,hp:def.maxHp,maxHp:def.maxHp,moves:def.moves,maxMoves:def.moves,charges:type === 'builder' ? 3 : 0};
+  state.units.push(unit);
+  return unit;
+}
+function establish(state,seat,tile,original = false) {
+  const city = {id:mint(state,'c'),name:TILE_BY_ID[tile].name,seat,tile,hp:100,maxHp:100,population:1,food:0,buildings:[],queue:null,originalSeat:original ? seat : null};
+  state.cities.push(city);
+  state.board[tile] = {...state.board[tile],owner:seat,level:Math.max(1,state.board[tile].level)};
+  if (!original) for (const next of adjacent[tile]) {
+    const holding = state.board[next];
+    if (holding.owner === null && terrainCost[TILE_BY_ID[next].terrain] && !state.units.some(u=>u.tile===next && u.seat!==seat)) {
+      state.board[next] = {...holding,owner:seat};
+    }
+  }
+  return city;
+}
+function addResearch(state) {
+  const hasBots = state.players.some(player => player.bot);
+  const players = state.players.map((player, seat) => {
+    const faction = FACTIONS[player.faction];
+    let name = player.name;
+    if (player.bot && player.name === faction.nameZh) name = faction.name;
+    if (hasBots && seat === 0 && !player.bot && player.name === "你") name = "You";
+    return {...player, name, research: null, science: 0, technologies: []};
+  });
+  return {...state, rulesVersion: 3, players};
+}
+export function migrateGame(state) {
+  if (!state || state.rulesVersion === 3) return state;
+  if (state.rulesVersion === 2) return addResearch(state);
+  const next = {...state,rulesVersion:2,nextId:1,units:[],cities:[],
+    board:Object.fromEntries(Object.entries(state.board).map(([id,tile])=>[id,{...tile,improvement:null}])),
+    players:state.players.map(player=>({...player}))};
+  next.players.forEach((player,seat)=>{
+    const home = FACTIONS[player.faction].capital;
+    establish(next,seat,home,true);
+    spawn(next,seat,'settler',STARTING_TERRITORY[seat][1]);
+    spawn(next,seat,'melee',STARTING_TERRITORY[seat][2]);
+  });
+  if (state.phase === 'playing') refreshScores(next);
+  else next.legacyFinalScores = state.players.map(p=>p.score);
+  return addResearch(next);
+}
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(f=>({name:f.name,bot:true}))]) {
+  if (!Array.isArray(players) || players.length < 2 || players.length > 4) throw new Error("A campaign needs two to four factions.");
+  const next = {round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
+    board:Object.fromEntries(TILES.map(tile=>[tile.id,{owner:null,level:0}])),
+    players:players.map((player,seat)=>({
+      name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[seat].name,
+      bot:player?.bot===true,faction:seat,color:FACTIONS[seat].color,capital:12,influence:6,score:0
+    })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
+  next.players.forEach((p,seat)=>{for (const id of STARTING_TERRITORY[seat]) next.board[id].owner = seat;});
+  return migrateGame(next);
+}
+function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
+function unitOrNull(state,id) { return state.units.find(u=>u.id === id); }
+export function getCityYield(state,cityId) {
+  const city = cityOrNull(state,cityId);
+  if (!city) return {food:0,production:0,capital:0,influence:0};
+  const has = key=>city.buildings.includes(key);
+  // Improvements within two hexes work the closest city; city id order breaks ties.
+  let farms = 0, mines = 0;
+  for (const tile of TILES) {
+    const holding = state.board[tile.id];
+    if (holding.owner !== city.seat || !holding.improvement) continue;
+    const d = hexDistance(tile.id,city.tile);
+    if (d>2 || state.cities.some(c=>c.seat===city.seat && c.id!==city.id && (hexDistance(c.tile,tile.id)<d || (hexDistance(c.tile,tile.id)===d && c.id<city.id)))) continue;
+    if (holding.improvement==='farm') farms++;
+    if (holding.improvement==='mine') mines++;
+  }
+  const civics = knows(state, city.seat, 'civics');
+  return {
+    food: 2 + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
+    production: 3 + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0),
+    capital: city.population + (civics ? 2 : 0),
+    influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
+  };
+}
+export function getStats(state,seat) {
+  let territories=0,developments=0,landmarks=0,improvements=0,productive=0;
+  for (const tile of TILES) {
+    const holding = state.board[tile.id];
+    if (holding.owner !== seat) continue;
+    territories++; developments+=holding.level;
+    if (tile.landmark) landmarks++;
+    if (holding.improvement) improvements++;
+    if (isProductive(tile.terrain)) productive+=holding.level;
+  }
+  const cities=(state.cities||[]).filter(c=>c.seat===seat);
+  const count=cities.length,population=cities.reduce((sum,c)=>sum+c.population,0);
+  const buildings=cities.reduce((sum,c)=>sum+c.buildings.length,0);
+  const monuments=cities.filter(c=>c.buildings.includes('monument')).length;
+  const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
+  return {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
+    score:state.legacyFinalScores?.[seat] ?? score,
+    scienceIncome:2+count+Math.floor(population/3),
+    capitalIncome:3+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0),
+    influenceIncome:2+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
+}
+function refreshScores(state) { state.players.forEach((p,i)=>{p.score=getStats(state,i).score;}); }
+function record(state,seat,type,text,tile,detail={}) {
+  state.log.push({round:state.round,seat,type,text,...(tile ? {tile}:{}),...detail});
+  if (state.log.length>160) state.log.shift();
+}
+function territoryOrder(state,seat,tile) {
+  if (tile.terrain==='ocean') return null;
+  const {owner,level}=state.board[tile.id];
+  if (owner===seat) return level<3 ? {type:'develop',label:'Develop district',cost:{capital:5+level*3,influence:0}} : null;
+  if (state.cities.some(c=>c.tile===tile.id) || state.units.some(u=>u.tile===tile.id && u.seat!==seat)) return null;
+  if (owner===null) return {type:'claim',label:'Claim district',cost:{capital:4,influence:0}};
+  return {type:'contest',label:'Contest district',cost:{capital:4,influence:5+level*2}};
+}
+export function getActions(state,seat,id) {
+  const tile=TILE_BY_ID[id], player=state.players[seat];
+  if (!tile || !player) return [];
+  const order=territoryOrder(state,seat,tile);
+  if (!order) return [];
+  let reason='';
+  if (state.phase!=='playing') reason='The campaign has ended.';
+  else if (state.turn!==seat) reason='Wait for your turn.';
+  else if (state.actionsLeft<=0) reason='You have used both civic actions this turn.';
+  else if (order.type!=='develop' && !adjacent[id].some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
+  else if (player.capital<order.cost.capital) reason='You need '+order.cost.capital+' capital.';
+  else if (player.influence<order.cost.influence) reason='You need '+order.cost.influence+' influence.';
+  return [{...order,enabled:!reason,reason}];
+}
+// The search budget is the unit's remaining movement on this turn.
+function findRoutes(state,unit) {
+  const costs=new Map([[unit.tile,0]]),parents=new Map(),queue=[unit.tile];
+  const blocked=new Set(state.units.filter(u=>u.id!==unit.id).map(u=>u.tile));
+  for (const c of state.cities) if (c.seat!==unit.seat) blocked.add(c.tile);
+  for (let i=0;i<queue.length;i++) {
+    const here=queue[i];
+    for (const next of adjacent[here]) {
+      const step=terrainCost[TILE_BY_ID[next].terrain];
+      if (!step || blocked.has(next)) continue;
+      const cost=costs.get(here)+step;
+      if (cost>unit.moves || cost>=(costs.get(next)??Infinity)) continue;
+      costs.set(next,cost); parents.set(next,here); queue.push(next);
+    }
+  }
+  return {costs,parents};
+}
+function active(state,unit) { return unit && state.phase==='playing' && state.turn===unit.seat && unit.moves>0; }
+export function getMovePath(state,unitId,target) {
+  const unit=unitOrNull(state,unitId);
+  if (!active(state,unit) || target===unit.tile) return [];
+  const {parents}=findRoutes(state,unit);
+  if (!parents.has(target)) return [];
+  const path=[target];
+  while (path[0]!==unit.tile) path.unshift(parents.get(path[0]));
+  return path;
+}
+function canSettle(state,seat,id) {
+  const owner=state.board[id].owner;
+  return Boolean(terrainCost[TILE_BY_ID[id].terrain]) && (owner===null || owner===seat) && state.cities.every(c=>hexDistance(c.tile,id)>=3);
+}
+function improvementAt(state,seat,id) {
+  if (state.board[id].owner!==seat || state.board[id].improvement || state.cities.some(c=>c.tile===id)) return null;
+  const terrain=TILE_BY_ID[id].terrain;
+  return isProductive(terrain) ? 'farm' : terrain==='forest' || terrain==='hills' ? 'mine' : null;
+}
+function attackTargets(state,unit) {
+  const range=UNIT_TYPES[unit.type].range;
+  if (!range) return [];
+  const occupied=state.units.filter(u=>u.seat!==unit.seat && hexDistance(unit.tile,u.tile)<=range).map(u=>u.tile);
+  const cities=state.cities.filter(c=>c.seat!==unit.seat && hexDistance(unit.tile,c.tile)<=range && (unit.type!=='ranged' || c.hp>1)).map(c=>c.tile);
+  return [...new Set([...occupied,...cities])];
+}
+export function getUnitOptions(state,unitId) {
+  const empty={moves:[],attacks:[],canFound:false,improvements:[]},unit=unitOrNull(state,unitId);
+  if (!active(state,unit)) return empty;
+  const improvement=unit.type==='builder' && unit.charges>0 ? improvementAt(state,unit.seat,unit.tile) : null;
+  return {moves:[...findRoutes(state,unit).parents.keys()],attacks:attackTargets(state,unit),
+    canFound:unit.type==='settler' && canSettle(state,unit.seat,unit.tile),improvements:improvement ? [improvement]:[]};
+}
+export function getProductionOptions(state,cityId) {
+  const city=cityOrNull(state,cityId);
+  if (!city) return [];
+  const rate=getCityYield(state,city.id).production;
+  return Object.entries(PRODUCTS).map(([item,def])=>{
+    const kind=Object.hasOwn(UNIT_TYPES,item) ? 'unit':'building';
+    let reason='';
+    if (state.phase!=='playing') reason='The campaign has ended.';
+    else if (city.seat!==state.turn) reason='Wait for the city owner’s turn.';
+    else if (city.queue) reason='This city already has a project in progress.';
+    else if (city.buildings.includes(item)) reason='This city already has that building.';
+    return {item,label:def.name,kind,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
+  });
+}
+export function getResearchOptions(state, seat) {
+  const player = state.players[seat];
+  if (!player) return [];
+  const income = getStats(state, seat).scienceIncome;
+  return Object.entries(TECHS).map(([item, tech]) => {
+    const completed = knows(state, seat, item);
+    const active = player.research === item;
+    let reason = "";
+    if (state.phase !== "playing") reason = "The campaign has ended.";
+    else if (state.turn !== seat) reason = "Wait for your turn.";
+    else if (completed) reason = "Your faction already knows this technology.";
+    else if (active) reason = "This is your current research project.";
+    const turns = completed ? 0 : Math.max(0, Math.ceil((tech.cost - player.science) / income));
+    return {item, label: tech.name, description: tech.description, cost: tech.cost, completed, active, turns, enabled: !reason, reason};
+  });
+}
+function checkDiscovery(state, seat) {
+  const player = state.players[seat], item = player.research;
+  if (!item || player.science < TECHS[item].cost) return;
+  player.science -= TECHS[item].cost;
+  player.technologies = [...player.technologies, item];
+  player.research = null;
+  record(state, seat, 'discovery', FACTIONS[seat].name+' discovered '+TECHS[item].name+'.', null, {item});
+}
+function setResearch(state, seat, item) {
+  const option = getResearchOptions(state, seat).find(tech => tech.item === item);
+  if (!option?.enabled) throw new Error(option?.reason || "Choose an available technology.");
+  state.players[seat].research = item;
+  record(state, seat, 'research', FACTIONS[seat].name+' began researching '+option.label+'.', null, {item});
+  checkDiscovery(state, seat);
+}
+function cloneGame(state) {
+  // Records are cloned at the action boundary so optimistic retries cannot mutate the old revision.
+  return {...state,board:{...state.board},players:state.players.map(p=>({...p})),units:state.units.map(u=>({...u})),
+    cities:state.cities.map(c=>({...c,buildings:[...c.buildings],queue:c.queue ? {...c.queue}:null})),log:[...state.log]};
+}
+function produceCityTurn(state,city) {
+  const yieldNow=getCityYield(state,city.id);
+  city.food+=yieldNow.food;
+  const threshold=6+city.population*2;
+  if (city.food>=threshold) {city.food-=threshold;city.population++;}
+  const queue=city.queue;
+  if (!queue) return;
+  queue.progress=Math.min(queue.required,queue.progress+yieldNow.production);
+  if (queue.progress<queue.required) return;
+  if (Object.hasOwn(UNIT_TYPES,queue.item)) {
+    const spawnTile=[city.tile,...adjacent[city.tile]].find(id=>terrainCost[TILE_BY_ID[id].terrain] &&
+      !state.units.some(u=>u.tile===id) && !state.cities.some(c=>c.tile===id && c.seat!==city.seat) &&
+      (state.board[id].owner===null || state.board[id].owner===city.seat));
+    if (!spawnTile) return;
+    spawn(state,city.seat,queue.item,spawnTile).moves=0;
+  } else {
+    city.buildings.push(queue.item);
+    if (queue.item==='walls') {city.maxHp+=50; city.hp=Math.min(city.maxHp,city.hp+50);}
+  }
+  record(state,city.seat,'complete',city.name+' completed '+PRODUCTS[queue.item].name+'.',city.tile,{item:queue.item,city:city.id});
+  city.queue=null;
+}
+function finish(state,winners,reason) {
+  state.phase='finished';state.winners=winners;state.actionsLeft=0;state.victoryReason=reason;
+  const names=winners.map(i=>FACTIONS[state.players[i].faction].name).join(' and ');
+  const message=reason==='domination' ? names+' controls every original capital.' : names+(winners.length===1 ? ' won' : ' shared victory')+' with '+state.players[winners[0]].score+' civic points.';
+  record(state,winners[0],'finish',message);
+}
+function endTurn(state,seat) {
+  const income=getStats(state,seat),player=state.players[seat];
+  player.capital+=income.capitalIncome;player.influence+=income.influenceIncome;
+  for (const city of state.cities) if (city.seat===seat) produceCityTurn(state,city);
+  player.science += income.scienceIncome;
+  checkDiscovery(state, seat);
+  refreshScores(state);
+  record(state,seat,'end',FACTIONS[seat].name+' ended its turn.');
+  const next=(seat+1)%state.players.length;
+  if (next===0) {
+    const top=Math.max(...state.players.map(p=>p.score));
+    if (state.round>=MAX_ROUNDS || top>=TARGET_SCORE) {
+      finish(state,state.players.map((p,i)=>p.score===top ? i : -1).filter(i=>i>=0),'civic');
+      return;
+    }
+    state.round++;
+  }
+  state.turn=next;state.actionsLeft=ACTIONS_PER_TURN;
+  const towns=state.cities.filter(c=>c.seat===next);
+  for (const city of towns) city.hp=Math.min(city.maxHp,city.hp+6);
+  for (const unit of state.units) if (unit.seat===next) {
+    unit.moves=unit.maxMoves;
+    if (towns.some(c=>c.tile===unit.tile)) unit.hp=Math.min(unit.maxHp,unit.hp+12);
+  }
+}
+export function combatPreview(state, unitId, target) {
+  const unit = unitOrNull(state, unitId);
+  if (!active(state, unit) || !attackTargets(state, unit).includes(target)) return null;
+
+  // A garrison absorbs the hit before the city can be damaged.
+  const defender = state.units.find(other => other.tile === target && other.seat !== unit.seat);
+  const town = state.cities.find(city => city.tile === target && city.seat !== unit.seat);
+  const opponent = defender || town;
+  const melee = unit.type === 'melee';
+  const walls = !!town?.buildings.includes('walls');
+  const terrain = TILE_BY_ID[target].terrain;
+  const terrainDefense = terrain === 'hills' || terrain === 'forest' ? 4 : 0;
+  const strength = Math.round(UNIT_TYPES[unit.type].strength * (0.75 + 0.25 * unit.hp / unit.maxHp));
+  const attackBonus = knows(state, unit.seat, 'tactics') ? 7 : 0;
+  let damage = Math.min(opponent.hp, Math.max(1, strength + attackBonus - terrainDefense - (walls ? 7 : 0)));
+  let retaliation = 0;
+  if (melee) {
+    if (defender) {
+      const military = UNIT_TYPES[defender.type].strength;
+      retaliation = Math.round(military * (0.45 + 0.15 * defender.hp / defender.maxHp));
+      if (military && knows(state, defender.seat, 'tactics')) retaliation += 3;
+    } else {
+      retaliation = walls ? 24 : 15;
+    }
+  }
+  retaliation = Math.min(retaliation, unit.hp);
+  const attackerHpAfter = unit.hp - retaliation;
+  if (!defender && (!melee || attackerHpAfter === 0)) damage = Math.min(damage, town.hp - 1);
+  const defenderHpAfterHit = opponent.hp - damage;
+  const capture = !defender && defenderHpAfterHit === 0;
+  const defeated = !!defender && defenderHpAfterHit === 0;
+  const advances = melee && attackerHpAfter > 0 && (capture || (defeated && !town));
+  return {
+    defenderType: defender ? 'unit' : 'city', defenderId: opponent.id,
+    damage, retaliation, capture, defeated, advances, attackerDefeated: attackerHpAfter === 0,
+    attackerHpBefore: unit.hp, defenderHpBefore: opponent.hp, attackerHpAfter, defenderHpAfterHit,
+    defenderHpAfter: capture ? Math.ceil(town.maxHp / 2) : defenderHpAfterHit
+  };
+}
+function resolveAttack(state, unit, target) {
+  const result = combatPreview(state, unit.id, target);
+  if (!result) throw new Error('Choose an enemy unit or city within range.');
+  const from = unit.tile;
+  const isUnit = result.defenderType === 'unit';
+  const defender = isUnit ? unitOrNull(state, result.defenderId) : cityOrNull(state, result.defenderId);
+  const name = isUnit ? UNIT_TYPES[defender.type].name+' in '+TILE_BY_ID[target].name : defender.name;
+  defender.hp = result.defenderHpAfter;
+  if (result.capture) {
+    defender.seat = unit.seat;
+    defender.queue = null;
+    state.board[target] = {...state.board[target], owner: unit.seat};
+  }
+  unit.hp = result.attackerHpAfter;
+  unit.moves = 0;
+  if (result.advances) unit.tile = target;
+  if (result.attackerDefeated || result.defeated) state.units = state.units.filter(other => other.hp > 0);
+  const text = UNIT_TYPES[unit.type].name+(result.capture ? ' captured ' : ' attacked ')+name+' for '+result.damage+' damage.';
+  record(state, unit.seat, 'attack', text, target, {unit: unit.id, from, ...result});
+  if (result.capture && state.players.every(p => state.cities.some(c => c.tile === FACTIONS[p.faction].capital && c.seat === unit.seat))) {
+    refreshScores(state);
+    finish(state, [unit.seat], 'domination');
+  }
+}
+function unitOrder(state,seat,action) {
+  const unit=unitOrNull(state,action.unit);
+  if (!unit || unit.seat!==seat) throw new Error('Choose one of your units.');
+  if (!unit.moves) throw new Error('This unit has spent its movement for the turn.');
+  const id=unit.tile, label=UNIT_TYPES[unit.type].name;
+  if (action.type==='move') {
+    const path=getMovePath(state,unit.id,action.tile);
+    if (!path.length) throw new Error('Choose an unoccupied tile within movement range.');
+    unit.moves-=path.slice(1).reduce((sum,k)=>sum+terrainCost[TILE_BY_ID[k].terrain],0);
+    unit.tile=action.tile;
+    record(state,seat,'move',label+' moved to '+TILE_BY_ID[unit.tile].name+'.',unit.tile,{from:id,unit:unit.id,path});
+  } else if (action.type==='attack') {
+    resolveAttack(state,unit,action.tile);
+  } else if (action.type==='found') {
+    if (unit.type!=='settler' || !canSettle(state,seat,id)) throw new Error('Found a city on friendly or neutral land at least three hexes from every other city.');
+    const city=establish(state,seat,id);
+    state.units=state.units.filter(u=>u.id!==unit.id);
+    record(state,seat,'found',FACTIONS[seat].name+' founded a city at '+city.name+'.',id,{city:city.id,unit:unit.id});
+  } else {
+    const item=improvementAt(state,seat,id);
+    if (unit.type!=='builder' || !unit.charges || !item || item!==action.item) throw new Error('Build a suitable improvement on one of your unimproved districts.');
+    state.board[id]={...state.board[id],improvement:item};unit.moves=0;unit.charges--;
+    if (!unit.charges) state.units=state.units.filter(u=>u.id!==unit.id);
+    record(state,seat,'improve',label+' built a '+IMPROVEMENTS[item].name.toLowerCase()+' in '+TILE_BY_ID[id].name+'.',id,{unit:unit.id,item});
+  }
+}
+export function applyAction(source,seat,action) {
+  const state=migrateGame(source);
+  if (state.phase!=='playing') throw new Error('The campaign has ended.');
+  if (!Number.isInteger(seat) || seat!==state.turn) throw new Error('Wait for your turn.');
+  if (!action || typeof action!=='object') throw new Error('Choose an action.');
+  const next=cloneGame(state);
+  if (action.type==='end') {endTurn(next,seat);return next;}
+  if (action.type==='research') {
+    setResearch(next, seat, action.item);
+  } else if (action.type==='produce') {
+    const city=cityOrNull(next,action.city);
+    if (!city || city.seat!==seat) throw new Error('Choose one of your cities.');
+    const option=getProductionOptions(next,city.id).find(o=>o.item===action.item);
+    if (!option || !option.enabled) throw new Error(option?.reason || 'Choose an available production project.');
+    city.queue={item:option.item,required:option.required,progress:0};
+    record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
+  } else if (['move','attack','found','improve'].includes(action.type)) {
+    unitOrder(next,seat,action);
+  } else {
+    if (typeof action.tile!=='string') throw new Error('Choose a district.');
+    const [order]=getActions(next,seat,action.tile);
+    if (!order || action.type!==order.type) throw new Error('That order is unavailable in this district.');
+    if (!order.enabled) throw new Error(order.reason);
+    const tile=TILE_BY_ID[action.tile],prior=next.board[tile.id],player=next.players[seat];
+    player.capital-=order.cost.capital;player.influence-=order.cost.influence;
+    next.board[tile.id]={...prior,owner:seat,level:order.type==='develop' ? prior.level+1:prior.level};
+    next.actionsLeft--;
+    const verb={develop:'developed',contest:'took control of',claim:'claimed'}[order.type];
+    record(next,seat,order.type,FACTIONS[seat].name+' '+verb+' '+tile.name+'.',tile.id);
+  }
+  refreshScores(next);
+  return next;
+}
+function botProject(state,city) {
+  const units=state.units.filter(u=>u.seat===city.seat);
+  const cities=state.cities.filter(c=>c.seat===city.seat);
+  const count=type=>units.filter(u=>u.type===type).length+cities.filter(c=>c.queue?.item===type).length;
+  const choices=[];
+  if (count('builder')===0) choices.push('builder');
+  if (count('ranged')<Math.max(1,cities.length-1)) choices.push('ranged');
+  if (count('melee')<2) choices.push('melee');
+  if (cities.length<3 && count('settler')===0) choices.push('settler');
+  choices.push('workshop','walls','monument','granary');
+  if (count('melee')<4) choices.push('melee');
+  const option=choices.find(key=>!city.buildings.includes(key));
+  return option ? {type:'produce',city:city.id,item:option}:null;
+}
+function botMovement(state,unit,options) {
+  if (!options.moves.length) return null;
+  const settle=unit.type==='settler', builder=unit.type==='builder';
+  const candidates=[unit.tile,...options.moves];
+  const towns=state.cities.filter(c=>c.seat===unit.seat);
+  let goals;
+  if (settle) goals=TILES.filter(t=>canSettle(state,unit.seat,t.id)).map(t=>t.id);
+  else if (builder) goals=TILES.filter(t=>improvementAt(state,unit.seat,t.id) && towns.some(c=>hexDistance(c.tile,t.id)<=2)).map(t=>t.id);
+  else goals=state.cities.filter(c=>c.seat!==unit.seat).map(c=>c.tile);
+  if (!goals.length) return null;
+  const costs=findRoutes(state,unit).costs;
+  function value(tile) {
+    const distance=Math.min(...goals.map(g=>hexDistance(g,tile)));
+    if (settle && distance===0) {
+      const territory=adjacent[tile].filter(k=>terrainCost[TILE_BY_ID[k].terrain] && state.board[k].owner===null).length;
+      return 20+territory*0.3+(TILE_BY_ID[tile].landmark ? 1:0)-costs.get(tile)*0.2;
+    }
+    if (!builder && !settle) {
+      const inRange=state.units.some(u=>u.seat!==unit.seat && hexDistance(u.tile,tile)<=UNIT_TYPES[unit.type].range) ||
+        state.cities.some(c=>c.seat!==unit.seat && hexDistance(c.tile,tile)<=UNIT_TYPES[unit.type].range);
+      const immediate=inRange && costs.get(tile)<unit.moves;
+      return -distance + (immediate ? 3 : inRange ? 0.5:0) - costs.get(tile)*0.04;
+    }
+    return -distance - costs.get(tile)*0.05;
+  }
+  let best=unit.tile, rating=value(best);
+  for (const tile of candidates) {
+    const v=value(tile);
+    if (v>rating) {best=tile;rating=v;}
+  }
+  return best===unit.tile ? null : {type:'move',unit:unit.id,tile:best};
+}
+function botDistrict(state) {
+  if (!state.actionsLeft) return null;
+  let choice=null,best=-Infinity;
+  for (const tile of TILES) {
+    const [order]=getActions(state,state.turn,tile.id);
+    if (!order?.enabled) continue;
+    const frontier=adjacent[tile.id].filter(id=>terrainCost[TILE_BY_ID[id].terrain] && state.board[id].owner===null).length;
+    const variety=((tile.q*67+tile.r*31+state.round*19+state.turn*11+state.actionsLeft*7)%29)/29;
+    const value=order.type==='develop' ? 0.5 : 2+Number(Boolean(tile.landmark))*3+frontier*0.1+(order.type==='contest'?1.5:0);
+    if (value+variety>best) {best=value+variety;choice={type:order.type,tile:tile.id};}
+  }
+  return choice;
+}
+export function chooseBotAction(source) {
+  const state=migrateGame(source),seat=state.turn;
+  if (state.phase!=='playing') throw new Error('The campaign has ended.');
+  const player = state.players[seat];
+  if (!player.research && player.technologies.length < Object.keys(TECHS).length) {
+    const threatened = state.cities.some(city => city.seat === seat && state.units.some(
+      unit => unit.seat !== seat && UNIT_TYPES[unit.type].range > 0 && hexDistance(unit.tile, city.tile) <= 2));
+    const opening = ['industry', 'agronomy', 'tactics', 'civics'][seat];
+    const priorities = [threatened ? 'tactics' : opening, 'industry', 'tactics', 'agronomy', 'civics'];
+    return {type: 'research', item: priorities.find(item => !knows(state, seat, item))};
+  }
+  const available=state.units.filter(u=>u.seat===seat && u.moves>0);
+  const plans=available.map(u=>[u,getUnitOptions(state,u.id)]);
+  for (const [unit,options] of plans) {
+    if (options.canFound) return {type:'found',unit:unit.id};
+    if (options.improvements.length) return {type:'improve',unit:unit.id,item:options.improvements[0]};
+    if (options.attacks.length) {
+      // Compare actual outcomes, prioritizing captures, then kills and favorable exchanges.
+      const outcomes = options.attacks.map(tile => {
+        const result = combatPreview(state, unit.id, tile);
+        const value = Number(result.capture)*500 + Number(result.defeated)*80 + result.damage - result.retaliation
+          - Number(result.attackerDefeated)*40 - result.defenderHpAfterHit*0.1;
+        return {tile, value};
+      });
+      const target = outcomes.sort((a,b) => b.value-a.value)[0].tile;
+      return {type:'attack',unit:unit.id,tile:target};
+    }
+  }
+  for (const city of state.cities) if (city.seat===seat && !city.queue) {
+    const order=botProject(state,city);
+    if (order) return order;
+  }
+  for (const [unit,options] of plans) {
+    const move=botMovement(state,unit,options);
+    if (move) return move;
+  }
+  return botDistrict(state) || {type:'end'};
+}
