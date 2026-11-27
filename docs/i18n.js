@@ -68,7 +68,7 @@ const phraseRules = [
   [/^(.+) strategy map\. Use arrow keys to preview a district\. Press Enter or Space to select it\. Use plus and minus to zoom, and Home to reset the view\.$/,region=>zh(region)+'战役地图。用方向键预览地块，回车或空格选择。按加减键缩放，按 Home 重置视图。'],
   [/^(.+) (started production of|completed) (.+)\.$/,(a,v,b)=>cityLabel(a)+(v==='completed'?'完成了':'开始生产')+zh(b)+'。'],
   [/^(.+) (founded a city at|founded) (.+)\.$/,(a,v,b)=>zh(a)+'在'+cityLabel(b)+'建城。'],
-  [/^(.+) via (Golden Gate Bridge|Bay Bridge|Coronado Bridge)([.]?)$/, (prefix,bridge,end)=>zh(prefix)+'，经'+zh(bridge)+(end?'。':'')],
+  [/^(.+) via (Golden Gate Bridge|Bay Bridge|Coronado Bridge|Angel Island ferry)([.]?)$/, (prefix,bridge,end)=>zh(prefix)+'，经'+zh(bridge)+(end?'。':'')],
   [/^Producing$/i,()=>'正在生产'],
   [/^(.+) (moved to|took control of|claimed|developed|discovered|began researching) (.+)\.$/,(a,verb,b)=>zh(a)+({'moved to':'移至','took control of':'夺取了','claimed':'将领土扩展至','developed':'开发了','discovered':'完成了研究：','began researching':'开始研究'}[verb])+zh(b)+'。'],
   [/^(.+) (captured|attacked) (.+) for (\d+) damage\.$/,(a,v,b,n)=>zh(a)+(v==='captured'?'占领了':'攻击了')+cityLabel(b)+'，造成 '+n+' 点伤害。'],

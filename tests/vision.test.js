@@ -20,10 +20,10 @@ test('every mobile formation sees two rings while movement and attack ranges sta
 });
 
 test('city lookouts and controlled districts contribute only to their owner’s view',()=>{
-  const s=field();s.units=[];s.cities=[{seat:0,tile:'8,6'}];s.board['0,0'].owner=0;
+  const s=field();s.units=[];s.cities=[{seat:0,tile:'8,6'}];s.board['3,0'].owner=0;
   assert.equal(getVisibleTiles(s,0).size,20);
   assert.equal(getVisibleTiles(s,1).size,0);
-  s.cities[0].tile='0,0';
+  s.cities[0].tile='3,0';
   assert.ok(getVisibleTiles(s,0).size<19);
   for(const tile of getVisibleTiles(s,0)) assert.ok(s.board[tile]);
 });

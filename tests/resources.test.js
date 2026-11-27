@@ -42,7 +42,7 @@ test('across 108 starts, deposits stay private at birth and a workable deposit c
       assert.equal(depositList(firstView).length,0);
       assert.equal(firstView.seed,undefined);
       const settler=state.units.find(u=>u.seat===seat && u.type==='settler');
-      const ring=neighbors(settler.tile);
+      const ring=neighbors(settler.tile,state);
       const site=ring.find(id=>state.board[id].resource && getMap(state).byId[id].terrain!=='ocean');
       assert.ok(site);
       const surveyed=applyAction({...state,turn:seat},seat,{type:'survey',unit:settler.id});

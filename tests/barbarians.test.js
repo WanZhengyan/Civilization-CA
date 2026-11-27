@@ -11,7 +11,7 @@ function setup(region='la',seed=764) {
 function battlefield() {
   const s=setup();
   const camp=s.barbarians.camps[0];
-  const from=neighbors(camp.tile).find(t=>!['ocean','mountains'].includes(getMap(s).byId[t].terrain));
+  const from=neighbors(camp.tile,s).find(t=>!['ocean','mountains'].includes(getMap(s).byId[t].terrain));
   const unit={id:'veteran',seat:0,type:'melee',tile:from,hp:100,maxHp:100,moves:2,maxMoves:2};
   s.units=[unit];s.cities=[];s.barbarians={camps:[{...camp,hp:9}],parties:[]};
   return {s,camp,unit};
@@ -21,7 +21,7 @@ test('camp and scout sites are deterministic and give every founder a safe openi
     const state=setup(region);
     const generate=seed=>{
       const next={...state,seed,barbarians:undefined};
-      seedCamps(next,getMap(next),neighbors,hexDistance);
+      seedCamps(next,getMap(next),getMap(next).neighbors,hexDistance);
       return next.barbarians;
     };
     const a=generate(908);
@@ -90,9 +90,9 @@ function raidFixture() {
   const map=getMap(s);
   const free=id=>map.byId[id].terrain==='urban';
   const t=map.tiles.find(tile=>free(tile.id) &&
-    neighbors(tile.id).some(mid=>free(mid) && neighbors(mid).some(end=>free(end) && hexDistance(end,tile.id)===2)));
-  const front=neighbors(t.id).find(mid=>free(mid) && neighbors(mid).some(end=>free(end)&&hexDistance(end,t.id)===2));
-  const home=neighbors(front).find(end=>free(end)&&hexDistance(end,t.id)===2);
+    map.neighbors(tile.id).some(mid=>free(mid) && map.neighbors(mid).some(end=>free(end) && hexDistance(end,tile.id)===2)));
+  const front=map.neighbors(t.id).find(mid=>free(mid) && map.neighbors(mid).some(end=>free(end)&&hexDistance(end,t.id)===2));
+  const home=map.neighbors(front).find(end=>free(end)&&hexDistance(end,t.id)===2);
   const city={id:'capital',name:'Test City',tile:t.id,seat:0,buildings:[],hp:100,maxHp:100};
   const camp={id:'base',type:'camp',tile:home,hp:48,maxHp:48};
   const scout={id:'eyes',type:'lookout',tile:front,campId:'base',hp:24,maxHp:24};
@@ -100,7 +100,7 @@ function raidFixture() {
   s.barbarians={camps:[camp],parties:[scout],settledSince:{capital:2}};s.log=[];
   function next() {
     s.round++;
-    barbarianRound(s,map,neighbors,hexDistance,UNIT_TYPES,(state,seat,type,text,tile)=>state.log.push({round:state.round,seat,type,text,tile}));
+    barbarianRound(s,map,map.neighbors,hexDistance,UNIT_TYPES,(state,seat,type,text,tile)=>state.log.push({round:state.round,seat,type,text,tile}));
   }
   return {s,city,camp,scout,front,next};
 }

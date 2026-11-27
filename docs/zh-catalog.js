@@ -695,6 +695,7 @@ Richmond|里士满
 North Richmond|北里士满
 El Cerrito|埃尔塞里托
 Angel Island|天使岛
+Angel Island ferry|天使岛渡轮
 `);
 section(`
 Command the harbor from Point Loma to Chula Vista. The Silver Strand shelters the inner bay.|从洛马角到丘拉维斯塔，争夺港湾控制权。银色沙洲将内湾与太平洋隔开。

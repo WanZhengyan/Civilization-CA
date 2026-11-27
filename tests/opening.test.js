@@ -11,7 +11,7 @@ test('seeded starts vary, have food and neighbors, and stay separated on all thr
       seen.add(homes[0]);
       for(const id of homes){
         assert.ok(['urban','coast','plains'].includes(getMap(mapId).byId[id].terrain));
-        assert.ok(neighbors(id).filter(n=>['urban','coast','plains'].includes(getMap(mapId).byId[n].terrain)).length>=2);
+        assert.ok(neighbors(id,mapId).filter(n=>['urban','coast','plains'].includes(getMap(mapId).byId[n].terrain)).length>=2);
         assert.ok(homes.every(other=>other===id||hexDistance(id,other)>=5));
       }
     }
@@ -60,7 +60,7 @@ test('a living unfounded rival prevents domination and losing the last unprotect
   }
   game=applyAction(game,2,{type:'end'});
   const city=game.cities[1], mil={id:'army',seat:0,type:'melee',tile:city.tile,hp:100,maxHp:100,moves:2,maxMoves:2};
-  mil.tile=neighbors(city.tile).find(id=>!['mountains','ocean'].includes(getMap(game).byId[id].terrain));
+  mil.tile=neighbors(city.tile,game).find(id=>!['mountains','ocean'].includes(getMap(game).byId[id].terrain));
   game.units.push(mil);city.hp=1;
   game=applyAction(game,0,{type:'attack',unit:'army',tile:city.tile});
   assert.equal(game.phase,'playing');assert.equal(game.players[1].eliminated,true);
@@ -68,7 +68,7 @@ test('a living unfounded rival prevents domination and losing the last unprotect
   game=applyAction(game,2,{type:'end'});assert.equal(game.turn,0);
   const settler=game.units.find(u=>u.seat===2);
   const army=game.units.find(u=>u.id==='army');
-  army.tile=neighbors(settler.tile).find(id=>!['ocean','mountains'].includes(getMap(game).byId[id].terrain));
+  army.tile=neighbors(settler.tile,game).find(id=>!['ocean','mountains'].includes(getMap(game).byId[id].terrain));
   settler.hp=1;
   game=applyAction(game,0,{type:'attack',unit:'army',tile:settler.tile});
   assert.deepEqual(game.winners,[0]);assert.equal(game.victoryReason,'survival');
@@ -106,6 +106,6 @@ test('a first city can train a Scout; it travels farther than militia and cannot
  const stopped=applyAction(twin,0,{type:'move',unit:scout.id,tile:advance.id});
  assert.deepEqual(getUnitOptions(stopped,scout.id).moves,[]);
 
- const rival=state.cities[1]; scout.tile=neighbors(rival.tile).find(id=>getMap(state).byId[id].terrain==='urban')||neighbors(rival.tile)[0];
+ const rival=state.cities[1]; scout.tile=neighbors(rival.tile,state).find(id=>getMap(state).byId[id].terrain==='urban')||neighbors(rival.tile,state)[0];
  assert.ok(!getUnitOptions(state,scout.id).attacks.includes(rival.tile));
 });

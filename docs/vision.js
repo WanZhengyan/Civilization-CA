@@ -111,7 +111,7 @@ export function projectForSeat(state,seat) {
     {...publicShape(c,['id','name','seat','tile','hp','maxHp','population','originalSeat']),buildings:[]});
   const units=state.units.filter(u=>u.seat===seat || visible.has(u.tile)).map(u=>u.seat===seat ? u :
     publicShape(u,['id','seat','type','tile','hp','maxHp','maxMoves']));
-  const view={...publicShape(state,['rulesVersion','opening','mapId','round','turn','phase','victoryReason','winners','wonderRegistry']),
+  const view={...publicShape(state,['rulesVersion','opening','mapId','mapShape','round','turn','phase','victoryReason','winners','wonderRegistry']),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
     log:state.log.map(e=>observedEvent(e,seat)).filter(Boolean),intel:{seat,visible:[...visible],explored:[...explored]}};
   if (state.barbarians) {
