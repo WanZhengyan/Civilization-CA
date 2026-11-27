@@ -377,6 +377,17 @@ function renderAtlas(tiles,map) {
   const scene=figuresOnTerrain(g,geo,extended,landmarks,shore);
   if(map.routes)for(const route of map.routes)bezierRoute(g,route,[['#847964',4.7],['#e7d4ae',3.2],['#b69e78',.7]]);
   else roadNetwork(g);
+  for(const bridge of map.crossings||[]) {
+    const a=map.byId[bridge.a],b=map.byId[bridge.b], pa=pos(a.q,a.r),pb=pos(b.q,b.r);
+    const span=[...pa,...pb];
+    line(g,span,'#394c4e',6);
+    line(g,span,bridge.color,4.6);
+    line(g,span,'#dcc7a0',1.05);
+    for(const f of [.23,.77]){
+      const x=pa[0]+(pb[0]-pa[0])*f,y=pa[1]+(pb[1]-pa[1])*f;
+      line(g,[x-2,y+2,x-2,y-8,x+1,y-9,x+1,y],bridge.color,1.6);
+    }
+  }
   for(const t of tiles.filter(t=>t.landmark)){
     const [x,y]=pos(t.q,t.r),scales={downtown:1.97,griffith:1.76,hollywood:1.52,pier:1.73,ucla:1.66,studios:1.69,airport:1.65,rosebowl:1.73};
     scene.push({y:y+4,run:()=>{
@@ -737,6 +748,10 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   const [rq,rr,ridge]=region.ridgeLabel;
   const [mountX,mountY]=pos(rq,rr);g.save();g.translate(mountX,mountY+20);g.rotate(.022);
   g.shadowColor='#405b48';g.shadowBlur=2.3;smallCaps(g,ridge,0,0,9.3*labelScale,1.4,'#f9e9bd');g.restore();
+  if(region.id==='sd'){
+    const [bx,by]=pos(9.6,8.6);g.save();g.translate(bx,by);g.rotate(.22);
+    g.shadowColor='#234651';g.shadowBlur=2;smallCaps(g,'SAN DIEGO BAY',0,0,9*labelScale,1.4,'#f5eac4');g.restore();
+  }
   const labelObstacles=[], labelBounds=[];
   for(const u of model.units){
     const a=unitAnchor(model,u.tile);if(!a)continue;
@@ -1053,6 +1068,34 @@ function drawLandmark(g, kind, x, y, scale = 1) {
     const top=kind==='campanile'?-23:-15;
     solid(0,top,3.4,4,3,cream);oval(0,top-1,1.3,1.3,'#eee0ad',ink);
     line([[0,top-3],[0,top-8]],'#697777',1.55);
+  } else if (kind === 'lighthouse') {
+    shade(14,5); solid(6,3,6,4,4,cream);
+    put([[-3,2],[-2,-14],[2,-14],[3,2]],'#e8e1ca',ink,.65);
+    solid(0,-14,2.7,2.7,3,['#e9cb94','#98775c','#765e4e']);
+    line([[-3,-18],[0,-20],[3,-18]],'#7f4e3a',1.6);
+  } else if (kind === 'hotel') {
+    shade(22,6); solid(0,4,13,6,7,cream);
+    for(const a of [-10,1,11]){
+      solid(a,2,3.7,4.5,8,cream);
+      put([[a-5,-5],[a,-14],[a+5,-6]],'#b65b44','#813f32',.6);
+    }
+  } else if (kind === 'balboa') {
+    shade(17,6); solid(0,3,12,6,6,cream);
+    solid(7,-2,3.2,3.5,17,['#ecd9ac','#b79670','#927658']); dome(7,-20,3.1,4.3);
+    dome(-4,-6,6,6.8);line([[7,-23],[7,-27]],rim,.65);
+  } else if (kind === 'depot') {
+    shade(19,5); solid(0,3,13,7,6,cream);
+    for(const a of [-8,8]){solid(a,1,3.5,3.7,9,cream);dome(a,-9,3.8,3.8);}
+  } else if (kind === 'marina' || kind === 'scripps') {
+    shade(21,5);
+    line([[-16,5],[16,-5]],'#8d7457',3.3);
+    for(const a of [-13,-4,5,13])line([[a,-a*.3],[a,-a*.3+3.8]],'#584f41',1);
+    if(kind==='scripps')solid(8,-3,6,3.5,4,cream);
+    else for(const a of [-9,1,9]){
+      line([[a,1],[a,-9]],'#e8d0a1',.8);
+      put([[a-.4,-8],[a-4,.5],[a-.4,0]],'#e8ddba',ink,.45);
+      line([[a-5,1],[a+3,.6]],'#985748',1.6);
+    }
   } else if (kind === 'griffith') {
     shade(29,8);
     solid(-1,7,22,24,2.5,['#dbc9a4','#998f79','#71786e']);

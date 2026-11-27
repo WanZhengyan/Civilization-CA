@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { FACTIONS, applyAction, chooseBotAction, createGame } from "../docs/rules.js";
 
-function run(seats, opening) {
-  let state = createGame(FACTIONS.slice(0, seats).map(f => ({name: f.name, bot: true})));
+function run(mapId, seats, opening) {
+  let state = createGame(FACTIONS.slice(0, seats).map(f => ({name: f.name, bot: true})), mapId);
   const hash = createHash("sha256");
   const counts = {moves: 0, attacks: 0, captures: 0, citiesFounded: 0, unitsTrained: 0,
-    buildingsCompleted: 0, improvements: 0, technologies: 0};
+    buildingsCompleted: 0, improvements: 0, technologies: 0, civics: 0, shipsLaunched: 0, fisheries: 0};
   let orders = 0;
   while (state.phase === "playing") {
     // These fixed openings let a production change be compared across versions.
@@ -39,21 +39,29 @@ function run(seats, opening) {
     // Includes discoveries paid instantly from a previously accumulated science bank.
     const seat = state.turn;
     counts.technologies += (next.players[seat].technologies?.length ?? 0) - (state.players[seat].technologies?.length ?? 0);
+    counts.civics += next.players[seat].civics.length - state.players[seat].civics.length;
+    if (action.type === "improve" && action.item === "fishery") counts.fisheries++;
+    if (action.type === "end") {
+      counts.shipsLaunched += next.units.filter(unit => ["cutter","workboat","frigate"].includes(unit.type)
+        && !state.units.some(old => old.id === unit.id)).length;
+    }
     state = next;
   }
   assert.ok(state.winners.length, "A finished campaign must have a winner.");
   hash.update(JSON.stringify(state));
-  return {seats, opening, rounds: state.round, ...counts, victory: state.victoryReason,
+  return {mapId, seats, opening, rounds: state.round, ...counts, victory: state.victoryReason,
     winners: state.winners.map(seat => FACTIONS[state.players[seat].faction].name),
     replayHash: hash.digest("hex")};
 }
 
 const results = [];
-for (const seats of [2, 3, 4]) {
-  for (const opening of ["standard", "workshop-first"]) {
-    const first = run(seats, opening);
-    assert.deepEqual(run(seats, opening), first, `Replay diverged for ${seats} seats, ${opening}.`);
-    results.push(first);
+for (const mapId of ["la", "sf", "sd"]) {
+  for (const seats of [2, 3, 4]) {
+    for (const opening of ["standard", "workshop-first"]) {
+      const first = run(mapId, seats, opening);
+      assert.deepEqual(run(mapId, seats, opening), first, `Replay diverged for ${mapId}, ${seats} seats, ${opening}.`);
+      results.push(first);
+    }
   }
 }
-console.log(JSON.stringify({suite: "LA campaign playtest", repeatedRuns: 2, deterministic: true, results}, null, 2));
+console.log(JSON.stringify({suite: "California campaign playtest", repeatedRuns: 2, deterministic: true, results}, null, 2));

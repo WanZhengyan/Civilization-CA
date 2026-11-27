@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame, getMap, migrateGame, getUnitOptions, applyAction, neighbors, getPortSite} from '../docs/rules.js';
+import {createGame, getMap, migrateGame, getUnitOptions, applyAction, neighbors, getPortSite, getRouteDetail, combatPreview} from '../docs/rules.js';
 import {mapPicker} from '../docs/regions-ui.js';
 
 function connectedWater(map,start,end) {
@@ -68,3 +68,56 @@ function checkRegionalFleet(mapId) {
 }
 
 test('Bay Area harbors commission ships into the Bay Area water network',()=>checkRegionalFleet('sf'));
+test('San Diego Bay has its own capitals, harbor mouth and accessible coastal settlements',()=>{
+  const state=createGame(undefined,'sd'), map=getMap(state);
+  assert.equal(map.tiles.length,221);
+  assert.deepEqual(state.cities.map(c=>c.name),['Downtown San Diego','La Jolla','Coronado','Chula Vista']);
+  assert.ok(connectedWater(map,'0,7','10,8'));
+  assert.ok(connectedWater(map,'0,3','6,4'));
+  for(const ids of map.starts){
+    assert.ok(ids.every(id=>!['ocean','mountains'].includes(map.byId[id].terrain)));
+    assert.ok(ids.some(id=>neighbors(id).some(n=>map.byId[n].terrain==='ocean')));
+  }
+  assert.equal(map.byId['5,8'].landmark,'lighthouse');
+  assert.notEqual(getMap('sf').byId['5,8'].name,map.byId['5,8'].name);
+});
+
+test('San Diego fleets stay in their own connected waterways',()=>checkRegionalFleet('sd'));
+
+test('every campaign has a traversable land route between all participating capitals',()=>{
+  for(const mapId of ['la','sf','sd']) for(const count of [2,3,4]){
+    const state=createGame(Array.from({length:count},(_,i)=>({name:'Seat '+i})),mapId);
+    const capitals=state.cities.map(c=>c.tile);
+    const unit=state.units.find(u=>u.type==='melee');
+    // Terrain reachability ignores temporary garrisons. Traverse the same moves offered by the game.
+    const probe={...state,units:[unit],cities:[]};
+    const seen=new Set([capitals[0]]),queue=[capitals[0]];
+    for(const tile of queue){
+      unit.tile=tile;
+      for(const next of getUnitOptions(probe,unit.id).moves)if(!seen.has(next)){seen.add(next);queue.push(next);}
+    }
+    assert.ok(capitals.every(id=>seen.has(id)),mapId+' '+count+' factions');
+  }
+});
+
+test('the Golden Gate carries land units and its shipping channel remains navigable',()=>{
+  let state=createGame([{name:'Host'},{name:'Guest'}],'sf');
+  const map=getMap(state), bridge=map.crossings[0], unit=state.units.find(u=>u.type==='melee'&&u.seat===0);
+  unit.tile=bridge.a;
+  const detail=getRouteDetail(state,unit.id,bridge.b);
+  assert.deepEqual(detail,{path:[bridge.a,bridge.b],cost:2,crossings:['Golden Gate Bridge']});
+  assert.ok(!getUnitOptions(state,unit.id).moves.includes('5,3'));
+  unit.moves=1;
+  assert.equal(getRouteDetail(state,unit.id,bridge.b),null);
+  unit.moves=2;
+  const passed=applyAction(state,unit.seat,{type:'move',unit:unit.id,tile:bridge.b});
+  assert.equal(passed.units.find(other=>other.id===unit.id).moves,0);
+  const guard=state.units.find(u=>u.type==='melee'&&u.seat===1);
+  guard.tile=bridge.b;
+  assert.ok(!getUnitOptions(state,unit.id).moves.includes(bridge.b));
+  assert.ok(combatPreview(state,unit.id,bridge.b));
+  unit.type='cutter';unit.tile='5,3';unit.moves=3;
+  const vessel=getUnitOptions(state,unit.id);
+  assert.ok(vessel.moves.length && vessel.moves.every(id=>map.byId[id].terrain==='ocean'));
+  assert.ok(connectedWater(map,'0,3','10,5'));
+});

@@ -357,6 +357,23 @@ function movementCost(state,unit, tileId) {
   const terrain=getMap(state).byId[tileId].terrain;
   return UNIT_TYPES[unit.type].domain==='sea' ? Number(terrain==='ocean') : terrainCost[terrain];
 }
+function bridgeTo(state,from,to) {
+  return getMap(state).bridgesByTile?.[from]?.find(bridge=>bridge.to===to);
+}
+function routeStepCost(state,unit,from,to) {
+  return UNIT_TYPES[unit.type].domain!=='sea' && bridgeTo(state,from,to) ? 2 : movementCost(state,unit,to);
+}
+export function getRouteDetail(state,unitId,target) {
+  const unit=unitOrNull(state,unitId),path=getMovePath(state,unitId,target);
+  if(!unit || !path.length)return null;
+  let cost=0;
+  const crossings=[];
+  for(let i=1;i<path.length;i++){
+    cost+=routeStepCost(state,unit,path[i-1],path[i]);
+    const bridge=bridgeTo(state,path[i-1],path[i]);if(bridge)crossings.push(bridge.name);
+  }
+  return {path,cost,crossings};
+}
 // The search budget is the unit's remaining movement on this turn.
 function findRoutes(state,unit) {
   const costs=new Map([[unit.tile,0]]),parents=new Map(),queue=[unit.tile];
@@ -364,8 +381,10 @@ function findRoutes(state,unit) {
   for (const c of state.cities) if (c.seat!==unit.seat) blocked.add(c.tile);
   for (let i=0;i<queue.length;i++) {
     const here=queue[i];
-    for (const next of adjacent[here]) {
-      const step=movementCost(state,unit,next);
+    const bridges=UNIT_TYPES[unit.type].domain!=='sea' && getMap(state).bridgesByTile?.[here];
+    const directions=bridges ? [...adjacent[here],...bridges.map(link=>link.to)] : adjacent[here];
+    for (const next of directions) {
+      const step=routeStepCost(state,unit,here,next);
       if (!step || blocked.has(next)) continue;
       const cost=costs.get(here)+step;
       if (cost>unit.moves || cost>=(costs.get(next)??Infinity)) continue;
@@ -461,8 +480,10 @@ function unitImprovement(state,unit,tile) {
 function attackTargets(state,unit) {
   const range=UNIT_TYPES[unit.type].range;
   if (!range) return [];
-  const occupied=state.units.filter(u=>u.seat!==unit.seat && hexDistance(unit.tile,u.tile)<=range).map(u=>u.tile);
-  const cities=state.cities.filter(c=>c.seat!==unit.seat && hexDistance(unit.tile,c.tile)<=range && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
+  // A land melee unit can contest a defended end of a bridge with a full crossing order.
+  const inRange=tile=>hexDistance(unit.tile,tile)<=range || (UNIT_TYPES[unit.type].captures && unit.moves>=2 && Boolean(bridgeTo(state,unit.tile,tile)));
+  const occupied=state.units.filter(u=>u.seat!==unit.seat && inRange(u.tile)).map(u=>u.tile);
+  const cities=state.cities.filter(c=>c.seat!==unit.seat && inRange(c.tile) && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
   return [...new Set([...occupied,...cities])];
 }
 function fieldUpgrade(state, unit) {
@@ -691,7 +712,7 @@ function unitOrder(state,seat,action) {
   if (action.type==='move') {
     const path=getMovePath(state,unit.id,action.tile);
     if (!path.length) throw new Error('Choose an unoccupied tile within movement range.');
-    unit.moves-=path.slice(1).reduce((sum,k)=>sum+movementCost(state,unit,k),0);
+    unit.moves-=path.slice(1).reduce((sum,k,i)=>sum+routeStepCost(state,unit,path[i],k),0);
     unit.tile=action.tile;
     record(state,seat,'move',label+' moved to '+getMap(state).byId[unit.tile].name+'.',unit.tile,{from:id,unit:unit.id,path});
   } else if (action.type==='upgrade') {

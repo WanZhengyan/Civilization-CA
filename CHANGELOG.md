@@ -1,5 +1,11 @@
 # Release notes
 
+## 3.8 · Southern California and navigable crossings
+
+The first Bay Area playtest exposed a serious terrain problem: the Marin capital was on an island for land armies, making conquest impossible in a four-player game. Golden Gate, Bay and Coronado bridges now let land troops cross or contest the far end while ships can pass underneath. San Diego adds a sheltered inner bay and Mission Bay. Each region keeps its own solo save.
+
+45 checks passed. 18 fixed campaigns replayed identically twice. Every original capital is land-reachable for every map and seat count. The next check is how many controls a player can reach while watching the board.
+
 ## 3.7 · A campaign across San Francisco Bay
 
 On the Los Angeles map most factions begin inland. A second region needed to make competing ports part of the opening. The new Bay Area map has its own terrain, city sites and a navigable Golden Gate. In a four-faction opening all four capitals can commission distinct harbors. The host selects the scenario for everyone.

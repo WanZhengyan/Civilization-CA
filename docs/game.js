@@ -34,6 +34,17 @@ function freshSolo(mapId = "la") {
   })), mapId);
 }
 
+const mapSaveKey = mapId => SOLO_KEY + '.' + mapId;
+function archiveSolo() {
+  if (solo) save(mapSaveKey(getMap(solo).id), solo);
+}
+function campaignSave(mapId) {
+  if (solo && getMap(solo).id === mapId) return solo;
+  const saved = read(mapSaveKey(mapId), null);
+  if (!saved || getMap(saved).id !== mapId || !Array.isArray(saved.players) || !saved.board || !Array.isArray(saved.log)) return null;
+  try { return migrateGame(saved); } catch { return null; }
+}
+
 function storedSolo() {
   const candidate = read(SOLO_KEY, null);
   if (candidate?.players?.length === FACTIONS.length && candidate.board &&
@@ -341,12 +352,13 @@ function showError(message) {
 
 function open(kind, tab, code) {
   if (!dialog) return;
+  const previousModal = modal;
   const changed = modal !== kind;
   modal = kind;
   if (changed) errorMessage = '';
   if (tab) roomTab = tab;
   if (code) joinCode = code;
-  if (changed && (kind === 'multiplayer' || kind === 'restart')) selectedMap = getMap(getState()).id;
+  if (changed && ['multiplayer','campaign-atlas','restart'].includes(kind) && previousModal !== 'campaign-atlas') selectedMap = getMap(getState()).id;
   if (changed && kind === 'multiplayer') inviteOpen = false;
   drawDialog();
   if (!dialog.open) dialog.showModal();
@@ -523,11 +535,17 @@ function content() {
           [mode === 'online' && escapeHTML(name), countLabel(stats.cities,'city','cities'), countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), escapeHTML(stats.score)+' pts'))) +
         actions(button('back','Return to map','primary')) };
   }
+  if (modal === 'campaign-atlas') {
+    const saved=campaignSave(selectedMap);
+    const status=saved ? getMap(selectedMap).name+' · Round '+saved.round : 'No campaign started on this map.';
+    return {kicker:'California campaigns', title:'Campaign atlas',
+      body:mapPicker(selectedMap)+muted(status)+actions(button('load-region',saved?'Resume campaign':'Start campaign','primary'))};
+  }
   if (modal === 'restart') return {kicker:'Solo campaign', title:'Start a new campaign?',
-    body:mapPicker(selectedMap) + desc('This replaces your saved solo campaign on this device.') + actions(button('restart','Start new campaign','primary'),button('menu','Keep playing'))};
+    body:mapPicker(selectedMap) + desc('Starting over replaces the saved campaign on the selected map. Your other regions keep their progress.') + actions(button('restart','Start new campaign','primary'),button('menu','Keep playing'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings','Faction standings'),button('log','Event log'),
-    button('help','Field guide'), mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
+    button('help','Field guide'), mode === 'solo' ? button('campaign-atlas','Campaign atlas') : '', mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
 }
 
 function drawDialog() {
@@ -576,8 +594,18 @@ function modalAction(act) {
   else if (act === 'show-link') { inviteOpen = !inviteOpen; drawDialog(); }
   else if (act === 'to-solo' && !pending) { returnToSolo(); toast?.('Solo campaign resumed. Use the room code to return to your seat.'); }
   else if (act === 'start') mutate('start');
+  else if (act === 'campaign-atlas') open('campaign-atlas');
+  else if (act === 'load-region') {
+    const target=campaignSave(selectedMap)||freshSolo(selectedMap);
+    archiveSolo();
+    solo=target;
+    save(SOLO_KEY, solo);
+    resultShown='';
+    returnToSolo();
+  }
   else if (act === 'confirm-restart') open('restart');
   else if (act === 'restart') {
+    archiveSolo();
     solo = freshSolo(selectedMap);
     resultShown = '';
     save(SOLO_KEY, solo);
@@ -593,7 +621,14 @@ async function init({ render, toast: showToast }) {
   initialized = true;
   installMapStyles();
   dialog = document.getElementById('modal');
-  dialog.addEventListener('change', e => { if (e.target.name === 'mapId') selectedMap=e.target.value; });
+  dialog.addEventListener('change', e => {
+    if (e.target.name !== 'mapId') return;
+    selectedMap=e.target.value;
+    if (modal === 'campaign-atlas') {
+      drawDialog();
+      dialog.querySelector('input[name="mapId"]:checked')?.focus();
+    }
+  });
   solo = storedSolo();
   formName = String(read(NAME_KEY, '') || '');
   dialog.addEventListener('click', e => {

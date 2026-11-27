@@ -2,7 +2,7 @@ import {paintCompactCivics} from "./council.js";
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
-import {FACTIONS,getMap,MAX_ROUNDS,getMovePath,getSettlementAssessment,getResearchOptions,combatPreview,getActions,getStats,getCityYield,getProductionOptions,getUnitOptions,UNIT_TYPES,BUILDINGS,IMPROVEMENTS} from "./rules.js";
+import {FACTIONS,getMap,MAX_ROUNDS,getRouteDetail,getSettlementAssessment,getResearchOptions,combatPreview,getActions,getStats,getCityYield,getProductionOptions,getUnitOptions,UNIT_TYPES,BUILDINGS,IMPROVEMENTS} from "./rules.js";
 
 const el=id=>document.getElementById(id);
 const names=FACTIONS.map(f=>f.name);
@@ -140,9 +140,8 @@ function updateHint(id){
     hint=tile.name+" · "+terrain[tile.terrain];
     if(ready && selectedOptions?.attacks.includes(id))hint+=" · Click to preview attack";
     else if(ready && selectedOptions?.moves.includes(id) && order!=="attack"){
-      const path=getMovePath(view.state,u.id,id);
-      const cost=path.slice(1).reduce((n,t)=>n+(["forest","hills"].includes(mapRegion.byId[t].terrain)?2:1),0);
-      hint+=" · Move here for "+cost+" movement";
+      const route=getRouteDetail(view.state,u.id,id);
+      hint+=" · Move here for "+route.cost+" movement"+(route.crossings.length?" · "+route.crossings.join(", "):"");
     }
   }
   if(surveyUnitId){
@@ -158,6 +157,7 @@ function updateHint(id){
     }
   }
   if(order==="inspect" && surveyUnitId)hint="Inspect mode · "+hint;
+  if(tile && mapRegion.bridgesByTile?.[tile.id])hint+=" · "+mapRegion.bridgesByTile[tile.id].map(b=>b.name).join(", ");
   text("map-hint",hint);
 }
 function flash(message){
