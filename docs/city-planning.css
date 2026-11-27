@@ -2,3 +2,12 @@
 .city-food-report > div { display: flex; justify-content: space-between; gap: .5rem; }
 .city-food-report span { color: #c8c9b9; }
 .city-food-report b { font-variant-numeric: tabular-nums; font-weight: 600; }
+.population-dialog { width:min(480px,calc(100% - 22px)); max-height:min(82dvh,680px); margin:auto; padding:0; color:#e7e4d7; border:1px solid #615b46; border-radius:8px; background:#1b2029; }
+.population-dialog::backdrop { background:#10141ac9; }
+.population-dialog h3 { margin:1rem 0 .4rem; font:600 1rem Georgia,serif; }
+.focus-options { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.focus-options button { min-height:40px; }
+.focus-options [aria-pressed="true"] { border-color:#b59c62; color:#ecd495; }
+.work-tiles { list-style:none; margin:0; padding:0; }
+.work-tiles li { display:flex; gap:5px; padding:.4rem 0; border-bottom:1px solid #39404b; }
+.work-tiles li span { margin-left:auto; font-variant-numeric:tabular-nums; }

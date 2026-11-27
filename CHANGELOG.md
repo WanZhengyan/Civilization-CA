@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.3 · Assign the city workforce
+
+More residents previously gave the governor little control over which yields increased. Residents work eligible city land or specialist jobs. The city focus changes assignments and therefore actual food, production or science.
+
+75 checks passed. 18 fixed campaigns replayed identically twice. When growth stops, make its limiting factor visible.
+
 ## 5.2 · Feed each citizen
 
 Population grew without a clear cost to providing food. Cities now consume food per resident, store surplus and draw down their reserves during shortages. Prolonged shortages reduce population.

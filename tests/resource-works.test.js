@@ -24,7 +24,10 @@ test('a builder must use the correct work on a deposit and the city gets its foo
   assert.equal(getCityYield(next,city.id).food-before.food,3);
   assert.equal(getWorkingCity(next,tile).id,city.id);
   next.board[tile]={...next.board[tile],owner:1};
-  assert.equal(getCityYield(next,city.id).food,before.food);
+  // The worker is reassigned when the tile changes hands. Compare two cities
+  // with identical remaining territory to isolate the orchard's contribution.
+  const lost={...s,board:{...s.board,[tile]:{...s.board[tile],owner:1}}};
+  assert.equal(getCityYield(next,city.id).food,getCityYield(lost,city.id).food);
 });
 test('distant, rival or reserved campus sites cannot be improved',()=>{
   const {s,u,tile,city}=fixture();

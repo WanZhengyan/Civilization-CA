@@ -1,7 +1,7 @@
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
-import {populationSummary} from "./city-planning.js";
-import {getPopulationReport} from "./rules.js";
+import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
+import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -289,7 +289,7 @@ function inspect(){
     const buildings=(c.buildings||[]).map(i=>items[i]||i);
     if(buildings.length)info+='<p class="built-list">Buildings · '+esc(buildings.join(", "))+'</p>';
     if(own) info+=populationSummary(getPopulationReport(state,c.id))+cityQueue(c);
-    if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods");
+    if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
   }else{
     const holding=state.board[tile.id];
     if(!visible.has(tile.id)){
@@ -480,11 +480,21 @@ function paint(next){
   const eventKey=event?JSON.stringify(event):"";
   if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end"].includes(event.type))flash(Game.eventText(event));
   previousEvent=eventKey;
-  redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();
+  redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();populationLedger();
   if(el("production-modal").open)productionOptions();
   if(el("combat-modal").open)drawCombat();
 }
+function populationLedger() {
+  paintCitizenLedger(view.state,view.seat,mayOrder(),city=>({
+    population:getPopulationReport(view.state,city.id),workforce:getCitizenWorkforce(view.state,city.id)
+  }));
+}
 function chooseOrder(key){
+  if(key==="citizens"){
+    const c=cityAt(selectedTile);
+    if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}));populationLedger()}
+    return;
+  }
   if(key==="port-production"){
     const port=ownCities().find(c=>c.portTile===selectedTile);
     if(port){select(port.tile,null,true);redraw();openProduction()}

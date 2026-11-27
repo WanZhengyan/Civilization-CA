@@ -9,6 +9,21 @@ function section(pairs) {
   }
 }
 section(`
+Manage citizens|管理居民
+City planning|城市规划
+Citizen focus|居民工作重心
+Worked districts|居民工作地块
+Food / production / science per worker|每名居民的粮食 / 生产力 / 科研点
+Balanced|均衡发展
+Food supply|粮食优先
+Industry focus|工业优先
+Science focus|科研优先
+City garden|城市菜园
+City workshop|城市工坊
+Study hall|研习室
+Assign citizens|分配居民
+Select your city and open Manage citizens. Food, industry and science priorities change which controlled districts are worked. Each citizen works one district or a specialist job in town. The same district cannot support two cities.|选中城市后打开「管理居民」。粮食、工业或科研优先级会改变居民使用的领土地块。每名居民可工作一块土地或在城内担任专职工作。同一地块只能服务一座城市。
+Choose a valid citizen focus.|请选择有效的居民工作重心。
 Stored food|存粮
 Harvest|粮食产量
 Consumption|粮食消耗

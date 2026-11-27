@@ -1,6 +1,7 @@
 import {getVisibleTiles, projectForSeat, rememberVision} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
+import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
 import { foodForecast, feedCity } from "./population.js";
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
@@ -307,9 +308,31 @@ export function getPortSite(state, cityId) {
   return findPortSite(state, cityOrNull(state, cityId), getMap(state).byId, neighbors);
 }
 function unitOrNull(state,id) { return state.units.find(u=>u.id === id); }
+function cityWorkArea(state, city) {
+  const map=getMap(state);
+  const neighborsInRange=new Set([city.tile]);
+  let ring=[city.tile];
+  for (let distance=0;distance<2;distance++) {
+    const next=[];
+    for (const tile of ring) for (const id of adjacent[tile]) {
+      if (neighborsInRange.has(id) || state.board[id]?.owner!==city.seat || !terrainCost[map.byId[id].terrain]) continue;
+      neighborsInRange.add(id);next.push(id);
+    }
+    ring=next;
+  }
+  return [...neighborsInRange].filter(id=>id!==city.tile && !state.cities.some(c=>c.tile===id)).map(id=>map.byId[id]);
+}
+export function getCitizenWorkforce(state,cityId,focus) {
+  const city=cityOrNull(state,cityId);
+  if(!city)return null;
+  const tiles=cityWorkArea(state,city).filter(tile=>
+    !state.board[tile.id].pillaged && getWorkingCity(state,tile.id)?.id===city.id);
+  return assignWorkforce(city,tiles,focus);
+}
 export function getCityYield(state,cityId) {
   const city = cityOrNull(state,cityId);
   if (!city) return {food:0,production:0,capital:0,influence:0};
+  const work=getCitizenWorkforce(state,cityId).yields;
   const has = key=>city.buildings.includes(key);
   // Improvements within two hexes work the closest city; city id order breaks ties.
   let farms = 0, mines = 0, fisheries = 0, cropBonus = 0, materialBonus = 0;
@@ -328,8 +351,8 @@ export function getCityYield(state,cityId) {
   const steam = has('workshop') && knows(state, city.seat, 'steam');
   const trade = tradesBySea(state,city);
   return {
-    food: 4 + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
-    production: 3 + materialBonus + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
+    food: 4 + work.food + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
+    production: 3 + work.production + materialBonus + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
@@ -359,7 +382,7 @@ export function getStats(state,seat) {
     score:state.legacyFinalScores?.[seat] ?? score,
     cultureIncome:Number(settled)+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
       +(adopted(state,seat,'conservation') ? cities.filter(c=>hasPark(state,c)).length : 0),
-    scienceIncome:2*Number(settled)+count+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
+    scienceIncome:2*Number(settled)+count+cities.reduce((sum,c)=>sum+getCitizenWorkforce(state,c.id).yields.science,0)+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
       +(adopted(state,seat,'publicRadio') ? 2*count : 0),
     capitalIncome:3*Number(settled)+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +2*cities.filter(c=>tradesBySea(state,c)).length,
@@ -849,6 +872,12 @@ function resolveOrder(source,seat,action) {
     record(next,seat,'shipment','Resource shipment dispatched.');
   } else if (action.type==='research' || action.type==='civic') {
     selectProject(next, seat, action.item, action.type==='research' ? SCIENCE : CULTURE);
+  } else if (action.type==='focus') {
+    const city=cityOrNull(next,action.city);
+    if(!city || city.seat!==seat) throw new Error('Choose one of your cities.');
+    if(!Object.hasOwn(CITY_FOCUS,action.item)) throw new Error('Choose a valid citizen focus.');
+    city.focus=action.item;
+    city.focusRound=state.round;
   } else if (action.type==='produce') {
     const city=cityOrNull(next,action.city);
     if (!city || city.seat!==seat) throw new Error('Choose one of your cities.');
