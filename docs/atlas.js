@@ -882,9 +882,22 @@ export function createAtlas(host, options = {}) {
     ctx.setTransform(dpi,0,0,dpi,0,0);ctx.fillStyle='#203d48';ctx.fillRect(0,0,boxW,boxH);
     ctx.save();ctx.translate(boxW/2,boxH/2);ctx.scale(s,s);ctx.translate(-cx,-cy);
     const {buffer,margin,resolution}=background;
+    // Paint every uncharted hex as a nautical survey grid. Clip the entire
+    // illustrated layer so terrain never flashes before the first observation.
+    if(model.fog) {
+      for(const tile of tiles) if(!model.fog.explored.has(tile.id)){
+        const path=hexPath(tile.q,tile.r);
+        ctx.fillStyle=(tile.q+tile.r)%3===0?'#263944':'#263843';ctx.fill(path);
+        ctx.strokeStyle='#314650';ctx.lineWidth=.65;ctx.stroke(path);
+        const [x,y]=pos(tile.q,tile.r);ctx.fillStyle='#64757a';ctx.fillRect(x-.65,y-.65,1.3,1.3);
+      }
+      ctx.save();ctx.clip(model.fog.window);
+    }
     ctx.drawImage(buffer,-margin,-margin,buffer.width/resolution,buffer.height/resolution);
-    renderOverlay(ctx,tiles,model,s,labels,territories);
+    renderOverlay(ctx,model.fog ? model.fog.knownTiles : tiles,model,s,labels,territories);
+    if(model.fog){ctx.fillStyle='#24333c9c';ctx.fill(model.fog.memory);}
     if(paintUnits(ctx,model,s,performance.now()))schedule();
+    if(model.fog)ctx.restore();
     ctx.restore();
     // A very light vignette holds together all the terrain colours at the edge of the atlas.
     const shadow=ctx.createRadialGradient(boxW*.49,boxH*.45,Math.min(boxW,boxH)*.34,boxW*.5,boxH*.49,Math.hypot(boxW,boxH)*.57);
@@ -1004,6 +1017,12 @@ export function createAtlas(host, options = {}) {
         zoom=1;resetCenter();options.onZoom?.(100);
       }
       const state=o.state||o;if(o.state)model.state=o.state;
+      if(state.intel && model.intel!==state.intel) {
+        const explored=new Set(state.intel.explored), visible=new Set(state.intel.visible);
+        const window=new Path2D(),memory=new Path2D(),knownTiles=tiles.filter(t=>explored.has(t.id));
+        for(const t of knownTiles){window.addPath(hexPath(t.q,t.r));if(!visible.has(t.id)) memory.addPath(hexPath(t.q,t.r));}
+        model.intel=state.intel;model.fog={explored,visible,window,memory,knownTiles};
+      } else if(!state.intel){model.fog=null;model.intel=null;}
       if(state.board)model.board=state.board;if(state.players)model.players=state.players;
       if(Array.isArray(state.units)){
         updateBattleMotion(model,state,performance.now());model.units=state.units;
@@ -1025,7 +1044,7 @@ export function createAtlas(host, options = {}) {
     },
     zoomBy(factor){if(Number.isFinite(factor)&&factor>0)animateZoom(zoom*factor,boxW/2,boxH/2);},
     reset(){cancelAnimationFrame(tween);zoom=1;resetCenter();options.onZoom?.(100);schedule();},
-    focus(id){const t=model.byId.get(id);if(t){[cx,cy]=pos(t.q,t.r);bound();schedule();}},
+    focus(id,opening=false){const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} [cx,cy]=pos(t.q,t.r);bound();schedule();}},
     setLabels(show){labels=Boolean(show);schedule();},
     setTerritories(show){territories=Boolean(show);schedule();},
     destroy(){disposed=true;observer.disconnect();input.abort();cancelAnimationFrame(request);cancelAnimationFrame(tween);cancelAnimationFrame(resizeFrame);canvas.remove();background=null;}

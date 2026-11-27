@@ -30,3 +30,28 @@ test('city lookouts and controlled districts contribute only to their owner’s 
   assert.ok(getVisibleTiles(s,0).size<19);
   for(const tile of getVisibleTiles(s,0)) assert.ok(s.board[tile]);
 });
+
+import {getVision, rememberVision, projectForSeat} from '../docs/vision.js';
+test('exploration persists across moves, is private, and stores only observed resources',()=>{
+  const starting={...field(),players:[{surveyEnabled:false},{}],round:1,turn:0,log:[]};
+  starting.board['8,6'].resource='citrus';
+  const a=rememberVision(starting);
+  assert.equal(projectForSeat(a,0).board['8,6'].resource,undefined);
+  const changed=structuredClone(a);
+  changed.units[0].tile='12,8';changed.players[0].surveyEnabled=true;
+  changed.board['12,8'].resource='kelp';
+  const b=rememberVision(changed,a);
+  assert.ok(getVision(b,0).explored.has('8,6'));
+  assert.ok(!getVision(b,0).visible.has('8,6'));
+  assert.equal(projectForSeat(b,0).board['8,6'].resource,undefined);
+  assert.equal(projectForSeat(b,0).board['12,8'].resource,'kelp');
+  const later=structuredClone(b);
+  later.units[0].tile='1,1';later.board['12,8'].resource='timber';later.board['12,8'].owner=1;
+  later.units.push({id:'secret',tile:'12,8',type:'melee',seat:1});
+  const view=projectForSeat(rememberVision(later,b),0);
+  assert.equal(view.board['12,8'].resource,'kelp');
+  assert.equal(view.board['12,8'].owner,null);
+  assert.ok(!view.units.some(u=>u.id==='secret'));
+  assert.equal(a.exploration[0]['12,8'],undefined);
+  assert.strictEqual(projectForSeat(view,0),view);
+});

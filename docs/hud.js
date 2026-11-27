@@ -71,7 +71,7 @@ let view,atlas,selectedTile,selectedUnit,kind="tile",order="",matchKey="",active
 let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEvent="";
 const unavailableArt=new Set();
 let surveyUnitId=null;
-let survey=new Map();
+let survey=new Map(), explored=new Set(), visible=new Set();
 function toast(message){text("toast",message);el("toast").hidden=false;clearTimeout(timer);timer=setTimeout(()=>el("toast").hidden=true,3200)}
 function select(tile,unit=null,city=false){
   if(!mapRegion.byId[tile])return;
@@ -91,6 +91,7 @@ function openMapOnMobile(){
 }
 function onMapSelect(tileId,unitId){
   if(!view || !mapRegion.byId[tileId])return;
+  if(!explored.has(tileId)) {toast("Uncharted territory. Move closer to explore.");return}
   const unit=getUnit(), targetUnit=view.state.units.find(u=>sameId(u.id,unitId));
   const available=unit && unit.seat===view.seat && mayOrder() && order!=="inspect";
   if(available && targetUnit?.seat!==view.seat){
@@ -149,6 +150,7 @@ function renderSurveyDialog(){
 function updateHint(id){
   hoverId=id;
   if(!view)return;
+  if(id && !explored.has(id)){text("map-hint","Uncharted territory. Move closer to explore.");return}
   const tile=mapRegion.byId[id],u=getUnit();
   const ready=Boolean(u && u.seat===view.seat && mayOrder() && order!=="inspect");
   let hint=order==="inspect"?"Inspection mode. Click a hex to inspect it without moving.":"Select a unit, city or district to inspect it.";
@@ -175,6 +177,7 @@ function updateHint(id){
     }
   }
   if(order==="inspect" && surveyUnitId)hint="Inspect mode · "+hint;
+  if(tile && !visible.has(id))hint=tile.name+" · "+terrain[tile.terrain]+" · Outside current sight";
   if(tile && mapRegion.bridgesByTile?.[tile.id])hint+=" · "+mapRegion.bridgesByTile[tile.id].map(b=>b.name).join(", ");
   text("map-hint",hint);
 }
@@ -207,6 +210,12 @@ function cityQueue(city){
 }
 function inspect(){
   const state=view.state,tile=tileAt(),unit=getUnit(),city=cityAt(selectedTile);
+  if(!tile || !explored.has(selectedTile)){
+    text("hex-coord","—");text("entity-kind","Survey");text("entity-name","Uncharted territory");text("entity-location","");
+    el("unit-portrait").hidden=true;el("district-img").style.visibility="hidden";el("entity-tabs").innerHTML="";
+    selectedOptions=null;updateSurvey();el("entity-info").innerHTML="";el("entity-commands").innerHTML=note("Uncharted territory. Move closer to explore.");return;
+  }
+  el("district-img").style.visibility="";
   const activeUnit=kind==="unit"?unit:null,activeCity=kind==="city"?city:null;
   const owner=activeUnit?.seat??activeCity?.seat??state.board[tile.id]?.owner;
   const gov=owner!=null?faction(owner):null,own=owner===view.seat && !lobby();
@@ -265,6 +274,10 @@ function inspect(){
     }else explanation="Select a friendly unit to give orders.";
   }else if(activeCity){
     const c=activeCity,y=getCityYield(state,c.id);
+    if(!own) {
+      info='<div class="entity-stats">'+stat("Population",c.population)+stat("City HP",c.hp,c.maxHp)+'</div>'+healthBar(c.hp,c.maxHp);
+      el("entity-info").innerHTML=info;el("entity-commands").innerHTML=note("Only the city owner can inspect its economy.");return;
+    }
     info='<div class="entity-stats">'+stat("Population",c.population)+stat("Production","+"+y.production)+stat("City HP",c.hp,c.maxHp)+'</div>'+healthBar(c.hp,c.maxHp);
     const buildings=(c.buildings||[]).map(i=>items[i]||i);
     if(buildings.length)info+='<p class="built-list">Buildings · '+esc(buildings.join(", "))+'</p>';
@@ -272,6 +285,10 @@ function inspect(){
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false);
   }else{
     const holding=state.board[tile.id];
+    if(!visible.has(tile.id)){
+      el("entity-info").innerHTML=stat("Terrain",terrain[tile.terrain])+(holding?.resource ? stat("Resource",items[holding.resource]||holding.resource) : "");
+      el("entity-commands").innerHTML=note("Outside current sight");return;
+    }
     info='<div class="province-meta"><i style="background:'+esc(gov?.color||"#98a1a6")+'"></i>'+esc(gov?.name||(tile.terrain==="ocean"?"Open water":"Unclaimed land"))+'</div><div class="entity-stats">'+stat("Terrain",terrain[tile.terrain])+stat("Improvement",items[holding?.improvement]||"None")+'</div>';
     const territory=getActions(state,view.seat,tile.id)[0];
     if(port){
@@ -421,8 +438,10 @@ function closeCombat(){
 function paint(next){
   const previousKey=matchKey;view=next;const {state,seat,mode,room}=next;
   mapRegion=getMap(state);
-  const key=mapRegion.id+':'+mode+':'+(room?.code||state.seed||'')+':'+seat;
-  if(key!==matchKey||!selectedTile){matchKey=key;activeRoster="units";selectOpening()}
+  visible=new Set(state.intel?.visible??Object.keys(state.board));explored=new Set(state.intel?.explored??Object.keys(state.board));
+  const key=mapRegion.id+':'+mode+':'+(room?.code||next.session||'')+':'+seat;
+  const focusOpening=key!==matchKey||!selectedTile||(state.round===1&&!explored.has(selectedTile));
+  if(focusOpening){matchKey=key;activeRoster="units";selectOpening()}
   if(kind==="unit"){
     const u=getUnit();if(u)selectedTile=u.tile;else select(selectedTile,null,Boolean(cityAt(selectedTile)));
   }
@@ -447,7 +466,7 @@ function paint(next){
   const eventKey=event?JSON.stringify(event):"";
   if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end"].includes(event.type))flash(Game.eventText(event));
   previousEvent=eventKey;
-  redraw();paintResearch();
+  redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();
   if(el("production-modal").open)productionOptions();
   if(el("combat-modal").open)drawCombat();
 }

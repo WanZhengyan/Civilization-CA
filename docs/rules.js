@@ -1,3 +1,4 @@
+import {rememberVision} from './vision.js';
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
@@ -248,6 +249,11 @@ function addResearch(state) {
   return {...state, rulesVersion: 3, players};
 }
 export function migrateGame(state) {
+  if (state?.intel) return state;
+  const migrated=migrateCore(state);
+  return migrated && !migrated.exploration ? rememberVision(migrated) : migrated;
+}
+function migrateCore(state) {
   if (!state) return state;
   if (state.rulesVersion === 3) {
     if (state.players.every(p => Array.isArray(p.civics) && Number.isFinite(p.culture) && Object.hasOwn(p,'civic'))) return state;
@@ -281,7 +287,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
     })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
   starts.forEach(([site],seat)=>spawn(next,seat,'settler',site));
   refreshScores(next);
-  return addResearch(next);
+  return rememberVision(addResearch(next));
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
 export function getPortSite(state, cityId) {
@@ -390,6 +396,7 @@ export function getRouteDetail(state,unitId,target) {
 }
 // The search budget is the unit's remaining movement on this turn.
 function findRoutes(state,unit) {
+  const seen=state.intel && new Set(state.intel.visible);
   const costs=new Map([[unit.tile,0]]),parents=new Map(),queue=[unit.tile];
   const blocked=new Set(state.units.filter(u=>u.id!==unit.id).map(u=>u.tile));
   for (const c of state.cities) if (c.seat!==unit.seat) blocked.add(c.tile);
@@ -399,7 +406,7 @@ function findRoutes(state,unit) {
     const directions=bridges ? [...adjacent[here],...bridges.map(link=>link.to)] : adjacent[here];
     for (const next of directions) {
       const step=routeStepCost(state,unit,here,next);
-      if (!step || blocked.has(next)) continue;
+      if (!step || blocked.has(next) || (seen && !seen.has(next))) continue;
       const cost=costs.get(here)+step;
       if (cost>unit.moves || cost>=(costs.get(next)??Infinity)) continue;
       costs.set(next,cost); parents.set(next,here); queue.push(next);
@@ -775,6 +782,10 @@ function unitOrder(state,seat,action) {
   }
 }
 export function applyAction(source,seat,action) {
+  const current=migrateGame(source);
+  return rememberVision(resolveOrder(current,seat,action),current);
+}
+function resolveOrder(source,seat,action) {
   const state=migrateGame(source);
   if (state.phase!=='playing') throw new Error('The campaign has ended.');
   if (!Number.isInteger(seat) || seat!==state.turn) throw new Error('Wait for your turn.');

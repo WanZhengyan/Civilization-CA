@@ -1,3 +1,4 @@
+import {projectForSeat} from './vision.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
 import {mapPicker, installMapStyles} from './regions-ui.js';
 import { FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
@@ -67,13 +68,13 @@ let selectedMap = 'la';
 let pending = false, errorMessage = '', playingBots = false;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
 let inviteOpen = false, resultShown = '', guideTab = 'start';
-const getState = () => mode === 'online' && room?.game ? room.game : solo;
+const getState = () => projectForSeat(mode === 'online' && room?.game ? room.game : solo, currentSeat());
 const currentSeat = () => mode === 'online' && room ? room.you : 0;
 function emit() {
   const state = getState();
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
   renderView?.({
-    state, seat: currentSeat(), room,
+    state, seat: currentSeat(), room, session: mode==='solo' ? solo.seed : room?.code,
     mode, busy: pending || (mode === 'solo' && playingBots) || (mode === 'online' && !room?.game)
   });
 }
@@ -488,6 +489,7 @@ const guideSections = {
   start: {label:'First turn', entries:[
     ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
     ['Found a city', 'A settler with movement left can found a city on friendly or neutral land at least three hexes from any city. Choose Found city. The settler becomes the city and nearby open land joins your faction.'],
+    ['Explore the fog', 'Dark tiles are uncharted. Move a Scout to see three hexes in every direction. The shaded terrain behind it stays on your map, but enemy positions disappear when your units lose sight.'],
     ['Choose your map', 'Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
     ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Your faction earns science and culture separately every turn.'],

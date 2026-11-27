@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.7 · A map that remembers exploration
+
+A previously seen district and an unvisited one looked the same. The atlas distinguishes unexplored ground, remembered terrain and currently visible positions. Enemy movements are live only inside current sight.
+
+62 checks passed. 18 fixed campaigns replayed identically twice. Check that the room service gives each seat the matching view.
+
 ## 4.6 · Sight belongs to each formation
 
 Explorers and infantry shared access to the same open board. Units and cities now have individual sight radii. The scout sees farther than an ordinary infantry unit.
