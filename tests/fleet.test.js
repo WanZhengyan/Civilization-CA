@@ -70,7 +70,7 @@ test('a fishing crew has two offshore charges which feed and fund its own harbor
     worked++;
     assert.equal(state.board[dest].portCity,c.id);
     assert.equal(state.board[dest].owner,1);
-    assert.equal(getCityYield(state,c.id).food-getCityYield(old,c.id).food,2);
+    assert.equal(getCityYield(state,c.id).food-getCityYield(old,c.id).food,2+Number(state.board[dest].resource==='fish'));
     assert.equal(getCityYield(state,c.id).capital-getCityYield(old,c.id).capital,1);
     assert.ok(getStats(state,1).capitalIncome>getStats(old,1).capitalIncome);
     assert.equal(byId(state,crew.id)?.charges||0,2-worked);

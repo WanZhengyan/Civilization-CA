@@ -55,3 +55,35 @@ export function canSeeDeposits(state, seat) {
 export function canSurvey(state, unit) {
   return Boolean(unit && unit.moves>0 && ['settler','scout','builder'].includes(unit.type) && !canSeeDeposits(state,unit.seat));
 }
+
+export const SPECIAL_IMPROVEMENTS = {
+  orchard: {name: 'Orchard'}, lumberCamp: {name: 'Lumber camp'}, quarry: {name: 'Quarry'}
+};
+
+// Two supply steps through friendly land. Equal-distance cities use their
+// stable IDs, so a single site never supplies two cities at once.
+export function serviceCity(state, tileId, byId, neighbors) {
+  const holding=state.board[tileId];
+  if (holding?.owner == null) return null;
+  if (holding.improvement==='fishery') {
+    return state.cities.find(city=>city.id===holding.portCity && city.seat===holding.owner && city.portTile && city.buildings.includes('harbor')) || null;
+  }
+  if (['ocean','mountains'].includes(byId[tileId]?.terrain)) return null;
+  let frontier=[tileId];
+  const seen=new Set(frontier);
+  for(let distance=0;distance<=2;distance++) {
+    const candidates=state.cities.filter(city=>city.seat===holding.owner && frontier.includes(city.tile));
+    if(candidates.length) return candidates.sort((a,b)=>a.id.localeCompare(b.id))[0];
+    if(distance===2) break;
+    const next=[];
+    for (const cell of frontier) for (const id of neighbors(cell)) {
+      if(seen.has(id)||state.board[id]?.owner!==holding.owner || ['ocean','mountains'].includes(byId[id]?.terrain))continue;
+      seen.add(id);next.push(id);
+    }
+    frontier=next;
+  }
+  return null;
+}
+export function connectedDeposit(holding) {
+  return Boolean(holding && RESOURCES[holding.resource] && RESOURCES[holding.resource].improvement===holding.improvement && !holding.pillaged);
+}

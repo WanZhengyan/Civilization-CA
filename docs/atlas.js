@@ -450,6 +450,20 @@ function drawImprovement(g,tile,kind) {
     }
     town(g,9,2,5,4,6,0);
     poly(g,[4,-5.7,8,-10.2,13,-7.8,13,-6.2,9,-4.6],'#bd7859','#614f41',.8);
+  }else if(kind==='orchard'){
+    poly(g,[-20,1,-2,-8,20,1,1,12],'#a48c5c','#644e34',1);
+    for(const [a,b] of [[-11,1],[-3,-3],[5,-5],[-3,5],[5,1],[12,-1]]) {
+      line(g,[a,b+3,a,b-1],'#594937',1.6);
+      ellipse(g,a,b-2,3.1,2.3,'#72804d');ellipse(g,a+1,b-2,1.1,1.1,'#e2a553');
+    }
+  }else if(kind==='lumberCamp'){
+    town(g,5,0,6,4,5,1);
+    for(let i=0;i<3;i++){line(g,[-15,2+i*2.1,-4,-2+i*2.1],'#675139',2.6);ellipse(g,-15,2+i*2.1,1.4,1.2,'#d3b17d');}
+  }else if(kind==='quarry'){
+    for(let n=0;n<3;n++) {
+      const w=17-4*n,h=n*2.8;
+      poly(g,[-w,h,0,h-w*.4,w,h,0,h+w*.45],['#877f68','#afa188','#c0af91'][n],'#655f54',.8);
+    }
   }else if(kind==='fishery'){
     // The mesh reads as a floating pen, distinct from solid rows on farmland.
     poly(g,[-13,-1,0,-7,14,-1,1,6],'#6c9687','#cdb27d',1.65);

@@ -1,5 +1,5 @@
 import {getVisibleTiles, projectForSeat, rememberVision} from './vision.js';
-import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey} from './resources.js';
+import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
@@ -192,6 +192,7 @@ export const BUILDINGS = {
   walls: {name:"City walls", required:14}
 };
 export const IMPROVEMENTS = {
+  ...SPECIAL_IMPROVEMENTS,
   farm: {name:"Farm"}, mine: {name:"Mine"}, fishery: {name:"Fishery"}
 };
 function knows(state, seat, technology) {
@@ -310,22 +311,24 @@ export function getCityYield(state,cityId) {
   if (!city) return {food:0,production:0,capital:0,influence:0};
   const has = key=>city.buildings.includes(key);
   // Improvements within two hexes work the closest city; city id order breaks ties.
-  let farms = 0, mines = 0, fisheries = 0;
+  let farms = 0, mines = 0, fisheries = 0, cropBonus = 0, materialBonus = 0;
   for (const tile of getMap(state).tiles) {
     const holding = state.board[tile.id];
-    if (holding.owner !== city.seat || !holding.improvement) continue;
-    if (holding.improvement==='fishery' && holding.portCity===city.id) fisheries++;
-    const d = hexDistance(tile.id,city.tile);
-    if (d>2 || state.cities.some(c=>c.seat===city.seat && c.id!==city.id && (hexDistance(c.tile,tile.id)<d || (hexDistance(c.tile,tile.id)===d && c.id<city.id)))) continue;
-    if (holding.improvement==='farm') farms++;
-    if (holding.improvement==='mine') mines++;
+    if (holding?.owner !== city.seat || !holding.improvement || holding.pillaged || getWorkingCity(state,tile.id)?.id !== city.id) continue;
+    if (holding.improvement==='fishery') fisheries++;
+    if (['farm','orchard'].includes(holding.improvement)) farms++;
+    if (['mine','lumberCamp','quarry'].includes(holding.improvement)) mines++;
+    if (connectedDeposit(holding)) {
+      if (['grain','citrus','fish'].includes(holding.resource)) cropBonus++;
+      else materialBonus++;
+    }
   }
   const civics = knows(state, city.seat, 'civics');
   const steam = has('workshop') && knows(state, city.seat, 'steam');
   const trade = tradesBySea(state,city);
   return {
-    food: 2 + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
-    production: 3 + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
+    food: 2 + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
+    production: 3 + materialBonus + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
@@ -499,8 +502,14 @@ export function getSettlementAssessment(state, unitId, tileId) {
   }
   return assessment;
 }
+export function getWorkingCity(state,id) {
+  return serviceCity(state,id,getMap(state).byId,neighbors);
+}
 function improvementAt(state,seat,id) {
   if (state.board[id].owner!==seat || state.board[id].improvement || state.cities.some(c=>c.tile===id)) return null;
+  if (!getWorkingCity(state,id) || state.board[id].wonder || state.cities.some(city=>city.queue?.site===id)) return null;
+  const deposit=RESOURCES[state.board[id].resource];
+  if (deposit) return deposit.improvement;
   const terrain=getMap(state).byId[id].terrain;
   return isProductive(terrain) ? 'farm' : terrain==='forest' || terrain==='hills' ? 'mine' : null;
 }

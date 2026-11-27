@@ -1,9 +1,9 @@
 import {getSightRadius} from './vision.js';
-import {RESOURCES, canSeeDeposits, canSurvey} from './resources.js';
+import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
-import {FACTIONS,getMap,getCivicOptions,getEra,ERAS,MAX_ROUNDS,getRouteDetail,getSettlementAssessment,getResearchOptions,combatPreview,getActions,getStats,getCityYield,getProductionOptions,getUnitOptions,UNIT_TYPES,BUILDINGS,IMPROVEMENTS} from "./rules.js";
+import {FACTIONS,getMap,getCivicOptions,getEra,ERAS,MAX_ROUNDS,getRouteDetail,getSettlementAssessment,getResearchOptions,combatPreview,getActions,getStats,getCityYield,getProductionOptions,getUnitOptions,getWorkingCity,UNIT_TYPES,BUILDINGS,IMPROVEMENTS} from "./rules.js";
 
 const el=id=>document.getElementById(id);
 const names=FACTIONS.map(f=>f.name);
@@ -258,11 +258,13 @@ function inspect(){
         if(assessment?.nearestCity && !explanation.includes(assessment.nearestCity.name))explanation+=" "+nearestCityText(assessment);
       }else if(u.type==="builder"||u.type==="workboat"){
         const water=u.type==="workboat";
-        for(const item of water?["fishery"]:["farm","mine"]){
+        const localSite=state.board[tile.id];
+        const preferred=localSite?.resource && RESOURCES[localSite.resource]?.improvement;
+        for(const item of water?["fishery"]:(preferred && preferred!=="fishery" ? [preferred] : ["farm","mine"])){
           const ok=o.improvements.includes(item);
           actions+=actionButton(item,'Build '+items[item].toLowerCase(),ok?'1 charge':'Unavailable',"gold",disabled||!ok);
         }
-        explanation=water?"Build a fishery within two water hexes of a friendly harbor for +2 food and +1 capital.":"Build on an unimproved, friendly district outside a city.";
+        explanation=water?"Build a fishery within two water hexes of a friendly harbor for +2 food and +1 capital.":"Work an owned site connected to a city within two land steps.";
       }else{
         actions+=actionButton("attack","Preview attack",o.attacks.length+' '+(o.attacks.length===1?'target':'targets'),"red",disabled||!o.attacks.length,order==="attack");
         const definition=UNIT_TYPES[u.type];
@@ -304,6 +306,11 @@ function inspect(){
   }
   const deposit=canSeeDeposits(state,view.seat) && RESOURCES[state.board[tile.id]?.resource];
   if(deposit)info+='<div class="deposit-strip"><i style="background:'+deposit.color+'"></i><small>Resource</small><strong>'+esc(deposit.name)+'</strong></div>';
+  if(deposit){
+    const site=state.board[tile.id], supplier=getWorkingCity(state,tile.id);
+    const status=connectedDeposit(site) && supplier ? 'Supplying city' : 'Build to harvest';
+    info+='<div class="site-detail"><span>'+status+'</span><strong'+(supplier && connectedDeposit(site)?cityNameAttrs(supplier):'')+'>'+esc(supplier && connectedDeposit(site)?supplier.name:items[deposit.improvement])+'</strong></div>';
+  }
   if(order==="attack")explanation="Select an enemy outlined in red to review the combat forecast.";
   el("entity-info").innerHTML=info;
   el("entity-commands").innerHTML='<div class="orders">'+actions+'</div>'+note(explanation);
@@ -494,7 +501,7 @@ function chooseOrder(key){
   if(key==="survey"){Game.doAction({type:"survey",unit:u.id});return}
   if(key==="upgrade"){order="";Game.doAction({type:"upgrade",unit:u.id});return}
   if(key==="found"){order="";Game.doAction({type:"found",unit:u.id});return}
-  if(["farm","mine","fishery"].includes(key)){order="";Game.doAction({type:"improve",unit:u.id,item:key})}
+  if(Object.hasOwn(IMPROVEMENTS,key)){order="";Game.doAction({type:"improve",unit:u.id,item:key})}
 }
 function chooseRoster(id){
   const units=activeRoster==="units",item=(units?ownUnits():ownCities()).find(o=>sameId(o.id,id));

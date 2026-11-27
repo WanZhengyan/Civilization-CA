@@ -702,4 +702,13 @@ This unit cannot start a resource survey.|此单位无法开始资源勘探。
 section(`
 In sight|视野内
 Choose a tile within your current sight.|请选择当前视野内的地块。
+Orchard|果园
+Lumber camp|伐木场
+Quarry|采石场
+Build orchard|建造果园
+Build lumber camp|建造伐木场
+Build quarry|建造采石场
+Build to harvest|所需设施
+Supplying city|供应城市
+Work an owned site connected to a city within two land steps.|在与己方城市相连、两格以内的领土上施工。
 `);

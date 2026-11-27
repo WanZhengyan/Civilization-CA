@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.0 · Builders work the city hinterland
+
+A discovered deposit by itself gave a city no local construction decision. Builders match farms, orchards, lumber camps, quarries and mines to deposits within controlled territory; fishing crews work marine sites. Projects consume a build charge.
+
+68 checks passed. 18 fixed campaigns replayed identically twice. Check that a connected improved tile supplies its owner on the next turn.
+
 ## 4.9 · Survey the land for resources
 
 Knowing every deposit at the opening removed the value of exploration. Each seed distributes resources appropriate to land and water. The opening settler has no identified deposits. Surveying or founding starts local discovery.
