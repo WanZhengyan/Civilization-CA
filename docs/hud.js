@@ -1,4 +1,4 @@
-import {getSightRadius} from './vision.js';
+import {unitSight} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
@@ -256,8 +256,8 @@ function inspect(){
   if(activeUnit){
     const u=activeUnit,o=selectedOptions;
     info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+(["builder","workboat"].includes(u.type)?stat("Charges",u.charges):(UNIT_TYPES[u.type].range?stat("Range",UNIT_TYPES[u.type].range):stat("Terrain",terrain[tile.terrain])))+'</div>'+healthBar(u.hp,u.maxHp);
-    const radius=getSightRadius(u.type);
-    info+='<div class="unit-sight"><span>'+icon("inspect")+' Sight radius</span><strong>'+radius+' <small>'+(radius===1?'hex':'hexes')+'</small></strong></div>';
+    const radius=unitSight(state,u.type,u.seat);
+    info+='<div class="unit-sight"><span>'+icon("inspect")+' <span>'+(own?'Sight radius':'Base sight radius')+'</span></span><strong>'+radius+' <small>'+(radius===1?'hex':'hexes')+'</small></strong></div>';
     if(own){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);

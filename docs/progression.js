@@ -1,3 +1,4 @@
+import {appliedScience} from './applied-science.js';
 // Research projects share stable IDs with saved campaigns and room commands.
 export const ERAS = {
   frontier: {id: 'frontier', name: 'Frontier', rank: 0},
@@ -23,7 +24,8 @@ export const TECHS = {
   radio: {name: 'Radio Networks', era: 'modern', requires: ['steam'], cost: 12,
     description: 'Each city generates 2 more science per turn.'},
   motorization: {name: 'Motorization', era: 'modern', requires: ['steam', 'ballistics'], cost: 12,
-    description: 'Each city produces 2 more production per turn.'}
+    description: 'Each city produces 2 more production per turn.'},
+  ...appliedScience
 };
 
 export function eraFor(known = [], adopted = []) {

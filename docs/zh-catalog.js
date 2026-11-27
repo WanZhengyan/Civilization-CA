@@ -24,6 +24,15 @@ function section(pairs) {
   }
 }
 section(`
+Topographic Mapping|地形测绘
+Scouts and mounted scouts observe one additional ring of hexes.|侦察兵和骑乘侦察兵的视野半径增加一格。
+Crop Rotation|轮作制
+Each working farm or orchard supplies 1 extra food to its city.|每块有产出的农田或果园为所属城市额外提供 1 粮食。
+Industrial Metallurgy|工业冶金
+Connected iron mines and stone quarries supply 2 extra production to the city they serve.|已连通的铁矿和石料采石场为所属城市额外提供 2 生产力。
+Base sight radius|基础视野半径
+`);
+section(`
 Manage citizens|管理居民
 City planning|城市规划
 Citizen focus|居民工作重心

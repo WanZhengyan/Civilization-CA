@@ -23,8 +23,13 @@ function footprint(id, radius) {
   return tiles;
 }
 
-export function sightFrom(state, tile, type) {
-  return footprint(tile,getSightRadius(type)).filter(id=>Object.hasOwn(state.board,id));
+export function unitSight(state, type, seat) {
+  const trained = (type==='scout' || type==='cavalry') && state.players?.[seat]?.technologies?.includes('cartography');
+  return getSightRadius(type) + Number(Boolean(trained));
+}
+
+export function sightFrom(state, tile, type, seat) {
+  return footprint(tile,unitSight(state,type,seat)).filter(id=>Object.hasOwn(state.board,id));
 }
 
 export function getVisibleTiles(state, seat) {
@@ -33,7 +38,7 @@ export function getVisibleTiles(state, seat) {
   const reveal=(tile,radius)=>{
     for (const id of footprint(tile,radius)) if (Object.hasOwn(state.board,id)) visible.add(id);
   };
-  for (const unit of state.units) if (unit.seat===seat) reveal(unit.tile,getSightRadius(unit.type));
+  for (const unit of state.units) if (unit.seat===seat) reveal(unit.tile,unitSight(state,unit.type,seat));
   for (const city of state.cities) if (city.seat===seat) reveal(city.tile,getSightRadius('city'));
   for (const [id,holding] of Object.entries(state.board)) if (holding.owner===seat) visible.add(id);
   return visible;

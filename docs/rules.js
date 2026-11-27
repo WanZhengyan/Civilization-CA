@@ -350,6 +350,7 @@ export function getCityYield(state,cityId) {
   const has = key=>city.buildings.includes(key);
   // Improvements within two hexes work the closest city; city id order breaks ties.
   let farms = 0, mines = 0, fisheries = 0, cropBonus = 0, materialBonus = 0;
+  let mineralWorks = 0;
   for (const tile of getMap(state).tiles) {
     const holding = state.board[tile.id];
     if (holding?.owner !== city.seat || !holding.improvement || holding.pillaged || getWorkingCity(state,tile.id)?.id !== city.id) continue;
@@ -359,14 +360,15 @@ export function getCityYield(state,cityId) {
     if (connectedDeposit(holding)) {
       if (['grain','citrus','fish'].includes(holding.resource)) cropBonus++;
       else materialBonus++;
+      if (holding.resource==='iron' || holding.resource==='stone') mineralWorks++;
     }
   }
   const civics = knows(state, city.seat, 'civics');
   const steam = has('workshop') && knows(state, city.seat, 'steam');
   const trade = tradesBySea(state,city);
   const result = {
-    food: 4 + work.food + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
-    production:universityYield(city,'production')+ 3 + work.production + materialBonus + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
+    food: 4 + work.food + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * (knows(state,city.seat,'agriculturalScience') ? 3 : 2) + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
+    production:universityYield(city,'production')+ 3 + work.production + materialBonus + (knows(state,city.seat,'metallurgy') ? 2*mineralWorks : 0) + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
@@ -1039,7 +1041,7 @@ function botProject(state,city) {
 // contributes movement costs; the shape of the hex grid is public geography.
 function exploreFrontier(state,unit,moves) {
   const explored=new Set(state.intel.explored);
-  const newlyVisible=id=>sightFrom(state,id,unit.type).reduce((total,tile)=>total+Number(!explored.has(tile)),0);
+  const newlyVisible=id=>sightFrom(state,id,unit.type,unit.seat).reduce((total,tile)=>total+Number(!explored.has(tile)),0);
   let best=unit.tile, gain=newlyVisible(best);
   for (const tile of moves) {
     const count=newlyVisible(tile);
