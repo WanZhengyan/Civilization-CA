@@ -1,0 +1,55 @@
+/* Production choices use the same plates as the field command. Names, costs,
+   availability and descriptions remain live text in either interface language. */
+#production-options [data-produce="settler"] { --plate: url("./art/settler.webp"); }
+#production-options [data-produce="builder"] { --plate: url("./art/builder.webp"); }
+#production-options [data-produce="melee"] { --plate: url("./art/melee.webp"); }
+#production-options [data-produce="ranged"] { --plate: url("./art/ranged.webp"); }
+#production-options [data-produce="cavalry"] { --plate: url("./art/cavalry.webp"); }
+#production-options [data-produce="riflemen"] { --plate: url("./art/riflemen.webp"); }
+#production-options [data-produce="artillery"] { --plate: url("./art/artillery.webp"); }
+#production-options [data-produce="armor"] { --plate: url("./art/armor.webp"); }
+#production-options [data-produce="workboat"] { --plate: url("./art/workboat.webp"); }
+#production-options [data-produce="cutter"] { --plate: url("./art/cutter.webp"); }
+#production-options [data-produce="frigate"] { --plate: url("./art/frigate.webp"); }
+#production-options [data-produce="harbor"], #production-options [data-produce="shipyard"] { --plate: url("./art/harbor.webp"); }
+
+#production-options .production-item {
+  --plate-width: clamp(42px, 7vw, 60px);
+  display: grid;
+  grid-template-columns: var(--plate-width) minmax(0, 1fr);
+  align-content: start;
+  position: relative;
+}
+#production-options .production-item::before {
+  content: "";
+  width: var(--plate-width);
+  height: calc(var(--plate-width) * .93);
+  border-radius: 2px;
+  border: 1px solid #6b6559;
+  box-sizing: border-box;
+  background: linear-gradient(24deg, #24302c, #444a3d);
+  background-image: var(--plate, linear-gradient(24deg, #24302c, #444a3d));
+  background-size: cover;
+  background-position: center 40%;
+}
+#production-options [data-produce="shipyard"]::before { background-position: 84% center; }
+#production-options .production-item > svg {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: 2px;
+  color: #f2dfb6;
+  background: #25322ff0;
+}
+#production-options .production-item span { min-width: 0; }
+#production-options .production-item:focus-visible { outline: 2px solid #eed094; outline-offset: -2px; }
+#production-options .production-item:disabled::before { filter: saturate(.62); }
+@media (max-width: 530px) {
+  #production-options .production-grid { grid-template-columns: minmax(0,1fr); }
+  #production-options .production-item { --plate-width: 55px; gap: 10px; }
+}

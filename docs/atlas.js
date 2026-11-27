@@ -449,6 +449,17 @@ function drawImprovement(g,tile,kind) {
     }
     town(g,9,2,5,4,6,0);
     poly(g,[4,-5.7,8,-10.2,13,-7.8,13,-6.2,9,-4.6],'#bd7859','#614f41',.8);
+  }else if(kind==='fishery'){
+    // The mesh reads as a floating pen, distinct from solid rows on farmland.
+    poly(g,[-13,-1,0,-7,14,-1,1,6],'#6c9687','#cdb27d',1.65);
+    for(const t of [.24,.5,.76]){
+      line(g,[-13+13*t,-1-6*t,1+13*t,6-7*t],'#c9c594',.8);
+      line(g,[-13+14*t,-1+7*t,14*t,-7+6*t],'#c9c594',.8);
+    }
+    for(const [a,b] of [[-13,-1],[0,-7],[14,-1],[1,6]]){
+      line(g,[a,b+.8,a,b-3],'#72533a',1.1);ellipse(g,a,b-2.5,1.9,1.3,'#e7a164');
+      line(g,[a-2,b+2.65,a+2.4,b+2.1],'#b6d4c7',.6);
+    }
   }else if(kind==='mine'){
     mountain(g,-1,5,1.02,generator(tile.q,tile.r,124));
     poly(g,[-9,3,-9,-3,-5,-6,2,-5,5,-1,4,4],'#353e3a','#d3a570',2);
@@ -458,17 +469,54 @@ function drawImprovement(g,tile,kind) {
   }
   g.restore();
 }
+function drawHarbor(g,city,model,shipyard) {
+  const berth=model.byId.get(city.portTile);
+  if(!berth)return;
+  const [px,py]=pos(berth.q,berth.r);
+  const land=model.byId.get(city.tile),[lx,ly]=pos(land.q,land.r);
+  // Keep the port on the shore-facing edge of its assigned ocean hex, leaving
+  // the center clear for a ship and its selection ring.
+  const length=Math.max(1,Math.hypot(lx-px,ly-py)),bias=14;
+  g.save();g.translate(px+bias*(lx-px)/length,py+bias*(ly-py)/length+2);
+  const ink='#4a493e',timber='#ad8b5b',light='#e4c28a';
+  for(const [x,y] of [[-15,0],[-4,4],[12,-2],[17,-5]]) {
+    line(g,[x,y-1,x,y+5],ink,2.2);
+    line(g,[x+.55,y-.2,x+.55,y+4],timber,.85);
+    line(g,[x-3.2,y+5.6,x-1,y+5.8,x+2,y+5.3],'#c1d7c4',.87);
+  }
+  poly(g,[-18,-1,-1,-8,18,-5,0,3],timber,ink,1);
+  for(let i=0;i<6;i++)line(g,[-14+i*4,-2.8-i*.52,-8+i*3.7,.6-i*.6],light,.67);
+  poly(g,[-16,-3,-15,-9,-9,-12,-2,-8.7,-2,-3,-8,-.7],'#c39f71',ink,.72);
+  poly(g,[-16.8,-8.2,-10,-13.3,-1.1,-9.4,-8.1,-6.8],'#a25e47',ink,.7);
+  poly(g,[-13.4,-6,-10.4,-5.1,-10.2,-2,-13.2,-3],'#584e40');
+  const color=factionColor(model,city.seat);
+  if(shipyard){
+    line(g,[3,-6,4.6,-20,12,-8],ink,2.8);
+    line(g,[3,-6,4.6,-20,12,-8],'#e7ba6e',1.5);
+    line(g,[4.6,-20,15.6,-25.2,11.4,-18.1,4.6,-20],ink,2.2);
+    line(g,[4.6,-20,15.6,-25.2,11.4,-18.1,4.6,-20],'#e6b875',1.2);
+    line(g,[14.7,-24.3,14.7,-13],ink,.8);
+    poly(g,[12.2,-13,16,-14.3,18,-11.8,14,-10],'#aa7753',ink,.65);
+  }else{
+    line(g,[8,-5,8,-16],ink,1.45);
+    poly(g,[8.3,-16,14,-15.1,12.2,-13.5,8.4,-13.1],color,ink,.48);
+    ellipse(g,3,-5.6,2.0,1.2,'#8a6651');
+  }
+  g.restore();
+}
+
 function drawCity(g,city,model) {
   const t=model.byId.get(city.tile);if(!t)return;
   const [x,y]=pos(t.q,t.r),color=factionColor(model,city.seat);
   const buildings=city.buildings||[];
+  if(buildings.includes('harbor'))drawHarbor(g,city,model,buildings.includes('shipyard'));
   if(!t.landmark){
     town(g,x-11,y+2,8,7,11,3,true);town(g,x+3,y-1,7.5,9,14,1,true);
     town(g,x-2,y+9,8,6,8,5,true);
     poly(g,[x-10,y-1,x-5,y-5,x+4,y-1,x-2,y+2],'#b37657','#625345',.6);
   }
   if(buildings.length){
-    buildings.slice(0,4).forEach((name,i)=>{
+    buildings.filter(name=>name!=='harbor'&&name!=='shipyard').slice(0,4).forEach((name,i)=>{
       const [a,b]=[[-23,8],[17,10],[-16,-8],[19,-6]][i];
       const xx=x+a,yy=y+b;
       if(name==='walls'){
@@ -616,6 +664,18 @@ function battleFX(g,e,model,f) {
     line(g,[-12,0,1,0],'#352f2b',2.6);line(g,[-12,0,0,0],'#fff1bc',1.15);
     poly(g,[2,0,-3,-2,-2,0,-3,2],'#f6e3b5');g.restore();
   }
+  if((e.unit.type==='artillery'||e.unit.type==='frigate'||e.unit.type==='armor'||e.unit.type==='riflemen')&&f>=.22&&f<.52){
+    const k=(f-.22)/.30,arc=e.unit.type==='artillery'?17:4;
+    const x=ax+dx*k,y=ay-18+dy*k-Math.sin(k*Math.PI)*arc;
+    g.save();g.globalAlpha=1-k*.35;
+    line(g,[x-dx*.042,y-dy*.042,x,y],'#ffe0a2',1.7);
+    ellipse(g,x,y,2.55,1.75,'#e7b76e');
+    if(k<.28){
+      const side=Math.sign(dx)||1;
+      poly(g,[ax+side*9,ay-17,ax+side*17,ay-21,ax+side*15,ay-17,ax+side*22,ay-16,ax+side*11,ay-14],'#ffe1a2');
+    }
+    g.restore();
+  }
   if(f>.42 && f<.79){
     const a=(f-.42)/.37,ix=bx,iy=by-12;
     g.save();g.globalAlpha=Math.max(0,1-a);
@@ -633,6 +693,10 @@ function battleFX(g,e,model,f) {
     g.restore();
   }
 }
+const UNIT_INSIGNIA = {
+  melee:'M', ranged:'R', settler:'S', builder:'B', scout:'S', cavalry:'C', riflemen:'R',
+  artillery:'A', armor:'T', cutter:'C', frigate:'F', workboat:'W'
+};
 function paintUnits(g,model,scale,now) {
   let motion=model.motions.filter(e=>e.end>now);model.motions=motion;model.hitUnits=[];
   const data=new Map(model.units.map(u=>[u.id,u]));
@@ -664,7 +728,7 @@ function paintUnits(g,model,scale,now) {
           }
         }
       }else{
-        const ranged=u.type==='ranged',phase=Math.max(0,Math.min(1,(f-.10)/.70));
+        const ranged=u.type==='ranged'||u.type==='artillery'||u.type==='frigate',phase=Math.max(0,Math.min(1,(f-.10)/.70));
         const a=!ranged&&u.tile===active.tile
           ? (f<.48?.56*Math.sin(Math.min(1,Math.max(0,(f-.1)/.38))*Math.PI/2):.56+.44*Math.min(1,(f-.48)/.52))
           : Math.sin(Math.PI*phase)*(ranged?.085:.54);
@@ -690,7 +754,7 @@ function paintUnits(g,model,scale,now) {
     }
     drawUnitArt(g,u.type,x,y,{color:colour,facing,stride,strike,scale:factor});
     const badgeScale=Math.max(1.0,Math.min(1.4,1.04/scale)),bx=x+13.2*factor,by=y-29*factor;
-    shield(g,bx,by,colour,({melee:'M',ranged:'R',settler:'S',builder:'B',scout:'S'})[u.type]||'U',selected,u.hp,u.maxHp,badgeScale);
+    shield(g,bx,by,colour,UNIT_INSIGNIA[u.type]||'U',selected,u.hp,u.maxHp,badgeScale);
     if(!defeated)model.hitUnits.push({id:u.id,tile:u.tile,x,y,width:16*factor,height:40*factor,bx,by,badgeScale});
     g.restore();
   }

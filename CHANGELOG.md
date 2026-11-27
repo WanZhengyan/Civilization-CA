@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.1 · Illustrated forces and a longer modern campaign
+
+Advanced troops shared silhouettes and the initial 100-point limit often ended a game before armor arrived. Seven military and maritime formations have their own map pieces, animations and painted portraits. Ports, shipyards and fisheries appear on their water hexes. Waterfront trade now reaches urban ports, and the 125-point target allowed armor to reach all six reference two- and four-player standard games, up from three.
+
+54 checks passed. 18 fixed campaigns replayed identically twice. Next investigate player positioning around bridges and harbors; AI campaign outcomes alone do not establish human balance.
+
 ## 4.0 · English and Simplified Chinese at the same table
 
 The English-only interface made the field guide, council decisions and network lobby difficult to share with Chinese-speaking friends. The game menu now changes the interface language live, including the map, canvas labels, project descriptions and chronicle. Each player retains their own preference and entered names. The guide covers sea routes and three eras in both languages.

@@ -39,3 +39,21 @@ test('branch benefits match their required city and terrain', () => {
   assert.equal(getStats(s,1).capitalIncome,portIncome+2);
   assert.equal(getStats(s,0).scienceIncome,oldScience+2);
 });
+
+test('navigation credits waterfront urban capitals and working ports in both city and treasury yields',()=>{
+  for (const mapId of ['sf','sd']) {
+    const s=createGame(['West','East'],mapId), city=s.cities[0];
+    const previous=getCityYield(s,city.id).capital, income=getStats(s,0).capitalIncome;
+    s.players[0].technologies=['navigation'];
+    assert.equal(getCityYield(s,city.id).capital,previous+2);
+    assert.equal(getStats(s,0).capitalIncome,income+2);
+  }
+  const bay=createGame(['West','East'],'sf'), oakland=bay.cities[1];
+  bay.players[1].technologies=['navigation'];
+  const previous=getStats(bay,1).capitalIncome;
+  const request=applyAction({...bay, turn:1},1,{type:'produce',city:oakland.id,item:'harbor'});
+  let state=request;
+  while (!state.cities[1].buildings.includes('harbor')) state=applyAction(state,state.turn,{type:'end'});
+  const populationGain=state.cities[1].population-oakland.population;
+  assert.equal(getStats(state,1).capitalIncome-previous,2+2+populationGain);
+});

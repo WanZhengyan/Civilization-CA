@@ -6,7 +6,7 @@ export function getEra(state, seat) { return eraFor(state.players[seat]?.technol
 import {LOS_ANGELES, regionalMaps, validMapId} from './maps.js';
 export {CAMPAIGN_MAPS, validMapId} from './maps.js';
 export const MAX_ROUNDS = 30;
-export const TARGET_SCORE = 100;
+export const TARGET_SCORE = 125;
 export const ACTIONS_PER_TURN = 2;
 export const FACTIONS = [
   { id: "republic", nameZh:"加州共和国", name: "California Republic", color: "#efbb62", capital: "11,7", capitalName: "Downtown LA" },
@@ -194,6 +194,12 @@ function knows(state, seat, technology) {
 function adopted(state, seat, civic) {
   return state.players[seat]?.civics?.includes(civic) === true;
 }
+function tradesBySea(state, city) {
+  if (!knows(state,city.seat,'navigation')) return false;
+  const {byId}=getMap(state);
+  return city.buildings.includes('harbor') || byId[city.tile].terrain==='coast'
+    || neighbors(city.tile).some(id=>byId[id].terrain==='ocean');
+}
 function hasPark(state, city) {
   return [city.tile,...adjacent[city.tile]].some(id => state.board[id].owner===city.seat
     && ['forest','hills'].includes(getMap(state).byId[id].terrain));
@@ -292,7 +298,7 @@ export function getCityYield(state,cityId) {
   }
   const civics = knows(state, city.seat, 'civics');
   const steam = has('workshop') && knows(state, city.seat, 'steam');
-  const trade = getMap(state).byId[city.tile].terrain === 'coast' && knows(state, city.seat, 'navigation');
+  const trade = tradesBySea(state,city);
   return {
     food: 2 + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
     production: 3 + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
@@ -323,7 +329,7 @@ export function getStats(state,seat) {
     scienceIncome:2+count+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
       +(adopted(state,seat,'publicRadio') ? 2*count : 0),
     capitalIncome:3+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
-      +(knows(state,seat,'navigation') ? 2*cities.filter(c=>getMap(state).byId[c.tile].terrain==='coast').length : 0),
+      +2*cities.filter(c=>tradesBySea(state,c)).length,
     influenceIncome:2+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
 }
 function refreshScores(state) { state.players.forEach((p,i)=>{p.score=getStats(state,i).score;}); }

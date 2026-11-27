@@ -2,6 +2,8 @@ import {getLanguage, installLanguage, languageControl, observeCityNames, setLang
 import {mapPicker, installMapStyles} from './regions-ui.js';
 import { FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
 
+import {TARGET_SCORE, MAX_ROUNDS} from './rules.js';
+
 const SOLO_KEY = 'angel-basin.solo.v1';
 const SEATS_KEY = 'angel-basin.room-seats.v1';
 const LAST_ROOM_KEY = 'angel-basin.active-room.v1';
@@ -513,7 +515,7 @@ const guideSections = {
     ['Build up science', 'Cities, population and discoveries contribute science. Culture funds a separate civic project at the same time. Switch projects without losing saved points. Surplus science and culture carry over.'],
     ['Choose a civic path', 'Municipal Charter leads to County Federation for another district order, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
     ['Win by domination', 'Control every participating faction’s original capital to win immediately.'],
-    ['Win on civic points', 'If a faction reaches 100 civic points, finish the current round and compare scores. The same scoring applies after round 30. The highest score wins, and a tie shares victory.'],
+    ['Win on civic points', `If a faction reaches ${TARGET_SCORE} civic points, finish the current round and compare scores. The same scoring applies after round ${MAX_ROUNDS}. The highest score wins, and a tie shares victory.`],
     ['Count civic points', 'Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.']
   ]}
 };
@@ -541,7 +543,7 @@ function content() {
     const winners = (state.winners || []).map(seat => FACTION_NAMES[seat]);
     const label = winners.join(' and ') + (state.victoryReason === 'domination' ? ' captured every original capital.' : winners.length > 1 ? ' tied on civic points and share victory.' : ' won on civic points.');
     return { kicker: 'Campaign records', title: state.phase === 'finished' ? 'Campaign complete' : 'Faction standings',
-      body: desc(state.phase === 'finished' ? label : 'Holding every original capital wins immediately. Civic points are compared at the end of the round when a faction reaches 100, or after round 30.') +
+      body: desc(state.phase === 'finished' ? label : `Holding every original capital wins immediately. Civic points are compared at the end of the round when a faction reaches ${TARGET_SCORE}, or after round ${MAX_ROUNDS}.`) +
         list(ranked.map(({seat,name,stats}) => row(factionMark(seat) + FACTION_NAMES[seat],
           [mode === 'online' && '<span translate="no">'+escapeHTML(name)+'</span>', countLabel(stats.cities,'city','cities'), countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), escapeHTML(stats.score)+' pts'))) +
         actions(button('back','Return to map','primary')) };

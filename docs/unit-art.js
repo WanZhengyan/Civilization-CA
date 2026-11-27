@@ -352,11 +352,119 @@ function horseAndRider(g,b,color,phase,strike) {
   g.restore();
 }
 
+// The survey pieces are drawn from their waterline or ground contact. The
+// stripe, signal pennant or crew jacket carries the faction color on every hull.
+function wheel(b,x,y,r,phase,metal=false) {
+  b.oval(x,y,r,r*.91,metal?'#53615b':'#795d42',EDGE,1);
+  b.oval(x,y,r*.77,r*.68,metal?'#788575':'#433e35',metal?'#9b9e80':'#cca775',.55);
+  for(let i=0;i<(metal?4:7);i++) {
+    const a=phase+i*Math.PI*2/(metal?4:7);
+    b.line([[x,y],[x+Math.cos(a)*r*.71,y+Math.sin(a)*r*.62]],metal?'#535d52':'#d0ad7a',.72);
+  }
+  b.oval(x,y,r*.22,r*.21,'#d2ba89',EDGE,.45);
+}
+
+function rifleCompany(g,b,color,phase,strike) {
+  const wave=Math.sin(phase),recoil=strike*1.8;
+  const hip=[-1,-12-Math.abs(wave)*.6],y=hip[1]-6;
+  leg(b,[hip[0]-1.1,hip[1]],-1,-wave,-Math.cos(phase),0);
+  leg(b,[hip[0]+.9,hip[1]],1,wave,Math.cos(phase),0);
+  pack(b,-6,y-3,true);
+  torso(b,-recoil*.35,y,'infantry',color);
+  arm(b,[-3.4,y-3.1],[.5,y-.8],[7-recoil,y-3.8],color,false);
+  head(b,-recoil*.3+.2,y-9.6,'helmet',color);
+  // Kepi crown and visor keep the industrial infantry separate from militia.
+  const x=-recoil*.3;
+  b.polygon([[x-4.8,y-12.4],[x-4.9,y-15.4],[x-2.4,y-16.7],[x+.9,y-16.8],[x+3.8,y-15.3],[x+3.6,y-13.4],[x+6,y-12.6],[x+4.2,y-11.8],[x+1.8,y-12.3],[x-2.5,y-11.6]],'#3c5264',EDGE,.75);
+  b.line([[x-3.8,y-12.8],[x-.9,y-13.5],[x+3.1,y-13.9]],BRASS,.85);
+  const gunY=y-3.9;
+  g.save();g.translate(0,gunY);g.rotate(-.29+.24*strike);
+  b.polygon([[-5.9-recoil,-1.3],[-2-recoil,-1.3],[.6-recoil,-.2],[13.5-recoil,-.6],[13.5-recoil,.7],[3-recoil,1.23],[.3-recoil,2.2],[-2-recoil,2.25],[-5.7-recoil,4]],'#946443',EDGE,.68);
+  b.line([[.5-recoil,-1.15],[18-recoil,-1.1]],'#303e42',2.05);
+  b.line([[1-recoil,-1.6],[18-recoil,-1.55]],'#c4d0bf',.72);
+  b.line([[14-recoil,-.1],[17.3-recoil,-.1],[20.3-recoil,-.6]],'#e0dfc4',.65);
+  g.restore();arm(b,[1.4,y-4.1],[.2-recoil,y+.8],[3-recoil,y-3.6],color);
+}
+
+function fieldArtillery(g,b,color,phase,strike) {
+  const p=pigment(color),recoil=strike*2;
+  // Officer stands behind the breech rather than being mistaken for the gun.
+  g.save();g.translate(-10.5,-4);g.scale(.64,.64);
+  figure(b,'scout',color,phase*.55,0);g.restore();
+  wheel(b,3,-6.5,5.8,phase,true);
+  b.polygon([[-17,0],[-16,-1.9],[1.8,-10.3],[4.5,-9.4],[5.3,-6.3],[-10.5,-1.9],[-13.4,.2]],'#88917a',EDGE,.8);
+  b.polygon([[-5,-12.8],[2.5,-15.5],[7,-11.4],[7,-6.4],[-4,-6.6]],p.base,EDGE,.8);
+  b.line([[-4.2,-12.6],[2,-14.7],[5.6,-11.9]],p.rim,.7);
+  g.save();g.translate(1-recoil,-12.8);g.rotate(-.31);
+  b.polygon([[-6,-2.2],[-3.6,-3.0],[.5,-2.55],[13.1,-1.3],[15.8,-1.8],[16.6,-1.1],[16.5,1.18],[14.4,1.7],[13.1,1.3],[-.7,2.1],[-5.3,2],[-6.5,.9]],'#9e946f',EDGE,.84);
+  b.line([[-4.3,-2.18],[.58,-1.85],[13.5,-.86],[15.6,-1.1]],'#e8d29b',.8);
+  g.restore();wheel(b,.8,-6.4,6.55,phase);
+}
+
+function armoredColumn(g,b,color,phase,strike) {
+  const p=pigment(color),recoil=strike*1.85;
+  b.polygon([[-18,-8.3],[-15,-11],[12.5,-10.3],[18,-7.76],[17,-3.6],[13.7,-.25],[-11.7,.38],[-17.7,-3.7]],'#414d48',EDGE,1);
+  b.polygon([[-16.5,-7.2],[-13.8,-8.3],[14,-7.6],[15.7,-6.6],[13,-2.2],[-12,-1.7],[-15.8,-3.8]],'#787d68','#2b3634',.68);
+  for(const x of [-11.5,-6.6,-1.7,3.2,8.1,12.5])wheel(b,x,-4.7,2.6,phase,true);
+  b.line([[-13,-1.4],[-8,-.8],[10,-1.2],[15.2,-3.3]],'#acaa86',.65);
+  b.polygon([[-19,-9.1],[-14.7,-13.2],[-5.9,-14.8],[8.8,-14.3],[17.7,-10.7],[18.4,-8.3],[-11,-7.2]],'#7d8977',EDGE,.9);
+  b.polygon([[-16.4,-10.1],[-13.6,-12.3],[-5.3,-13.7],[6.1,-13.3],[11.4,-11.9],[-7.7,-10.3]],'#b7b59a',null);
+  b.polygon([[-7.4,-14.1],[-6.5,-19.4],[-3.8,-21.3],[4.8,-20.9],[8.2,-18.3],[8.5,-14.2],[4.5,-13],[-3.5,-13]],p.shade,EDGE,.85);
+  b.polygon([[-5.9,-18.7],[-3,-20.5],[4.45,-20.1],[6.85,-18.6],[1.3,-17.5]],p.lit,null);
+  b.polygon([[-4.9,-17.7],[.1,-16.8],[.3,-14.2],[-4.6,-15]],p.base,null);
+  b.oval(-1.3,-21.6,3.1,.85,'#8e9a83',EDGE,.6);
+  b.line([[-4.9,-20],[-7,-27]],'#5c634e',.74);
+  b.line([[6.6-recoil,-17.3],[22-recoil,-19.27]],EDGE,3.2);
+  b.line([[6.6-recoil,-17.8],[22-recoil,-19.68]],'#a5aa8e',1.85);
+  b.line([[19.8-recoil,-19.48],[22-recoil,-19.78]],'#e6d2a3',.75);
+  b.polygon([[10,-10.7],[12.4,-10.9],[14.3,-10],[12,-9.8]],'#f1d79d',null);
+}
+
+function vessel(g,b,type,color,phase,strike) {
+  const p=pigment(color), wave=Math.sin(phase), sail=type==='cutter', steam=type==='frigate', size=steam?22:sail?18:15.3;
+  g.save();g.rotate(wave*(steam?.018:.036));g.translate(0,-Math.abs(wave)*.65);
+  const flag=(x,y)=>{b.line([[x,y+4.5],[x,y-2.5]],'#615646',.76);b.polygon([[x+.3,y-2.35],[x+5.8,y-2.8-wave*.4],[x+4.1,y-.9],[x+5,y+.1],[x+.25,y+.65]],p.base,EDGE,.45);};
+  const mast=(x,y)=>{b.line([[x,-8],[x,y]],EDGE,1.85);b.line([[x-.3,-8],[x-.3,y]],'#dfc596',.86);};
+  if(sail){
+    mast(-6.2,-27);mast(3.2,-32.2);
+    b.line([[-13,-8],[-6.2,-26],[3.2,-30.5],[17,-8]],'#a69f83',.65);
+    b.polygon([[-6.2,-24],[-6.1,-12.2],[-16.3,-11.2],[-13.6,-15.2]],'#dbc6a0',EDGE,.66);
+    b.polygon([[2.65,-29.3],[2.95,-14],[-5.4,-11.7],[-4.5,-19.5]],'#f6e7bf',EDGE,.78);
+    b.polygon([[4,-26.3],[15.9,-11.1],[4.2,-13.5]],'#f3d9ac',EDGE,.72);
+    b.line([[4.9,-24],[6.5,-16.5],[14.6,-12.1]],'#bcaa82',.6);
+    b.line([[-4.55,-13.5],[-1.38,-15.4],[1.5,-26.4]],'#cbb38c',.6);flag(3.2,-32.3);
+  } else if(steam){
+    mast(-10.2,-22);b.line([[-16,-8],[-10.2,-21],[-4,-11]],'#b6b6a1',.67);
+    b.polygon([[-11.3,-10.7],[-9.3,-15],[4.6,-14.9],[8.7,-10.8],[7.2,-8.9],[-10.8,-8.5]],'#a2a9a0',EDGE,.72);
+    b.polygon([[-6.8,-14.8],[-7.7,-24],[-4.7,-24.5],[-3.6,-14.6]],'#bb915c',EDGE,.78);
+    b.polygon([[-7.65,-24],[-7.82,-25.4],[-4.65,-25.8],[-4.46,-24.3]],'#424d4f',EDGE,.55);
+    b.polygon([[.7,-14.5],[-.2,-21.5],[2.9,-22],[4.1,-14.3]],'#bd9865',EDGE,.7);
+    b.line([[0,-21.5],[2.8,-22]],'#4b5050',1.7);flag(8.3,-17.4);
+    b.oval(10.9,-9.9,3.7,2.45,'#a3aca1',EDGE,.6);
+    b.line([[12.2-strike,-10.1],[19.4-strike,-12.4]],EDGE,1.45);
+  } else {
+    b.polygon([[-11,-8.5],[-10.3,-14.3],[-4.1,-15.4],[-1.7,-13.8],[-1.15,-8.4]],'#e7cc94',EDGE,.73);
+    b.polygon([[-11.2,-14.2],[-10.6,-15.7],[-4,-16.5],[-1.45,-14.8],[-3.1,-14.1]],'#995e42',EDGE,.58);
+    b.polygon([[-8.9,-13.15],[-6.75,-13.5],[-6.5,-10.9],[-8.65,-10.6]],'#548086',EDGE,.36);
+    b.line([[.65,-8.4],[4.8,-21],[10.9,-8.9]],'#695b47',1.5);
+    b.line([[4.8,-21],[11,-16.7],[11,-13]],'#d7bd87',.76);
+    b.polygon([[9.3,-13.5],[13.1,-13.5],[14.8,-9.6],[12,-8.9],[8.9,-10]],'#9c9770',EDGE,.45);
+    b.oval(-.2,-11.4,1.05,1.15,'#dfad83',EDGE,.38);b.line([[-.1,-10.1],[.1,-7.9]],p.base,1.8);flag(-8.8,-18.8);
+  }
+  b.polygon([[-size,-8.8],[-size*.74,-7.8],[size*.32,-8.4],[size,-11],[size-1,-6.8],[size*.67,-2.1],[0,.25],[-size*.69,-.7],[-size*.91,-4.3]],steam?'#63767a':sail?'#405d69':'#b07247',EDGE,.95);
+  b.polygon([[-size*.88,-6.55],[-size*.18,-6.03],[size*.46,-7],[size*.92,-8.93],[size*.81,-7.1],[size*.44,-5.4],[-size*.13,-4.5],[-size*.81,-4.9]],p.base,null);
+  b.line([[-size*.95,-8.45],[-size*.53,-7.5],[size*.31,-8.05],[size*.93,-10.32]],'#f1d9ac',.8);
+  b.line([[-size*.65,-.45],[0,.41],[size*.63,-1.65]],'#b6dde0',1);
+  g.restore();
+  if(phase){b.curve([-size*.6,1.6],[-size,2.9],[-size*1.21,.5],[-size*1.39,1.3+wave],'#d0e3d8',1);b.line([[-size*.8,3.1],[-size*1.05,3.7],[-size*1.18,3.25]],'#93c2c2',.65);}
+}
+
 const KINDS = new Map([
   ['settler','settler'],['scout','scout'],['builder','builder'],
   ['warrior','guard'],['guard','guard'],['melee','guard'],
   ['archer','archer'],['ranger','archer'],['ranged','archer'],
-  ['cavalry','cavalry'],['horseman','cavalry']
+  ['cavalry','cavalry'],['horseman','cavalry'],['riflemen','riflemen'],['artillery','artillery'],
+  ['armor','armor'],['cutter','cutter'],['frigate','frigate'],['workboat','workboat']
 ]);
 
 export function drawUnitArt(g,kind,x,y,options={}) {
@@ -371,6 +479,10 @@ export function drawUnitArt(g,kind,x,y,options={}) {
   g.lineCap='round';g.lineJoin='round';
   const b=brush(g);
   if(type==='cavalry') horseAndRider(g,b,color,phase,strike);
+  else if(type==='riflemen') rifleCompany(g,b,color,phase,strike);
+  else if(type==='artillery') fieldArtillery(g,b,color,phase,strike);
+  else if(type==='armor') armoredColumn(g,b,color,phase,strike);
+  else if(type==='workboat'||type==='cutter'||type==='frigate') vessel(g,b,type,color,phase,strike);
   else figure(b,type,color,phase,strike);
   g.restore();
 }
