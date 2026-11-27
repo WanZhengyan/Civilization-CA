@@ -52,6 +52,10 @@ export function mountMapWorkspace() {
   plan.prepend(app.querySelector('.campaign-name'));
   const tools=app.querySelector('.map-head-tools');
   tools.append(app.querySelector('.map-buttons'));
+  const messages=node('div','map-messages');
+  const hint=app.querySelector('.map-intel');
+  hint.before(messages);
+  messages.append(app.querySelector('#settlement-key'),hint);
   const menu=app.querySelector('#layers-menu');
   menu.append(app.querySelector('.map-survey-key'),app.querySelector('.map-key'));
   dock=node('nav','map-dock');
@@ -60,7 +64,6 @@ export function mountMapWorkspace() {
   const entries=[
     ['plan','Planning',plan,true,'M3 4h14v13H3z M6 8h8m-8 4h5'],
     ['roster','Roster',app.querySelector('#roster-panel'),false,'M7 7a2.5 2.5 0 1 0 0 .1m5 1h4M3 16v-2c0-3 8-3 8 0v2m2-3h3'],
-    ['history','Chronicle',app.querySelector('.chronicle'),false,'M4 3h12v14H4z M7 7h6m-6 3h6m-6 3h4'],
     ['command','Command',app.querySelector('.command-inspector'),true,'M10 2l7 3v5c0 4-4 7-7 8-3-1-7-4-7-8V5z M7 10l2 2 4-5']
   ];
   for (const [key,label,panel,pinned,path] of entries) {
@@ -79,6 +82,11 @@ export function mountMapWorkspace() {
     dock.append(trigger);
     panels.set(key,{panel,trigger,pinned});
   }
+  const reports=document.getElementById('battle-reports-button');
+  reports.classList.add('dock-button','dock-reports');
+  panels.get('command').trigger.before(reports);
+  reports.addEventListener('click',()=>closeMapPanel());
+  app.querySelector('.chronicle').hidden=true;
   compactScreen.addEventListener('change',()=>{current='';applyPanels();});
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape' && current && !document.querySelector('dialog[open]'))closeMapPanel(true);
