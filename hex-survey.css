@@ -1,0 +1,32 @@
+.map-survey-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .2rem .85rem;
+  padding: .25rem .8rem;
+  border-top: 1px solid #364045;
+  color: #bbc8c6;
+  background: #20272b;
+  font-size: .74rem;
+}
+.map-survey-key span { display: inline-flex; align-items: center; gap: .36rem; }
+.map-survey-key span[hidden] { display: none; }
+.map-survey-key i { display: inline-block; width: 17px; height: 5px; }
+.map-survey-key .grid-sample { height: 1px; background: #9fae9f; }
+.map-survey-key .frame-sample { height: 3px; border-block: 1px solid #e0ce9c; }
+.map-survey-key .claim-sample { height: 3px; border-top: 2px solid #98bdb1; border-bottom: 1px solid #596e70; }
+.map-survey-key button {
+  min-height: 30px;
+  margin-inline-start: auto;
+  padding: .15rem .4rem;
+  border: 1px solid #52605e;
+  border-radius: 3px;
+  color: #e3dec7;
+  background: transparent;
+  font: inherit;
+}
+.map-survey-key button:hover, .map-survey-key button:focus-visible { background: #3c4647; }
+@media (max-width: 600px) {
+  .map-survey-key { gap: .2rem .55rem; padding-inline: .55rem; }
+  .map-survey-key button, .layers-menu label { min-height: 36px; }
+}

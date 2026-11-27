@@ -1,0 +1,12 @@
+.research-filters { display:flex; flex-wrap:wrap; align-items:center; gap:6px 15px; margin-block:8px; color:#d4dcd6; font:13px/1.4 var(--sans); }
+.research-filters[hidden],.research-filters [hidden],.council-tier[hidden],.project-option[hidden] { display:none; }
+.research-filters label { display:inline-flex; align-items:center; gap:5px; min-height:32px; }
+.research-filters select { min-height:32px; max-width:100%; border:1px solid #58706d; border-radius:3px; padding:3px 5px; background:#233431; color:#e2eae4; font:inherit; }
+.research-filters :is(input,select):focus-visible { outline:2px solid #efcd86; outline-offset:2px; }
+.research-filters input { accent-color:#a6d8c9; }
+.research-filters [role=status] { flex-basis:100%; color:#d6bd88; }
+.research-links { color:#a3c4bc; font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+@media(max-width:540px) {
+  #research-modal[data-council=research] .project-grid { grid-template-columns:minmax(0,1fr); }
+  .research-filters label { min-height:36px; }
+}

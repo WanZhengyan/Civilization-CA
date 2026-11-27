@@ -1,7 +1,7 @@
 // All regions use the same odd-row, point-up hex grid. Cached footprints contain
 // only public geometry; never cache occupancy, observations, or player data here.
 const sight = {
-  settler:1, builder:1, scout:3, melee:2, ranged:2, cavalry:3, riflemen:2,
+  ironclad:2, destroyer:3, sappers:2, signals:3, skirmisher:3, pikes:2, settler:1, builder:1, scout:3, melee:2, ranged:2, cavalry:3, riflemen:2,
   artillery:2, armor:2, workboat:2, cutter:3, frigate:3, city:2
 };
 const footprints = new Map();
@@ -23,8 +23,13 @@ function footprint(id, radius) {
   return tiles;
 }
 
-export function sightFrom(state, tile, type) {
-  return footprint(tile,getSightRadius(type)).filter(id=>Object.hasOwn(state.board,id));
+export function unitSight(state, type, seat) {
+  const trained = (type==='scout' || type==='cavalry') && state.players?.[seat]?.technologies?.includes('cartography');
+  return getSightRadius(type) + Number(Boolean(trained));
+}
+
+export function sightFrom(state, tile, type, seat) {
+  return footprint(tile,unitSight(state,type,seat)).filter(id=>Object.hasOwn(state.board,id));
 }
 
 export function getVisibleTiles(state, seat) {
@@ -33,8 +38,11 @@ export function getVisibleTiles(state, seat) {
   const reveal=(tile,radius)=>{
     for (const id of footprint(tile,radius)) if (Object.hasOwn(state.board,id)) visible.add(id);
   };
-  for (const unit of state.units) if (unit.seat===seat) reveal(unit.tile,getSightRadius(unit.type));
-  for (const city of state.cities) if (city.seat===seat) reveal(city.tile,getSightRadius('city'));
+  for (const unit of state.units) if (unit.seat===seat) reveal(unit.tile,unitSight(state,unit.type,seat));
+  for (const city of state.cities) if (city.seat===seat) {
+    reveal(city.tile,getSightRadius('city'));
+    if (city.portTile && city.buildings.includes('harbor') && state.players[seat]?.technologies?.includes('radar')) reveal(city.portTile,4);
+  }
   for (const [id,holding] of Object.entries(state.board)) if (holding.owner===seat) visible.add(id);
   return visible;
 }

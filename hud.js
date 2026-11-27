@@ -1,11 +1,14 @@
-import {getSightRadius} from './vision.js';
+import {researchLinks,syncResearchLens} from './research-catalog.js';
+import {getSightRadius,unitSight} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
+import {addPolicyPanel,updateCivicAgenda} from "./policy-panel.js";
 import {campusPlan} from './campus-plan.js';
 import {getWonderSites} from './rules.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
+import {mountSurveyControls} from './survey-controls.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -38,6 +41,12 @@ const symbols={
   settler:'<path d="M5 21V4l11 2-3 3 3 3-11-2M3 21h6"/>',
   builder:'<path d="m4 20 10-10m-3-2 4-4 5 5-3 3-4-3M4 20l2 1"/>',
   melee:'<path d="m5 19 3-3 8-10 4-2-1 5-10 9m-4-5 6 6"/>',
+  ironclad:'<path d="m2 15 19-2-4 7H6zM6 14l2-6h6l3 5M9 8V4h3v4m1 2h7"/>',
+  destroyer:'<path d="m2 16 20-4-3 8H5zM6 15l2-5h6l2 3M9 10V6h2v4m3 0V3m0 2h4"/>',
+  sappers:'<path d="m3 21 11-11m-2-2 4-4 5 5-4 4-5-5ZM3 5l3-2 14 16-2 2z"/>',
+  signals:'<path d="M4 10h12v11H4zm2-1 8-7m4 5c3 2 3 6 0 8M7 14h5m-5 4h2"/>',
+  pikes:'<path d="M4 21 14 3l-4 2m4-2v5M10 21 20 3l-4 2m4-2v5"/>',
+  skirmisher:'<path d="M3 17 12 5l8 12-8-5zM7 20l5-7 5 7"/>',
   ranged:'<path d="M3 4q14-1 17 16L4 4m1 15 13-13m-5 0h5v5"/>',
   city:'<path d="M3 21h18M5 20V9h5v11m0-14 4-3 4 3v14m0-10h3v10M7 12h1m5-3h2m-2 4h2"/>',
   land:'<path d="m3 18 5-9 4 6 3-4 6 7H3z"/><circle cx="17" cy="6" r="2"/>',
@@ -255,8 +264,8 @@ function inspect(){
   if(activeUnit){
     const u=activeUnit,o=selectedOptions;
     info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+(["builder","workboat"].includes(u.type)?stat("Charges",u.charges):(UNIT_TYPES[u.type].range?stat("Range",UNIT_TYPES[u.type].range):stat("Terrain",terrain[tile.terrain])))+'</div>'+healthBar(u.hp,u.maxHp);
-    const radius=getSightRadius(u.type);
-    info+='<div class="unit-sight"><span>'+icon("inspect")+' Sight radius</span><strong>'+radius+' <small>'+(radius===1?'hex':'hexes')+'</small></strong></div>';
+    const radius=own ? unitSight(state,u.type,u.seat) : getSightRadius(u.type);
+    info+='<div class="unit-sight"><span>'+icon("inspect")+' <span>'+(own?'Sight radius':'Base sight radius')+'</span></span><strong>'+radius+' <small>'+(radius===1?'hex':'hexes')+'</small></strong></div>';
     if(own){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
@@ -434,6 +443,10 @@ function paintResearch(){
     el("switch-"+id).setAttribute("aria-pressed",String(id===councilKind));
     if(id!==councilKind||!el("research-modal").open)continue;
     text("research-title",c.heading);el("research-modal").dataset.council=id;
+    const council=el('research-options');
+    const oldPolicyPanel=council.previousElementSibling;
+    if(id==='civics') addPolicyPanel(council,state,seat,mayOrder(),action=>{el('research-modal').close();Game.doAction(action)});
+    else if(oldPolicyPanel?.classList.contains('civic-government')) oldPolicyPanel.remove();
     const optionNames=Object.fromEntries(c.options.map(o=>[o.item,o.label]));
     const tiers=[...new Set(c.options.map(o=>o.era))];
     const eraGroups=tiers.map(tier=>{
@@ -441,12 +454,21 @@ function paintResearch(){
         const label=o.completed?"Complete":o.locked?"Locked":o.turns===null?turnsText(null):o.active?"In progress":o.turns===0?"Ready":turnsText(o.turns);
         const needs=o.requires.map(key=>optionNames[key]||key);
         const prereq=needs.length?'<span class="project-prereq">Requires '+esc(needs.join(" + "))+'</span>':'';
-        return '<button class="project-option" data-project="'+esc(o.item)+'" data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+prereq+'<span class="project-meta"><span>'+esc(o.cost+" "+c.resource)+'</span><b>'+esc(label)+'</b></span></button>';
+        let researchNotes='';
+        if (id==='research') {
+          const links=researchLinks(o.item,c.options,UNIT_TYPES);
+          for (const [label,items] of [['Trains',links.formations],['Leads to',links.discoveries]]) {
+            if (items.length) researchNotes+='<span class="research-links"><span>'+esc(label)+'</span> · <span>'+items.map(name=>'<span>'+esc(name)+'</span>').join(', ')+'</span></span>';
+          }
+        }
+        return '<button class="project-option" data-project="'+esc(o.item)+'" data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+prereq+researchNotes+'<span class="project-meta"><span>'+esc(o.cost+" "+c.resource)+'</span><b>'+esc(label)+'</b></span></button>';
       }).join("");
-      return '<section class="council-tier"><h3>'+esc(eraName(tier))+'</h3><div class="project-grid">'+cards+'</div></section>';
+      return '<section class="council-tier" data-era="'+esc(tier)+'"><h3>'+esc(eraName(tier))+'</h3><div class="project-grid">'+cards+'</div></section>';
     });
     const markup='<div class="council-summary"><strong>'+esc(c.balance+" "+c.resource)+'</strong><span>'+esc("+"+c.rate+" per turn")+'</span><span>'+c.completed+' / '+c.options.length+' complete</span></div>'+eraGroups.join("");
     if(markup!==lastCouncilMarkup){el("research-options").innerHTML=markup;lastCouncilMarkup=markup}
+    updateCivicAgenda(council,id==='civics',UNIT_TYPES);
+    syncResearchLens(id,el("research-options"));
   }
   paintProjects();
 }
@@ -471,8 +493,10 @@ function drawCombat(){
   const enemy=forecast.defenderType==="wild"?WILDS[defender.type].name:defender.type?items[defender.type]:defender.name;
   const attack=forecastRow("Attacker",items[u.type],forecast.attackerHpBefore,forecast.attackerHpAfter,u.maxHp,forecast.retaliation?forecast.retaliation+" retaliation damage":"No retaliation",faction(u.seat).color);
   const defend=forecastRow("Defender",enemy,forecast.defenderHpBefore,forecast.defenderHpAfterHit??forecast.defenderHpAfter,defender.maxHp,forecast.damage+" incoming damage",forecast.defenderType==="wild"?"#c38566":faction(defender.seat).color);
+  const notes=(forecast.roleNotes||[]).map(note=>'<li>'+esc(note)+'</li>').join('');
+  const modifiers=notes?'<ul class="formation-notes">'+notes+'</ul>':'';
   const outcome=forecast.defenderType==="wild" && defender.type==="camp" && forecast.defeated?"Clearing the camp adds 12 capital to your treasury.":forecast.capture?"Your unit will capture this city.":forecast.attackerDefeated&&forecast.defeated?"Both units will fall.":forecast.attackerDefeated?"Your unit will fall in this attack.":forecast.defeated?"The defending unit will fall.":"Both sides will hold their positions.";
-  el("combat-preview").innerHTML='<div class="forecast-grid">'+attack+defend+'</div><p class="forecast-outcome">'+esc(outcome)+'</p>';
+  el("combat-preview").innerHTML='<div class="forecast-grid">'+attack+defend+'</div>'+modifiers+'<p class="forecast-outcome">'+esc(outcome)+'</p>';
   return true;
 }
 function openCombat(unit,tile){
@@ -584,6 +608,7 @@ function mount(){
   el("zoom-out").onclick=()=>atlas.zoomBy(.8);el("zoom-in").onclick=()=>atlas.zoomBy(1.25);el("recenter").onclick=()=>atlas.reset();
   el("inspect-map").onclick=()=>{order=order==="inspect"?"":"inspect";hoverId=null;redraw()};
   el("layers").onclick=()=>toggleLayers(el("layers-menu").hidden);
+  mountSurveyControls(atlas);
   el("map-labels").onchange=e=>atlas.setLabels(e.currentTarget.checked);
   el("territory-lines").onchange=e=>atlas.setTerritories(e.currentTarget.checked);
   document.addEventListener("click",e=>{if(!e.target.closest(".layers-wrap"))toggleLayers(false)});
@@ -622,7 +647,7 @@ function mount(){
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};
   el("confirm-combat").onclick=()=>{if(!battle||!drawCombat())return;const {unit,tile}=battle;closeCombat();order="";Game.doAction({type:"attack",unit,tile})};
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"){toggleLayers(false);if(order){order="";redraw()}}});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(el("layers-menu").contains(document.activeElement))el("layers").focus();toggleLayers(false);if(order){order="";redraw()}}});
   el("close-production").onclick=closeProduction;
   el("production-modal").addEventListener("close",()=>{productionCity=null});
   el("production-modal").onclick=e=>{if(e.target===el("production-modal"))closeProduction()};

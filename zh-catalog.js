@@ -1,6 +1,51 @@
 // The English UI copy is the catalog key. The rules and network protocol keep
 // their canonical IDs in both languages.
 export const catalog = new Map();
+section(`
+Civic projects|市政项目
+Council agenda|可审议项目
+Full civic tree|完整市政树
+Unlocks policy|解锁方针
+Unlocks unit|解锁单位
+Fund a government program|推行施政方针
+In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.|在市政面板中打开施政方针。市政宪章解锁公众讲堂，公共工程解锁公共建设合同。比较各城市得到和付出的产出，再表决推行。打开完整市政树可查看后续方针和大学奇观。
+Government policy|施政方针
+Balanced budget|平衡预算
+Standard city yields with no program funded.|维持城市的标准产出。
+Public contracts|公共建设合同
+Each city gains 2 production and loses 1 food.|每座城市增加 2 生产力，减少 1 粮食。
+Public lectures|公众讲堂
+Each city gains 1 culture and loses 1 science.|每座城市增加 1 文化，减少 1 科研点。
+Food relief|粮食援助
+Each city gains 2 food and loses 1 production.|每座城市增加 2 粮食，减少 1 生产力。
+Port concessions|港口专营
+Each harbor earns 3 capital. Every city loses 1 influence.|每个港口增加 3 资金。每座城市减少 1 影响力。
+Research fellowships|科研资助
+Each city gains 2 science and spends 2 capital per turn.|每座城市每回合增加 2 科研点，花费 2 资金。
+In force|现行方针
+Civic required|尚未解锁市政
+The assembly has already voted this turn.|议会本回合已经表决。
+Choose an available policy.|请选择可实施的方针。
+Found a city first.|请先建立城市。
+Fund one program at a time. The first vote is free. Later changes cost 3 influence, once per turn.|同一时间只能推行一项方针。首次表决免费，此后每次调整消耗 3 影响力，每回合最多一次。
+Adopt Municipal Charter or Public Works to fund a government program.|通过市政宪章或公共工程后，可以推行施政方针。
+Ratify for 3 influence|消耗 3 影响力推行
+Ratify for free|免费推行
+Ruling policy|现行施政方针
+Irrigation Districts|灌溉合作区
+A city with a working farm or orchard gains 2 food per turn.|有运行中的农场或果园的城市每回合额外获得 2 粮食。
+Mutual Aid Pacts|互助公约
+Damaged cities recover 6 additional health when their turn begins.|受损城市在己方回合开始时额外恢复 6 点生命值。
+Harbor Commissions|港务委员会
+Each city with a harbor earns 3 additional capital per turn.|每座建有港口的城市每回合额外获得 3 资金。
+Teachers Colleges|师范学院
+Cities with at least 3 residents generate 2 additional science per turn.|人口达到 3 的城市每回合额外获得 2 科研点。
+Community Land Trusts|社区土地信托
+Every city gains 2 housing spaces, including newly founded settlements.|每座城市额外获得 2 个住房名额，新建城市也能享受。
+California Expositions|加州博览会
+Each completed university generates 2 additional culture and 2 influence per turn.|每座已建成的大学每回合额外提供 2 文化和 2 影响力。
+`);
+
 function section(pairs) {
   for (const line of pairs.trim().split('\n')) {
     const [key, value] = line.split('|');
@@ -8,6 +53,29 @@ function section(pairs) {
     catalog.set(key.toLowerCase(), value);
   }
 }
+section(`
+Research era|筛选时代
+All eras|所有时代
+Available research only|仅看可研究的科技
+No discoveries match these filters.|没有符合条件的科技。
+Trains|可训练
+Leads to|后续科技
+Hydrographic Charts|水道测绘
+Ships and fishing crews gain 1 movement point when their next turn begins.|舰艇和渔船从下一回合起每回合增加 1 点移动力。
+Field Medicine|战地医疗
+Land combat units resting on friendly territory outside a city recover 6 health at the start of their turn.|位于己方领土且不在城内的地面战斗单位，回合开始时恢复 6 生命。
+District Railways|地区铁路
+Ground units spend only 1 movement between friendly districts, including bridge crossings.|地面单位在相邻己方地块间移动只消耗 1 点移动力，过桥同样适用。
+Coastal Radar|海岸雷达
+Each working harbor observes four hexes in every direction from its berth.|每座运作中的港口可观测以泊位为中心、半径四格的区域。
+Topographic Mapping|地形测绘
+Scouts and mounted scouts observe one additional ring of hexes.|侦察兵和骑乘侦察兵的视野半径增加一格。
+Crop Rotation|轮作制
+Each working farm or orchard supplies 1 extra food to its city.|每块有产出的农田或果园为所属城市额外提供 1 粮食。
+Industrial Metallurgy|工业冶金
+Connected iron mines and stone quarries supply 2 extra production to the city they serve.|已连通的铁矿和石料采石场为所属城市额外提供 2 生产力。
+Base sight radius|基础视野半径
+`);
 section(`
 Manage citizens|管理居民
 City planning|城市规划
@@ -77,6 +145,11 @@ Drag to pan|拖动平移
 Inspect hexes without moving|只查看地块，不移动单位
 Inspect|查看
 Layers|图层
+Hex grid|六角格线
+Map edge|地图边界
+Territory border|领土边界
+Fit region|查看全图
+Map line key|地图线型图例
 Place names|地名
 Territories|领土
 Zoom out|缩小
@@ -841,8 +914,74 @@ A completed campus appears on the map. Select the campus tile to inspect its eff
 `);
 
 section(`
+Play solo|开始单人战役
+Title screen|返回开始界面
+Rejoin room|重新进入房间
+Keep saved campaign|保留已有存档
+Room code or invite link|房间代码或邀请链接
+Explore California, settle its coast and lead your civilization through the ages.|探索加州海岸，选址建城，带领你的文明走过不同的时代。
+`);
+
+section(`
 Civilization CA · California Campaigns|Civilization CA · 加州战役
 Founding expedition|建都远征
 Choose a site for your first city. Surveying or founding can reveal local resources.|选择第一座城市的位置。勘探或建城后可发现附近的资源。
 Locate settler|定位开拓者
+`);
+
+section(`
+Trail Skirmishers|山径散兵
+Pike Guard|长枪卫队
+Light infantry unit|轻步兵
+Defensive infantry unit|防御步兵
+Light ranged infantry. Woodland and foothills cost only one movement point.|轻装远程步兵。进入林地或丘陵只消耗一点移动力。
+Guards gain 14 attack damage against mounted scouts and cut their incoming charge damage by 14.|攻击骑马侦察兵时额外造成 14 点伤害，抵御其冲锋时少受 14 点伤害。
+Pikes against cavalry · +14 damage|长枪克制骑兵 · 伤害 +14
+Defending pike line · −14 damage|长枪卫队防守 · 伤害 −14
+`);
+
+section(`
+Siege Engineers|攻城工兵
+Signal Corps|通信队
+Siege infantry unit|攻城步兵
+Communications unit|通信部队
+Assault engineers deal 18 extra damage to an ungarrisoned walled city and can capture it.|攻击没有驻军的城墙时，攻城工兵额外造成 18 点伤害，并可占领城市。
+Supports adjacent friendly formations. They deal 8 more damage against rival civilizations. Multiple signal units do not stack.|支援相邻友军。其攻击其他文明时多造成 8 点伤害，多支通信队的效果不会叠加。
+Siege engineers at the walls · +18 damage|工兵攻城 · 伤害 +18
+Adjacent signal corps · +8 damage|邻近通信队 · 伤害 +8
+`);
+
+section(`
+Harbor Ironclad|港防铁甲舰
+Escort Destroyer|护航驱逐舰
+Coastal siege unit|近岸攻城舰
+Fleet escort unit|舰队护航单位
+A slow armored ship that deals 14 extra damage to cities and their garrisons. Requires a shipyard.|低速装甲舰，对城市和城内驻军额外造成 14 点伤害。需要船厂。
+A fast escort with four movement points. It deals 18 extra damage to armed ships. Requires a shipyard.|高速护航舰，拥有四点移动力，对武装舰船额外造成 18 点伤害。需要船厂。
+Coastal bombardment · +14 damage|近岸炮击 · 伤害 +14
+Escort against a warship · +18 damage|护航舰对敌舰 · 伤害 +18
+`);
+
+section(`
+Choose a frontier formation|挑选边疆兵种
+Trail skirmishers cross woods and hills for one movement point. Pike Guards make poor targets for cavalry and gain a bonus when attacking mounted scouts.|山径散兵穿过林地和丘陵只需一点移动力。长枪卫队能抵御骑兵冲锋，攻击骑马侦察兵时也有加成。
+Support an assault|支援进攻
+Siege Engineers can capture a walled city after its garrison falls. Keep a Signal Corps one hex from a friendly attacker to add 8 damage against rival civilizations. Check the forecast to see the active bonuses.|击败驻军后，攻城工兵可以夺取有城墙的城市。让通信队站在友军旁边一格，友军攻击其他文明时可多造成 8 点伤害。战斗预估会列出当前加成。
+Choose a warship|选择作战舰船
+An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.|港防铁甲舰速度较慢，耐久性高，擅长近岸攻城。护航驱逐舰可移动四格，攻击武装舰船时有额外伤害。两种船都需要船厂。
+Unit handbook|兵种手册
+Compare base movement, sight, attack range and production cost. Select a formation to see its role and requirements.|比较各兵种的基础移动力、视野、射程和生产成本。点开兵种可查看用途和训练条件。
+Formation|兵种
+Base unit statistics|兵种基础数值
+Move|移动
+Sight|视野
+Range|射程
+Cost|成本
+Train with|训练条件
+Upgrades to|可升级为
+City center|城市中心
+Founds a city on a legal settlement site.|在符合条件的地块建立城市。
+Spends charges to improve land connected to a friendly city.|消耗建造次数，改良与己方城市相连的土地。
+Captures a weakened city through an adjacent attack.|可从相邻地块进攻并占领被削弱的城市。
+Can attack from two hexes away.|可以从两格外发动攻击。
 `);

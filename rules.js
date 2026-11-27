@@ -1,12 +1,17 @@
+import {REGIMENTS, matchup, formationChoices, signalPosition} from './regiments.js';
 import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
 import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
+import {councilAgenda,proposePolicy} from './assembly-plan.js';
+import {ratifyPolicy} from "./policy.js";
+import {extraHousing} from "./civic-agenda.js";
 import { foodForecast, feedCity } from "./population.js";
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
+import {nextTechnology} from './applied-science.js';
 import {TECHS, CIVICS, ERA_UNITS, eraFor} from './progression.js';
 export {TECHS, CIVICS, ERAS} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
@@ -187,7 +192,8 @@ export const UNIT_TYPES = {
   melee: {name:"Militia", era:"frontier", captures:true, upgrade:"riflemen", upgradeCost:10, maxHp:100, moves:2, range:1, strength:42, required:10},
   ranged: {name:"Rangers", era:"frontier", captures:false, upgrade:"artillery", upgradeCost:12, maxHp:80, moves:2, range:2, strength:35, required:12},
   ...ERA_UNITS,
-  ...VESSELS
+  ...VESSELS,
+  ...REGIMENTS
 };
 export const BUILDINGS = {
   ...WONDERS,
@@ -231,7 +237,8 @@ function mint(state, prefix) { return prefix + state.nextId++; }
 function spawn(state,seat,type,tile) {
   const def = UNIT_TYPES[type];
   const maxHp = def.maxHp + (def.strength && adopted(state,seat,'mobilization') ? 20 : 0);
-  const unit = {id:mint(state,'u'),seat,type,tile,hp:maxHp,maxHp,moves:def.moves,maxMoves:def.moves,charges:type === 'builder' ? 3 : def.charges || 0};
+  const movement = def.moves + Number(def.domain==='sea' && knows(state,seat,'hydrography'));
+  const unit = {id:mint(state,'u'),seat,type,tile,hp:maxHp,maxHp,moves:movement,maxMoves:movement,charges:type === 'builder' ? 3 : def.charges || 0};
   state.units.push(unit);
   return unit;
 }
@@ -349,6 +356,7 @@ export function getCityYield(state,cityId) {
   const has = key=>city.buildings.includes(key);
   // Improvements within two hexes work the closest city; city id order breaks ties.
   let farms = 0, mines = 0, fisheries = 0, cropBonus = 0, materialBonus = 0;
+  let mineralWorks = 0;
   for (const tile of getMap(state).tiles) {
     const holding = state.board[tile.id];
     if (holding?.owner !== city.seat || !holding.improvement || holding.pillaged || getWorkingCity(state,tile.id)?.id !== city.id) continue;
@@ -358,21 +366,31 @@ export function getCityYield(state,cityId) {
     if (connectedDeposit(holding)) {
       if (['grain','citrus','fish'].includes(holding.resource)) cropBonus++;
       else materialBonus++;
+      if (holding.resource==='iron' || holding.resource==='stone') mineralWorks++;
     }
   }
   const civics = knows(state, city.seat, 'civics');
   const steam = has('workshop') && knows(state, city.seat, 'steam');
   const trade = tradesBySea(state,city);
-  return {
-    food: 4 + work.food + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
-    production:universityYield(city,'production')+ 3 + work.production + materialBonus + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
+  const result = {
+    food: 4 + work.food + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * (knows(state,city.seat,'agriculturalScience') ? 3 : 2) + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
+    production:universityYield(city,'production')+ 3 + work.production + materialBonus + (knows(state,city.seat,'metallurgy') ? 2*mineralWorks : 0) + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
+  if (farms && adopted(state,city.seat,'irrigationDistricts')) result.food += 2;
+  if (has('harbor') && adopted(state,city.seat,'harborCommission')) result.capital += 3;
+  if (adopted(state,city.seat,'exposition')) result.influence += 2 * city.buildings.filter(id=>WONDERS[id]).length;
+  const policy=state.players[city.seat].policy;
+  if (policy==='contracts') { result.production+=2; result.food-=1; }
+  if (policy==='relief') { result.food+=2; result.production-=1; }
+  if (policy==='portDues') { if (has('harbor')) result.capital+=3; result.influence-=1; }
+  if (policy==='grants') result.capital-=2;
+  return result;
 }
 export function getPopulationReport(state, cityId) {
   const city = cityOrNull(state, cityId);
-  return city ? foodForecast(city, getCityYield(state, cityId).food) : null;
+  return city ? foodForecast(city, getCityYield(state, cityId).food, extraHousing(state.players[city.seat])) : null;
 }
 export function getStats(state,seat) {
   let territories=0,developments=0,landmarks=0,improvements=0,productive=0,fisheries=0;
@@ -391,7 +409,7 @@ export function getStats(state,seat) {
   const monuments=cities.filter(c=>c.buildings.includes('monument')).length;
   const settled = count > 0 || state.opening !== 'settlers';
   const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
-  return {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
+  const stats = {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
     score:state.legacyFinalScores?.[seat] ?? score,
     cultureIncome:cities.reduce((n,c)=>n+universityYield(c,'culture'),0)+Number(settled)+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
       +(adopted(state,seat,'conservation') ? cities.filter(c=>hasPark(state,c)).length : 0),
@@ -400,6 +418,21 @@ export function getStats(state,seat) {
     capitalIncome:3*Number(settled)+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +2*cities.filter(c=>tradesBySea(state,c)).length,
     influenceIncome:2*Number(settled)+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
+  if (adopted(state,seat,'harborCommission')) stats.capitalIncome += 3 * cities.filter(c=>c.buildings.includes('harbor')).length;
+  if (adopted(state,seat,'normalSchools')) stats.scienceIncome += 2 * cities.filter(c=>c.population>=3).length;
+  if (adopted(state,seat,'exposition')) {
+    const campuses=cities.reduce((n,c)=>n+c.buildings.filter(id=>WONDERS[id]).length,0);
+    stats.cultureIncome += 2 * campuses;
+    stats.influenceIncome += 2 * campuses;
+  }
+  const policy=state.players[seat].policy;
+  if (policy==='lectures') { stats.cultureIncome+=count; stats.scienceIncome-=count; }
+  if (policy==='grants') { stats.scienceIncome+=2*count; stats.capitalIncome-=2*count; }
+  if (policy==='portDues') {
+    stats.capitalIncome+=3*cities.filter(c=>c.buildings.includes('harbor')).length;
+    stats.influenceIncome=Math.max(0,stats.influenceIncome-count);
+  }
+  return stats;
 }
 function refreshScores(state) { state.players.forEach((p,i)=>{p.score=getStats(state,i).score;}); }
 function record(state,seat,type,text,tile,detail={}) {
@@ -434,13 +467,17 @@ export function getActions(state,seat,id,visible) {
 }
 function movementCost(state,unit, tileId) {
   const terrain=getMap(state).byId[tileId].terrain;
+  if (unit.type==='skirmisher' && (terrain==='forest'||terrain==='hills')) return 1;
   return UNIT_TYPES[unit.type].domain==='sea' ? Number(terrain==='ocean') : terrainCost[terrain];
 }
 function bridgeTo(state,from,to) {
   return getMap(state).bridgesByTile?.[from]?.find(bridge=>bridge.to===to);
 }
 function routeStepCost(state,unit,from,to) {
-  return UNIT_TYPES[unit.type].domain!=='sea' && bridgeTo(state,from,to) ? 2 : movementCost(state,unit,to);
+  const ground=UNIT_TYPES[unit.type].domain!=='sea';
+  const step=ground && bridgeTo(state,from,to) ? 2 : movementCost(state,unit,to);
+  if (step===2 && ground && state.board[from].owner===unit.seat && state.board[to].owner===unit.seat && knows(state,unit.seat,'railways')) return 1;
+  return step;
 }
 export function getRouteDetail(state,unitId,target) {
   const unit=unitOrNull(state,unitId),path=getMovePath(state,unitId,target);
@@ -616,7 +653,7 @@ export function getProductionOptions(state,cityId) {
     else if (def.civic && !adopted(state,city.seat,def.civic)) reason='Requires '+CIVICS[def.civic].name+'.';
     else if (item==='harbor' && !getPortSite(state,city.id)) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
     else if ((item==='shipyard' || def.domain==='sea') && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
-    else if (item==='frigate' && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
+    else if ((item==='frigate' || def.shipyard) && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
     else if (def.tech && !knows(state,city.seat,def.tech)) reason='Requires '+TECHS[def.tech].name+'.';
     else if (WONDERS[item] && state.players[city.seat].capital<def.grant) reason='You need '+def.grant+' capital.';
     else if (WONDERS[item] && !getWonderSites(state,city.id,item).length) reason='Claim an empty land tile within two hexes of the city.';
@@ -677,7 +714,7 @@ function cloneGame(state) {
 function produceCityTurn(state,city) {
   const yieldNow=getCityYield(state,city.id);
   const previousPopulation=city.population;
-  feedCity(city, foodForecast(city,yieldNow.food));
+  feedCity(city, foodForecast(city,yieldNow.food,extraHousing(state.players[city.seat])));
   if (city.population!==previousPopulation) {
     const verb=city.population>previousPopulation?' grew to ':' fell to ';
     record(state,city.seat,'population',city.name+verb+city.population+' residents.',city.tile,{city:city.id});
@@ -743,11 +780,15 @@ function endTurn(state,seat) {
   }
   state.turn=next;state.actionsLeft=ACTIONS_PER_TURN+Number(adopted(state,next,'federation'));
   const towns=state.cities.filter(c=>c.seat===next);
-  for (const city of towns) city.hp=Math.min(city.maxHp,city.hp+6);
+  const recovery=adopted(state,next,'mutualAid') ? 12 : 6;
+  for (const city of towns) city.hp=Math.min(city.maxHp,city.hp+recovery);
   for (const unit of state.units) if (unit.seat===next) {
+    const def=UNIT_TYPES[unit.type];
+    if (def.domain==='sea' && knows(state,next,'hydrography')) unit.maxMoves=def.moves+1;
     unit.moves=unit.maxMoves;
     const repairs=towns.some(c=>c.tile===unit.tile || (UNIT_TYPES[unit.type].domain==='sea' && c.portTile && hexDistance(c.portTile,unit.tile)<=1));
-    if (repairs) unit.hp=Math.min(unit.maxHp,unit.hp+12);
+    const fieldAid=def.strength>0 && def.domain!=='sea' && state.board[unit.tile].owner===next && knows(state,next,'fieldMedicine');
+    unit.hp=Math.min(unit.maxHp,unit.hp+(repairs ? 12 : fieldAid ? 6 : 0));
   }
 }
 // Compute spotter-assisted forecasts on the authority without disclosing rival
@@ -803,7 +844,8 @@ export function combatPreview(state, unitId, target) {
   const strength = Math.round(UNIT_TYPES[unit.type].strength * (0.75 + 0.25 * unit.hp / unit.maxHp));
   const attackBonus = (knows(state, unit.seat, 'tactics') ? 7 : 0)
     + (UNIT_TYPES[unit.type].range > 1 && knows(state, unit.seat, 'ballistics') ? 5 : 0);
-  let damage = Math.min(opponent.hp, Math.max(1, strength + attackBonus - terrainDefense - (walls ? 7 : 0)));
+  const role=matchup(unit,defender,town,state,hexDistance,UNIT_TYPES);
+  let damage = Math.min(opponent.hp, Math.max(1, strength + role.damage + attackBonus - terrainDefense - (walls ? 7 : 0)));
   let retaliation = 0;
   if (melee) {
     if (defender) {
@@ -822,7 +864,7 @@ export function combatPreview(state, unitId, target) {
   const defeated = !!defender && defenderHpAfterHit === 0;
   const advances = melee && movementCost(state,unit,target)>0 && attackerHpAfter > 0 && (capture || (defeated && !town));
   return {
-    defenderType: defender ? 'unit' : 'city', defenderId: opponent.id,
+    defenderType: defender ? 'unit' : 'city', defenderId: opponent.id, roleNotes:role.notes,
     damage, retaliation, capture, defeated, advances, attackerDefeated: attackerHpAfter === 0,
     attackerHpBefore: unit.hp, defenderHpBefore: opponent.hp, attackerHpAfter, defenderHpAfterHit,
     defenderHpAfter: capture ? Math.ceil(town.maxHp / 2) : defenderHpAfterHit
@@ -939,6 +981,9 @@ function resolveOrder(source,seat,action) {
     record(next,seat,'shipment','Resource shipment dispatched.');
   } else if (action.type==='research' || action.type==='civic') {
     selectProject(next, seat, action.item, action.type==='research' ? SCIENCE : CULTURE);
+  } else if (action.type==='policy') {
+    const name=ratifyPolicy(next,seat,action.item);
+    record(next,seat,'policy','Ruling policy · '+name,null,{item:action.item});
   } else if (action.type==='focus') {
     const city=cityOrNull(next,action.city);
     if(!city || city.seat!==seat) throw new Error('Choose one of your cities.');
@@ -1006,9 +1051,15 @@ function botProject(state,city) {
     const worked=Object.values(state.board).filter(tile=>tile.portCity===city.id).length;
     if (worked<2 && count('workboat')===0) choices.push('workboat');
     if (count('cutter')===0) choices.push('cutter');
-    if (city.buildings.includes('shipyard') && knows(state,city.seat,'steam') && count('frigate')===0) choices.push('frigate');
+    if (city.buildings.includes('shipyard')) {
+      if (!count('destroyer') && (state.round>=14 || state.units.some(u=>u.seat!==city.seat && UNIT_TYPES[u.type].domain==='sea'))) choices.push('destroyer');
+      if (!count('ironclad') && state.cities.some(c=>c.seat!==city.seat)) choices.push('ironclad');
+      if (!count('frigate')) choices.push('frigate');
+    } else if (knows(state,city.seat,'steam')) choices.push('shipyard');
   }
   if (count('builder')===0) choices.push('builder');
+  const nearby=neighbors(city.tile).filter(id=>state.board[id]).map(id=>getMap(state).byId[id].terrain);
+  choices.push(...formationChoices(state,city,units,count,nearby));
   for (const type of ['armor','artillery','riflemen','cavalry']) {
     if (knows(state,city.seat,UNIT_TYPES[type].tech) && !count(type)) choices.push(type);
   }
@@ -1018,14 +1069,15 @@ function botProject(state,city) {
   if (city.buildings.includes('harbor')) choices.push('shipyard');
   choices.push('workshop','walls','monument','granary');
   if (count('melee')<4) choices.push('melee');
-  const option=choices.find(key=>!city.buildings.includes(key));
+  const enabled=new Set(getProductionOptions(state,city.id).filter(o=>o.enabled).map(o=>o.item));
+  const option=choices.find(key=>enabled.has(key));
   return option ? {type:'produce',city:city.id,item:option}:null;
 }
 // March toward terrain the faction has yet to chart. Only revealed terrain
 // contributes movement costs; the shape of the hex grid is public geography.
 function exploreFrontier(state,unit,moves) {
   const explored=new Set(state.intel.explored);
-  const newlyVisible=id=>sightFrom(state,id,unit.type).reduce((total,tile)=>total+Number(!explored.has(tile)),0);
+  const newlyVisible=id=>sightFrom(state,id,unit.type,unit.seat).reduce((total,tile)=>total+Number(!explored.has(tile)),0);
   let best=unit.tile, gain=newlyVisible(best);
   for (const tile of moves) {
     const count=newlyVisible(tile);
@@ -1045,6 +1097,7 @@ function botMovement(state,unit,options) {
   const candidates=[unit.tile,...options.moves];
   const explored=new Set(state.intel.explored);
   let goals;
+  if (unit.type==='signals') return signalPosition(state,unit,options.moves,UNIT_TYPES,hexDistance);
   if (unit.type==='scout') return exploreFrontier(state,unit,options.moves);
   if (settle) goals=state.intel.visible.filter(id=>canSettle(state,unit.seat,id));
   else if (unit.type==='workboat') {
@@ -1110,15 +1163,11 @@ export function chooseBotAction(source) {
   if (!player.research && player.technologies.length < Object.keys(TECHS).length) {
     const threatened = state.cities.some(city => city.seat === seat && state.units.some(
       unit => unit.seat !== seat && UNIT_TYPES[unit.type].range > 0 && hexDistance(unit.tile, city.tile) <= 2));
-    const opening = ['industry', 'agronomy', 'tactics', 'civics'][seat];
-    const priorities = [threatened ? 'tactics' : opening, 'ballistics', 'industry', 'steam', 'tactics', 'motorization', 'radio', 'agronomy', 'navigation', 'civics'];
-    const project = priorities.find(key => !knows(state, seat, key) && TECHS[key].requires.every(parent => knows(state, seat, parent)));
+    const project=nextTechnology(state,seat,threatened,TECHS);
     if (project) return {type: 'research', item: project};
   }
   if (!player.civic && player.civics.length < Object.keys(CIVICS).length) {
-    const opening = seat%2 ? 'publicWorks' : 'charter';
-    const priorities = [opening,'charter','federation','publicWorks','mobilization','conservation','publicRadio'];
-    const project = priorities.find(key => !adopted(state,seat,key) && CIVICS[key].requires.every(parent=>adopted(state,seat,parent)));
+    const project=councilAgenda(state,seat);
     if (project) return {type:'civic',item:project};
   }
   const available=state.units.filter(u=>u.seat===seat && u.moves>0);
@@ -1138,6 +1187,8 @@ export function chooseBotAction(source) {
       return {type:'attack',unit:unit.id,tile:target};
     }
   }
+  const policy=proposePolicy(state,seat,getPopulationReport);
+  if (policy) return policy;
   const shipment=planShipment(state,seat);
   if(shipment)return shipment;
   for (const city of state.cities) if (city.seat===seat && city.focusRound!==state.round) {

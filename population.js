@@ -5,13 +5,13 @@ export function housingCapacity(city) {
     + (city.buildings?.includes('neighborhood') ? 3 : 0);
 }
 
-export function foodForecast(city, harvest) {
+export function foodForecast(city, harvest, bonusHousing = 0) {
   const population = city.population;
   const consumption = population * 2;
   const surplus = harvest - consumption;
   const food = Math.max(0, city.food || 0);
   const threshold = 6 + population * 2;
-  const housing=housingCapacity(city);
+  const housing=housingCapacity(city) + bonusHousing;
   const housingLimited=population >= housing;
   return {
     population, food, harvest, consumption, surplus, threshold, housing, housingLimited,
