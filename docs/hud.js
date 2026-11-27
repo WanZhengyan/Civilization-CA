@@ -3,7 +3,7 @@ import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resource
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
-import {addPolicyPanel} from "./policy-panel.js";
+import {addPolicyPanel,updateCivicAgenda} from "./policy-panel.js";
 import {campusPlan} from './campus-plan.js';
 import {getWonderSites} from './rules.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
@@ -457,6 +457,7 @@ function paintResearch(){
     });
     const markup='<div class="council-summary"><strong>'+esc(c.balance+" "+c.resource)+'</strong><span>'+esc("+"+c.rate+" per turn")+'</span><span>'+c.completed+' / '+c.options.length+' complete</span></div>'+eraGroups.join("");
     if(markup!==lastCouncilMarkup){el("research-options").innerHTML=markup;lastCouncilMarkup=markup}
+    updateCivicAgenda(council,id==='civics',UNIT_TYPES);
   }
   paintProjects();
 }

@@ -2,6 +2,13 @@
 // their canonical IDs in both languages.
 export const catalog = new Map();
 section(`
+Civic projects|市政项目
+Council agenda|可审议项目
+Full civic tree|完整市政树
+Unlocks policy|解锁方针
+Unlocks unit|解锁单位
+Fund a government program|推行施政方针
+In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.|在市政面板中打开施政方针。市政宪章解锁公众讲堂，公共工程解锁公共建设合同。比较各城市得到和付出的产出，再表决推行。打开完整市政树可查看后续方针和大学奇观。
 Government policy|施政方针
 Balanced budget|平衡预算
 Standard city yields with no program funded.|维持城市的标准产出。

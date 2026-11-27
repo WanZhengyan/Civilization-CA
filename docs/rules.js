@@ -4,6 +4,7 @@ import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './visi
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
+import {councilAgenda,proposePolicy} from './assembly-plan.js';
 import {ratifyPolicy} from "./policy.js";
 import {extraHousing} from "./civic-agenda.js";
 import { foodForecast, feedCity } from "./population.js";
@@ -1163,9 +1164,7 @@ export function chooseBotAction(source) {
     if (project) return {type: 'research', item: project};
   }
   if (!player.civic && player.civics.length < Object.keys(CIVICS).length) {
-    const opening = seat%2 ? 'publicWorks' : 'charter';
-    const priorities = [opening,'charter','federation','publicWorks','mobilization','conservation','publicRadio'];
-    const project = priorities.find(key => !adopted(state,seat,key) && CIVICS[key].requires.every(parent=>adopted(state,seat,parent)));
+    const project=councilAgenda(state,seat);
     if (project) return {type:'civic',item:project};
   }
   const available=state.units.filter(u=>u.seat===seat && u.moves>0);
@@ -1185,6 +1184,8 @@ export function chooseBotAction(source) {
       return {type:'attack',unit:unit.id,tile:target};
     }
   }
+  const policy=proposePolicy(state,seat,getPopulationReport);
+  if (policy) return policy;
   const shipment=planShipment(state,seat);
   if(shipment)return shipment;
   for (const city of state.cities) if (city.seat===seat && city.focusRound!==state.round) {

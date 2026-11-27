@@ -83,3 +83,17 @@ test('adopted stances modify banked income and council labels translate',()=>{
     assert.match(translate(p.description,'zh-CN'),/\p{Script=Han}/u);
   }
 });
+
+import {councilAgenda,proposePolicy} from '../docs/assembly-plan.js';
+
+test('assembly looks at its own cities and chooses policies with a stable reconsideration window',()=>{
+  const s=fresh(),p=s.players[0],city=s.cities[0];
+  p.civics=['charter','publicWorks'];city.buildings.push('harbor');
+  assert.equal(councilAgenda(s,0),'harborCommission');
+  city.hp-=8;assert.equal(councilAgenda(s,0),'mutualAid');
+  p.civics.push('irrigationDistricts');p.capital=20;
+  const forecast=()=>({surplus:-1});
+  assert.deepEqual(proposePolicy(s,0,forecast),{type:'policy',item:'relief'});
+  const enacted=policy(s,'relief');enacted.round+=2;
+  assert.equal(proposePolicy(enacted,0,forecast),null);
+});
