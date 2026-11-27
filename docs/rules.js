@@ -1,9 +1,9 @@
+import {WONDERS, universityYield, surveyCampus} from './wonders.js';
 import {getVisibleTiles, projectForSeat, rememberVision} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
 import { foodForecast, feedCity } from "./population.js";
-import {WONDERS, universityYield} from './wonders.js';
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
@@ -310,6 +310,9 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   return rememberVision(addResearch(next));
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
+export function getWonderSites(state,cityId,item) {
+  return surveyCampus(state, cityOrNull(state,cityId), item, getMap(state), hexDistance);
+}
 export function getPortSite(state, cityId) {
   return findPortSite(state, cityOrNull(state, cityId), getMap(state).byId, neighbors);
 }
@@ -402,6 +405,7 @@ function record(state,seat,type,text,tile,detail={}) {
 function territoryOrder(state,seat,tile) {
   if (tile.terrain==='ocean' || wildAt(state,tile.id)) return null;
   const {owner,level}=state.board[tile.id];
+  if (state.board[tile.id].wonder || state.cities.some(c=>c.queue?.site===tile.id)) return null;
   if (owner===seat) return level<3 ? {type:'develop',label:'Develop district',cost:{capital:5+level*3,influence:0}} : null;
   if (state.cities.some(c=>c.tile===tile.id) || state.units.some(u=>u.tile===tile.id && u.seat!==seat)) return null;
   if (owner===null) return {type:'claim',label:'Claim district',cost:{capital:4,influence:0}};
@@ -484,7 +488,7 @@ function nearestSettlement(state, tileId) {
   return nearest;
 }
 function settlementRestriction(state, seat, tile, nearest) {
-  if (!terrainCost[tile.terrain]) return 'terrain';
+  if (!terrainCost[tile.terrain] || state.board[tile.id].wonder || state.cities.some(c=>c.queue?.site===tile.id)) return 'terrain';
   const owner = state.board[tile.id].owner;
   if (owner !== null && owner !== seat) return 'ownership';
   if (nearest && nearest.distance < 3) return 'spacing';
@@ -542,6 +546,7 @@ export function getWorkingCity(state,id) {
   return serviceCity(state,id,getMap(state).byId,neighbors);
 }
 function improvementAt(state,seat,id) {
+  if(state.board[id].wonder || state.cities.some(c=>c.queue?.site===id)) return null;
   if (state.board[id].owner!==seat || state.board[id].improvement || state.cities.some(c=>c.tile===id)) return null;
   if (!getWorkingCity(state,id) || state.board[id].wonder || state.cities.some(city=>city.queue?.site===id)) return null;
   const deposit=RESOURCES[state.board[id].resource];
@@ -598,6 +603,7 @@ export function getProductionOptions(state,cityId) {
     else if ((item==='shipyard' || def.domain==='sea') && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
     else if (item==='frigate' && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
     else if (def.tech && !knows(state,city.seat,def.tech)) reason='Requires '+TECHS[def.tech].name+'.';
+    else if (WONDERS[item] && !getWonderSites(state,city.id,item).length) reason='Claim an empty land tile within two hexes of the city.';
     return {item,label:def.name,kind,era:def.era || null,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
   });
 }
@@ -677,6 +683,11 @@ function produceCityTurn(state,city) {
       const tile = queue.portTile || getPortSite(state,city.id);
       if (!tile) return;
       city.portTile = tile;
+    }
+    if (WONDERS[queue.item] && queue.site) {
+      const terrain=getMap(state).byId[queue.site].terrain;
+      state.board[queue.site]={...state.board[queue.site],wonder:queue.item,wonderCity:city.id};
+      if (WONDERS[queue.item].terrain.includes(terrain)) city.campusHonors=[...(city.campusHonors||[]),queue.item];
     }
     city.buildings.push(queue.item);
     if (queue.item==='walls') {city.maxHp+=50; city.hp=Math.min(city.maxHp,city.hp+50);}
@@ -797,6 +808,9 @@ function resolveAttack(state, unit, target) {
   if (result.capture) {
     defender.seat = unit.seat;
     defender.queue = null;
+    for (const [id,holding] of Object.entries(state.board)) {
+      if (holding.wonderCity===defender.id) state.board[id]={...holding,owner:unit.seat};
+    }
     if (defender.portTile) {
       for (const [tile,holding] of Object.entries(state.board)) {
         if (holding.improvement==='fishery' && holding.portCity===defender.id) state.board[tile]={...holding,owner:unit.seat};
@@ -902,8 +916,14 @@ function resolveOrder(source,seat,action) {
     if (!city || city.seat!==seat) throw new Error('Choose one of your cities.');
     const option=getProductionOptions(next,city.id).find(o=>o.item===action.item);
     if (!option || !option.enabled) throw new Error(option?.reason || 'Choose an available production project.');
+    let site;
+    if (WONDERS[option.item]) {
+      const candidate=getWonderSites(next,city.id,option.item).find(s=>s.id===action.site);
+      if (!candidate) throw new Error('Choose a surveyed campus site.');
+      site=candidate.id;
+    }
     const berth=option.item==='harbor' ? getPortSite(next,city.id) : null;
-    city.queue={item:option.item,required:option.required,progress:0,...(berth ? {portTile:berth} : {})};
+    city.queue={item:option.item,required:option.required,progress:0,...(site ? {site} : {}),...(berth ? {portTile:berth} : {})};
     record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
   } else if (['move','attack','found','improve','upgrade','survey'].includes(action.type)) {
     unitOrder(next,seat,action);

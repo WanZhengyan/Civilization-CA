@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.8 · Choose the campus district
+
+Hard-coded real-world addresses would repeat the same wonder location across campaigns. A survey lets a city select eligible controlled land for a campus. Terrain suitability changes its specialty yield and occupied sites are excluded.
+
+87 checks passed. 18 fixed campaigns replayed identically twice. Resolve two civilizations racing to build the same university.
+
 ## 5.7 · University wonders from science and civics
 
 A research discovery rarely changed the long-term identity of a city. UCLA, Stanford, UC Berkeley and Caltech have distinct unlock requirements, costs and effects; players can examine the relevant charter in their councils.

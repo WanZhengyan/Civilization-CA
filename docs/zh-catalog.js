@@ -796,3 +796,13 @@ An engineering quad generating 2 production and 2 science per turn.|工程学院
 A public research campus generating 4 science per turn.|公立研究校园，每回合提供 4 点科研。
 A research observatory generating 5 science per turn.|科研天文台，每回合提供 5 点科研。
 `);
+
+section(`
+Site bonus|选址加成
+Standard campus yield|标准校园产出
+Commission campus|在此建造校园
+Back to production|返回生产菜单
+Choose a campus site in this city’s territory.|请选择这座城市领土内的一块校园用地。
+Claim an empty land tile within two hexes of the city.|请先控制距该城市两格以内的空闲陆地。
+Choose a surveyed campus site.|请选择一处可用的校园地块。
+`);

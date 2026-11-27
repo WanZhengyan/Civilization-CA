@@ -1,4 +1,5 @@
 @import url("./city-planning.css");
+@import url("./campus.css");
 @import url("./production-art.css");
 :root{color-scheme:dark;--bg:#13161e;--surface:#1c202b;--panel:#1c202b;--edge:#363a47;--line:#323645;--ink:#f0ece3;--muted:#a4a7b3;--metal:#dcbc80;--gold:#ebc988;--serif:"Baskervville","Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;--sans:"Inter","Avenir Next",Arial,sans-serif}
 *{box-sizing:border-box}html{min-width:320px}body{margin:0;color:var(--ink);background:radial-gradient(ellipse at 65% 22%,#1b1e29 0%,#151820 48%,#11141b 100%);font-family:var(--sans);font-size:16px;-webkit-font-smoothing:antialiased}button,input{font:inherit}button{color:inherit;cursor:pointer;background:none;border:0}button:disabled{cursor:default;opacity:.57}button:focus-visible,input:focus-visible{outline:2px solid #e3c789;outline-offset:3px}button{transition:background .16s,color .16s,border-color .16s,transform .16s}button:enabled:active{transform:translateY(1px)}button svg,.section-label svg,.resource-icon svg,.turn-icon svg{width:17px;height:17px;stroke-width:1.65;flex-shrink:0}h1,h2,p{margin:0}[hidden]{display:none!important}

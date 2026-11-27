@@ -3,6 +3,8 @@ import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resource
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
+import {campusPlan} from './campus-plan.js';
+import {getWonderSites} from './rules.js';
 import {WONDERS, universitiesUnlockedBy} from './wonders.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
@@ -367,12 +369,19 @@ function paintProjects(){
   }).join("");
   if(markup!==lastProjectsMarkup){el("watch-cities").innerHTML=markup;lastProjectsMarkup=markup}
 }
+let campusItem=null,campusSite=null;
 function productionOptions(){
   const c=view.state.cities.find(c=>sameId(c.id,productionCity));
   if(!c||c.seat!==view.seat){closeProduction();return}
   el("production-city").translate=!customCity(c);
   text("production-city",c.name);
   const list=getProductionOptions(view.state,c.id);
+  if(campusItem && !c.queue) {
+    const sites=getWonderSites(view.state,c.id,campusItem);
+    if(!sites.some(s=>s.id===campusSite))campusSite=sites[0]?.id;
+    el("production-options").innerHTML=campusPlan(mapRegion,view.state,c,campusItem,sites,campusSite,mayOrder()&&list.find(o=>o.item===campusItem)?.enabled);
+    return;
+  }
   const groups=[
     ["Train a unit",list.filter(x=>x.kind==="unit"&&!isSeaUnit(x.item))],
     ["Construct a building",list.filter(x=>x.kind==="building"&&!portBuildings.has(x.item)&&!WONDERS[x.item])],
@@ -388,7 +397,7 @@ function productionOptions(){
     }).join('')+'</div>'});
   el("production-options").innerHTML=(c.queue?cityQueue(c):'')+html.join('');
 }
-function openProduction(){const c=cityAt(selectedTile);if(!c||c.seat!==view.seat)return;productionCity=c.id;productionOptions();el("production-modal").showModal()}
+function openProduction(){const c=cityAt(selectedTile);if(!c||c.seat!==view.seat)return;campusItem=null;campusSite=null;productionCity=c.id;productionOptions();el("production-modal").showModal()}
 function closeProduction(){if(el("production-modal").open)el("production-modal").close();productionCity=null}
 const councilTypes={
   research:{heading:"Technology",resource:"science",income:"scienceIncome",options:getResearchOptions,choose:"Choose research",done:"All research complete",action:"research"},
@@ -583,7 +592,17 @@ function mount(){
   el("close-production").onclick=closeProduction;
   el("production-modal").addEventListener("close",()=>{productionCity=null});
   el("production-modal").onclick=e=>{if(e.target===el("production-modal"))closeProduction()};
-  el("production-options").onclick=e=>{const b=e.target.closest("[data-produce]");if(!b||b.disabled||!productionCity)return;const id=productionCity;closeProduction();Game.doAction({type:"produce",city:id,item:b.dataset.produce})};
+  el("production-options").onclick=e=>{
+    const b=e.target.closest("button");
+    if(!b||b.disabled||!productionCity)return;
+    if(b.hasAttribute("data-campus-back")){campusItem=null;campusSite=null;productionOptions();return}
+    if(b.dataset.campusSite){campusSite=b.dataset.campusSite;productionOptions();el("production-options").querySelector('[data-campus-site="'+campusSite+'"]')?.focus();return}
+    if(b.dataset.produce && WONDERS[b.dataset.produce]){campusItem=b.dataset.produce;campusSite=null;productionOptions();el("production-options").querySelector("[data-campus-site]")?.focus();return}
+    const isCampus=b.hasAttribute("data-campus-confirm");
+    if(!b.dataset.produce && !isCampus)return;
+    const action={type:"produce",city:productionCity,item:isCampus?campusItem:b.dataset.produce,...(isCampus?{site:campusSite}:{})};
+    closeProduction();Game.doAction(action);
+  };
   el("roster-units").onclick=()=>showRoster("units");el("roster-cities").onclick=()=>showRoster("cities");
   for(const [id,type] of [["units-summary","units"],["cities-summary","cities"]])el(id).onclick=()=>{showRoster(type);el("roster-panel").scrollIntoView({block:"nearest",behavior:"smooth"})};
   el("roster").onclick=e=>{const b=e.target.closest("[data-roster-id]");if(b)chooseRoster(b.dataset.rosterId)};
