@@ -1,6 +1,7 @@
+import {placeNaturalWonders, neighboringWonders} from './natural-wonders.js';
 import {REGIMENTS, matchup, formationChoices, signalPosition} from './regiments.js';
 import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
-import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
+import {getVision, getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
@@ -12,11 +13,13 @@ import { foodForecast, feedCity } from "./population.js";
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
 import {nextTechnology} from './applied-science.js';
-import {TECHS, CIVICS, ERA_UNITS, eraFor} from './progression.js';
+import {TECHS, CIVICS, ERAS, ERA_UNITS, eraFor} from './progression.js';
 export {TECHS, CIVICS, ERAS} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
+import {campaignChart, REGIONAL_SHAPE} from './region-shapes.js';
 import {LOS_ANGELES, regionalMaps, validMapId} from './maps.js';
 export {CAMPAIGN_MAPS, validMapId} from './maps.js';
+import {prepareBattle} from './battle-reports.js';
 import {barbarianRound,seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
 
 export const MAX_ROUNDS = 30;
@@ -174,12 +177,17 @@ for (const {id, q, r} of TILES) {
   ].map(([x, y]) => x + "," + y).filter(key => TILE_BY_ID[key]);
 }
 const losAngeles = {...LOS_ANGELES, tiles:TILES, byId:TILE_BY_ID, starts:STARTING_TERRITORY};
+const sources = [losAngeles,...Object.values(regionalMaps)];
+const classicCharts = Object.fromEntries(sources.map(map=>[map.id,campaignChart(map,adjacent,false)]));
+const regionalCharts = Object.fromEntries(sources.map(map=>[map.id,campaignChart(map,adjacent,true)]));
 export function getMap(stateOrId) {
-  const id = typeof stateOrId === 'string' ? stateOrId : stateOrId?.mapId;
-  return id && Object.hasOwn(regionalMaps,id) ? regionalMaps[id] : losAngeles;
+  const isState = stateOrId && typeof stateOrId === 'object';
+  const charts = isState && stateOrId.mapShape !== REGIONAL_SHAPE ? classicCharts : regionalCharts;
+  const id = isState ? stateOrId.mapId : stateOrId;
+  return Object.hasOwn(charts,id) ? charts[id] : charts.la;
 }
-export function neighbors(id) {
-  return adjacent[id] ? [...adjacent[id]] : [];
+export function neighbors(id,stateOrId) {
+  return [...(stateOrId ? getMap(stateOrId).neighbors(id) : adjacent[id] || [])];
 }
 function isProductive(terrain) {
   return terrain === "coast" || terrain === "plains" || terrain === "urban";
@@ -199,7 +207,7 @@ export const BUILDINGS = {
   ...WONDERS,
   ...PORT_BUILDINGS,
   granary: {name:"Granary", required:10, description:"Provides 2 food and housing for 2 more citizens."},
-  neighborhood: {name:"Residential quarter", required:16, description:"Provides housing for 3 more citizens."},
+  neighborhood: {name:"Residential quarter", era:"frontier", civic:"publicWorks", required:16, description:"Provides housing for 3 more citizens."},
   workshop: {name:"Workshop", required:13},
   monument: {name:"Monument", required:10},
   walls: {name:"City walls", required:14}
@@ -215,14 +223,16 @@ function adopted(state, seat, civic) {
   return state.players[seat]?.civics?.includes(civic) === true;
 }
 function tradesBySea(state, city) {
+  const map=getMap(state);
   if (!knows(state,city.seat,'navigation')) return false;
-  const {byId}=getMap(state);
+  const {byId,neighbors}=map;
   return city.buildings.includes('harbor') || byId[city.tile].terrain==='coast'
     || neighbors(city.tile).some(id=>byId[id].terrain==='ocean');
 }
 function hasPark(state, city) {
-  return [city.tile,...adjacent[city.tile]].some(id => state.board[id].owner===city.seat
-    && ['forest','hills'].includes(getMap(state).byId[id].terrain));
+  const map=getMap(state);
+  return [city.tile,...map.neighbors(city.tile)].some(id => state.board[id].owner===city.seat
+    && ['forest','hills'].includes(map.byId[id].terrain));
 }
 const PRODUCTS = {...UNIT_TYPES, ...BUILDINGS};
 const terrainCost = {coast:1, urban:1, plains:1, hills:2, forest:2};
@@ -243,12 +253,13 @@ function spawn(state,seat,type,tile) {
   return unit;
 }
 function establish(state,seat,tile,original = false) {
-  const city = {id:mint(state,'c'),name:getMap(state).byId[tile].name,seat,tile,hp:100,maxHp:100,population:1,food:0,buildings:[],queue:null,originalSeat:original ? seat : null};
+  const map=getMap(state);
+  const city = {id:mint(state,'c'),name:map.byId[tile].name,seat,tile,hp:100,maxHp:100,population:1,food:0,buildings:[],queue:null,originalSeat:original ? seat : null};
   state.cities.push(city);
   state.board[tile] = {...state.board[tile],owner:seat,level:Math.max(1,state.board[tile].level)};
-  if (!original || state.opening==='settlers') for (const next of adjacent[tile]) {
+  if (!original || state.opening==='settlers') for (const next of map.neighbors(tile)) {
     const holding = state.board[next];
-    if (!wildAt(state,next) && holding.owner === null && terrainCost[getMap(state).byId[next].terrain] && !state.units.some(u=>u.tile===next && u.seat!==seat)) {
+    if (!wildAt(state,next) && holding.owner === null && terrainCost[map.byId[next].terrain] && !state.units.some(u=>u.tile===next && u.seat!==seat)) {
       state.board[next] = {...holding,owner:seat};
     }
   }
@@ -272,7 +283,7 @@ export function migrateGame(state) {
     migrated={...migrated,board:{...migrated.board},players:migrated.players.map((p,seat)=>({
       ...p,surveyEnabled:p.surveyEnabled ?? migrated.cities.some(city=>city.seat===seat)
     }))};
-    populateDeposits(migrated,getMap(migrated),migrated.seed,neighbors);
+    populateDeposits(migrated,getMap(migrated),migrated.seed,getMap(migrated).neighbors);
     return rememberVision(migrated);
   }
   return migrated && !migrated.exploration ? rememberVision(migrated) : migrated;
@@ -302,30 +313,35 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   if (!Array.isArray(players) || players.length < 2 || players.length > 4) throw new Error("A campaign needs two to four factions.");
   const seed = campaignSeed(requestedSeed);
   const allocation = shuffled(FACTIONS.map((_,i)=>i), seededRandom(seed,'civilizations'));
-  const starts = selectStarts(getMap(mapId), players.length, seed, neighbors, hexDistance);
-  const next = {seed, mapId, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
-    board:Object.fromEntries(getMap(mapId).tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
+  const map = getMap(mapId);
+  const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
+  const next = {seed, mapId, mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
+    board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
     players:players.map((player,seat)=>({
       name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[allocation[seat]].name,
       bot:player?.bot===true,faction:allocation[seat],color:FACTIONS[allocation[seat]].color,capital:12,influence:6,score:0
     })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
   starts.forEach(([site],seat)=>spawn(next,seat,'settler',site));
-  seedCamps(next,getMap(next),neighbors,hexDistance);
+  placeNaturalWonders(next,map);
+  seedCamps(next,map,map.neighbors,hexDistance);
   refreshScores(next);
   for (const player of next.players) player.surveyEnabled=false;
-  populateDeposits(next,getMap(mapId),seed,neighbors);
+  populateDeposits(next,map,seed,map.neighbors);
   return rememberVision(addResearch(next));
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
 export function getWonderSites(state,cityId,item) {
-  return surveyCampus(state, cityOrNull(state,cityId), item, getMap(state), hexDistance);
+  const city=cityOrNull(state,cityId), campus=WONDERS[item];
+  if (!city || !campus || !productionUnlocked(state,city.seat,campus)) return [];
+  return surveyCampus(state, city, item, getMap(state), hexDistance);
 }
 export function getPortSite(state, cityId) {
+  const map=getMap(state);
   const city=cityOrNull(state,cityId);
   if (!city) return null;
   if (state.intel?.portSites) return state.intel.portSites[cityId] ?? null;
   const visible=(state.opening==='settlers' || state.enforceSight) ? getVisibleTiles(state,city.seat) : null;
-  return findPortSite(state,city,getMap(state).byId,neighbors,visible);
+  return findPortSite(state,city,map.byId,map.neighbors,visible);
 }
 function unitOrNull(state,id) { return state.units.find(u=>u.id === id); }
 function cityWorkArea(state, city) {
@@ -334,7 +350,7 @@ function cityWorkArea(state, city) {
   let ring=[city.tile];
   for (let distance=0;distance<2;distance++) {
     const next=[];
-    for (const tile of ring) for (const id of adjacent[tile]) {
+    for (const tile of ring) for (const id of map.neighbors(tile)) {
       if (neighborsInRange.has(id) || state.board[id]?.owner!==city.seat || !terrainCost[map.byId[id].terrain]) continue;
       neighborsInRange.add(id);next.push(id);
     }
@@ -345,8 +361,16 @@ function cityWorkArea(state, city) {
 export function getCitizenWorkforce(state,cityId,focus) {
   const city=cityOrNull(state,cityId);
   if(!city)return null;
+  const map=getMap(state);
+  const known=state.exploration?.[city.seat] || {};
+  const visible=getVisibleTiles(state,city.seat);
+  const canIdentify=id=>visible.has(id) || Object.hasOwn(known,id) || state.intel?.explored?.includes(id);
   const tiles=cityWorkArea(state,city).filter(tile=>
-    !state.board[tile.id].pillaged && getWorkingCity(state,tile.id)?.id===city.id);
+    !state.board[tile.id].pillaged && !state.board[tile.id].naturalWonder && getWorkingCity(state,tile.id)?.id===city.id)
+    .map(tile=>{
+      const wonders=neighboringWonders(state.board,map,tile.id,canIdentify);
+      return wonders.length ? {...tile,naturalWonders:wonders} : tile;
+    });
   return assignWorkforce(city,tiles,focus);
 }
 export function getCityYield(state,cityId) {
@@ -442,7 +466,7 @@ function record(state,seat,type,text,tile,detail={}) {
 function territoryOrder(state,seat,tile) {
   if (tile.terrain==='ocean' || wildAt(state,tile.id)) return null;
   const {owner,level}=state.board[tile.id];
-  if (state.board[tile.id].wonder || state.cities.some(c=>c.queue?.site===tile.id)) return null;
+  if (state.board[tile.id].wonder || state.board[tile.id].naturalWonder || state.cities.some(c=>c.queue?.site===tile.id)) return null;
   if (owner===seat) return level<3 ? {type:'develop',label:'Develop district',cost:{capital:5+level*3,influence:0}} : null;
   if (state.cities.some(c=>c.tile===tile.id) || state.units.some(u=>u.tile===tile.id && u.seat!==seat)) return null;
   if (owner===null) return {type:'claim',label:'Claim district',cost:{capital:4,influence:0}};
@@ -459,7 +483,7 @@ export function getActions(state,seat,id,visible) {
   if (state.phase!=='playing') reason='The campaign has ended.';
   else if (state.turn!==seat) reason='Wait for your turn.';
   else if (state.actionsLeft<=0) reason='You have used all district orders this turn.';
-  else if (order.type!=='develop' && !adjacent[id].some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
+  else if (order.type!=='develop' && !getMap(state).neighbors(id).some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
   else if (player.capital<order.cost.capital) reason='You need '+order.cost.capital+' capital.';
   else if (player.influence<order.cost.influence) reason='You need '+order.cost.influence+' influence.';
   if (!reason && state.intel?.districtChoices && !state.intel.districtChoices.includes(id)) return [];
@@ -467,6 +491,8 @@ export function getActions(state,seat,id,visible) {
 }
 function movementCost(state,unit, tileId) {
   const terrain=getMap(state).byId[tileId].terrain;
+  const reconnaissance = unit.type==='scout' || unit.type==='cavalry';
+  if (terrain==='hills' && reconnaissance && knows(state,unit.seat,'cartography')) return 1;
   if (unit.type==='skirmisher' && (terrain==='forest'||terrain==='hills')) return 1;
   return UNIT_TYPES[unit.type].domain==='sea' ? Number(terrain==='ocean') : terrainCost[terrain];
 }
@@ -475,7 +501,9 @@ function bridgeTo(state,from,to) {
 }
 function routeStepCost(state,unit,from,to) {
   const ground=UNIT_TYPES[unit.type].domain!=='sea';
-  const step=ground && bridgeTo(state,from,to) ? 2 : movementCost(state,unit,to);
+  const crossing=ground && bridgeTo(state,from,to);
+  if (crossing?.kind==='ferry') return 2;
+  const step=crossing ? 2 : movementCost(state,unit,to);
   if (step===2 && ground && state.board[from].owner===unit.seat && state.board[to].owner===unit.seat && knows(state,unit.seat,'railways')) return 1;
   return step;
 }
@@ -492,6 +520,7 @@ export function getRouteDetail(state,unitId,target) {
 }
 // The search budget is the unit's remaining movement on this turn.
 function findRoutes(state,unit) {
+  const map=getMap(state);
   const seen=(state.intel || state.opening==='settlers' || state.enforceSight) && getVisibleTiles(state,unit.seat);
   const costs=new Map([[unit.tile,0]]),parents=new Map(),queue=[unit.tile];
   const blocked=new Set(state.units.filter(u=>u.id!==unit.id).map(u=>u.tile));
@@ -499,8 +528,9 @@ function findRoutes(state,unit) {
   for (const group of [state.barbarians?.camps,state.barbarians?.parties]) for (const p of group || []) blocked.add(p.tile);
   for (let i=0;i<queue.length;i++) {
     const here=queue[i];
-    const bridges=UNIT_TYPES[unit.type].domain!=='sea' && getMap(state).bridgesByTile?.[here];
-    const directions=bridges ? [...adjacent[here],...bridges.map(link=>link.to)] : adjacent[here];
+    const bridges=UNIT_TYPES[unit.type].domain!=='sea' && map.bridgesByTile?.[here];
+    const nearby=map.neighbors(here);
+    const directions=bridges ? [...nearby,...bridges.map(link=>link.to)] : nearby;
     for (const next of directions) {
       const step=routeStepCost(state,unit,here,next);
       if (!step || blocked.has(next) || (seen && !seen.has(next))) continue;
@@ -532,6 +562,7 @@ function nearestSettlement(state, tileId) {
   return nearest;
 }
 function settlementRestriction(state, seat, tile, nearest) {
+  if (state.board[tile.id].naturalWonder) return 'protected';
   if (!terrainCost[tile.terrain] || state.board[tile.id].wonder || state.cities.some(c=>c.queue?.site===tile.id)) return 'terrain';
   const owner = state.board[tile.id].owner;
   if (owner !== null && owner !== seat) return 'ownership';
@@ -564,7 +595,9 @@ export function getSettlementAssessment(state, unitId, tileId) {
   assessment.movesAfter = assessment.reachable ? unit.moves - cost : null;
 
   const restriction = settlementRestriction(state, unit.seat, tile, nearest);
-  if (restriction === 'terrain') {
+  if (restriction === 'protected') {
+    assessment.reason='This protected site cannot host a city, improvement or campus.';
+  } else if (restriction === 'terrain') {
     assessment.reason = tile.terrain === 'ocean' ? 'Cities need land. This tile is open water.' : 'Mountain terrain is impassable.';
   } else if (restriction === 'ownership') {
     const owner = state.board[tileId].owner;
@@ -590,12 +623,16 @@ export function getSettlementAssessment(state, unitId, tileId) {
   }
   return assessment;
 }
-export function getResourceLedger(state,seat) { return resourceAccounts(state,seat,getMap(state).byId,neighbors); }
+export function getResourceLedger(state,seat) {
+  const map=getMap(state);
+  return resourceAccounts(state,seat,map.byId,map.neighbors);
+}
 export function getWorkingCity(state,id) {
-  return serviceCity(state,id,getMap(state).byId,neighbors);
+  const map=getMap(state);
+  return serviceCity(state,id,map.byId,map.neighbors);
 }
 function improvementAt(state,seat,id) {
-  if(state.board[id].wonder || state.cities.some(c=>c.queue?.site===id)) return null;
+  if(state.board[id].naturalWonder || state.board[id].wonder || state.cities.some(c=>c.queue?.site===id)) return null;
   if (state.board[id].owner!==seat || state.board[id].improvement || state.cities.some(c=>c.tile===id)) return null;
   if (!getWorkingCity(state,id) || state.board[id].wonder || state.cities.some(city=>city.queue?.site===id)) return null;
   const deposit=RESOURCES[state.board[id].resource];
@@ -604,9 +641,10 @@ function improvementAt(state,seat,id) {
   return isProductive(terrain) ? 'farm' : terrain==='forest' || terrain==='hills' ? 'mine' : null;
 }
 function unitImprovement(state,unit,tile) {
+  const map=getMap(state);
   if (!unit.charges) return null;
   if (state.intel?.workSites) return state.intel.workSites[unit.id]?.[tile] ?? null;
-  if (unit.type==='workboat') return fisheryPort(state,unit.seat,tile,getMap(state).byId, neighbors) ? 'fishery' : null;
+  if (unit.type==='workboat') return fisheryPort(state,unit.seat,tile,map.byId,map.neighbors) ? 'fishery' : null;
   return unit.type==='builder' ? improvementAt(state,unit.seat,tile) : null;
 }
 function attackTargets(state,unit) {
@@ -624,7 +662,7 @@ function fieldUpgrade(state, unit) {
   const source = UNIT_TYPES[unit.type];
   if (!source.upgrade) return null;
   const next = UNIT_TYPES[source.upgrade];
-  if (!knows(state,unit.seat,next.tech)) return null;
+  if (!productionUnlocked(state,unit.seat,next)) return null;
   let reason = '';
   if (state.board[unit.tile].owner !== unit.seat) reason = 'Move into your territory to upgrade.';
   else if (state.players[unit.seat].capital < source.upgradeCost) reason = 'Your treasury cannot cover this upgrade.';
@@ -637,11 +675,24 @@ export function getUnitOptions(state,unitId) {
   return {moves:[...findRoutes(state,unit).parents.keys()],attacks:attackTargets(state,unit),upgrade:fieldUpgrade(state,unit),
     canFound:unit.type==='settler' && canSettle(state,unit.seat,unit.tile),improvements:improvement ? [improvement]:[]};
 }
+function productionUnlocked(state,seat,definition,era=getEra(state,seat)) {
+  return (!definition.era || era.rank>=ERAS[definition.era].rank)
+    && (!definition.tech || knows(state,seat,definition.tech))
+    && (!definition.civic || adopted(state,seat,definition.civic));
+}
+
 export function getProductionOptions(state,cityId) {
   const city=cityOrNull(state,cityId);
-  if (!city) return [];
+  if (!city || (state.intel && state.intel.seat!==city.seat)) return [];
   const rate=getCityYield(state,city.id).production;
-  return Object.entries(PRODUCTS).map(([item,def])=>{
+  const era=getEra(state,city.seat), berth=getPortSite(state,city.id);
+  const map=getMap(state);
+  const hasCoast=city.buildings.includes('harbor') || berth || findPortSite(
+    state,city,map.byId,map.neighbors,getVision(state,city.seat).explored,true);
+  const available=Object.entries(PRODUCTS).filter(([item,def])=>
+    productionUnlocked(state,city.seat,def,era) &&
+    (hasCoast || !(Object.hasOwn(PORT_BUILDINGS,item) || def.domain==='sea')));
+  return available.map(([item,def])=>{
     const kind=Object.hasOwn(UNIT_TYPES,item) ? 'unit':'building';
     let reason='';
     if (state.phase!=='playing') reason='The campaign has ended.';
@@ -650,11 +701,9 @@ export function getProductionOptions(state,cityId) {
     else if (city.buildings.includes(item)) reason='This city already has that building.';
     else if (WONDERS[item] && campusStatus(state,item)==='complete') reason='This university has already opened.';
     else if (WONDERS[item] && state.cities.some(c=>c.seat===city.seat && c.queue?.item===item)) reason='One of your cities already holds this charter.';
-    else if (def.civic && !adopted(state,city.seat,def.civic)) reason='Requires '+CIVICS[def.civic].name+'.';
-    else if (item==='harbor' && !getPortSite(state,city.id)) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
+    else if (item==='harbor' && !berth) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
     else if ((item==='shipyard' || def.domain==='sea') && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
     else if ((item==='frigate' || def.shipyard) && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
-    else if (def.tech && !knows(state,city.seat,def.tech)) reason='Requires '+TECHS[def.tech].name+'.';
     else if (WONDERS[item] && state.players[city.seat].capital<def.grant) reason='You need '+def.grant+' capital.';
     else if (WONDERS[item] && !getWonderSites(state,city.id,item).length) reason='Claim an empty land tile within two hexes of the city.';
     return {item,label:def.name,kind,era:def.era || null,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
@@ -712,6 +761,7 @@ function cloneGame(state) {
     cities:state.cities.map(c=>({...c,buildings:[...c.buildings],queue:c.queue ? {...c.queue}:null})),log:[...state.log]};
 }
 function produceCityTurn(state,city) {
+  const map=getMap(state);
   const yieldNow=getCityYield(state,city.id);
   const previousPopulation=city.population;
   feedCity(city, foodForecast(city,yieldNow.food,extraHousing(state.players[city.seat])));
@@ -727,7 +777,7 @@ function produceCityTurn(state,city) {
     const vessel=UNIT_TYPES[queue.item].domain==='sea';
     const origin=vessel ? city.portTile : city.tile;
     if (!origin) return;
-    const spawnTile=[origin,...adjacent[origin]].find(id=>(vessel ? getMap(state).byId[id].terrain==='ocean' : terrainCost[getMap(state).byId[id].terrain]) &&
+    const spawnTile=[origin,...map.neighbors(origin)].find(id=>(vessel ? map.byId[id].terrain==='ocean' : terrainCost[map.byId[id].terrain]) &&
       !wildAt(state,id) && !state.units.some(u=>u.tile===id) && !state.cities.some(c=>c.tile===id && c.seat!==city.seat) &&
       (state.board[id].owner===null || state.board[id].owner===city.seat));
     if (!spawnTile) return;
@@ -739,7 +789,7 @@ function produceCityTurn(state,city) {
       city.portTile = tile;
     }
     if (WONDERS[queue.item] && queue.site) {
-      const terrain=getMap(state).byId[queue.site].terrain;
+      const terrain=map.byId[queue.site].terrain;
       state.board[queue.site]={...state.board[queue.site],wonder:queue.item,wonderCity:city.id};
       if (WONDERS[queue.item].terrain.includes(terrain)) city.campusHonors=[...(city.campusHonors||[]),queue.item];
     }
@@ -757,8 +807,9 @@ function finish(state,winners,reason) {
   record(state,winners[0],'finish',message);
 }
 function endTurn(state,seat) {
+  const map=getMap(state);
   const income=getStats(state,seat),player=state.players[seat];
-  bankHarvest(state,seat,getMap(state).byId,neighbors);
+  bankHarvest(state,seat,map.byId,map.neighbors);
   player.capital+=income.capitalIncome;player.influence+=income.influenceIncome;
   for (const city of state.cities) if (city.seat===seat) produceCityTurn(state,city);
   player.science += income.scienceIncome;
@@ -776,7 +827,7 @@ function endTurn(state,seat) {
       return;
     }
     state.round++;
-    barbarianRound(state,getMap(state),neighbors,hexDistance,UNIT_TYPES,record);
+    barbarianRound(state,map,map.neighbors,hexDistance,UNIT_TYPES,record);
   }
   state.turn=next;state.actionsLeft=ACTIONS_PER_TURN+Number(adopted(state,next,'federation'));
   const towns=state.cities.filter(c=>c.seat===next);
@@ -877,6 +928,8 @@ function resolveAttack(state, unit, target) {
   const from = unit.tile;
   const isUnit = result.defenderType === 'unit';
   const defender = isUnit ? unitOrNull(state, result.defenderId) : cityOrNull(state, result.defenderId);
+  const garrison = isUnit && state.cities.find(c => c.tile === target && c.seat === defender.seat);
+  const recordResult = prepareBattle(state, unit, defender, result, {garrison:garrison?.name});
   const name = isUnit ? UNIT_TYPES[defender.type].name+' in '+getMap(state).byId[target].name : defender.name;
   defender.hp = result.defenderHpAfter;
   if (result.capture) {
@@ -917,6 +970,7 @@ function resolveAttack(state, unit, target) {
     refreshScores(state);
     finish(state, remaining, 'survival');
   }
+  recordResult();
 }
 function unitOrder(state,seat,action) {
   const unit=unitOrNull(state,action.unit);
@@ -958,7 +1012,7 @@ function unitOrder(state,seat,action) {
     if (!item || item!==action.item) throw new Error(unit.type==='workboat'
       ? 'Build a fishery on open water within two water hexes of a friendly harbor.'
       : 'Build a suitable improvement on one of your unimproved districts.');
-    const port=item==='fishery' ? fisheryPort(state,seat,id,getMap(state).byId, neighbors) : null;
+    const port=item==='fishery' ? fisheryPort(state,seat,id,getMap(state).byId,getMap(state).neighbors) : null;
     state.board[id]={...state.board[id],improvement:item,...(port ? {owner:seat,portCity:port.id} : {})};
     unit.moves=0;unit.charges--;
     if (!unit.charges) state.units=state.units.filter(u=>u.id!==unit.id);
@@ -1058,7 +1112,7 @@ function botProject(state,city) {
     } else if (knows(state,city.seat,'steam')) choices.push('shipyard');
   }
   if (count('builder')===0) choices.push('builder');
-  const nearby=neighbors(city.tile).filter(id=>state.board[id]).map(id=>getMap(state).byId[id].terrain);
+  const nearby=getMap(state).neighbors(city.tile).filter(id=>state.board[id]).map(id=>getMap(state).byId[id].terrain);
   choices.push(...formationChoices(state,city,units,count,nearby));
   for (const type of ['armor','artillery','riflemen','cavalry']) {
     if (knows(state,city.seat,UNIT_TYPES[type].tech) && !count(type)) choices.push(type);
@@ -1077,7 +1131,7 @@ function botProject(state,city) {
 // contributes movement costs; the shape of the hex grid is public geography.
 function exploreFrontier(state,unit,moves) {
   const explored=new Set(state.intel.explored);
-  const newlyVisible=id=>sightFrom(state,id,unit.type,unit.seat).reduce((total,tile)=>total+Number(!explored.has(tile)),0);
+  const newlyVisible=id=>sightFrom(state,id).reduce((total,tile)=>total+Number(!explored.has(tile)),0);
   let best=unit.tile, gain=newlyVisible(best);
   for (const tile of moves) {
     const count=newlyVisible(tile);
@@ -1085,13 +1139,14 @@ function exploreFrontier(state,unit,moves) {
   }
   if (best!==unit.tile) return {type:'move',unit:unit.id,tile:best};
   // A unit behind its own lines can still walk to a reachable chart edge.
-  const frontier=[...explored].filter(id=>movementCost(state,unit,id) && neighbors(id).some(tile=>!explored.has(tile)));
+  const frontier=[...explored].filter(id=>movementCost(state,unit,id) && getMap(state).neighbors(id).some(tile=>!explored.has(tile)));
   if(!frontier.length) return null;
   const distance=id=>Math.min(...frontier.map(tile=>hexDistance(id,tile)));
   const closer=moves.reduce((best,tile)=>distance(tile)<distance(best)?tile:best,unit.tile);
   return closer===unit.tile ? null : {type:'move',unit:unit.id,tile:closer};
 }
 function botMovement(state,unit,options) {
+  const map=getMap(state);
   if (!options.moves.length) return null;
   const settle=unit.type==='settler', builder=unit.type==='builder';
   const candidates=[unit.tile,...options.moves];
@@ -1104,14 +1159,14 @@ function botMovement(state,unit,options) {
     const site=options.moves.find(id=>unitImprovement(state,unit,id));
     return site ? {type:'move',unit:unit.id,tile:site} : null;
   } else if (builder) {
-    const eligible=getMap(state).tiles.filter(t=>improvementAt(state,unit.seat,t.id));
+    const eligible=map.tiles.filter(t=>improvementAt(state,unit.seat,t.id));
     const rich=eligible.filter(t=>state.board[t.id].resource);
     goals=(rich.length?rich:eligible).map(t=>t.id);
   }
   else if (UNIT_TYPES[unit.type].domain==='sea') {
     const range=UNIT_TYPES[unit.type].range;
     goals=[...state.units,...state.cities].filter(target=>target.seat!==unit.seat && (
-      movementCost(state,unit,target.tile) || (getMap(state).tiles.some(t=>explored.has(t.id) && t.terrain==='ocean' && hexDistance(t.id,target.tile)<=range))
+      movementCost(state,unit,target.tile) || (map.tiles.some(t=>explored.has(t.id) && t.terrain==='ocean' && hexDistance(t.id,target.tile)<=range))
     )).map(target=>target.tile);
   } else goals=state.cities.filter(c=>c.seat!==unit.seat).map(c=>c.tile);
   if (!goals.length) return builder ? null : exploreFrontier(state,unit,options.moves);
@@ -1119,8 +1174,8 @@ function botMovement(state,unit,options) {
   function value(tile) {
     const distance=Math.min(...goals.map(g=>hexDistance(g,tile)));
     if (settle && distance===0) {
-      const territory=adjacent[tile].filter(k=>explored.has(k) && terrainCost[getMap(state).byId[k].terrain] && state.board[k].owner===null).length;
-      return 20+territory*0.3+(getMap(state).byId[tile].landmark ? 1:0)-costs.get(tile)*0.2;
+      const territory=map.neighbors(tile).filter(k=>explored.has(k) && terrainCost[map.byId[k].terrain] && state.board[k].owner===null).length;
+      return 20+territory*0.3+(map.byId[tile].landmark ? 1:0)-costs.get(tile)*0.2;
     }
     if (!builder && !settle) {
       const inRange=state.units.some(u=>u.seat!==unit.seat && hexDistance(u.tile,tile)<=UNIT_TYPES[unit.type].range) ||
@@ -1138,13 +1193,14 @@ function botMovement(state,unit,options) {
   return best===unit.tile ? null : {type:'move',unit:unit.id,tile:best};
 }
 function botDistrict(state) {
+  const map=getMap(state);
   if (!state.actionsLeft) return null;
   let choice=null,best=-Infinity;
   const explored=new Set(state.intel.explored);
-  for (const tile of getMap(state).tiles) {
+  for (const tile of map.tiles) {
     const [order]=getActions(state,state.turn,tile.id);
     if (!order?.enabled) continue;
-    const frontier=adjacent[tile.id].filter(id=>explored.has(id) && terrainCost[getMap(state).byId[id].terrain] && state.board[id].owner===null).length;
+    const frontier=map.neighbors(tile.id).filter(id=>explored.has(id) && terrainCost[map.byId[id].terrain] && state.board[id].owner===null).length;
     const variety=((tile.q*67+tile.r*31+state.round*19+state.turn*11+state.actionsLeft*7)%29)/29;
     const value=order.type==='develop' ? 0.5 : 2+Number(Boolean(tile.landmark))*3+frontier*0.1+(order.type==='contest'?1.5:0);
     if (value+variety>best) {best=value+variety;choice={type:order.type,tile:tile.id};}

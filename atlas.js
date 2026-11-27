@@ -1,4 +1,8 @@
-import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom} from './hex-survey.js';
+import {battleMarkers,paintBattleReport} from './battle-overlay.js';
+import {NATURAL_WONDERS} from './natural-wonders.js';
+import {drawNaturalWonder} from './natural-wonder-marker.js';
+import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom,chartViewport} from './hex-survey.js';
+import {politicalPaths, inkPolitics} from './political-borders.js';
 import {drawResource} from './resource-art.js';
 import {drawCampus} from './campus-art.js';
 import {WONDERS} from './wonders.js';
@@ -12,6 +16,8 @@ const places = {
   downtown: 'Downtown LA', westwood: 'Westwood', rosebowl: 'Rose Bowl', airport: 'LAX'
 };
 export function getAtlasPlace(tile, holding) {
+  const nature=NATURAL_WONDERS[holding?.naturalWonder];
+  if(nature)return {name:nature.name,landmark:null};
   const campus=WONDERS[holding?.wonder];
   if(campus) return {name:campus.name, landmark:null};
   if(!tile.landmark) return null;
@@ -351,7 +357,9 @@ function renderAtlas(tiles,map,landmarkTiles) {
   const margin=144,resolution=1.55,buffer=document.createElement('canvas');
   buffer.width=Math.ceil((worldW+2*margin)*resolution);buffer.height=Math.ceil((worldH+2*margin)*resolution);
   const g=buffer.getContext('2d');g.scale(resolution,resolution);g.translate(margin,margin);
-  const extended=[...tiles],geo=new Map(tiles.map(t=>[t.id,t])),landmarks=tiles.filter(t=>t.landmark).map(t=>pos(t.q,t.r));
+  // Terrain interpolation needs samples just past the edge of the playable chart.
+  const survey=map.terrainAtlas || tiles;
+  const extended=[...survey],geo=new Map(survey.map(t=>[t.id,t])),landmarks=tiles.filter(t=>t.landmark).map(t=>pos(t.q,t.r));
   for(let r=-4;r<ROWS+4;r++)for(let q=-4;q<COLS+4;q++){
     if(q>=0&&q<COLS&&r>=0&&r<ROWS)continue;
     const clamp=(v,n)=>Math.max(0,Math.min(n,v)),nearest=geo.get(idFor(clamp(q,COLS-1),clamp(r,ROWS-1)));
@@ -384,6 +392,13 @@ function renderAtlas(tiles,map,landmarkTiles) {
   for(const bridge of map.crossings||[]) {
     const a=map.byId[bridge.a],b=map.byId[bridge.b], pa=pos(a.q,a.r),pb=pos(b.q,b.r);
     const span=[...pa,...pb];
+    if(bridge.kind==='ferry'){
+      g.save();g.setLineDash([5,4]);line(g,span,'#e9e4c2',2);g.restore();
+      for(const [x,y] of [pa,pb]){
+        ellipse(g,x,y,3.5,3.5,'#396573');ellipse(g,x,y,1.8,1.8,'#ecdcb2');
+      }
+      continue;
+    }
     line(g,span,'#394c4e',6);
     line(g,span,bridge.color,4.6);
     line(g,span,'#dcc7a0',1.05);
@@ -795,11 +810,40 @@ function paintHexFocus(g,model,scale) {
 
 // All rows contain these inner bounds, including the inset on alternating rows.
 // Keep the complete nameplate inside the campaign's stepped cutline.
-export function fitAtlasCaption(x,y,halfWidth,halfHeight) {
-  const horizontal = W/2 + halfWidth + 3;
-  const vertical = H/4 + halfHeight + 4;
-  return [Math.max(horizontal,Math.min(worldW-horizontal,x)),
-    Math.max(vertical,Math.min(worldH-vertical,y))];
+const captionStrips=new WeakMap();
+function chartCaptionStrips(region) {
+  if(captionStrips.has(region))return captionStrips.get(region);
+  const strips=[];
+  // Each contiguous row of same-width hexes contains an uninterrupted
+  // rectangular strip between the upper and lower shoulders of the hexes.
+  for(const tile of region.tiles){
+    const [x,y]=pos(tile.q,tile.r),previous=strips.at(-1);
+    if(previous && previous.y===y && previous.right===x-W/2)previous.right=x+W/2;
+    else strips.push({left:x-W/2,right:x+W/2,y});
+  }
+  captionStrips.set(region,strips);
+  return strips;
+}
+
+export function fitAtlasCaption(x,y,halfWidth,halfHeight,region=getMap('la')) {
+  const hasTile=id=>Object.hasOwn(region.byId,id);
+  const samples=Math.max(1,Math.ceil(2*halfWidth/(W/4)));
+  let inside=true;
+  for(let i=0;i<=samples && inside;i++){
+    const xx=x-halfWidth+2*halfWidth*i/samples;
+    inside=Boolean(chartHit(xx,y-halfHeight,hasTile) && chartHit(xx,y+halfHeight,hasTile));
+  }
+  if(inside)return [x,y];
+  let best=[x,y],distance=Infinity;
+  for(const strip of chartCaptionStrips(region)){
+    const left=strip.left+halfWidth+2,right=strip.right-halfWidth-2;
+    if(right<left)continue;
+    const dy=Math.max(0,H/4-halfHeight-2);
+    const xx=Math.max(left,Math.min(right,x)),yy=Math.max(strip.y-dy,Math.min(strip.y+dy,y));
+    const squared=(xx-x)**2+(yy-y)**2;
+    if(squared<distance){best=[xx,yy];distance=squared;}
+  }
+  return best;
 }
 
 function renderOverlay(g,tiles,model,scale,labels,territories) {
@@ -807,26 +851,13 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   const getFaction=owner=>players[owner]?.color||FACTION[owner%4]||FACTION[0];
   if(territories){
     for(const t of tiles){
-      const owner=board[t.id]?.owner;if(owner==null)continue;
-      const color=getFaction(owner);g.save();g.globalAlpha=.15;g.fillStyle=color;g.fill(hexPath(t.q,t.r));g.restore();
-    }
-    for(const t of tiles){
-      const owner=board[t.id]?.owner;if(owner==null)continue;
-      const color=getFaction(owner),[x,y]=pos(t.q,t.r);g.lineCap='round';
-      for(let k=0;k<6;k++){const [q,r]=adjacent(t.q,t.r,k);if(board[idFor(q,r)]?.owner===owner)continue;
-        const next=(k+1)%6,e=[x+dX[k],y+dY[k],x+dX[next],y+dY[next]];
-        const neighbor=board[idFor(q,r)]?.owner;
-        if(neighbor!=null){
-          const inset=1.2/(scale*Math.hypot(e[2]-e[0],e[3]-e[1]));
-          const dx=(e[1]-e[3])*inset,dy=(e[2]-e[0])*inset;
-          e[0]+=dx;e[1]+=dy;e[2]+=dx;e[3]+=dy;
-        }
-        line(g,e,'#273335e0',3.2/scale);line(g,e,color,1.8/scale);
-      }
-      if(board[t.id].level>0 && !t.landmark){
-        const level=board[t.id].level;
-        town(g,x+1,y+5,5.5,5.3,5+level*2,2,true);
-        if(level>1)town(g,x-5,y+8,4,4,5,3,true);
+      if(model.fog && !model.fog.visible.has(t.id))continue;
+      const holding=board[t.id];if(holding?.owner==null)continue;
+      g.save();g.globalAlpha=.15;g.fillStyle=getFaction(holding.owner);g.fill(hexPath(t.q,t.r));g.restore();
+      if(holding.level>0 && !t.landmark){
+        const [x,y]=pos(t.q,t.r);
+        town(g,x+1,y+5,5.5,5.3,5+holding.level*2,2,true);
+        if(holding.level>1)town(g,x-5,y+8,4,4,5,3,true);
       }
     }
   }
@@ -837,10 +868,12 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   for(const t of tiles){
     const holding=board[t.id];
+    if(holding?.naturalWonder)drawNaturalWonder(g,holding.naturalWonder,...pos(t.q,t.r),scale);
     if(holding?.wonder){const [x,y]=pos(t.q,t.r);drawCampus(g,holding.wonder,x,y,getFaction(holding.owner));}
   }
   for(const c of model.cities||[])drawCity(g,c,model);
   drawBarbarians(g,model,pos);
+  if(territories)inkPolitics(g,model.politics,scale,getFaction);
   tacticalLayer(g,model,scale);projectedRoute(g,model,scale);settlementMarkers(g,model,scale);
   const lookup=model.byId;
   for(const city of model.cities || [])if(city.originalSeat!=null){
@@ -874,7 +907,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     const half=(g.measureText(name).width+(city?30:16))*labelScale/2,height=9.5*labelScale;g.restore();
     let best,minimum=Infinity;
     for(const [dx,dy] of [[0,0],[12,-7],[-12,-7],[23,-4],[-23,-4],[9,11],[-9,11],[25,8],[-25,8],[0,-11]]){
-      const [xx,yy]=fitAtlasCaption(x+dx,y+dy,half,height);
+      const [xx,yy]=fitAtlasCaption(x+dx,y+dy,half,height,region);
       const rect=[xx-half,yy-height,xx+half,yy+height];
       let score=Math.abs(xx-x)*.7+Math.abs(yy-y);
       for(const box of labelObstacles.concat(labelBounds)){
@@ -908,7 +941,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     }
   }
 }
-import { TILES as defaultTiles, getMap, getMovePath } from './rules.js';
+import { getMap, getMovePath } from './rules.js';
 import { drawUnitArt } from './unit-art.js';
 export function createAtlas(host, options = {}) {
   const canvas=document.createElement('canvas');
@@ -917,10 +950,12 @@ export function createAtlas(host, options = {}) {
   Object.assign(canvas.style,{display:'block',height:'100%',width:'100%',touchAction:'none',cursor:'grab',position:'absolute',inset:'0'});
   host.appendChild(canvas);
   const ctx=canvas.getContext('2d'), input=new AbortController(), pointers=new Map();
-  let tiles=options.tiles||defaultTiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
+  let tiles=options.tiles||getMap('la').tiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
+  let replay=null,returnCamera=null,lastCameraInput=-Infinity;
+  function manualCamera(){returnCamera=null;lastCameraInput=performance.now();}
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
-  let labels=true,territories=true,grid=true,fresh=true,gesture=null,didDrag=false,disposed=false;
-  let frame=chartFrame(tiles), mesh=chartMesh(tiles);
+  let labels=true,territories=true,grid=true,fresh=true,pendingFocus=null,gesture=null,didDrag=false,disposed=false;
+  let frame=chartFrame(tiles), mesh=chartMesh(tiles), extent=chartExtent(tiles);
   let landmarkTiles=tiles.filter(tile=>tile.landmark);
   function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'),landmarkTiles);}
   function draw(){
@@ -949,6 +984,7 @@ export function createAtlas(host, options = {}) {
     if(paintUnits(ctx,model,s,performance.now()))schedule();
     if(model.fog)ctx.restore();
     paintHexFocus(ctx,model,s);
+    if(replay && paintBattleReport(ctx,replay,s,performance.now()))schedule();
     ctx.restore();
     inkChartFrame(ctx,frame,s);
     ctx.restore();
@@ -958,24 +994,39 @@ export function createAtlas(host, options = {}) {
   }
   function schedule(){if(!request&&!disposed)request=requestAnimationFrame(draw);}
   document.addEventListener('civitas-language',schedule,{signal:input.signal});
-  function bound(){
-    const hw=boxW/(base*zoom*2), hh=boxH/(base*zoom*2),pad=48;
-    const loX=hw-pad,hiX=worldW-hw+pad,loY=hh-pad,hiY=worldH-hh+pad;
-    cx=loX>hiX?worldW/2:Math.min(hiX,Math.max(loX,cx));
-    cy=loY>hiY?worldH/2:Math.min(hiY,Math.max(loY,cy));
+  function clearView(){
+    return chartViewport(boxW,boxH,options.viewInsets?.());
   }
-  function resetCenter(){
-    const narrow=boxW/boxH<1.15;
-    if(narrow){const [x,y]=pos(8,6);cx=x;cy=y;}
-    else{cx=worldW*.51;cy=worldH*.5;}
+  function bound(){
+    // An edge tile must be pannable into the middle of the open map.
+    // Retain a small strip of the survey at the furthest manual pan.
+    const view=clearView(),s=base*zoom;
+    const shiftX=(boxW/2-view.x)/s,shiftY=(boxH/2-view.y)/s;
+    const padX=.18*view.width/s,padY=.18*view.height/s;
+    cx=Math.max(extent.left+shiftX-padX,Math.min(extent.right+shiftX+padX,cx));
+    cy=Math.max(extent.top+shiftY-padY,Math.min(extent.bottom+shiftY+padY,cy));
+  }
+  function centerAt(x,y){
+    const view=clearView(),s=base*zoom;
+    cx=x+(boxW/2-view.x)/s;cy=y+(boxH/2-view.y)/s;
     bound();
   }
+  function obscured(x,y,pad){
+    const view=clearView(),s=base*zoom;
+    const px=(x-cx)*s+boxW/2,py=(y-cy)*s+boxH/2;
+    return px<view.left+pad || px>view.left+view.width-pad || py<view.top+pad || py>view.top+view.height-pad;
+  }
+  function resetCenter(){centerAt((extent.left+extent.right)/2,(extent.top+extent.bottom)/2);}
   function measure(){
     const rect=host.getBoundingClientRect();boxW=Math.round(rect.width);boxH=Math.round(rect.height);
     if(boxW<2||boxH<2)return;
     base=Math.max(boxW/(worldW+197),boxH/(worldH+175),Math.min(boxW/(W*15.65),boxH/(ROW*12.55)));
     const dpr=Math.min(2,window.devicePixelRatio||1);canvas.width=Math.round(dpr*boxW);canvas.height=Math.round(dpr*boxH);
-    if(fresh){resetCenter();fresh=false;}else bound();schedule();
+    if(pendingFocus){
+      centerAt(...pendingFocus);pendingFocus=null;
+    }else if(fresh)resetCenter();
+    else bound();
+    fresh=false;schedule();
   }
   function hoverTile(id){
     if(model.hoverId===id)return;
@@ -987,18 +1038,13 @@ export function createAtlas(host, options = {}) {
   function toWorld(x,y){const s=base*zoom;return [cx+(x-boxW/2)/s,cy+(y-boxH/2)/s];}
   function hitUnitAt(x,y){
     const [wx,wy]=toWorld(x,y);
+    if(!chartHit(wx,wy,id=>model.byId.has(id)))return null;
     return model.hitUnits.findLast(u=>(Math.abs(wx-u.bx)<=9*u.badgeScale && Math.abs(wy-u.by)<=9*u.badgeScale)||(Math.abs(wx-u.x)<=u.width && wy>u.y-u.height && wy<u.y+5));
   }
   function hit(x,y){
-    const [wx,wy]=toWorld(x,y),r0=Math.round((wy-H/2)/ROW);
-    for(let r=r0-1;r<=r0+1;r++){
-      const q0=Math.round((wx-W/2)/W-(r&1)*.5);
-      const t=model.byId.get(idFor(q0,r));if(!t)continue;
-      const [tx,ty]=pos(t.q,t.r),ax=Math.abs(wx-tx),ay=Math.abs(wy-ty);
-      if(ax<=W/2 && ay<=H/2-ax*H/(2*W))return t.id;
-    }return null;
+    return chartHit(...toWorld(x,y),id=>model.byId.has(id));
   }
-  function overviewZoom(){return regionOverviewZoom(boxW,boxH,worldW,worldH,base);}
+  function overviewZoom(){const view=clearView();return regionOverviewZoom(view.width,view.height,extent.width,extent.height,base);}
   function clampZoom(target){return Math.max(Math.min(.75,overviewZoom()),Math.min(3,target));}
   function setZoom(target,x=boxW/2,y=boxH/2) {
     const [wx,wy]=toWorld(x,y);zoom=clampZoom(target);
@@ -1015,7 +1061,7 @@ export function createAtlas(host, options = {}) {
   function on(name,fn,extra={}){canvas.addEventListener(name,fn,{...extra,signal:input.signal});}
   on('pointerdown',e=>{
     if(e.button!==0 && e.pointerType==='mouse')return;
-    cancelAnimationFrame(tween);const xy=local(e);pointers.set(e.pointerId,xy);
+    manualCamera();cancelAnimationFrame(tween);const xy=local(e);pointers.set(e.pointerId,xy);
     canvas.setPointerCapture(e.pointerId);canvas.style.cursor='grabbing';hoverTile(null);
     if(pointers.size===1){didDrag=false;gesture={start:xy,center:[cx,cy]};}
     else if(pointers.size===2){didDrag=true;const [a,b]=[...pointers.values()];gesture={dist:Math.max(2,Math.hypot(a[0]-b[0],a[1]-b[1])),initial:zoom,mid:[(a[0]+b[0])/2,(a[1]+b[1])/2]};}
@@ -1047,13 +1093,15 @@ export function createAtlas(host, options = {}) {
   }
   on('pointerup',e=>finishPointer(e,true));on('pointercancel',e=>finishPointer(e,false));
   on('pointerleave',()=>hoverTile(null));
-  on('wheel',e=>{e.preventDefault();const xy=local(e);cancelAnimationFrame(tween);setZoom(zoom*Math.exp(-Math.max(-100,Math.min(100,e.deltaY))*.0019),...xy);},{passive:false});
+  on('wheel',e=>{e.preventDefault();manualCamera();const xy=local(e);cancelAnimationFrame(tween);setZoom(zoom*Math.exp(-Math.max(-100,Math.min(100,e.deltaY))*.0019),...xy);},{passive:false});
   on('keydown',e=>{
-    const t=model.byId.get(model.hoverId)||model.byId.get(model.selectedId)||model.byId.get('11,7');
+    manualCamera();
+    const home=model.units.find(unit=>unit.seat===model.state?.intel?.seat);
+    const t=model.byId.get(model.hoverId)||model.byId.get(model.selectedId)||model.byId.get(home?.tile)||model.byId.get('11,7')||tiles[0];
     let target=null;
     const dirs={ArrowRight:1,ArrowLeft:4,ArrowUp:5,ArrowDown:2};
     if(e.key in dirs&&t){target=model.byId.get(idFor(...adjacent(t.q,t.r,dirs[e.key])));e.preventDefault();}
-    if(target){hoverTile(target.id);const [px,py]=pos(target.q,target.r);if(Math.abs(px-cx)>(boxW/2-24)/(base*zoom)||Math.abs(py-cy)>(boxH/2-24)/(base*zoom)){cx=px;cy=py;bound();}schedule();}
+    if(target){hoverTile(target.id);const [px,py]=pos(target.q,target.r);if(obscured(px,py,24))centerAt(px,py);schedule();}
     if(['+','=','-','Home'].includes(e.key)){e.preventDefault();if(e.key==='Home')api.reset();else api.zoomBy(e.key==='-'?1/1.2:1.2);}
     if((e.key==='Enter'||e.key===' ')&&t){e.preventDefault();model.selectedId=t.id;const unit=model.units.find(u=>u.tile===t.id);options.onSelect?.(t.id,unit?.id);if(unit)options.onUnitSelect?.(unit.id,t.id);schedule();}
   });
@@ -1068,18 +1116,23 @@ export function createAtlas(host, options = {}) {
       }
       const tilesChanged=nextTiles && nextTiles!==tiles;
       if(tilesChanged){
-        tiles=nextTiles;frame=chartFrame(tiles);mesh=chartMesh(tiles);model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
+        tiles=nextTiles;extent=chartExtent(tiles);frame=chartFrame(tiles);mesh=chartMesh(tiles);model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
         model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
         zoom=1;resetCenter();options.onZoom?.(100);
       }
       const state=o.state||o;if(o.state)model.state=o.state;
-      if(state.intel && model.intel!==state.intel) {
+      const priorFog=model.fog;
+      if(state.intel && (model.intel!==state.intel || tilesChanged)) {
         const explored=new Set(state.intel.explored), visible=new Set(state.intel.visible);
         const window=new Path2D(),memory=new Path2D(),knownTiles=tiles.filter(t=>explored.has(t.id));
         for(const t of knownTiles){window.addPath(hexPath(t.q,t.r));if(!visible.has(t.id)) memory.addPath(hexPath(t.q,t.r));}
         model.intel=state.intel;model.fog={explored,visible,window,memory,knownTiles};
       } else if(!state.intel){model.fog=null;model.intel=null;}
-      if(tilesChanged || (state.board && state.board!==model.board)){
+      const boardChanged=state.board && state.board!==model.board;
+      if(tilesChanged || boardChanged || priorFog!==model.fog){
+        model.politics=politicalPaths(tiles,state.board||model.board,model.fog?.visible,hexPath);
+      }
+      if(tilesChanged || boardChanged){
         if(state.board)model.board=state.board;
         // Only the seat's observed parcels may replace the printed landmark artwork.
         const next=tiles.filter(t=>t.landmark && getAtlasPlace(t,model.board[t.id])?.landmark);
@@ -1106,9 +1159,26 @@ export function createAtlas(host, options = {}) {
       if(model.previewPath?.length && !model.moveTiles.includes(model.previewPath.at(-1)))model.previewPath=[];
       schedule();return api;
     },
-    zoomBy(factor){if(Number.isFinite(factor)&&factor>0)animateZoom(zoom*factor,boxW/2,boxH/2);},
-    reset(){cancelAnimationFrame(tween);zoom=overviewZoom();cx=worldW/2;cy=worldH/2;bound();options.onZoom?.(Math.round(zoom*100));schedule();},
-    focus(id,opening=false){const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} [cx,cy]=pos(t.q,t.r);bound();schedule();}},
+    playBattle(report,manual,duration){
+      const points=battleMarkers(report,model.byId);if(!points)return;
+      const still=Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+      const player=model.players[report.attacker.seat];
+      replay={report,...points,still,color:player?.color || FACTION[player?.faction] || '#d58a6c',start:performance.now(),duration};
+      const [x,y]=points.to;
+      const outside=obscured(x,y,48);
+      if(manual){manualCamera();centerAt(x,y);}
+      else if(outside && !still && !gesture && performance.now()-lastCameraInput>2600){
+        if(!returnCamera)returnCamera=[cx,cy];
+        centerAt(x,y);
+      }
+      schedule();
+    },
+    stopBattle(){replay=null;if(returnCamera){[cx,cy]=returnCamera;returnCamera=null;bound();}schedule();},
+    zoomBy(factor){manualCamera();if(Number.isFinite(factor)&&factor>0){const view=clearView();animateZoom(zoom*factor,view.x,view.y);}},
+    reset(){manualCamera();cancelAnimationFrame(tween);zoom=overviewZoom();resetCenter();options.onZoom?.(Math.round(zoom*100));schedule();},
+    focus(id,opening=false){if(!opening)manualCamera();const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} const point=pos(t.q,t.r);
+      if(fresh || boxW!==Math.round(host.getBoundingClientRect().width))pendingFocus=point;
+      centerAt(...point);schedule();}},
     setGrid(show){grid=Boolean(show);schedule();},
     setLabels(show){labels=Boolean(show);schedule();},
     setTerritories(show){territories=Boolean(show);schedule();},

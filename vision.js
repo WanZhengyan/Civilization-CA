@@ -1,11 +1,13 @@
+import {NATURAL_WONDERS} from './natural-wonders.js';
 // All regions use the same odd-row, point-up hex grid. Cached footprints contain
 // only public geometry; never cache occupancy, observations, or player data here.
-const sight = {
-  ironclad:2, destroyer:3, sappers:2, signals:3, skirmisher:3, pikes:2, settler:1, builder:1, scout:3, melee:2, ranged:2, cavalry:3, riflemen:2,
-  artillery:2, armor:2, workboat:2, cutter:3, frigate:3, city:2
-};
 const footprints = new Map();
-export function getSightRadius(type) { return sight[type] ?? 1; }
+const fieldSight = 2;
+
+// Foot and mounted scouts explore faster through movement; every mobile unit
+// observes the same two rings. This also remains true for already trained units.
+export function getSightRadius() { return fieldSight; }
+export {getSightRadius as unitSight};
 
 function footprint(id, radius) {
   const key=id+'@'+radius;
@@ -23,13 +25,8 @@ function footprint(id, radius) {
   return tiles;
 }
 
-export function unitSight(state, type, seat) {
-  const trained = (type==='scout' || type==='cavalry') && state.players?.[seat]?.technologies?.includes('cartography');
-  return getSightRadius(type) + Number(Boolean(trained));
-}
-
-export function sightFrom(state, tile, type, seat) {
-  return footprint(tile,unitSight(state,type,seat)).filter(id=>Object.hasOwn(state.board,id));
+export function sightFrom(state, tile) {
+  return footprint(tile,fieldSight).filter(id=>Object.hasOwn(state.board,id));
 }
 
 export function getVisibleTiles(state, seat) {
@@ -38,9 +35,9 @@ export function getVisibleTiles(state, seat) {
   const reveal=(tile,radius)=>{
     for (const id of footprint(tile,radius)) if (Object.hasOwn(state.board,id)) visible.add(id);
   };
-  for (const unit of state.units) if (unit.seat===seat) reveal(unit.tile,unitSight(state,unit.type,seat));
+  for (const unit of state.units) if (unit.seat===seat) reveal(unit.tile,fieldSight);
   for (const city of state.cities) if (city.seat===seat) {
-    reveal(city.tile,getSightRadius('city'));
+    reveal(city.tile,fieldSight);
     if (city.portTile && city.buildings.includes('harbor') && state.players[seat]?.technologies?.includes('radar')) reveal(city.portTile,4);
   }
   for (const [id,holding] of Object.entries(state.board)) if (holding.owner===seat) visible.add(id);
@@ -63,10 +60,13 @@ function observedDeposit(state,seat,id) {
 export function rememberVision(state, previous) {
   if (!state || state.intel) return state;
   const sights=state.players.map((_,seat)=>getVisibleTiles(state,seat));
+  const discoveries=[];
   const exploration=sights.map((visible,seat)=>{
     const old=state.exploration?.[seat] || {};
     let known=old;
     for(const id of visible) {
+      const wonder=state.board[id].naturalWonder;
+      if(wonder && !Object.hasOwn(old,id))discoveries.push({round:state.round,seat,type:'discovery',tile:id,wonder,text:'Discovered '+NATURAL_WONDERS[wonder].name+'.'});
       const resource=observedDeposit(state,seat,id);
       if(known[id]===resource) continue;
       if(known===old) known={...old};
@@ -80,7 +80,7 @@ export function rememberVision(state, previous) {
     const audience=sights.reduce((mask,visible,seat)=>visible.has(entry.tile) ? mask|(1<<seat) : mask,0);
     return {...entry,audience};
   });
-  return {...state,exploration,log};
+  return {...state,exploration,log:discoveries.length ? [...log,...discoveries].slice(-160) : log};
 }
 
 const publicShape=(object,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(object,key)).map(key=>[key,object[key]]));
@@ -89,7 +89,7 @@ function observedEvent(entry,seat) {
     const {audience,...copy}=entry;
     return copy;
   }
-  if (!(entry.audience & (1<<seat)) || !['move','attack','found','barbarian','capture'].includes(entry.type)) return null;
+  if (!(entry.audience & (1<<seat)) || !['move','found'].includes(entry.type)) return null;
   // Enemy orders must not reveal the route from fog, the hidden target's city name,
   // composition, queue, or the seat IDs that also witnessed this event.
   return {round:entry.round,seat:entry.seat,tile:entry.tile,type:'observation',text:'Activity spotted in view.'};
@@ -106,6 +106,7 @@ export function projectForSeat(state,seat) {
       return [id,fields];
     }
     const cellMemory={owner:null,level:0,improvement:null};
+    if(explored.has(id) && cell.naturalWonder)cellMemory.naturalWonder=cell.naturalWonder;
     if (memory[id] && state.players[seat].surveyEnabled!==false) cellMemory.resource=memory[id];
     return [id,cellMemory];
   }));
@@ -115,9 +116,9 @@ export function projectForSeat(state,seat) {
     {...publicShape(c,['id','name','seat','tile','hp','maxHp','population','originalSeat']),buildings:[]});
   const units=state.units.filter(u=>u.seat===seat || visible.has(u.tile)).map(u=>u.seat===seat ? u :
     publicShape(u,['id','seat','type','tile','hp','maxHp','maxMoves']));
-  const view={...publicShape(state,['rulesVersion','opening','mapId','round','turn','phase','victoryReason','winners','wonderRegistry']),
+  const view={...publicShape(state,['rulesVersion','opening','mapId','mapShape','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
-    log:state.log.map(e=>observedEvent(e,seat)).filter(Boolean),intel:{seat,visible:[...visible],explored:[...explored]}};
+    log:state.log.map(e=>observedEvent(e,seat)).filter(Boolean),intel:{seat,visible:[...visible],explored:[...explored],battles:state.battleReports?.[seat] || []}};
   if (state.barbarians) {
     const shown=entries=>(entries||[]).filter(e=>visible.has(e.tile))
       .map(e=>publicShape(e,['id','tile','type','hp','maxHp']));

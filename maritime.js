@@ -1,11 +1,11 @@
 export const PORT_BUILDINGS = {
   harbor: {name: 'Harbor', required: 10, description: 'Earns 2 capital per turn. A city may use its own shore or a connected coastal district within two hexes.'},
-  shipyard: {name: 'Shipyard', required: 13, description: 'Adds 2 production per turn to this harbor city and equips it for larger vessels.'}
+  shipyard: {name: 'Shipyard', era:'industrial', tech:'steam', required: 13, description: 'Adds 2 production per turn to this harbor city and equips it for larger vessels.'}
 };
 
 // A slipway must touch the shore reached from the city via its owned land.
 // Reserve the water hex when the order is placed so simultaneous queues never overlap.
-export function findPortSite(state, city, byId, neighbors, visible) {
+export function findPortSite(state, city, byId, neighbors, visible, prospective=false) {
   if (!city) return null;
   if (city.portTile) return city.portTile;
   if (city.queue?.item === 'harbor' && city.queue.portTile) return city.queue.portTile;
@@ -17,9 +17,12 @@ export function findPortSite(state, city, byId, neighbors, visible) {
     for (const shore of frontier) {
       for (const id of neighbors(shore)) {
         const tile = byId[id];
+        // A future harbor may use surveyed coast beyond our borders. Consult only
+        // its known terrain until the city can actually reserve a working berth.
+        if (visible && !visible.has(id)) continue;
         if (tile.terrain === 'ocean') {
-          if ((!visible || visible.has(id)) && !reserved.has(id) && state.board[id].owner == null && !state.board[id].improvement) return id;
-        } else if (!seen.has(id) && tile.terrain !== 'mountains' && state.board[id].owner === city.seat) {
+          if (!state.board[id].naturalWonder && (prospective || (!reserved.has(id) && state.board[id].owner == null && !state.board[id].improvement))) return id;
+        } else if (!seen.has(id) && tile.terrain !== 'mountains' && (prospective || state.board[id].owner === city.seat)) {
           seen.add(id);
           next.push(id);
         }
@@ -39,7 +42,7 @@ export const VESSELS = {
 // Fishing fleets work sheltered water connected to an actual port by sea.
 export function fisheryPort(state, seat, tile, byId, neighbors) {
   const holding = state.board[tile];
-  if (byId[tile]?.terrain !== 'ocean' || holding.improvement || (holding.owner !== null && holding.owner !== seat)) return null;
+  if (byId[tile]?.terrain !== 'ocean' || holding.naturalWonder || holding.improvement || (holding.owner !== null && holding.owner !== seat)) return null;
   if (state.cities.some(city => city.portTile === tile || city.queue?.portTile === tile)) return null;
   const ports = state.cities.filter(city => city.seat === seat && city.portTile && city.buildings.includes('harbor'));
   if (!ports.length) return null;

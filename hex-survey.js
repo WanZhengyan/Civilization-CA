@@ -10,6 +10,28 @@ export function adjacent(q, r, side) {
   return [[q+odd,r-1],[q+1,r],[q+odd,r+1],[q-1+odd,r+1],[q-1,r],[q-1+odd,r-1]][side];
 }
 
+// Picking, text placement and the camera all use the playable survey.
+export function chartHit(x,y,hasTile) {
+  const row=Math.round((y-H/2)/ROW);
+  for(let r=row-1;r<=row+1;r++){
+    const q=Math.round((x-W/2)/W-(r&1)*.5),id=idFor(q,r);
+    if(!hasTile(id))continue;
+    const [tx,ty]=pos(q,r),dx=Math.abs(x-tx);
+    if(dx<=W/2 && Math.abs(y-ty)<=H/2-dx*H/(2*W))return id;
+  }
+  return null;
+}
+
+export function chartExtent(tiles) {
+  let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
+  for(const {q,r} of tiles){
+    const [x,y]=pos(q,r);
+    left=Math.min(left,x-W/2);right=Math.max(right,x+W/2);
+    top=Math.min(top,y-H/2);bottom=Math.max(bottom,y+H/2);
+  }
+  return {left,right,top,bottom,width:right-left,height:bottom-top};
+}
+
 // Only coordinates enter the frame. Unseen oceans, deposits and opponents
 // cannot move the line that marks the outermost playable hexes.
 export function chartPerimeter(tiles) {
@@ -118,4 +140,13 @@ export function regionOverviewZoom(viewWidth, viewHeight, worldWidth, worldHeigh
   const availableWidth = Math.max(1, viewWidth - 28);
   const availableHeight = Math.max(1, viewHeight - 28);
   return Math.min(availableWidth / worldWidth, availableHeight / worldHeight) / base;
+}
+
+// Camera space remains the full canvas; the focus point and fit use the open
+// rectangle between the fixed controls so every edge hex can be reached.
+export function chartViewport(width,height,insets={}) {
+  const left=insets.left||0,top=insets.top||0;
+  const innerWidth=Math.max(1,width-left-(insets.right||0));
+  const innerHeight=Math.max(1,height-top-(insets.bottom||0));
+  return {left,top,width:innerWidth,height:innerHeight,x:left+innerWidth/2,y:top+innerHeight/2};
 }

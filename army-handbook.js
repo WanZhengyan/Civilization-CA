@@ -17,7 +17,7 @@ export function handbookRows(era) {
     if (unit.domain==='sea') requirements.push('Harbor');
     if (unit.shipyard || id==='frigate') requirements.push('Shipyard');
     return {
-      name:unit.name, moves:unit.moves, sight:getSightRadius(id), range:unit.range, cost:unit.required,
+      name:unit.name, moves:unit.moves, sight:getSightRadius(), range:unit.range, cost:unit.required,
       requirements, note:unit.description || notes[id] || '', upgrade:UNIT_TYPES[unit.upgrade]?.name
     };
   });

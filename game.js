@@ -1,3 +1,5 @@
+import {naturalWonderArt} from './natural-wonder-art.js';
+import {discoveredNaturalWonders} from './natural-wonders.js';
 import {invitationCode, launchDestination} from './launch.js';
 import {armyHandbook} from './army-handbook.js';
 import {ledgerBody} from './resource-ledger.js';
@@ -63,7 +65,7 @@ function storedSolo() {
   return null;
 }
 
-let renderView, toast, dialog, solo, room = null, token = null;
+let renderView, locateDistrict, toast, dialog, solo, room = null, token = null;
 let mode = 'home', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
 let supplyCity='';
@@ -96,6 +98,7 @@ function showTitle(visible) {
   const leavingTitle = !visible && !screen.hidden;
   screen.hidden = !visible;
   document.body.classList.toggle('on-title', visible);
+  document.dispatchEvent(new Event('civitas-screen'));
   if (leavingTitle) requestAnimationFrame(() => {
     if (screen.hidden && !dialog?.open) document.getElementById('board-nav')?.focus({preventScroll:true});
   });
@@ -555,7 +558,7 @@ const guideSections = {
   start: {label:'First turn', entries:[
     ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
     ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
-    ['Explore the fog', 'Dark tiles are uncharted. Move a Scout to see three hexes in every direction. The shaded terrain behind it stays on your map, but enemy positions disappear when your units lose sight.'],
+    ['Explore the fog', 'Each unit sees two hexes in every direction. Dark tiles are uncharted. Shaded tiles keep the terrain you explored, but enemies there are hidden.'],
     ['Survey for deposits', 'Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.'],
     ['Choose your map', 'Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
@@ -567,14 +570,14 @@ const guideSections = {
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
     ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
     ['Use stored goods', 'Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.'],
-    ['Plan housing', 'A new city has room for three citizens. A granary adds two places and a residential quarter adds three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.'],
+    ['Plan housing', 'A new city has room for three citizens. A granary adds two places. Public Works unlocks residential quarters, which add three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.'],
     ['Assign citizens', 'Select your city and open Manage citizens. Food, industry and science priorities change which controlled districts are worked. Each citizen works one district or a specialist job in town. The same district cannot support two cities.'],
     ['Choose a building', 'A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.'],
     ['Make room for recruits', 'Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.']
   ]},
   formations: {label:'Unit handbook'},
   battle: {label:'Field tactics', entries:[
-    ['Train a scout', 'A Scout is available as soon as you found a city. It has three movement points to a Militia unit’s two. Forests and hills still cost two points to enter.'],
+    ['Train a scout', 'Train a Scout after founding a city. It has three movement points to a Militia unit’s two. Move again after revealing new ground. Topographic Mapping makes foothills cost only one point for scouts and mounted scouts.'],
     ['Choose a frontier formation', 'Trail skirmishers cross woods and hills for one movement point. Pike Guards make poor targets for cavalry and gain a bonus when attacking mounted scouts.'],
     ['Support an assault', 'Siege Engineers can capture a walled city after its garrison falls. Keep a Signal Corps one hex from a friendly attacker to add 8 damage against rival civilizations. Check the forecast to see the active bonuses.'],
     ['Read the terrain', 'Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.'],
@@ -585,7 +588,7 @@ const guideSections = {
     ['Clear a camp', 'Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.'],
     ['Recover', 'Units regain movement at the start of their faction’s turn. A unit in a friendly city heals up to 12 health. Each friendly city recovers up to 6.']
   ]},
-  universities: {label:'Universities', entries:[
+  universities: {label:'Wonders', entries:[
     ['Charter a university', 'Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.'],
     ['Survey the campus', 'Choose an empty land tile in your territory within two hexes of the host city. Deposits, improvements, city centers and reserved sites are protected. A matching terrain grants one additional point in the listed specialty every turn.'],
     ['Compete for a charter', 'Pay the charter fee and assign city production. The first campus of its kind to open wins the charter for this world. A competing city stops work and recovers its fee. Its spent production is lost.'],
@@ -595,7 +598,7 @@ const guideSections = {
     ['Choose a harbor site', 'Found on the shore or connect a city to your own coast within two hexes. Choose Harbor in city production. The harbor reserves an adjacent water hex and earns capital.'],
     ['Put a crew to work', 'Train a Fishing crew at a harbor. Sail to open water within two water hexes of a friendly harbor and build a Fishery. Each crew has two charges.'],
     ['Choose a warship', 'An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.'],
-    ['Launch a fleet', 'A harbor trains Revenue cutters. Add a Shipyard and research Steam Power to build Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.']
+    ['Launch a fleet', 'A harbor trains Revenue cutters. Research Steam Power to unlock the Shipyard, then build one to train Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.']
   ]},
   research: {label:'Research & victory', entries:[
     ['Choose a specialization', 'Workshop Engineering opens Steam Power and then Radio Networks. Field Tactics leads to Ballistics. Learn both Steam Power and Ballistics to unlock Motorization and train an Armored Column.'],
@@ -606,6 +609,24 @@ const guideSections = {
     ['Count civic points', 'Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.']
   ]}
 };
+function wonderJournal(state) {
+  const discoveries=state ? discoveredNaturalWonders(state) : [];
+  const region=getMap(state || 'la');
+  const entries=discoveries.map(site=>{
+    const label=region.byId[site.tile]?.name;
+    const coordinate='('+site.tile.split(',').join(', ')+')';
+    return '<li class="journal-entry">'+
+      '<img src="'+escapeHTML(naturalWonderArt(site.id))+'" width="72" height="72" alt="">'+
+      '<div><strong>'+escapeHTML(site.name)+'</strong><small>'+escapeHTML(site.effect)+'</small>'+
+      '<span>'+(label?'<span>'+escapeHTML(label)+'</span> · ':'')+coordinate+'</span></div>'+
+      button('locate-wonder-'+site.id,'Show on map')+'</li>';
+  });
+  const intro=state && !state.naturalWonderVersion ? 'Start a new campaign to discover natural wonders. This save keeps its original terrain.' :
+    'Explore to record natural wonders here. Work a district next to a discovered site to gain its local bonus.';
+  return '<h3 class="journal-heading">Natural wonders</h3>'+desc(intro)+
+    (entries.length?'<ul class="wonder-journal">'+entries.join('')+'</ul>':'')+
+    '<h3 class="journal-heading">University wonders</h3>';
+}
 function countLabel(n, singular, plural = singular + 's') {
   return n + ' ' + (n === 1 ? singular : plural);
 }
@@ -617,12 +638,13 @@ function content() {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
     return {kicker:'Field guide', title:'How to play', body:tabs +
+      (guideTab === 'universities' ? wonderJournal(state) : '') +
       (guideTab === 'formations' ? armyHandbook(escapeHTML) : list(guideSections[guideTab].entries.map(([title, text]) => row(title, text)))) + actions(button('back', 'Return to map', 'primary'))};
   }
   if (modal === 'log') return {
     kicker: 'Campaign records', title: 'Event log',
-    body: state.log.length ? list([...state.log].reverse().map(entry => row(escapeHTML(eventText(entry)),
-      'Round ' + escapeHTML(entry.round), Number.isInteger(entry.seat) && FACTIONS[entry.seat] ? factionMark(entry.seat) : ''))) : muted('No events yet.')
+    body: actions(button('battle-reports',getLanguage()==='zh-CN'?'战报':'Battle reports')) + (state.log.length ? list([...state.log].reverse().map(entry => row(escapeHTML(eventText(entry)),
+      'Round ' + escapeHTML(entry.round), Number.isInteger(entry.seat) && FACTIONS[entry.seat] ? factionMark(entry.seat) : ''))) : muted('No events yet.'))
   };
   if (modal === 'standings') {
     const winnersFirst = seat => Number(state.winners?.includes(seat));
@@ -640,7 +662,8 @@ function content() {
     const saved=campaignSave(selectedMap);
     const status=saved ? getMap(selectedMap).name+' · Round '+saved.round : 'No campaign started on this map.';
     return {kicker:'California campaigns', title:'Campaign atlas',
-      body:mapPicker(selectedMap)+muted(status)+actions(button('load-region',saved?'Resume campaign':'Start campaign','primary'),saved?button('confirm-restart','Start new campaign'):'')};
+      body:mapPicker(selectedMap)+muted(status)+
+        (saved && saved.mapShape!=='regional' ? muted('This save uses the original map. Start a new campaign here to play the regional coastline.') : '')+actions(button('load-region',saved?'Resume campaign':'Start campaign','primary'),saved?button('confirm-restart','Start new campaign'):'')};
   }
   if (modal === 'restart') return {kicker:'Solo campaign', title:'Start a new campaign?',
     body:muted(getMap(selectedMap).name) + desc('Starting over replaces the saved campaign on the selected map. Your other regions keep their progress.') + actions(button('restart','Start new campaign','primary'),button('campaign-atlas','Keep saved campaign'))};
@@ -678,6 +701,15 @@ async function copyInvite() {
   }
 }
 function modalAction(act) {
+  if (act.startsWith('locate-wonder-')) {
+    const match=discoveredNaturalWonders(getState()).find(site=>site.id===act.slice('locate-wonder-'.length));
+    if (match) {
+      dismissDialog();
+      locateDistrict?.(match.tile);
+    }
+    return;
+  }
+  if(act==='battle-reports'){dismissDialog();document.dispatchEvent(new Event('civitas-battle-history'));return;}
   if(act==='title-screen'){enterTitle();return}
   if(act==='supplies'){open('supplies');return}
   if(act.startsWith('cargo-')){
@@ -753,8 +785,9 @@ async function reconnectRoom(code) {
   }
 }
 
-async function init({ render, toast: showToast }) {
+async function init({ render, locate, toast: showToast }) {
   renderView = render;
+  locateDistrict = locate;
   toast = showToast;
   if (initialized) { emit(); return; }
   initialized = true;

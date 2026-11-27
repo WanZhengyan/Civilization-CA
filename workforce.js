@@ -1,3 +1,4 @@
+import {NATURAL_WONDERS} from './natural-wonders.js';
 // City centers can always employ specialists. A controlled district normally
 // gives a stronger return, so access to the surrounding land matters.
 export const CITY_FOCUS = {balanced:'Balanced',food:'Food supply',industry:'Industry focus',science:'Science focus'};
@@ -13,9 +14,12 @@ const centerJobs = [
 
 export function assignWorkforce(city, eligibleTiles, focus = city.focus || 'balanced') {
   const weights = {balanced:[3,2,1],food:[7,1,1],industry:[1,7,1],science:[1,1,7]}[focus];
-  const eligible = eligibleTiles.filter(tile=>districtOutput[tile.terrain]).map(tile=>({
-    id:tile.id,name:tile.name,terrain:tile.terrain,output:districtOutput[tile.terrain],specialist:false
-  }));
+  const eligible = eligibleTiles.filter(tile=>districtOutput[tile.terrain]).map(tile=>{
+    const wonders=tile.naturalWonders || [];
+    const output=districtOutput[tile.terrain].map((base,index)=>
+      wonders.reduce((value,id)=>value+NATURAL_WONDERS[id].bonus[index],base));
+    return {id:tile.id,name:tile.name,terrain:tile.terrain,output,specialist:false,...(wonders.length ? {naturalWonders:wonders}: {})};
+  });
   const score = job => job.output.reduce((sum,amount,k)=>sum+amount*weights[k],0);
   const centers=centerJobs.map(([id,name,output])=>({id,name,output,specialist:true}));
   const bestCenter=centers.sort((a,b)=>score(b)-score(a))[0];

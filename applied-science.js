@@ -3,7 +3,7 @@
 export const appliedScience = {
   cartography: {
     name:'Topographic Mapping', era:'industrial', requires:['civics'], cost:14,
-    description:'Scouts and mounted scouts observe one additional ring of hexes.'
+    description:'Scouts and mounted scouts spend one movement point to enter foothills.'
   },
   agriculturalScience: {
     name:'Crop Rotation', era:'industrial', requires:['agronomy'], cost:15,

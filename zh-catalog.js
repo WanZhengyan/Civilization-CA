@@ -7,6 +7,7 @@ Council agenda|可审议项目
 Full civic tree|完整市政树
 Unlocks policy|解锁方针
 Unlocks unit|解锁单位
+Unlocks building|解锁建筑
 Fund a government program|推行施政方针
 In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.|在市政面板中打开施政方针。市政宪章解锁公众讲堂，公共工程解锁公共建设合同。比较各城市得到和付出的产出，再表决推行。打开完整市政树可查看后续方针和大学奇观。
 Government policy|施政方针
@@ -54,6 +55,17 @@ function section(pairs) {
   }
 }
 section(`
+Campaign controls|战役控制
+Planning|规划
+Roster|名册
+Chronicle|战史
+Command|指挥
+Close panel|关闭面板
+Claim edge|领地边界
+Shared frontier|文明交界
+`);
+
+section(`
 Research era|筛选时代
 All eras|所有时代
 Available research only|仅看可研究的科技
@@ -69,7 +81,7 @@ Ground units spend only 1 movement between friendly districts, including bridge 
 Coastal Radar|海岸雷达
 Each working harbor observes four hexes in every direction from its berth.|每座运作中的港口可观测以泊位为中心、半径四格的区域。
 Topographic Mapping|地形测绘
-Scouts and mounted scouts observe one additional ring of hexes.|侦察兵和骑乘侦察兵的视野半径增加一格。
+Scouts and mounted scouts spend one movement point to enter foothills.|侦察兵和骑乘侦察兵进入丘陵只消耗一点移动力。
 Crop Rotation|轮作制
 Each working farm or orchard supplies 1 extra food to its city.|每块有产出的农田或果园为所属城市额外提供 1 粮食。
 Industrial Metallurgy|工业冶金
@@ -101,7 +113,7 @@ Plan housing|规划住房
 Under construction|正在建设
 Provides housing for 3 more citizens.|为三名额外居民提供住房。
 Provides 2 food and housing for 2 more citizens.|提供两份粮食和两名额外居民的住房。
-A new city has room for three citizens. A granary adds two places and a residential quarter adds three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.|新城可容纳三名居民。粮仓增加两处住房，住宅区增加三处。住房满额时，城市可以储备下一次人口增长所需的粮食；扩建住房后即可继续增长。可在「管理居民」中启动住房项目。
+A new city has room for three citizens. A granary adds two places. Public Works unlocks residential quarters, which add three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.|新城可容纳三名居民。粮仓增加两处住房。完成公共工程后可建造住宅区，再增加三处住房。住房满额时，城市可以储备下一次人口增长所需的粮食；扩建住房后即可继续增长。可在「管理居民」中启动住房项目。
 Stored food|存粮
 Harvest|粮食产量
 Consumption|粮食消耗
@@ -116,7 +128,7 @@ Civitas LA · The Los Angeles Campaign|Civitas LA · 洛杉矶战役
 Scout|侦察兵
 Light reconnaissance infantry. Moves three points per turn, can skirmish with units, and cannot occupy cities.|轻装侦察步兵。每回合有三点移动力，可以与敌军交战，不能占领城市。
 Train a scout|训练侦察兵
-A Scout is available as soon as you found a city. It has three movement points to a Militia unit’s two. Forests and hills still cost two points to enter.|建城后即可训练侦察兵。侦察兵每回合有三点移动力，民兵有两点。进入林地或丘陵需要两点。
+Train a Scout after founding a city. It has three movement points to a Militia unit’s two. Move again after revealing new ground. Topographic Mapping makes foothills cost only one point for scouts and mounted scouts.|建城后可以训练侦察兵。侦察兵每回合有三点移动力，民兵有两点。发现新地块后，还可使用剩余移动力继续前进。研究地形测绘后，侦察兵和骑乘侦察兵进入丘陵只需一点移动力。
 Choose your first city site|选择首都的位置
 Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.|每个文明都从一名开拓者起步。你可以就地建都，也可以先去探索。建城后可获得收入并训练单位。
 Found capital|建立首都
@@ -690,6 +702,7 @@ Richmond|里士满
 North Richmond|北里士满
 El Cerrito|埃尔塞里托
 Angel Island|天使岛
+Angel Island ferry|天使岛渡轮
 `);
 section(`
 Command the harbor from Point Loma to Chula Vista. The Silver Strand shelters the inner bay.|从洛马角到丘拉维斯塔，争夺港湾控制权。银色沙洲将内湾与太平洋隔开。
@@ -760,7 +773,7 @@ Found on the shore or connect a city to your own coast within two hexes. Choose 
 Put a crew to work|派渔船出海
 Train a Fishing crew at a harbor. Sail to open water within two water hexes of a friendly harbor and build a Fishery. Each crew has two charges.|在港口训练渔船队，驶入距己方港口两格水路内的空水域，再选择建设渔场。每支渔船队可施工两次。
 Launch a fleet|组建舰队
-A harbor trains Revenue cutters. Add a Shipyard and research Steam Power to build Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.|港口可建造海岸巡逻舰。增建船厂并研究蒸汽动力后，即可建造蒸汽护卫舰。舰船能炮击海岸，占领城市仍需地面部队。
+A harbor trains Revenue cutters. Research Steam Power to unlock the Shipyard, then build one to train Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.|港口可训练海岸巡逻舰。研究蒸汽动力可解锁船厂，在港口建好船厂即可训练蒸汽护卫舰。战舰可以炮击海岸，占领城市还需要陆军。
 `);
 section(`
 Harbor district|港区
@@ -800,7 +813,7 @@ Uncharted territory|未知区域
 Outside current sight|目前没有视野
 Only the city owner can inspect its economy.|只有城市所属文明可以查看其经济情况。
 Explore the fog|探索迷雾
-Dark tiles are uncharted. Move a Scout to see three hexes in every direction. The shaded terrain behind it stays on your map, but enemy positions disappear when your units lose sight.|深色地块尚未探索。侦察兵可以看见周围三格。走过的地形会留在地图上，离开视野的敌军位置将被隐藏。
+Each unit sees two hexes in every direction. Dark tiles are uncharted. Shaded tiles keep the terrain you explored, but enemies there are hidden.|每个单位都能看见周围两格。深色地块尚未探索。阴影内保留已探索的地形，其中的敌人会隐藏。
 Grain|谷物
 Citrus|柑橘
 Timber|木材
@@ -984,4 +997,30 @@ Founds a city on a legal settlement site.|在符合条件的地块建立城市�
 Spends charges to improve land connected to a friendly city.|消耗建造次数，改良与己方城市相连的土地。
 Captures a weakened city through an adjacent attack.|可从相邻地块进攻并占领被削弱的城市。
 Can attack from two hexes away.|可以从两格外发动攻击。
+`);
+
+section(`
+Natural wonder|自然奇观
+Adjacent natural wonder|相邻自然奇观
+La Brea Tar Pits|拉布雷亚沥青坑
+South Bay Salt Marshes|南湾盐沼
+Torrey Pines|托里松林
+Cabrillo Tide Pools|卡布里洛潮池
+Each adjacent worked district gains 2 science.|每块由市民工作的相邻地块增加 2 点科研。
+Each adjacent worked district gains 1 production and 1 science.|每块由市民工作的相邻地块增加 1 点生产力和 1 点科研。
+Each adjacent worked district gains 2 food.|每块由市民工作的相邻地块增加 2 点粮食。
+Each adjacent worked district gains 1 food and 1 production.|每块由市民工作的相邻地块增加 1 点粮食和 1 点生产力。
+Each adjacent worked district gains 1 food and 1 science.|每块由市民工作的相邻地块增加 1 点粮食和 1 点科研。
+Dark asphalt seeps through the city floor, preserving the bones of Ice Age animals.|沥青从城市地下缓缓渗出，保存了冰河时代动物的骨骼。
+Sandstone walls rise above a winding creek in the Santa Monica Mountains.|圣莫尼卡山脉中，蜿蜒的小溪穿行于砂岩峭壁之间。
+From the summit in Marin, wooded ridges fall away toward the Pacific and the bay.|从马林县的山顶望去，林木覆盖的山脊一路蜿蜒向太平洋和海湾。
+Tidal channels wind between salt-tolerant plants at the shallow southern end of the bay.|在海湾南端的浅滩，潮沟穿过成片的耐盐植物。
+Wind-shaped pines cling to sandstone bluffs above the Pacific near La Jolla.|在拉霍亚附近，海风塑造的松树扎根于俯瞰太平洋的砂岩峭壁。
+At the foot of Point Loma, receding water leaves small rock pools alive with intertidal creatures.|在洛马角的崖脚，潮水退去后，岩池中仍可看到丰富的潮间带生物。
+This protected site cannot host a city, improvement or campus.|这里是受保护的自然奇观，无法建城、改良地块或建设大学。
+Wonders|奇观
+Show on map|在地图上查看
+Start a new campaign to discover natural wonders. This save keeps its original terrain.|开始新战役即可探索自然奇观，这个存档保留了原来的地形。
+Explore to record natural wonders here. Work a district next to a discovered site to gain its local bonus.|探索地图后，发现的自然奇观会记录在这里。让市民在奇观旁的地块工作，即可获得当地加成。
+This save uses the original map. Start a new campaign here to play the regional coastline.|这个存档使用原来的地图。选择「开始新战役」即可体验本地区的新海岸线。
 `);

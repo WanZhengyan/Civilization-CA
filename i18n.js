@@ -29,6 +29,7 @@ function count(n,word) {
   return n+' '+(counters[normalized] || word);
 }
 const phraseRules = [
+  [/^Discovered (.+)\.$/,name=>'发现自然奇观“'+zh(name)+'”。'],
   [/^(.+) (grew to|fell to) (\d+) residents\.$/,(city,verb,n)=>cityLabel(city)+(verb==='grew to'?'的人口增至':'的人口减至')+n+'。'],
   [/^Holding every original capital wins immediately\. Civic points are compared at the end of the round when a faction reaches (\d+), or after round (\d+)\.$/,(score,round)=>'占领所有初始首府即可立刻获胜。有阵营达到 '+score+' 分时，在本轮结束后比较积分；最迟于第 '+round+' 轮结算。'],
   [/^If a faction reaches (\d+) civic points, finish the current round and compare scores\. The same scoring applies after round (\d+)\. The highest score wins, and a tie shares victory\.$/,(score,round)=>'当任一阵营达到 '+score+' 分，在当前轮结束后比较积分。第 '+round+' 轮结束后也按此规则结算。最高分获胜，同分者共享胜利。'],
@@ -68,7 +69,7 @@ const phraseRules = [
   [/^(.+) strategy map\. Use arrow keys to preview a district\. Press Enter or Space to select it\. Use plus and minus to zoom, and Home to reset the view\.$/,region=>zh(region)+'战役地图。用方向键预览地块，回车或空格选择。按加减键缩放，按 Home 重置视图。'],
   [/^(.+) (started production of|completed) (.+)\.$/,(a,v,b)=>cityLabel(a)+(v==='completed'?'完成了':'开始生产')+zh(b)+'。'],
   [/^(.+) (founded a city at|founded) (.+)\.$/,(a,v,b)=>zh(a)+'在'+cityLabel(b)+'建城。'],
-  [/^(.+) via (Golden Gate Bridge|Bay Bridge|Coronado Bridge)([.]?)$/, (prefix,bridge,end)=>zh(prefix)+'，经'+zh(bridge)+(end?'。':'')],
+  [/^(.+) via (Golden Gate Bridge|Bay Bridge|Coronado Bridge|Angel Island ferry)([.]?)$/, (prefix,bridge,end)=>zh(prefix)+'，经'+zh(bridge)+(end?'。':'')],
   [/^Producing$/i,()=>'正在生产'],
   [/^(.+) (moved to|took control of|claimed|developed|discovered|began researching) (.+)\.$/,(a,verb,b)=>zh(a)+({'moved to':'移至','took control of':'夺取了','claimed':'将领土扩展至','developed':'开发了','discovered':'完成了研究：','began researching':'开始研究'}[verb])+zh(b)+'。'],
   [/^(.+) (captured|attacked) (.+) for (\d+) damage\.$/,(a,v,b,n)=>zh(a)+(v==='captured'?'占领了':'攻击了')+cityLabel(b)+'，造成 '+n+' 点伤害。'],

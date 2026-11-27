@@ -1,3 +1,6 @@
+import {NATURAL_WONDERS} from './natural-wonders.js';
+import {illustration} from './illustrations.js';
+
 function line(label, value) {
   return '<div><span>'+label+'</span><b>'+value+'</b></div>';
 }
@@ -48,12 +51,12 @@ export function paintCitizenLedger(state,seat,canAct,read) {
     const selected=city.queue?.item===p.item;
     const detail=built?'Completed':selected?'Under construction':!p.enabled?p.reason:p.turns+' '+(p.turns===1?'turn':'turns');
     return '<button type="button" class="housing-project" data-housing-project="'+p.item+'" '+(!p.enabled||!canAct?'disabled':'')+'>'+
-      '<b>'+escape(p.label)+'</b><span>'+escape(detail)+'</span></button>';
+      illustration(p.item)+'<b>'+escape(p.label)+'</b><span>'+escape(detail)+'</span></button>';
   }).join('');
   const activeChoice=ledger.contains(document.activeElement) && document.activeElement.dataset.cityFocus;
   const focus=Object.entries(focusNames).map(([id,name])=>'<button type="button" class="modal-tab" data-city-focus="'+id+
     '" aria-pressed="'+(id===workforce.focus)+'" '+(!canAct?'disabled':'')+'>'+name+'</button>').join('');
-  const jobs=workforce.workedTiles.map(job=>'<li><strong>'+escape(job.name)+'</strong><small> × '+job.workers+'</small>'+
+  const jobs=workforce.workedTiles.map(job=>'<li><strong>'+escape(job.name)+'</strong>'+(job.naturalWonders||[]).map(id=>'<small> · <span>'+escape(NATURAL_WONDERS[id].name)+'</span></small>').join('')+'<small> × '+job.workers+'</small>'+
     '<span>'+job.output[0]+' / '+job.output[1]+' / '+job.output[2]+'</span></li>').join('');
   const html='<div class="modal-shell"><div class="modal-head"><div><small class="modal-kicker">City planning</small>'+
     '<h2 class="modal-title" id="population-dialog-title">'+escape(city.name)+'</h2></div><button type="button" class="modal-close" data-citizens-close aria-label="Close dialog">×</button></div>'+

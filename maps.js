@@ -45,6 +45,7 @@ const BAY_AREA = {
     {name:'Golden Gate Bridge', a:'5,2', b:'5,4', color:'#be5c42'},
     {name:'Bay Bridge', a:'6,5', b:'12,4', color:'#73848a'}
   ],
+  regionalCrossings: [{name:'Angel Island ferry',kind:'ferry',a:'7,2',b:'8,3'}],
   oceanName(q,r) { return q < 4 ? 'Pacific Ocean' : r < 2 ? 'San Pablo Bay' : 'San Francisco Bay'; }
 };
 
@@ -110,12 +111,7 @@ function chart(config) {
     const seat = cityIds.indexOf(id);
     return {id,q,r,name,terrain,landmark:site?.[1]||null,capitalFor:seat<0?null:seat};
   }));
-  const bridgesByTile=Object.create(null);
-  for(const crossing of config.crossings || []) {
-    (bridgesByTile[crossing.a] ||= []).push({...crossing, to:crossing.b});
-    (bridgesByTile[crossing.b] ||= []).push({...crossing, to:crossing.a});
-  }
-  return {...config, tiles, bridgesByTile, byId:Object.fromEntries(tiles.map(tile=>[tile.id,tile]))};
+  return {...config, tiles, byId:Object.fromEntries(tiles.map(tile=>[tile.id,tile]))};
 }
 
 export const regionalMaps = {sf:chart(BAY_AREA),sd:chart(SAN_DIEGO)};
