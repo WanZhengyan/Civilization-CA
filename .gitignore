@@ -1,7 +1,0 @@
-node_modules/
-.wrangler/
-.civitas-local/
-.dev.vars*
-.env*
-wrangler.jsonc
-.DS_Store
