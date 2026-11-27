@@ -23,6 +23,10 @@ function footprint(id, radius) {
   return tiles;
 }
 
+export function sightFrom(state, tile, type) {
+  return footprint(tile,getSightRadius(type)).filter(id=>Object.hasOwn(state.board,id));
+}
+
 export function getVisibleTiles(state, seat) {
   if (state.intel?.seat===seat) return new Set(state.intel.visible);
   const visible = new Set();

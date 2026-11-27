@@ -110,7 +110,7 @@ function onMapSelect(tileId,unitId){
   }
   const keepInspect=order==="inspect";select(tileId,unitId);if(keepInspect)order="inspect";redraw();
 }
-function turnsText(value){return value+" "+(value===1?"turn":"turns")}
+function turnsText(value){return value===null?"Awaiting city income":value+" "+(value===1?"turn":"turns")}
 function nearestCityText(test){
   const c=test?.nearestCity;
   return c ? c.name+" is "+c.distance+" "+(c.distance===1?"hex":"hexes")+" away." : "";
@@ -255,7 +255,8 @@ function inspect(){
   if(activeUnit){
     const u=activeUnit,o=selectedOptions;
     info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+(["builder","workboat"].includes(u.type)?stat("Charges",u.charges):(UNIT_TYPES[u.type].range?stat("Range",UNIT_TYPES[u.type].range):stat("Terrain",terrain[tile.terrain])))+'</div>'+healthBar(u.hp,u.maxHp);
-    info+='<div class="unit-sight"><span>'+icon("inspect")+' Sight radius</span><strong>'+getSightRadius(u.type)+' <small>hexes</small></strong></div>';
+    const radius=getSightRadius(u.type);
+    info+='<div class="unit-sight"><span>'+icon("inspect")+' Sight radius</span><strong>'+radius+' <small>'+(radius===1?'hex':'hexes')+'</small></strong></div>';
     if(own){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
@@ -366,7 +367,14 @@ function projectTurns(city){
 }
 function paintProjects(){
   const cities=ownCities();
-  const markup=cities.map(city=>{
+  const settler = cities.length === 0 && !lobby() && view.state.phase === "playing"
+    ? ownUnits().find(unit => unit.type === "settler") : null;
+  const heading = el("watch-title");
+  if (heading?.lastChild?.nodeType === 3) {
+    const title = settler ? "Founding expedition" : "City projects";
+    if (heading.lastChild.textContent !== title) heading.lastChild.textContent = title;
+  }
+  const markup=settler ? '<div class="expedition-orders"><p>Choose a site for your first city. Surveying or founding can reveal local resources.</p><button type="button" data-founding-unit="'+esc(settler.id)+'">Locate settler</button></div>' : cities.map(city=>{
     const turns=projectTurns(city);
     const status=turns===null?"Choose production":turns===0?"Awaiting deployment":items[city.queue.item]||city.queue.item;
     return '<button class="watch-city" type="button" data-watch="'+esc(city.id)+'"><strong'+cityNameAttrs(city)+'>'+esc(city.name)+'</strong><span>'+esc(status)+'</span>'+(turns>0?'<small>'+esc(turnsText(turns))+'</small>':'')+'</button>';
@@ -430,7 +438,7 @@ function paintResearch(){
     const tiers=[...new Set(c.options.map(o=>o.era))];
     const eraGroups=tiers.map(tier=>{
       const cards=c.options.filter(o=>o.era===tier).map(o=>{
-        const label=o.completed?"Complete":o.active?"In progress":o.locked?"Locked":o.turns===0?"Ready":turnsText(o.turns);
+        const label=o.completed?"Complete":o.locked?"Locked":o.turns===null?turnsText(null):o.active?"In progress":o.turns===0?"Ready":turnsText(o.turns);
         const needs=o.requires.map(key=>optionNames[key]||key);
         const prereq=needs.length?'<span class="project-prereq">Requires '+esc(needs.join(" + "))+'</span>':'';
         return '<button class="project-option" data-project="'+esc(o.item)+'" data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+prereq+'<span class="project-meta"><span>'+esc(o.cost+" "+c.resource)+'</span><b>'+esc(label)+'</b></span></button>';
@@ -597,6 +605,12 @@ function mount(){
     el("switch-"+id).onclick=()=>openCouncil(id);
   }
   el("watch-cities").onclick=e=>{
+    const founder=e.target.closest("[data-founding-unit]");
+    if(founder){
+      const unit=ownUnits().find(u=>sameId(u.id,founder.dataset.foundingUnit));
+      if(unit){select(unit.tile,unit.id);atlas.focus(unit.tile);redraw();openMapOnMobile()}
+      return;
+    }
     const id=e.target.closest("[data-watch]")?.dataset.watch;
     const city=id && ownCities().find(c=>c.id===id);if(!city)return;
     select(city.tile,null,true);atlas.focus(city.tile);redraw();openProduction();

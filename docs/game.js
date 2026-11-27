@@ -70,7 +70,17 @@ let supplyCity='';
 let pending = false, errorMessage = '', playingBots = false;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
 let inviteOpen = false, resultShown = '', guideTab = 'start';
-const getState = () => campaignView(mode === 'online' && room?.game ? room.game : solo, currentSeat());
+let renderedSource, renderedSeat, renderedView;
+function getState() {
+  const source=mode==='online' && room?.game ? room.game : solo;
+  const seat=currentSeat();
+  if (source!==renderedSource || renderedSeat!==seat) {
+    renderedSource=source;
+    renderedSeat=seat;
+    renderedView=campaignView(source,seat);
+  }
+  return renderedView;
+}
 const currentSeat = () => mode === 'online' && room ? room.you : 0;
 function emit() {
   if (modal==='supplies' && dialog?.open) drawDialog();
@@ -491,16 +501,18 @@ function multiplayerContent() {
 const guideSections = {
   start: {label:'First turn', entries:[
     ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
-    ['Found a city', 'A settler with movement left can found a city on friendly or neutral land at least three hexes from any city. Choose Found city. The settler becomes the city and nearby open land joins your faction.'],
+    ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
     ['Explore the fog', 'Dark tiles are uncharted. Move a Scout to see three hexes in every direction. The shaded terrain behind it stays on your map, but enemy positions disappear when your units lose sight.'],
+    ['Survey for deposits', 'Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.'],
     ['Choose your map', 'Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
-    ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Your faction earns science and culture separately every turn.'],
+    ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
     ['Plan your turn', 'Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
   ]},
   city: {label:'City growth', entries:[
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
-    ['Improve nearby land', 'Builders have three charges. Build a farm on a friendly coast, lowland or urban hex, or a mine in woodland or foothills. Within two hexes of a friendly city, farms add food and mines add production to the nearest city.'],
+    ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
+    ['Use stored goods', 'Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.'],
     ['Plan housing', 'A new city has room for three citizens. A granary adds two places and a residential quarter adds three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.'],
     ['Assign citizens', 'Select your city and open Manage citizens. Food, industry and science priorities change which controlled districts are worked. Each citizen works one district or a specialist job in town. The same district cannot support two cities.'],
     ['Choose a building', 'A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.'],
@@ -518,7 +530,7 @@ const guideSections = {
   ]},
   universities: {label:'Universities', entries:[
     ['Charter a university', 'Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.'],
-    ['Survey the campus', 'Choose any surveyed empty plot within two hexes of the city. Deposits, improvements and city centers are protected. A matching landscape grants one additional point in the listed specialty every turn.'],
+    ['Survey the campus', 'Choose an empty land tile in your territory within two hexes of the host city. Deposits, improvements, city centers and reserved sites are protected. A matching terrain grants one additional point in the listed specialty every turn.'],
     ['Compete for a charter', 'Pay the charter fee and assign city production. The first campus of its kind to open wins the charter for this world. A competing city stops work and recovers its fee. Its spent production is lost.'],
     ['Read the opening report', 'A completed campus appears on the map. Select the campus tile to inspect its effect. Capturing its host city transfers the campus with the city.']
   ]},

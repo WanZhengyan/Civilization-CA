@@ -1,28 +1,36 @@
-# Civitas LA · California Campaigns
+# Civilization CA
 
-A turn-based strategy game for one to four players, set on three hand-authored, 221-hex maps. Open Los Angeles, San Francisco Bay or San Diego to settle cities, run a fleet and advance from the Frontier into the Industrial and Modern eras.
+A bilingual, turn-based strategy game for one to four players. Each California campaign begins with a single settler, an independently drawn civilization and a new starting location. Choose Los Angeles, San Francisco Bay or San Diego. Single-player games can be saved separately for each region.
 
-[Play on GitHub Pages](https://wanzhengyan.github.io/Civilization-LA/) · [Hosted game](https://angel-basin-civilization.gifteddream3.chatgpt.site/) · [Release notes](./CHANGELOG.md)
+[Play Civilization CA](https://wanzhengyan.github.io/Civilization-CA/) · [Hosted game](https://angel-basin-civilization.gifteddream3.chatgpt.site/) · [Version history](./CHANGELOG.md)
 
-![California campaign board, with strategy councils and field command](./media/board-preview.webp)
+![Civilization CA campaign board](./media/board-preview.webp)
 
-[中文版实机画面](./media/board-zh.webp)
+[中文实机画面](./media/board-zh.webp)
 
-## Start a campaign
+## Your first expedition
 
-- For solo play, choose **Change map** next to the region title to start or resume a campaign. The diagrams in the picker show each scenario's coastline and land.
-- For a network game, open **Multiplayer**, select the map and create a room. Send its invitation link to one to three friends. The host starts once everyone has joined. Returning in the same browser restores the player's seat.
-- Change the interface between English and Simplified Chinese in the upper-right **Game menu**. Each online player can choose their own language.
+1. Select your settler. Decide whether to found immediately, move to a different site, or spend a movement point surveying nearby resources. Nobody begins with a city, army or claimed land. The first city you found becomes your original capital.
+2. Train a **Scout** to explore. A scout gets three movement points to a militia unit’s two. Rough terrain can cost more than one point. The map distinguishes uncharted land, places you remember, and tiles you can currently observe. In an online game each seat gets its own observations.
+3. Choose research and a civic in the left rail, then train a **Builder**. An improved deposit supplies a city only when it is connected to controlled territory. Check the stockpile for your actual income. Fishing crews work marine sites from a harbor.
+4. Inspect the city's food reserve, consumption, housing and next expected population change. Switch its workforce focus to favor food, industry or science. Granaries and residential quarters can expand housing.
+5. Watch for neutral lookouts as the map opens. Returning lookouts can warn a camp and lead to a raid. Intercept a party, protect a city with a garrison or walls, or clear the source with a ground unit.
+6. Open the councils and look up **UCLA**, **Stanford**, **UC Berkeley** and **Caltech**. Their respective discoveries or charters unlock construction. Pick eligible owned land, compare specialties and commit a city to the project. Each university can finish once per world.
 
-## Play your opening turns
+| University | Unlock | Base yield per turn |
+| --- | --- | --- |
+| UCLA | Municipal Charter (civic) | 3 culture, 1 science |
+| Stanford University | Workshop Engineering (technology) | 2 production, 2 science |
+| UC Berkeley | Park Conservancies (civic) | 4 science |
+| Caltech | Steam Power (technology) | 5 science |
 
-1. Select your settler and open the settlement survey. Gold flags mark sites you can settle immediately. Blue flags mark sites where the unit will need its next turn to found the city.
-2. Use **Technology** and **Civics** on the left of the map. Science and culture build up separately. A technology can change production, military capability or trade. A civic can change how a faction grows or issues orders.
-3. Open a city's production menu. The available units change with discoveries. Militia can capture cities, ranged units can damage defenders, and later discoveries open specialized cavalry, infantry, artillery and armored units. Inspect the attack forecast before committing.
-4. Establish a harbor on a suitable controlled shore. A fishing crew can improve nearby water, a cutter patrols the coast, and a shipyard plus Steam Power unlocks a steam frigate. Ships travel on connected sea hexes. A full berth can delay a launch.
-5. Capture all original capitals for a domination victory, or lead the score when a faction reaches 125 points or round 30 ends.
+A favored site adds one unit of the university’s specialty yield. Existing improvements and resource deposits are protected from campus construction.
 
-**中文快速开始。** 点击右上角游戏菜单切换到简体中文。新建单人战役或创建联机房间时可选地图。先选开拓者查找新城位置，再从地图左侧各选一项科技和市政。经营沿海城市可以修建港口、派渔船建设渔场，或建造军舰争夺沿岸水域。
+Open **Change map** to choose a different region. For 2–4 people, choose **Multiplayer**, select the map and share the invitation. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
+
+## 中文快速开始
+
+开局只有一名开拓者。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
 
 ## Run locally
 
@@ -32,7 +40,7 @@ Use Node.js 22.13 or newer. From the repository root, run:
 npm run dev
 ```
 
-Open [the local game](http://127.0.0.1:8080/Civilization-LA/). The development server serves the frontend and the room API together, with room data saved in `.civitas-local/`. Open a private window or a second browser to join as a different player. Run the rules and multiplayer regression tests with:
+Open [the local game](http://127.0.0.1:8080/Civilization-CA/). The development server serves the frontend and the room API together, with room data saved in `.civitas-local/`. Open a private window or a second browser to join as a different player. Run the rules and multiplayer regression tests with:
 
 ```sh
 npm test
@@ -51,7 +59,7 @@ Run `npm run playtest` to replay 18 campaigns twice across all three maps. See t
 
 ## Publish the frontend on GitHub Pages
 
-This repository publishes the contents of `docs/` at the root of its `gh-pages` branch. For a fork, you can instead select **Deploy from a branch → main → /docs** in **Settings → Pages**. GitHub displays the published URL after deployment. Asset paths are relative, so the game works under a repository path such as `/Civilization-LA/`. [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+This repository publishes the contents of `docs/` at the root of its `gh-pages` branch. For a fork, you can instead select **Deploy from a branch → main → /docs** in **Settings → Pages**. GitHub displays the published URL after deployment. Asset paths are relative, so the game works under the repository path selected by GitHub Pages. [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
 Solo play runs entirely in the browser. The `civitas-api-origin` meta tag in `docs/index.html` selects the room service for multiplayer. The maintained service allows the project's GitHub Pages origin, `https://wanzhengyan.github.io`. For a fork under a different account or a custom domain, configure the room service for that origin using the steps below.
 
@@ -75,6 +83,6 @@ A Cloudflare Worker handles `/api/room`, and D1 stores room membership, turns an
    npx wrangler@4 deploy
    ```
 
-4. Set `civitas-api-origin` in `docs/index.html` to the deployed Worker's HTTPS origin and push your change. Use separate browser sessions to create and join a room, move a unit, and confirm both players see the same board. [Cloudflare D1 migration documentation](https://developers.cloudflare.com/d1/reference/migrations/)
+4. Set `civitas-api-origin` in `docs/index.html` to the deployed Worker's HTTPS origin and push your change. Use separate browser sessions to create and join a room, move a unit, and confirm the active turn is synchronized and each player sees their own explored area. [Cloudflare D1 migration documentation](https://developers.cloudflare.com/d1/reference/migrations/)
 
 The interface uses Lucide icons. [Third-party notices](./THIRD-PARTY-NOTICES.txt)

@@ -225,6 +225,7 @@ Invite link|邀请链接
 Start when everyone has joined.|所有人加入后即可开始。
 Send the invite link to a friend. Two players can start a campaign.|把邀请链接发给好友。两位玩家即可开局。
 You have a seat. The host will start the campaign.|你已加入，请等待房主开始战役。
+This site is unavailable for settlement.|此地无法建立城市。
 This campaign has ended.|战役已结束。
 Campaign in progress.|战役进行中。
 Starting…|正在开始…
@@ -352,10 +353,14 @@ The room service is temporarily unavailable. Please try again.|联机服务暂�
 `);
 section(`
 First turn|第一回合
+Use stored goods|使用库存物资
+Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.|每处已改良并连通城市的资源在回合结束时提供一份物资。打开「物资账簿」可将两份同类物资卖得五点资金，或运送到己方城市。每回合可发运一次。
+Survey for deposits|寻找资源
+Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.|开局时资源尚未显现。选择开拓者的「勘探资源」，消耗一点移动力即可看见视野内的资源。建立首都也会自动开启勘探。单位离开后，已发现的资源仍会标在地图上。
 Send out your settler|派出开拓者
 Select the Settler on the map or in your roster. Point at a highlighted hex to preview the route. Click a reachable hex to move. You can also tap a highlighted destination on a touch screen.|在地图或名册中选择开拓者。指向高亮地块可预览路线，点击即可移动；触屏上直接轻点目的地。
 Found a city|建立城市
-A settler with movement left can found a city on friendly or neutral land at least three hexes from any city. Choose Found city. The settler becomes the city and nearby open land joins your faction.|开拓者仍有移动力时，可在己方或中立陆地上建城。新城与所有城市至少相距三格。选择「建造城市」后，开拓者会建立新城，附近空地随之并入领土。
+With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.|开拓者还有移动力时，可以在距任何城市至少三格的己方或中立陆地上建城。首座城市选择「建立首都」，之后选择「建造城市」。附近的空地会并入领土。
 Give your capital a project|安排首府生产
 Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.|在名册中打开「城市」，选择首府并指定生产项目。结束回合时，城市会积累粮食与生产力。
 Open the Research council and select a project. Your cities generate science each turn. Completed research gives the whole faction a lasting benefit.|打开科技议会并选择项目。城市每回合产出科研点；完成研究后，全阵营都会获得长期收益。
@@ -365,7 +370,7 @@ City growth|城市发展
 Food and production|粮食与生产
 Food grows your population. Production completes the unit or building in a city’s queue. More residents contribute capital and can raise production.|粮食推动人口增长，生产力用于完成队列中的单位或建筑。更多居民能增加收入，也能提高生产力。
 Improve nearby land|改良周边土地
-Builders have three charges. Build a farm on a friendly coast, lowland or urban hex, or a mine in woodland or foothills. Within two hexes of a friendly city, farms add food and mines add production to the nearest city.|建设者可施工三次。在己方海岸、低地或城区修建农场，在林地或丘陵修建矿场。距己方城市两格以内的设施会惠及最近的城市：农场增加粮食，矿场增加生产力。
+A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.|建设者可以施工三次。选择能经己方陆地在两步内连通己方城市的地块，并按资源选择设施。谷物需要农场，柑橘需要果园，木材需要伐木场，石料需要采石场，铁矿需要矿场。
 Choose a building|选择建筑
 A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.|粮仓提供粮食，工坊提高生产力，纪念碑增加影响力，城墙强化防御。每座城市可各建一座。
 Make room for recruits|留出部署空间
@@ -666,7 +671,7 @@ Your treasury cannot cover this upgrade.|金库中的资金不足以升级。
 No field upgrade is available.|当前没有可用的战场升级。
 Choose your map|选择地图
 Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.|选择「切换地图」可前往洛杉矶、旧金山或圣迭戈。每个地区的单人进度独立保存。多人联机时由房主在建房时选择地图。
-Open Technology and Civics beside the map. Choose a project in each council. Your faction earns science and culture separately every turn.|打开地图旁的「科技」和「市政」，分别选定一项议程。你的阵营在每回合分别积累科研点和文化。
+Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.|打开地图旁的「科技」和「市政」，分别选择一项议程。建立首都后，你的文明每回合分别积累科研点和文化。
 Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.|初始每回合有两次地区指令，可用于拓展、开发或争夺领土。通过「郡县联邦」后增加为三次。各单位单独消耗移动力。结束回合后结算收入，轮到下一个阵营行动。
 Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.|先查看所选单位的移动力。陆地单位进入海岸、低地或城区耗一点，进入林地或丘陵耗两点。船只在水面航行。已被其他单位占据的地块无法通行。
 Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.|陆地单位部署在城内或相邻的己方、中立可通行空地。舰船从港口或相邻空水域下水。结束回合前请留出部署空间。
@@ -710,7 +715,9 @@ Coronado Bridge|科罗纳多大桥
 
 section(`
 Sight radius|视野半径
+hex|格
 hexes|格
+Awaiting city income|建城后开始积累
 `);
 
 section(`
@@ -824,11 +831,18 @@ University opened|大学建成
 Dismiss campus notice|关闭大学建成通知
 Universities|大学奇观
 Charter a university|解锁大学
-Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.|采用市政宪章解锁加州大学洛杉矶分校，研究工坊工程解锁斯坦福大学，采用公园保护政策解锁加州大学伯克利分校，研究蒸汽动力解锁加州理工学院。在城市生产菜单中选择大学奇观。
+Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.|采用市政宪章解锁加州大学洛杉矶分校，研究工坊工程解锁斯坦福大学，通过“公园保护区”市政解锁加州大学伯克利分校，研究蒸汽动力解锁加州理工学院。在城市生产菜单中选择大学奇观。
 Survey the campus|选择校园地块
-Choose any surveyed empty plot within two hexes of the city. Deposits, improvements and city centers are protected. A matching landscape grants one additional point in the listed specialty every turn.|选择城市两格内的一处空闲候选地。资源、改良设施和市中心不能被占用。适宜的地形会让该校每回合额外提供 1 点特色产出。
+Choose an empty land tile in your territory within two hexes of the host city. Deposits, improvements, city centers and reserved sites are protected. A matching terrain grants one additional point in the listed specialty every turn.|在建设城市两格内选择一块己方空地。资源地块、改良设施、市中心和已预留地块均不能选。地形适宜时，该校每回合额外提供一点特色产出。
 Compete for a charter|竞争世界奇观
 Pay the charter fee and assign city production. The first campus of its kind to open wins the charter for this world. A competing city stops work and recovers its fee. Its spent production is lost.|支付筹建费并投入城市生产力。第一座建成的同名大学成为本局唯一的该校。竞争失败的城市会停工并收回筹建费；已投入的生产力不会返还。
 Read the opening report|查看大学落成
 A completed campus appears on the map. Select the campus tile to inspect its effect. Capturing its host city transfers the campus with the city.|建成后可在地图上选择校园地块，查看其效果。占领大学所属城市也会接管该校。
+`);
+
+section(`
+Civilization CA · California Campaigns|Civilization CA · 加州战役
+Founding expedition|建都远征
+Choose a site for your first city. Surveying or founding can reveal local resources.|选择第一座城市的位置。勘探或建城后可发现附近的资源。
+Locate settler|定位开拓者
 `);

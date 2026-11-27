@@ -1,5 +1,6 @@
 import {drawResource} from './resource-art.js';
 import {drawCampus} from './campus-art.js';
+import {WONDERS} from './wonders.js';
 import {translate} from './i18n.js';
 /* Illustrated, pointy-top, odd-row-offset California campaign maps. */
 const W = 72, H = 76, ROW = H * .75, COLS = 17, ROWS = 13;
@@ -11,6 +12,13 @@ const places = {
   griffith: 'Griffith Observatory', hollywood: 'Hollywood', pier: 'Santa Monica',
   downtown: 'Downtown LA', westwood: 'Westwood', rosebowl: 'Rose Bowl', airport: 'LAX'
 };
+export function getAtlasPlace(tile, holding) {
+  const campus=WONDERS[holding?.wonder];
+  if(campus) return {name:campus.name, landmark:null};
+  if(!tile.landmark) return null;
+  const name=tile.landmark==='studios' ? 'Burbank' : places[tile.landmark] || tile.name;
+  return {name,landmark:tile.landmark};
+}
 const pos = (q,r) => [W / 2 + (q + (r & 1) * .5) * W, H / 2 + r * ROW];
 const idFor = (q,r) => q + ',' + r;
 function noise(q, r, salt=0) {
@@ -346,7 +354,7 @@ function ridgeSilhouette(g,x,y,s,rng) {
   line(g,[peak+2,-h+1,peak+5,-h*.58,peak+4,-h*.31,peak+9,-1],'#b3ab80',.8);
   g.restore();
 }
-function renderAtlas(tiles,map) {
+function renderAtlas(tiles,map,landmarkTiles) {
   const margin=144,resolution=1.55,buffer=document.createElement('canvas');
   buffer.width=Math.ceil((worldW+2*margin)*resolution);buffer.height=Math.ceil((worldH+2*margin)*resolution);
   const g=buffer.getContext('2d');g.scale(resolution,resolution);g.translate(margin,margin);
@@ -391,7 +399,7 @@ function renderAtlas(tiles,map) {
       line(g,[x-2,y+2,x-2,y-8,x+1,y-9,x+1,y],bridge.color,1.6);
     }
   }
-  for(const t of tiles.filter(t=>t.landmark)){
+  for(const t of landmarkTiles){
     const [x,y]=pos(t.q,t.r),scales={downtown:1.97,griffith:1.76,hollywood:1.52,pier:1.73,westwood:1.66,studios:1.69,airport:1.65,rosebowl:1.73};
     scene.push({y:y+4,run:()=>{
       g.save();g.shadowColor='#434c4060';g.shadowBlur=2.8;
@@ -869,12 +877,13 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     }
     labelBounds.push(best.rect);return [best.xx,best.yy];
   }
-  for(const t of tiles)if(t.landmark){
+  for(const t of tiles){
+    const place=getAtlasPlace(t,board[t.id]);
+    if(!place || model.cityTiles.has(t.id))continue;
     const [x,y]=pos(t.q,t.r),owner=board[t.id]?.owner;
-    const name=translate(t.landmark==='studios'?'Burbank':places[t.landmark]||t.name);
-    const lx=x+(t.landmark==='hollywood'?-22:t.landmark==='griffith'?15:0);
-    const ly=y+(t.landmark==='hollywood'?18:t.landmark==='griffith'?28:24);
-    if(model.cityTiles.has(t.id))continue;
+    const name=translate(place.name);
+    const lx=x+(place.landmark==='hollywood'?-22:place.landmark==='griffith'?15:0);
+    const ly=y+(place.landmark==='hollywood'?18:place.landmark==='griffith'?28:24);
     const [nx,ny]=placeLabel(lx,ly,name);label(g,name,nx,ny,owner!=null && territories?getFaction(owner):'#a5997a',labelScale);
   }
   for(const city of model.cities){
@@ -884,7 +893,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   if(scale>1.02){
     const names=region.districts;
-    for(const t of tiles) if(names.includes(t.name)&&!t.landmark&&!model.cityTiles.has(t.id)){
+    for(const t of tiles) if(names.includes(t.name)&&!getAtlasPlace(t,board[t.id])&&!model.cityTiles.has(t.id)){
       const [x,y]=pos(t.q,t.r);g.save();g.font='italic 13px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
       g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(translate(t.name),x,y+14);g.fillStyle='#eee1bd';g.fillText(translate(t.name),x,y+14);g.restore();
     }
@@ -902,7 +911,8 @@ export function createAtlas(host, options = {}) {
   let tiles=options.tiles||defaultTiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
   let labels=true,territories=true,fresh=true,gesture=null,didDrag=false,disposed=false;
-  function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'));}
+  let landmarkTiles=tiles.filter(tile=>tile.landmark);
+  function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'),landmarkTiles);}
   function draw(){
     request=0;if(disposed||boxW<2||boxH<2)return;ensureBackground();
     const dpi=canvas.width/boxW,s=base*zoom;
@@ -1038,7 +1048,8 @@ export function createAtlas(host, options = {}) {
         model.region=region;
         canvas.setAttribute('aria-label',region.name+' strategy map. Use arrow keys to preview a district. Press Enter or Space to select it. Use plus and minus to zoom, and Home to reset the view.');
       }
-      if(nextTiles && nextTiles!==tiles){
+      const tilesChanged=nextTiles && nextTiles!==tiles;
+      if(tilesChanged){
         tiles=nextTiles;model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
         model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
         zoom=1;resetCenter();options.onZoom?.(100);
@@ -1050,7 +1061,14 @@ export function createAtlas(host, options = {}) {
         for(const t of knownTiles){window.addPath(hexPath(t.q,t.r));if(!visible.has(t.id)) memory.addPath(hexPath(t.q,t.r));}
         model.intel=state.intel;model.fog={explored,visible,window,memory,knownTiles};
       } else if(!state.intel){model.fog=null;model.intel=null;}
-      if(state.board)model.board=state.board;if(state.players)model.players=state.players;
+      if(tilesChanged || (state.board && state.board!==model.board)){
+        if(state.board)model.board=state.board;
+        // Only the seat's observed parcels may replace the printed landmark artwork.
+        const next=tiles.filter(t=>t.landmark && getAtlasPlace(t,model.board[t.id])?.landmark);
+        if(next.length!==landmarkTiles.length || next.some((t,i)=>t!==landmarkTiles[i]))background=null;
+        landmarkTiles=next;
+      }
+      if(state.players)model.players=state.players;
       if(Array.isArray(state.units)){
         updateBattleMotion(model,state,performance.now());model.units=state.units;
       }

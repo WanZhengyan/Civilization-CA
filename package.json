@@ -1,14 +1,14 @@
 {
-  "name": "civilization-la",
-  "homepage": "https://wanzhengyan.github.io/Civilization-LA/",
+  "name": "civilization-ca",
+  "homepage": "https://wanzhengyan.github.io/Civilization-CA/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/WanZhengyan/Civilization-LA.git"
+    "url": "https://github.com/WanZhengyan/Civilization-CA.git"
   },
-  "version": "6.0.0",
+  "version": "6.1.0",
   "private": true,
   "type": "module",
-  "description": "A turn-based strategy game set in the Los Angeles Basin",
+  "description": "A bilingual, turn-based strategy game of exploration and city building across California",
   "engines": {
     "node": ">=22.13.0"
   },

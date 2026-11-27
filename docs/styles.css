@@ -226,3 +226,11 @@ html[lang="zh-CN"] :is(.section-label,.eyebrow,.modal-kicker,.resource-label,.en
 .site-detail{display:flex;justify-content:space-between;gap:.4rem;font-size:.76rem;color:#aebcb1}.site-detail strong{font-weight:550;color:#d7caae}
 
 .cargo-ledger{display:grid;gap:5px}.cargo-row{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid #424c4c;border-radius:4px;background:#21292d}.cargo-symbol{display:grid;place-items:center;width:25px;height:25px;border:1px solid var(--cargo);border-radius:50%;color:var(--cargo);font-family:Georgia,serif;font-weight:700}.cargo-balance{display:grid;gap:3px}.cargo-balance small{font-size:.76rem;color:#b4bbae}.cargo-actions{margin-left:auto;display:flex;gap:4px}.cargo-order,.cargo-destination select{background:#252d31;color:#e6d3a8;border:1px solid #746753;border-radius:3px;padding:6px;font:inherit;font-size:.76rem}.cargo-order:disabled{color:#92978d;border-color:#3f4746}.cargo-destination{display:flex;align-items:center;gap:9px;margin:9px 0 13px;font-size:.88rem}.cargo-destination select{max-width:60%}@media(max-width:520px){.cargo-row{display:grid;grid-template-columns:25px 1fr}.cargo-actions{grid-column:2;justify-self:start;margin:0}.cargo-order{min-height:36px}}
+
+
+.brand .brand-name { font-size: clamp(20px, 1.9vw, 29px); letter-spacing: .012em; white-space: nowrap; text-transform: none; }
+.brand-state { color: #d6b97e; font-size: .79em; letter-spacing: .045em; }
+.expedition-orders p { margin: 9px 0; color: #bbc4c5; font-size: .81rem; line-height: 1.5; }
+.expedition-orders button { width: 100%; min-height: 37px; padding: 6px 10px; color: #e3c994; border: 1px solid #71634c; border-radius: 3px; text-align: left; }
+.expedition-orders button:hover, .expedition-orders button:focus-visible { background: #3c3832; }
+@media (max-width: 480px) { .brand .brand-name { font-size: 18px; } }

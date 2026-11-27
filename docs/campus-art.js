@@ -19,7 +19,7 @@ function arcade(g,x,y,n,step){
   for(let i=0;i<n;i++)g.fillRect(x+i*step,y+i*1.05,1.1,2.6);
 }
 export function drawCampus(g,id,x,y,color){
-  g.save();g.translate(x,y+4);
+  g.save();g.translate(x,y+4);g.scale(1.45,1.45);
   polygon(g,[[-16,0],[0,-7],[16,0],[0,8]],'#789176');
   polygon(g,[[-13,1],[1,-5],[14,1],[0,7]],'#c3b78e');
   if(id==='ucla'){

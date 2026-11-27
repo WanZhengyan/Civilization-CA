@@ -14,9 +14,9 @@ npm test
 npm run --silent playtest > playtest-candidate.json
 ```
 
-The current script plays 18 campaigns twice, six on each California map. It covers two, three and four factions. For each region, each configuration uses the normal AI opening and a second opening in which California Republic commissions a workshop first. Every later decision comes from the rules engine. Each pair must produce identical actions, final state and counters. The replay hash covers the actions and final state. Timings are excluded so a faster computer cannot change the report.
+The current script plays 18 campaigns twice, six on each California map. It covers two, three and four factions. For each region, each configuration uses the normal AI opening and a second opening in which the first seat commissions a workshop after founding. Every later decision comes from the rules engine. Each pair must produce identical actions, final state and counters. The replay hash covers the actions and final state. Timings are excluded so a faster computer cannot change the report.
 
-Compare the same seat count and opening across revisions. Look at campaign length, movement, cities founded or captured, completed projects, technology and winners together. More attacks can mean either a productive campaign or a stalled front. These openings revisit fixed factions in fixed places. Their winner counts cannot estimate a human player's chance of winning.
+Compare the same seat count and opening across revisions. Look at campaign length, movement, cities founded or captured, completed projects, technology and winners together. More attacks can mean either a productive campaign or a stalled front. These 18 scenarios use reproducible seeds, drawing their factions and starting locations from the same rules as a new campaign. Their winner counts cannot estimate a human player's chance of winning.
 
 ## Check what a player experiences
 
@@ -40,3 +40,15 @@ The v3 bots completed research in every campaign. In the four-player game, the n
 ## Choosing the campaign length in 4.1
 
 With bridge crossings and waterfront trade held constant, the 18 fixed openings ended in rounds 9–19 at a 100-point target, 12–26 at 125 points, and 13–29 at 150 points. Domination victories numbered 0, 2 and 2 respectively. In the six standard two- and four-player games, three fielded armor at 100 points and all six fielded armor at 125. The 125-point target gives the later units time to play a role, with a shorter maximum observed duration than the 150-point experiment. These are deterministic AI openings. Human balance and win rates require separate playtests.
+
+## What changed when the AI had to explore in 6.1
+
+On the standard 18 openings, the 6.0 opponent could use the position of an unseen city to choose its route. In 6.1 each faction plans from its own map. A regression test moves a hidden enemy city while keeping the patrol’s observations identical and checks that its next order stays the same.
+
+| Metric across the 18 campaigns | 6.0 | 6.1 |
+| --- | ---: | ---: |
+| Attacks ordered | 993 | 716 |
+| Improvements ordered | 326 | 364 |
+| Campaigns reaching round 30 | 5 | 2 |
+
+Each version repeated its own results on a second run. The next balance question is whether human players have enough early information to choose between founding immediately and spending a turn exploring.

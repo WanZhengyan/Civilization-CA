@@ -1,5 +1,11 @@
 # Release notes
 
+## 6.1 · Civilization CA
+
+A regional title and an inherited opening guide no longer described the campaign. The project now uses the Civilization CA name and an opening guide for settlement, reconnaissance, surveyed resources, population, raiders and universities. Computer opponents plan reconnaissance, military routes and settlements from their own charted territory.
+
+94 checks passed. 18 fixed campaigns replayed identically twice. Continue measuring opening balance and late-game campus races with players.
+
 ## 6.0 · Recognizable campuses on the California map
 
 The architectural identity and progress of a campus were difficult to read on a crowded map. University construction, completion and specialties now have dedicated artwork, visual feedback and bilingual guidance.

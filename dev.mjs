@@ -35,7 +35,8 @@ const types = {
 };
 const port = Number(process.env.PORT || 8080);
 const host = process.env.HOST || "127.0.0.1";
-const prefix = "/Civilization-LA/";
+const prefix = "/Civilization-CA/";
+const previousPrefix = "/Civilization-LA/";
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url,"http://"+req.headers.host);
@@ -55,6 +56,10 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (!["HEAD","GET"].includes(req.method)) { res.writeHead(405); res.end(); return; }
+    if (url.pathname === previousPrefix.slice(0,-1) || url.pathname.startsWith(previousPrefix)) {
+      const tail = url.pathname.startsWith(previousPrefix) ? url.pathname.slice(previousPrefix.length) : "";
+      res.writeHead(302, {Location:prefix+tail+url.search}); res.end(); return;
+    }
     if (url.pathname === "/" || url.pathname === prefix.slice(0,-1)) {
       res.writeHead(302,{Location:prefix+url.search}); res.end(); return;
     }
@@ -71,4 +76,4 @@ const server = createServer(async (req, res) => {
     res.writeHead(500); res.end();
   }
 });
-server.listen(port,host,()=>console.log("Civitas LA: http://"+host+":"+server.address().port+prefix));
+server.listen(port,host,()=>console.log("Civilization CA: http://"+host+":"+server.address().port+prefix));

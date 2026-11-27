@@ -1,5 +1,5 @@
 import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
-import {getVisibleTiles, projectForSeat, rememberVision} from './vision.js';
+import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
@@ -314,7 +314,11 @@ export function getWonderSites(state,cityId,item) {
   return surveyCampus(state, cityOrNull(state,cityId), item, getMap(state), hexDistance);
 }
 export function getPortSite(state, cityId) {
-  return findPortSite(state, cityOrNull(state, cityId), getMap(state).byId, neighbors);
+  const city=cityOrNull(state,cityId);
+  if (!city) return null;
+  if (state.intel?.portSites) return state.intel.portSites[cityId] ?? null;
+  const visible=(state.opening==='settlers' || state.enforceSight) ? getVisibleTiles(state,city.seat) : null;
+  return findPortSite(state,city,getMap(state).byId,neighbors,visible);
 }
 function unitOrNull(state,id) { return state.units.find(u=>u.id === id); }
 function cityWorkArea(state, city) {
@@ -411,9 +415,11 @@ function territoryOrder(state,seat,tile) {
   if (owner===null) return {type:'claim',label:'Claim district',cost:{capital:4,influence:0}};
   return {type:'contest',label:'Contest district',cost:{capital:4,influence:5+level*2}};
 }
-export function getActions(state,seat,id) {
+export function getActions(state,seat,id,visible) {
   const tile=getMap(state).byId[id], player=state.players[seat];
   if (!tile || !player) return [];
+  if (state.intel && !state.intel.visible.includes(id)) return [];
+  if (!state.intel && (state.opening==='settlers' || state.enforceSight) && !(visible || getVisibleTiles(state,seat)).has(id)) return [];
   const order=territoryOrder(state,seat,tile);
   if (!order) return [];
   let reason='';
@@ -423,6 +429,7 @@ export function getActions(state,seat,id) {
   else if (order.type!=='develop' && !adjacent[id].some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
   else if (player.capital<order.cost.capital) reason='You need '+order.cost.capital+' capital.';
   else if (player.influence<order.cost.influence) reason='You need '+order.cost.influence+' influence.';
+  if (!reason && state.intel?.districtChoices && !state.intel.districtChoices.includes(id)) return [];
   return [{...order,enabled:!reason,reason}];
 }
 function movementCost(state,unit, tileId) {
@@ -492,6 +499,7 @@ function settlementRestriction(state, seat, tile, nearest) {
   const owner = state.board[tile.id].owner;
   if (owner !== null && owner !== seat) return 'ownership';
   if (nearest && nearest.distance < 3) return 'spacing';
+  if (state.intel?.unavailableSites?.includes(tile.id)) return 'unsuitable';
   return null;
 }
 function canSettle(state, seat, id) {
@@ -500,13 +508,15 @@ function canSettle(state, seat, id) {
 export function getSettlementAssessment(state, unitId, tileId) {
   const unit = unitOrNull(state, unitId);
   const tile = getMap(state).byId[tileId];
-  const nearest = tile ? nearestSettlement(state, tileId) : null;
+  const charted=!state.intel || state.intel.explored.includes(tileId);
+  const nearest = tile && charted ? nearestSettlement(state, tileId) : null;
   const assessment = {
     status: 'invalid', reason: '', canFoundThisTurn: false, canFoundNextTurn: false,
     reachable: false, nearestCity: nearest, distanceToNearestCity: nearest?.distance ?? null,
-    terrainCost: tile ? terrainCost[tile.terrain] ?? null : null, moveCost: null, movesAfter: null
+    terrainCost: tile && charted ? terrainCost[tile.terrain] ?? null : null, moveCost: null, movesAfter: null
   };
   if (!tile) return {...assessment, reason: 'Select a tile on the map.'};
+  if (!charted) return {...assessment,reason:'Uncharted territory. Move closer to explore.'};
   if (unit?.type !== 'settler') return {...assessment, reason: 'Select a settler to survey this tile.'};
   if (state.phase !== 'playing') return {...assessment, reason: 'The campaign has ended.'};
   if (unit.seat !== state.turn) return {...assessment, reason: 'Wait for the settler’s turn.'};
@@ -522,6 +532,8 @@ export function getSettlementAssessment(state, unitId, tileId) {
   } else if (restriction === 'ownership') {
     const owner = state.board[tileId].owner;
     assessment.reason = FACTIONS[state.players[owner].faction].name+' owns this tile. Settle on friendly or neutral land.';
+  } else if (restriction === 'unsuitable') {
+    assessment.reason = 'This site is unavailable for settlement.';
   } else if (restriction === 'spacing') {
     assessment.reason = nearest.distance === 0
       ? nearest.name+' already occupies this tile. Cities must be at least 3 hexes apart.'
@@ -556,6 +568,7 @@ function improvementAt(state,seat,id) {
 }
 function unitImprovement(state,unit,tile) {
   if (!unit.charges) return null;
+  if (state.intel?.workSites) return state.intel.workSites[unit.id]?.[tile] ?? null;
   if (unit.type==='workboat') return fisheryPort(state,unit.seat,tile,getMap(state).byId, neighbors) ? 'fishery' : null;
   return unit.type==='builder' ? improvementAt(state,unit.seat,tile) : null;
 }
@@ -631,7 +644,8 @@ function councilOptions(state, seat, track) {
     else if (completed) reason = "Your faction has already completed this project.";
     else if (active) reason = "This is your current project.";
     else if (missing.length) reason = "Requires " + missing.map(key=>track.tree[key].name).join(" + ") + ".";
-    const turns = completed ? 0 : Math.max(0, Math.ceil((project.cost - bank) / income));
+    const remaining = Math.max(0, project.cost - bank);
+    const turns = completed || remaining === 0 ? 0 : income > 0 ? Math.ceil(remaining / income) : null;
     return {item, label: project.name, description: project.description, cost: project.cost, era: project.era,
       requires: project.requires, locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
   });
@@ -740,11 +754,25 @@ function endTurn(state,seat) {
 // research or a city's private construction queue to the attacking client.
 export function campaignView(state, seat) {
   if(!state || state.intel?.seat===seat) return state;
-  const view=projectForSeat(state,seat), forecasts={};
+  const view=projectForSeat(state,seat), forecasts={}, unavailableSites=[], portSites={}, workSites={}, districtChoices=[];
+  for(const city of view.cities) if(city.seat===seat) portSites[city.id]=getPortSite(state,city.id);
   if(state.phase==='playing' && state.turn===seat) {
     const visible=new Set(view.intel.visible);
+    if (state.actionsLeft) {
+      for (const tile of visible) if (getActions(state,seat,tile,visible)[0]?.enabled) districtChoices.push(tile);
+    }
     for(const unit of view.units) {
-      if(unit.seat!==seat || !unit.moves || !UNIT_TYPES[unit.type].range)continue;
+      if(unit.seat!==seat || !unit.moves)continue;
+      if(unit.charges) {
+        const sites={};
+        for (const tile of [unit.tile,...findRoutes(view,unit).parents.keys()]) {
+          const allowed=unitImprovement(state,unit,tile);
+          if (allowed) sites[tile]=allowed;
+        }
+        workSites[unit.id]=sites;
+      }
+      if(unit.type==='settler' && !canSettle(state,seat,unit.tile)) unavailableSites.push(unit.tile);
+      if(!UNIT_TYPES[unit.type].range)continue;
       for(const target of attackTargets(state,unit)) {
         if(!visible.has(target))continue;
         const forecast=combatPreview(state,unit.id,target);
@@ -752,7 +780,7 @@ export function campaignView(state, seat) {
       }
     }
   }
-  return {...view,intel:{...view.intel,forecasts}};
+  return {...view,intel:{...view.intel,forecasts,unavailableSites,portSites,workSites,districtChoices}};
 }
 
 export function combatPreview(state, unitId, target) {
@@ -993,30 +1021,32 @@ function botProject(state,city) {
   const option=choices.find(key=>!city.buildings.includes(key));
   return option ? {type:'produce',city:city.id,item:option}:null;
 }
+// March toward terrain the faction has yet to chart. Only revealed terrain
+// contributes movement costs; the shape of the hex grid is public geography.
+function exploreFrontier(state,unit,moves) {
+  const explored=new Set(state.intel.explored);
+  const newlyVisible=id=>sightFrom(state,id,unit.type).reduce((total,tile)=>total+Number(!explored.has(tile)),0);
+  let best=unit.tile, gain=newlyVisible(best);
+  for (const tile of moves) {
+    const count=newlyVisible(tile);
+    if (count>gain) {best=tile;gain=count;}
+  }
+  if (best!==unit.tile) return {type:'move',unit:unit.id,tile:best};
+  // A unit behind its own lines can still walk to a reachable chart edge.
+  const frontier=[...explored].filter(id=>movementCost(state,unit,id) && neighbors(id).some(tile=>!explored.has(tile)));
+  if(!frontier.length) return null;
+  const distance=id=>Math.min(...frontier.map(tile=>hexDistance(id,tile)));
+  const closer=moves.reduce((best,tile)=>distance(tile)<distance(best)?tile:best,unit.tile);
+  return closer===unit.tile ? null : {type:'move',unit:unit.id,tile:closer};
+}
 function botMovement(state,unit,options) {
   if (!options.moves.length) return null;
   const settle=unit.type==='settler', builder=unit.type==='builder';
   const candidates=[unit.tile,...options.moves];
-  const towns=state.cities.filter(c=>c.seat===unit.seat);
+  const explored=new Set(state.intel.explored);
   let goals;
-  if (unit.type==='scout') {
-    const footprints=new Set([unit.tile]);
-    for(const event of state.log) if(event.unit===unit.id && event.type==='move') {
-      for(const tile of event.path || [event.tile]) footprints.add(tile);
-    }
-    const rating=tile=>{
-      const frontier=neighbors(tile).filter(n=>!footprints.has(n)).length;
-      const home=towns.length ? Math.min(...towns.map(c=>hexDistance(c.tile,tile))) : 0;
-      return Number(!footprints.has(tile))*12+frontier+Math.min(home,6)*.5;
-    };
-    const unexplored=options.moves.filter(tile=>!footprints.has(tile));
-    if(unexplored.length){
-      const best=unexplored.reduce((a,b)=>rating(a)>=rating(b)?a:b);
-      return {type:'move',unit:unit.id,tile:best};
-    }
-    return null;
-  }
-  if (settle) goals=getMap(state).tiles.filter(t=>canSettle(state,unit.seat,t.id)).map(t=>t.id);
+  if (unit.type==='scout') return exploreFrontier(state,unit,options.moves);
+  if (settle) goals=state.intel.visible.filter(id=>canSettle(state,unit.seat,id));
   else if (unit.type==='workboat') {
     const site=options.moves.find(id=>unitImprovement(state,unit,id));
     return site ? {type:'move',unit:unit.id,tile:site} : null;
@@ -1028,15 +1058,15 @@ function botMovement(state,unit,options) {
   else if (UNIT_TYPES[unit.type].domain==='sea') {
     const range=UNIT_TYPES[unit.type].range;
     goals=[...state.units,...state.cities].filter(target=>target.seat!==unit.seat && (
-      movementCost(state,unit,target.tile) || (getMap(state).tiles.some(t=>t.terrain==='ocean' && hexDistance(t.id,target.tile)<=range))
+      movementCost(state,unit,target.tile) || (getMap(state).tiles.some(t=>explored.has(t.id) && t.terrain==='ocean' && hexDistance(t.id,target.tile)<=range))
     )).map(target=>target.tile);
   } else goals=state.cities.filter(c=>c.seat!==unit.seat).map(c=>c.tile);
-  if (!goals.length) return null;
+  if (!goals.length) return builder ? null : exploreFrontier(state,unit,options.moves);
   const costs=findRoutes(state,unit).costs;
   function value(tile) {
     const distance=Math.min(...goals.map(g=>hexDistance(g,tile)));
     if (settle && distance===0) {
-      const territory=adjacent[tile].filter(k=>terrainCost[getMap(state).byId[k].terrain] && state.board[k].owner===null).length;
+      const territory=adjacent[tile].filter(k=>explored.has(k) && terrainCost[getMap(state).byId[k].terrain] && state.board[k].owner===null).length;
       return 20+territory*0.3+(getMap(state).byId[tile].landmark ? 1:0)-costs.get(tile)*0.2;
     }
     if (!builder && !settle) {
@@ -1057,10 +1087,11 @@ function botMovement(state,unit,options) {
 function botDistrict(state) {
   if (!state.actionsLeft) return null;
   let choice=null,best=-Infinity;
+  const explored=new Set(state.intel.explored);
   for (const tile of getMap(state).tiles) {
     const [order]=getActions(state,state.turn,tile.id);
     if (!order?.enabled) continue;
-    const frontier=adjacent[tile.id].filter(id=>terrainCost[getMap(state).byId[id].terrain] && state.board[id].owner===null).length;
+    const frontier=adjacent[tile.id].filter(id=>explored.has(id) && terrainCost[getMap(state).byId[id].terrain] && state.board[id].owner===null).length;
     const variety=((tile.q*67+tile.r*31+state.round*19+state.turn*11+state.actionsLeft*7)%29)/29;
     const value=order.type==='develop' ? 0.5 : 2+Number(Boolean(tile.landmark))*3+frontier*0.1+(order.type==='contest'?1.5:0);
     if (value+variety>best) {best=value+variety;choice={type:order.type,tile:tile.id};}
@@ -1068,8 +1099,9 @@ function botDistrict(state) {
   return choice;
 }
 export function chooseBotAction(source) {
-  const state=migrateGame(source),seat=state.turn;
-  if (state.phase!=='playing') throw new Error('The campaign has ended.');
+  const current=migrateGame(source),seat=current.turn;
+  if (current.phase!=='playing') throw new Error('The campaign has ended.');
+  const state=campaignView(current,seat);
   const player = state.players[seat];
   if (!state.cities.some(c=>c.seat===seat)) {
     const pioneer=state.units.find(u=>u.type==='settler' && u.seat===seat && u.moves>0);
