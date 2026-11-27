@@ -41,3 +41,45 @@ test('mutual aid doubles damaged city recovery without crossing maximum health',
   s=round(s);assert.equal(s.cities[0].hp,s.cities[0].maxHp-5);
   s=round(s);assert.equal(s.cities[0].hp,s.cities[0].maxHp);
 });
+
+import {policyOptions} from '../docs/policy.js';
+import {campaignView} from '../docs/rules.js';
+import {translate} from '../docs/i18n.js';
+const policy=(s,id)=>applyAction(s,0,{type:'policy',item:id});
+
+test('one ruling program is private, paid only on changes, and carries through reload',()=>{
+  let s=fresh();
+  const city=s.cities[0],base=getCityYield(s,city.id),before=s.players[0].influence;
+  assert.throws(()=>policy(s,'contracts'),/Civic required/);
+  s.players[0].civics=['publicWorks','irrigationDistricts'];
+  s=policy(s,'contracts');
+  assert.equal(s.players[0].influence,before);
+  assert.equal(getCityYield(s,city.id).food,base.food-1);
+  assert.equal(getCityYield(s,city.id).production,base.production+3);
+  assert.throws(()=>policy(s,'relief'),/already voted/);
+  assert.equal(campaignView(s,1).players[0].policy,undefined);
+  assert.ok(campaignView(s,0).log.some(e=>e.type==='policy'));
+  s=JSON.parse(JSON.stringify(round(s)));
+  const bank=s.players[0].influence;
+  s=policy(s,'relief');
+  assert.equal(s.players[0].influence,bank-3);
+  assert.equal(getCityYield(s,city.id).production,base.production);
+  assert.equal(getCityYield(s,city.id).food,base.food+2);
+});
+
+test('adopted stances modify banked income and council labels translate',()=>{
+  let s=fresh(); s.players[0].civics=['normalSchools','charter'];
+  const base=getStats(s,0);
+  s=policy(s,'grants');
+  const changed=getStats(s,0);
+  assert.equal(changed.scienceIncome,base.scienceIncome+2);
+  assert.equal(changed.capitalIncome,base.capitalIncome-2);
+  const bank=s.players[0].capital;
+  s=round(s);assert.equal(s.players[0].capital,bank+changed.capitalIncome);
+  s.players[0].influence=2;
+  assert.throws(()=>policy(s,'balanced'),/need 3 influence/);
+  for (const p of policyOptions(s,0)) {
+    assert.match(translate(p.name,'zh-CN'),/\p{Script=Han}/u);
+    assert.match(translate(p.description,'zh-CN'),/\p{Script=Han}/u);
+  }
+});

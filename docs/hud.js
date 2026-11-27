@@ -3,6 +3,7 @@ import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resource
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
+import {addPolicyPanel} from "./policy-panel.js";
 import {campusPlan} from './campus-plan.js';
 import {getWonderSites} from './rules.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
@@ -437,6 +438,10 @@ function paintResearch(){
     el("switch-"+id).setAttribute("aria-pressed",String(id===councilKind));
     if(id!==councilKind||!el("research-modal").open)continue;
     text("research-title",c.heading);el("research-modal").dataset.council=id;
+    const council=el('research-options');
+    const oldPolicyPanel=council.previousElementSibling;
+    if(id==='civics') addPolicyPanel(council,state,seat,mayOrder(),action=>{el('research-modal').close();Game.doAction(action)});
+    else if(oldPolicyPanel?.classList.contains('civic-government')) oldPolicyPanel.remove();
     const optionNames=Object.fromEntries(c.options.map(o=>[o.item,o.label]));
     const tiers=[...new Set(c.options.map(o=>o.era))];
     const eraGroups=tiers.map(tier=>{

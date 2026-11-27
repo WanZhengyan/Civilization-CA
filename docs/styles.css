@@ -1,5 +1,6 @@
 @import url("./hex-survey.css");
 @import url("./city-planning.css");
+@import url("./policy.css");
 @import url("./campus.css");
 @import url("./production-art.css");
 :root{color-scheme:dark;--bg:#13161e;--surface:#1c202b;--panel:#1c202b;--edge:#363a47;--line:#323645;--ink:#f0ece3;--muted:#a4a7b3;--metal:#dcbc80;--gold:#ebc988;--serif:"Baskervville","Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;--sans:"Inter","Avenir Next",Arial,sans-serif}

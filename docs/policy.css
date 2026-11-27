@@ -1,0 +1,10 @@
+.civic-government{background:#1b282d;border:1px solid #655f4c;border-radius:5px;margin:10px 0;color:#ece5d6}
+.civic-government summary{display:flex;align-items:center;gap:.6rem;min-height:40px;padding:.4rem .85rem;cursor:pointer}
+.civic-government summary::after{content:'▾';color:#e0c98e;margin-left:auto}.civic-government[open] summary::after{content:'▴'}
+.civic-government summary strong{font-size:.93rem}.civic-government summary span{color:#d4bb86;font-size:.82rem}
+.civic-government p{margin:.1rem .85rem .7rem;line-height:1.4;font-size:.82rem}
+.policy-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));gap:.45rem;padding:0 .8rem .8rem}
+.policy-choices button{background:#263338;border:1px solid #59615d;color:#eee6d5;text-align:start;display:grid;align-content:start;gap:.22rem;padding:.55rem;border-radius:4px}
+.policy-choices button[aria-pressed=true]{border-color:#cfb579}.policy-choices button:disabled{cursor:default}
+.policy-choices span,.policy-choices small{font-size:.76rem;line-height:1.38}.policy-choices small{color:#d9c490}
+.civic-government :focus-visible{outline:2px solid #ebca87;outline-offset:2px}

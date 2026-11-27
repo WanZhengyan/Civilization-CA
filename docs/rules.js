@@ -4,6 +4,7 @@ import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './visi
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
+import {ratifyPolicy} from "./policy.js";
 import {extraHousing} from "./civic-agenda.js";
 import { foodForecast, feedCity } from "./population.js";
 // Shared rules for the browser and the authoritative room service.
@@ -378,6 +379,11 @@ export function getCityYield(state,cityId) {
   if (farms && adopted(state,city.seat,'irrigationDistricts')) result.food += 2;
   if (has('harbor') && adopted(state,city.seat,'harborCommission')) result.capital += 3;
   if (adopted(state,city.seat,'exposition')) result.influence += 2 * city.buildings.filter(id=>WONDERS[id]).length;
+  const policy=state.players[city.seat].policy;
+  if (policy==='contracts') { result.production+=2; result.food-=1; }
+  if (policy==='relief') { result.food+=2; result.production-=1; }
+  if (policy==='portDues') { if (has('harbor')) result.capital+=3; result.influence-=1; }
+  if (policy==='grants') result.capital-=2;
   return result;
 }
 export function getPopulationReport(state, cityId) {
@@ -416,6 +422,13 @@ export function getStats(state,seat) {
     const campuses=cities.reduce((n,c)=>n+c.buildings.filter(id=>WONDERS[id]).length,0);
     stats.cultureIncome += 2 * campuses;
     stats.influenceIncome += 2 * campuses;
+  }
+  const policy=state.players[seat].policy;
+  if (policy==='lectures') { stats.cultureIncome+=count; stats.scienceIncome-=count; }
+  if (policy==='grants') { stats.scienceIncome+=2*count; stats.capitalIncome-=2*count; }
+  if (policy==='portDues') {
+    stats.capitalIncome+=3*cities.filter(c=>c.buildings.includes('harbor')).length;
+    stats.influenceIncome=Math.max(0,stats.influenceIncome-count);
   }
   return stats;
 }
@@ -966,6 +979,9 @@ function resolveOrder(source,seat,action) {
     record(next,seat,'shipment','Resource shipment dispatched.');
   } else if (action.type==='research' || action.type==='civic') {
     selectProject(next, seat, action.item, action.type==='research' ? SCIENCE : CULTURE);
+  } else if (action.type==='policy') {
+    const name=ratifyPolicy(next,seat,action.item);
+    record(next,seat,'policy','Ruling policy · '+name,null,{item:action.item});
   } else if (action.type==='focus') {
     const city=cityOrNull(next,action.city);
     if(!city || city.seat!==seat) throw new Error('Choose one of your cities.');

@@ -2,6 +2,29 @@
 // their canonical IDs in both languages.
 export const catalog = new Map();
 section(`
+Government policy|施政方针
+Balanced budget|平衡预算
+Standard city yields with no program funded.|维持城市的标准产出。
+Public contracts|公共建设合同
+Each city gains 2 production and loses 1 food.|每座城市增加 2 生产力，减少 1 粮食。
+Public lectures|公众讲堂
+Each city gains 1 culture and loses 1 science.|每座城市增加 1 文化，减少 1 科研点。
+Food relief|粮食援助
+Each city gains 2 food and loses 1 production.|每座城市增加 2 粮食，减少 1 生产力。
+Port concessions|港口专营
+Each harbor earns 3 capital. Every city loses 1 influence.|每个港口增加 3 资金。每座城市减少 1 影响力。
+Research fellowships|科研资助
+Each city gains 2 science and spends 2 capital per turn.|每座城市每回合增加 2 科研点，花费 2 资金。
+In force|现行方针
+Civic required|尚未解锁市政
+The assembly has already voted this turn.|议会本回合已经表决。
+Choose an available policy.|请选择可实施的方针。
+Found a city first.|请先建立城市。
+Fund one program at a time. The first vote is free. Later changes cost 3 influence, once per turn.|同一时间只能推行一项方针。首次表决免费，此后每次调整消耗 3 影响力，每回合最多一次。
+Adopt Municipal Charter or Public Works to fund a government program.|通过市政宪章或公共工程后，可以推行施政方针。
+Ratify for 3 influence|消耗 3 影响力推行
+Ratify for free|免费推行
+Ruling policy|现行施政方针
 Irrigation Districts|灌溉合作区
 A city with a working farm or orchard gains 2 food per turn.|有运行中的农场或果园的城市每回合额外获得 2 粮食。
 Mutual Aid Pacts|互助公约
