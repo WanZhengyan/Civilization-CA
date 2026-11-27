@@ -1,5 +1,11 @@
 # Release notes
 
+## 3.5 · Harbors and working waterfronts
+
+A coastal district previously generated no port income and offered the same building list as an inland city. A harbor now needs access to a connected controlled shore. Its berth is reserved while under construction. A finished harbor adds two capital each turn and unlocks a shipyard with two extra production.
+
+33 checks passed. 6 fixed campaigns replayed identically twice. The next playtest checks whether a vessel can launch, cross the bay and return to the correct shore.
+
 ## 3.4 · Mobilize across three eras
 
 In the prior build a discovery could raise damage, but cities kept training the same four units. Cities now train mounted scouts, rifle companies, field artillery and armored columns after the matching discoveries. In the four-faction opening those units first appeared in rounds 6, 7, 10 and 12.

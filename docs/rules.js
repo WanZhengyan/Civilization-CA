@@ -1,4 +1,5 @@
 // Shared rules for the browser and the authoritative room service.
+import { PORT_BUILDINGS, findPortSite } from "./maritime.js";
 import {TECHS, CIVICS, ERA_UNITS, eraFor} from './progression.js';
 export {TECHS, CIVICS, ERAS} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
@@ -170,6 +171,7 @@ export const UNIT_TYPES = {
   ...ERA_UNITS
 };
 export const BUILDINGS = {
+  ...PORT_BUILDINGS,
   granary: {name:"Granary", required:10},
   workshop: {name:"Workshop", required:13},
   monument: {name:"Monument", required:10},
@@ -260,6 +262,9 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(f=>
   return migrateGame(next);
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
+export function getPortSite(state, cityId) {
+  return findPortSite(state, cityOrNull(state, cityId), TILE_BY_ID, neighbors);
+}
 function unitOrNull(state,id) { return state.units.find(u=>u.id === id); }
 export function getCityYield(state,cityId) {
   const city = cityOrNull(state,cityId);
@@ -280,8 +285,8 @@ export function getCityYield(state,cityId) {
   const trade = TILE_BY_ID[city.tile].terrain === 'coast' && knows(state, city.seat, 'navigation');
   return {
     food: 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
-    production: 3 + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
-    capital: city.population + (civics ? 2 : 0) + (trade ? 2 : 0),
+    production: 3 + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
+    capital: city.population + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
 }
@@ -306,7 +311,7 @@ export function getStats(state,seat) {
       +(adopted(state,seat,'conservation') ? cities.filter(c=>hasPark(state,c)).length : 0),
     scienceIncome:2+count+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
       +(adopted(state,seat,'publicRadio') ? 2*count : 0),
-    capitalIncome:3+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
+    capitalIncome:3+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +(knows(state,seat,'navigation') ? 2*cities.filter(c=>TILE_BY_ID[c.tile].terrain==='coast').length : 0),
     influenceIncome:2+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
 }
@@ -468,6 +473,8 @@ export function getProductionOptions(state,cityId) {
     else if (city.seat!==state.turn) reason='Wait for the city owner’s turn.';
     else if (city.queue) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
+    else if (item==='harbor' && !getPortSite(state,city.id)) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
+    else if (item==='shipyard' && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
     else if (def.tech && !knows(state,city.seat,def.tech)) reason='Requires '+TECHS[def.tech].name+'.';
     return {item,label:def.name,kind,era:def.era || null,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
   });
@@ -538,6 +545,11 @@ function produceCityTurn(state,city) {
     if (!spawnTile) return;
     spawn(state,city.seat,queue.item,spawnTile).moves=0;
   } else {
+    if (queue.item==='harbor') {
+      const tile = queue.portTile || getPortSite(state,city.id);
+      if (!tile) return;
+      city.portTile = tile;
+    }
     city.buildings.push(queue.item);
     if (queue.item==='walls') {city.maxHp+=50; city.hp=Math.min(city.maxHp,city.hp+50);}
   }
@@ -691,7 +703,8 @@ export function applyAction(source,seat,action) {
     if (!city || city.seat!==seat) throw new Error('Choose one of your cities.');
     const option=getProductionOptions(next,city.id).find(o=>o.item===action.item);
     if (!option || !option.enabled) throw new Error(option?.reason || 'Choose an available production project.');
-    city.queue={item:option.item,required:option.required,progress:0};
+    const berth=option.item==='harbor' ? getPortSite(next,city.id) : null;
+    city.queue={item:option.item,required:option.required,progress:0,...(berth ? {portTile:berth} : {})};
     record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
   } else if (['move','attack','found','improve','upgrade'].includes(action.type)) {
     unitOrder(next,seat,action);
@@ -715,6 +728,7 @@ function botProject(state,city) {
   const cities=state.cities.filter(c=>c.seat===city.seat);
   const count=type=>units.filter(u=>u.type===type).length+cities.filter(c=>c.queue?.item===type).length;
   const choices=[];
+  if (!city.buildings.includes('harbor') && getPortSite(state,city.id)) choices.push('harbor');
   if (count('builder')===0) choices.push('builder');
   for (const type of ['armor','artillery','riflemen','cavalry']) {
     if (knows(state,city.seat,UNIT_TYPES[type].tech) && !count(type)) choices.push(type);
@@ -722,6 +736,7 @@ function botProject(state,city) {
   if (count('ranged')<Math.max(1,cities.length-1)) choices.push('ranged');
   if (count('melee')<2) choices.push('melee');
   if (cities.length<3 && count('settler')===0) choices.push('settler');
+  if (city.buildings.includes('harbor')) choices.push('shipyard');
   choices.push('workshop','walls','monument','granary');
   if (count('melee')<4) choices.push('melee');
   const option=choices.find(key=>!city.buildings.includes(key));

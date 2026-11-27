@@ -285,7 +285,7 @@ function productionOptions(){
   const html=[["Train a unit",list.filter(x=>x.kind==="unit")],["Construct a building",list.filter(x=>x.kind==="building")]].map(([heading,opts])=>{
     return '<h3 class="production-group">'+heading+'</h3><div class="production-grid">'+opts.map(o=>{
       const disabled=!o.enabled||!mayOrder();
-      const desc=UNIT_TYPES[o.item]?.description||itemDesc[o.item]||o.label;
+      const desc=BUILDINGS[o.item]?.description||UNIT_TYPES[o.item]?.description||itemDesc[o.item]||o.label;
       return '<button class="production-item" data-produce="'+esc(o.item)+'" '+(disabled?'disabled':'')+'>'+icon(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small><small>'+esc(turnsText(o.turns))+' · '+esc(o.required)+' production</small>'+(o.reason?'<small>'+esc(o.reason)+'</small>':'')+'</span></button>';
     }).join('')+'</div>'});
   el("production-options").innerHTML=(c.queue?cityQueue(c):'')+html.join('');
