@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { FACTIONS, applyAction, chooseBotAction, createGame } from "../docs/rules.js";
 
 function run(mapId, seats, opening) {
-  let state = createGame(FACTIONS.slice(0, seats).map(f => ({name: f.name, bot: true})), mapId, {seed:417003 + seats});
+  let state = createGame(FACTIONS.slice(0, seats).map(() => ({bot: true})), mapId, {seed:417003 + seats});
   const hash = createHash("sha256");
   const counts = {moves: 0, attacks: 0, captures: 0, citiesFounded: 0, unitsTrained: 0,
     buildingsCompleted: 0, improvements: 0, technologies: 0, civics: 0, shipsLaunched: 0, fisheries: 0};

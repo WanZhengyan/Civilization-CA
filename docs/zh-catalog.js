@@ -10,6 +10,7 @@ function section(pairs) {
 }
 section(`
 Civitas LA · The Los Angeles Campaign|Civitas LA · 洛杉矶战役
+Civilization drawn at start|开局随机分配文明
 Los Angeles|洛杉矶
 The Los Angeles Basin|洛杉矶盆地
 Regional campaign|地区战役

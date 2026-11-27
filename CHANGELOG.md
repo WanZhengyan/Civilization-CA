@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.3 · Draw a civilization independently of the map
+
+A given seat always represented the same civilization. Civilizations, colors and capitals now follow an independent draw. All twelve ordered two-player combinations occurred across 48 fixed seeds. Human names remain attached to their seats.
+
+56 checks passed. 18 fixed campaigns replayed identically twice. Now test how the game behaves before anyone has founded a city.
+
 ## 4.2 · Seeded starts across California
 
 A familiar capital and the same adjacent districts gave away each opening. The host now draws a seed. Each map chooses connected, separated founding sites; 120 four-player setups had at least five hexes between opponents.

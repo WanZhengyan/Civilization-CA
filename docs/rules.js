@@ -1,5 +1,5 @@
 // Shared rules for the browser and the authoritative room service.
-import {campaignSeed, selectStarts} from './opening.js';
+import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
 import {TECHS, CIVICS, ERA_UNITS, eraFor} from './progression.js';
 export {TECHS, CIVICS, ERAS} from './progression.js';
@@ -265,16 +265,17 @@ export function migrateGame(state) {
   else next.legacyFinalScores = state.players.map(p=>p.score);
   return addResearch(next);
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(f=>({name:f.name,bot:true}))], mapId = "la", {seed: requestedSeed} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!Array.isArray(players) || players.length < 2 || players.length > 4) throw new Error("A campaign needs two to four factions.");
   const seed = campaignSeed(requestedSeed);
+  const allocation = shuffled(FACTIONS.map((_,i)=>i), seededRandom(seed,'civilizations'));
   const starts = selectStarts(getMap(mapId), players.length, seed, neighbors, hexDistance);
   const next = {seed, mapId, rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(getMap(mapId).tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
     players:players.map((player,seat)=>({
-      name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[seat].name,
-      bot:player?.bot===true,faction:seat,color:FACTIONS[seat].color,capital:12,influence:6,score:0
+      name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[allocation[seat]].name,
+      bot:player?.bot===true,faction:allocation[seat],color:FACTIONS[allocation[seat]].color,capital:12,influence:6,score:0
     })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
   starts.forEach(([home,settler,militia],seat)=>{
     for (const id of [home,settler,militia]) next.board[id].owner = seat;
@@ -571,14 +572,14 @@ function finishProject(state, seat, track) {
   player[track.bank] -= track.tree[item].cost;
   player[track.known] = [...player[track.known], item];
   player[track.focus] = null;
-  record(state, seat, track.event, FACTIONS[seat].name+' '+track.verb+' '+track.tree[item].name+'.', null, {item});
+  record(state, seat, track.event, FACTIONS[state.players[seat].faction].name+' '+track.verb+' '+track.tree[item].name+'.', null, {item});
 }
 function selectProject(state, seat, item, track) {
   const option = councilOptions(state, seat, track).find(project => project.item === item);
   if (!option?.enabled) throw new Error(option?.reason || "Choose an available council project.");
   state.players[seat][track.focus] = item;
   const verb = track === SCIENCE ? ' began researching ' : ' began debating ';
-  record(state, seat, track.order, FACTIONS[seat].name+verb+option.label+'.', null, {item});
+  record(state, seat, track.order, FACTIONS[state.players[seat].faction].name+verb+option.label+'.', null, {item});
   finishProject(state, seat, track);
 }
 function cloneGame(state) {
@@ -631,7 +632,7 @@ function endTurn(state,seat) {
   finishProject(state, seat, SCIENCE);
   finishProject(state, seat, CULTURE);
   refreshScores(state);
-  record(state,seat,'end',FACTIONS[seat].name+' ended its turn.');
+  record(state,seat,'end',FACTIONS[state.players[seat].faction].name+' ended its turn.');
   const next=(seat+1)%state.players.length;
   if (next===0) {
     const top=Math.max(...state.players.map(p=>p.score));
@@ -746,7 +747,7 @@ function unitOrder(state,seat,action) {
     if (unit.type!=='settler' || !canSettle(state,seat,id)) throw new Error('Found a city on friendly or neutral land at least three hexes from every other city.');
     const city=establish(state,seat,id);
     state.units=state.units.filter(u=>u.id!==unit.id);
-    record(state,seat,'found',FACTIONS[seat].name+' founded a city at '+city.name+'.',id,{city:city.id,unit:unit.id});
+    record(state,seat,'found',FACTIONS[state.players[seat].faction].name+' founded a city at '+city.name+'.',id,{city:city.id,unit:unit.id});
   } else {
     const item=unitImprovement(state,unit,id);
     if (!item || item!==action.item) throw new Error(unit.type==='workboat'
@@ -788,7 +789,7 @@ export function applyAction(source,seat,action) {
     next.board[tile.id]={...prior,owner:seat,level:order.type==='develop' ? prior.level+1:prior.level};
     next.actionsLeft--;
     const verb={develop:'developed',contest:'took control of',claim:'claimed'}[order.type];
-    record(next,seat,order.type,FACTIONS[seat].name+' '+verb+' '+tile.name+'.',tile.id);
+    record(next,seat,order.type,FACTIONS[state.players[seat].faction].name+' '+verb+' '+tile.name+'.',tile.id);
   }
   refreshScores(next);
   return next;

@@ -32,7 +32,7 @@ function save(key, value) {
 
 function freshSolo(mapId = "la") {
   return createGame(FACTIONS.map((_, index) => ({
-    name: index ? FACTION_NAMES[index] : 'You',
+    name: index ? undefined : 'You',
     bot: index !== 0
   })), mapId);
 }
@@ -383,7 +383,8 @@ const row = (title, subtitle, value = '') =>
   `<li class="modal-row"><div><strong>${title}</strong>${subtitle ? `<small>${subtitle}</small>` : ''}</div>${value ? `<span class="modal-number">${value}</span>` : ''}</li>`;
 const list = items => `<ul class="modal-list">${items.join('')}</ul>`;
 const actions = (...items) => `<div class="modal-actions">${items.join('')}</div>`;
-const factionMark = seat => `<i aria-hidden="true" class="modal-faction" style="background:${FACTIONS[seat].color};display:inline-block;width:.55rem;height:.55rem;border-radius:50%;margin-right:.55rem"></i>`;
+const seatFaction = seat => getState()?.players[seat]?.faction ?? seat;
+const factionMark = seat => `<i aria-hidden="true" class="modal-faction" style="background:${FACTIONS[seatFaction(seat)].color};display:inline-block;width:.55rem;height:.55rem;border-radius:50%;margin-right:.55rem"></i>`;
 
 // Old campaigns store a sentence alongside the structured order. Match the old
 // sentence patterns only, so names in a player's language stay exactly as entered.
@@ -395,8 +396,8 @@ function eventText(entry) {
   if (!entry) return '';
   const text = String(entry.text || '');
   if (!/[\u3400-\u9fff]/.test(text)) return text;
-  const faction = FACTION_NAMES[entry.seat] || 'A faction';
-  const oldFaction = oldFactions[entry.seat];
+  const faction = FACTION_NAMES[seatFaction(entry.seat)] || 'A faction';
+  const oldFaction = oldFactions[seatFaction(entry.seat)];
   const item = products[entry.item]?.name;
   let match;
   switch (entry.type) {
@@ -459,7 +460,7 @@ function multiplayerContent() {
   if (room && mode === 'online') {
     const lobby = room.phase === 'lobby';
     const host = room.you === room.host;
-    const roster = room.players.map(p => row(factionMark(p.id) + '<span translate="no">' + escapeHTML(p.name) + '</span>', FACTION_NAMES[p.id],
+    const roster = room.players.map(p => row((lobby ? '' : factionMark(p.id)) + '<span translate="no">' + escapeHTML(p.name) + '</span>', lobby ? 'Civilization drawn at start' : FACTION_NAMES[seatFaction(p.id)],
       [p.id === room.host && 'Host', p.id === room.you && 'You'].filter(Boolean).join(' · ')));
     const sharing = `<div class="modal-room"><span class="modal-muted">Room code</span><strong class="modal-code" translate="no">${escapeHTML(room.code)}</strong></div>` +
       actions(button('copy', 'Copy invite link'), button('show-link', inviteOpen ? 'Hide link' : 'Show link')) +
@@ -540,11 +541,11 @@ function content() {
     const winnersFirst = seat => Number(state.winners?.includes(seat));
     const ranked = state.players.map((p, seat) => ({seat, name:p.name, stats:getStats(state,seat)}))
       .sort((a,b)=>winnersFirst(b.seat)-winnersFirst(a.seat) || b.stats.score-a.stats.score);
-    const winners = (state.winners || []).map(seat => FACTION_NAMES[seat]);
+    const winners = (state.winners || []).map(seat => FACTION_NAMES[seatFaction(seat)]);
     const label = winners.join(' and ') + (state.victoryReason === 'domination' ? ' captured every original capital.' : winners.length > 1 ? ' tied on civic points and share victory.' : ' won on civic points.');
     return { kicker: 'Campaign records', title: state.phase === 'finished' ? 'Campaign complete' : 'Faction standings',
       body: desc(state.phase === 'finished' ? label : `Holding every original capital wins immediately. Civic points are compared at the end of the round when a faction reaches ${TARGET_SCORE}, or after round ${MAX_ROUNDS}.`) +
-        list(ranked.map(({seat,name,stats}) => row(factionMark(seat) + FACTION_NAMES[seat],
+        list(ranked.map(({seat,name,stats}) => row(factionMark(seat) + FACTION_NAMES[seatFaction(seat)],
           [mode === 'online' && '<span translate="no">'+escapeHTML(name)+'</span>', countLabel(stats.cities,'city','cities'), countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), escapeHTML(stats.score)+' pts'))) +
         actions(button('back','Return to map','primary')) };
   }
