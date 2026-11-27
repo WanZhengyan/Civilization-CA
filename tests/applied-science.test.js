@@ -102,3 +102,26 @@ test('a functioning radar berth reveals sea approaches only to its owner',()=>{
   state.cities[0].buildings=[];
   assert.ok(!getVisibleTiles(state,0).has(seaApproach));
 });
+
+test('research links follow real prerequisites and formation requirements',async()=>{
+  const {researchLinks}=await import('../docs/research-catalog.js');
+  const options=getResearchOptions(fundedCampaign(),0);
+  const links=researchLinks('steam',options,UNIT_TYPES);
+  assert.ok(links.discoveries.includes('District Railways'));
+  assert.ok(links.formations.includes('Field Artillery'));
+  assert.ok(researchLinks('hydrography',options,UNIT_TYPES).discoveries.includes('Coastal Radar'));
+});
+
+test('governors choose for their own economy and ignore a remote rival economy',async()=>{
+  const {chooseBotAction}=await import('../docs/rules.js');
+  let state=learn(fundedCampaign(),'industry');
+  state.board['10,7']={owner:1,level:1,resource:'iron',improvement:'mine'};
+  assert.notEqual(chooseBotAction(state).item,'metallurgy');
+  state.board['10,7'].owner=0;
+  assert.equal(chooseBotAction(state).item,'metallurgy');
+  state=learn(state,'metallurgy');
+  state.cities[0].buildings.push('harbor');
+  assert.equal(chooseBotAction(state).item,'navigation');
+  state=learn(state,'navigation');
+  assert.equal(chooseBotAction(state).item,'hydrography');
+});

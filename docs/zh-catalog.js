@@ -54,6 +54,12 @@ function section(pairs) {
   }
 }
 section(`
+Research era|筛选时代
+All eras|所有时代
+Available research only|仅看可研究的科技
+No discoveries match these filters.|没有符合条件的科技。
+Trains|可训练
+Leads to|后续科技
 Hydrographic Charts|水道测绘
 Ships and fishing crews gain 1 movement point when their next turn begins.|舰艇和渔船从下一回合起每回合增加 1 点移动力。
 Field Medicine|战地医疗
