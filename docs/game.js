@@ -1,3 +1,5 @@
+import {ledgerBody} from './resource-ledger.js';
+import {getResourceLedger} from './rules.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
 import {mapPicker, installMapStyles} from './regions-ui.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
@@ -64,12 +66,14 @@ function storedSolo() {
 let renderView, toast, dialog, solo, room = null, token = null;
 let mode = 'solo', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
+let supplyCity='';
 let pending = false, errorMessage = '', playingBots = false;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
 let inviteOpen = false, resultShown = '', guideTab = 'start';
 const getState = () => campaignView(mode === 'online' && room?.game ? room.game : solo, currentSeat());
 const currentSeat = () => mode === 'online' && room ? room.you : 0;
 function emit() {
+  if (modal==='supplies' && dialog?.open) drawDialog();
   const state = getState();
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
   renderView?.({
@@ -528,6 +532,7 @@ function countLabel(n, singular, plural = singular + 's') {
 function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
+  if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending,escapeHTML)};
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
@@ -561,7 +566,7 @@ function content() {
     body:mapPicker(selectedMap) + desc('Starting over replaces the saved campaign on the selected map. Your other regions keep their progress.') + actions(button('restart','Start new campaign','primary'),button('menu','Keep playing'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings','Faction standings'),button('log','Event log'),
-    button('help','Field guide'), mode === 'solo' ? button('campaign-atlas','Campaign atlas') : '', mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
+    button('help','Field guide'), button('supplies','Supply ledger'), mode === 'solo' ? button('campaign-atlas','Campaign atlas') : '', mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
 }
 
 function drawDialog() {
@@ -593,6 +598,13 @@ async function copyInvite() {
   }
 }
 function modalAction(act) {
+  if(act==='supplies'){open('supplies');return}
+  if(act.startsWith('cargo-')){
+    const [,resource,market]=act.split('-');
+    const city=dialog.querySelector('[name=supply-city]')?.value;
+    if(city)supplyCity=city;
+    doAction({type:'shipment',resource,market,city});return;
+  }
   if (act === 'language-en' || act === 'language-zh-CN') {
     setLanguage(act.slice(9));
     drawDialog();

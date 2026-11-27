@@ -1,5 +1,5 @@
 import {getVisibleTiles, projectForSeat, rememberVision} from './vision.js';
-import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit} from './resources.js';
+import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
@@ -502,6 +502,7 @@ export function getSettlementAssessment(state, unitId, tileId) {
   }
   return assessment;
 }
+export function getResourceLedger(state,seat) { return resourceAccounts(state,seat,getMap(state).byId,neighbors); }
 export function getWorkingCity(state,id) {
   return serviceCity(state,id,getMap(state).byId,neighbors);
 }
@@ -651,6 +652,7 @@ function finish(state,winners,reason) {
 }
 function endTurn(state,seat) {
   const income=getStats(state,seat),player=state.players[seat];
+  bankHarvest(state,seat,getMap(state).byId,neighbors);
   player.capital+=income.capitalIncome;player.influence+=income.influenceIncome;
   for (const city of state.cities) if (city.seat===seat) produceCityTurn(state,city);
   player.science += income.scienceIncome;
@@ -839,7 +841,10 @@ function resolveOrder(source,seat,action) {
   if (!action || typeof action!=='object') throw new Error('Choose an action.');
   const next=cloneGame(state);
   if (action.type==='end') {endTurn(next,seat);return next;}
-  if (action.type==='research' || action.type==='civic') {
+  if (action.type==='shipment') {
+    shipGoods(next,seat,action);
+    record(next,seat,'shipment','Resource shipment dispatched.');
+  } else if (action.type==='research' || action.type==='civic') {
     selectProject(next, seat, action.item, action.type==='research' ? SCIENCE : CULTURE);
   } else if (action.type==='produce') {
     const city=cityOrNull(next,action.city);
@@ -919,7 +924,11 @@ function botMovement(state,unit,options) {
   else if (unit.type==='workboat') {
     const site=options.moves.find(id=>unitImprovement(state,unit,id));
     return site ? {type:'move',unit:unit.id,tile:site} : null;
-  } else if (builder) goals=getMap(state).tiles.filter(t=>improvementAt(state,unit.seat,t.id) && towns.some(c=>hexDistance(c.tile,t.id)<=2)).map(t=>t.id);
+  } else if (builder) {
+    const eligible=getMap(state).tiles.filter(t=>improvementAt(state,unit.seat,t.id));
+    const rich=eligible.filter(t=>state.board[t.id].resource);
+    goals=(rich.length?rich:eligible).map(t=>t.id);
+  }
   else if (UNIT_TYPES[unit.type].domain==='sea') {
     const range=UNIT_TYPES[unit.type].range;
     goals=[...state.units,...state.cities].filter(target=>target.seat!==unit.seat && (
@@ -1001,6 +1010,8 @@ export function chooseBotAction(source) {
       return {type:'attack',unit:unit.id,tile:target};
     }
   }
+  const shipment=planShipment(state,seat);
+  if(shipment)return shipment;
   const veteran=plans.find(([,options])=>options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
   if (veteran) return {type:'upgrade',unit:veteran[0].id};
   for (const city of state.cities) if (city.seat===seat && !city.queue) {

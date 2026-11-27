@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.1 · Turn local deposits into usable supplies
+
+A map icon did not explain how a city earned and spent goods. Improved, connected deposits credit the owning civilization’s stockpile. A ledger makes production and exchanges visible.
+
+71 checks passed. 18 fixed campaigns replayed identically twice. Test whether this opening economy can support residents in a new settlement.
+
 ## 5.0 · Builders work the city hinterland
 
 A discovered deposit by itself gave a city no local construction decision. Builders match farms, orchards, lumber camps, quarries and mines to deposits within controlled territory; fishing crews work marine sites. Projects consume a build charge.

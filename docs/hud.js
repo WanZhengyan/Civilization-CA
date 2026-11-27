@@ -286,7 +286,7 @@ function inspect(){
     const buildings=(c.buildings||[]).map(i=>items[i]||i);
     if(buildings.length)info+='<p class="built-list">Buildings · '+esc(buildings.join(", "))+'</p>';
     info+='<p class="built-list">Food '+c.food+' / '+(6+2*c.population)+' · +'+y.food+' per turn</p>'+cityQueue(c);
-    if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false);
+    if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods");
   }else{
     const holding=state.board[tile.id];
     if(!visible.has(tile.id)){
@@ -487,6 +487,7 @@ function chooseOrder(key){
     if(port){select(port.tile,null,true);redraw();openProduction()}
     return;
   }
+  if(key==="supplies"){Game.open("supplies");return}
   if(key==="choose-production"){openProduction();return}
   if(["develop","claim","contest"].includes(key)&&mayOrder()){Game.doAction({type:key,tile:selectedTile});return}
   const u=getUnit();if(!u||!mayOrder()||u.seat!==view.seat)return;

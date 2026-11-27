@@ -712,3 +712,22 @@ Build to harvest|所需设施
 Supplying city|供应城市
 Work an owned site connected to a city within two land steps.|在与己方城市相连、两格以内的领土上施工。
 `);
+
+section(`
+Economy|经济
+Supply ledger|物资账簿
+Stored goods|库存物资
+Destination city|接收城市
+Stored|库存
+Harvest|每回合采集
+Sell for 5 capital|出售得 5 资金
+Supply 4 food|补给 4 粮食
+Supply 4 production|补给 4 生产力
+Each worked deposit adds one good at the end of your turn. Dispatch two of the same good once per turn.|每处已开发的资源在回合结束时收获 1 份物资。每回合可将 2 份相同物资出售或运送给城市一次。
+Shipment dispatched this turn.|本回合已发货。
+Resource shipment dispatched.|物资已发运。
+This shipment requires two stored goods.|本次装运需要 2 份同类物资。
+Your shipment for this turn has already left.|本回合的物资已发运。
+Select a city with an unfinished production project.|请选择正在生产且尚未完工的城市。
+Choose one of your cities to receive goods.|请选择一座己方城市以接收物资。
+`);

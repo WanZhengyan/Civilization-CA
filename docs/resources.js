@@ -87,3 +87,44 @@ export function serviceCity(state, tileId, byId, neighbors) {
 export function connectedDeposit(holding) {
   return Boolean(holding && RESOURCES[holding.resource] && RESOURCES[holding.resource].improvement===holding.improvement && !holding.pillaged);
 }
+
+export const isProduce = resource => ['grain','citrus','fish'].includes(resource);
+export function resourceAccounts(state, seat, byId, neighbors) {
+  const stock=state.players[seat]?.stockpile || {};
+  const result=Object.fromEntries(Object.keys(RESOURCES).map(key=>[key,{stock:stock[key]||0,income:0}]));
+  for (const [id,holding] of Object.entries(state.board)) {
+    if (holding?.owner!==seat || !connectedDeposit(holding) || !serviceCity(state,id,byId,neighbors)) continue;
+    result[holding.resource].income++;
+  }
+  return result;
+}
+export function bankHarvest(state, seat, byId, neighbors) {
+  const balances=resourceAccounts(state,seat,byId,neighbors);
+  state.players[seat].stockpile=Object.fromEntries(Object.entries(balances).map(([key,b])=>[key,b.stock+b.income]));
+}
+export function shipGoods(state, seat, order) {
+  const player=state.players[seat];
+  const {resource,market}=order;
+  if (!Object.hasOwn(RESOURCES,resource) || (player.stockpile?.[resource]||0)<2) throw new Error('This shipment requires two stored goods.');
+  if (player.lastShipment===state.round) throw new Error('Your shipment for this turn has already left.');
+  const city=state.cities.find(c=>c.id===order.city && c.seat===seat);
+  if (market==='sell') player.capital+=5;
+  else if (city && market==='city') {
+    if (isProduce(resource)) city.food+=4;
+    else if (city.queue && city.queue.required>city.queue.progress) city.queue.progress=Math.min(city.queue.required,city.queue.progress+4);
+    else throw new Error('Select a city with an unfinished production project.');
+  } else throw new Error('Choose one of your cities to receive goods.');
+  player.stockpile={...player.stockpile,[resource]:player.stockpile[resource]-2};
+  player.lastShipment=state.round;
+}
+export function planShipment(state,seat) {
+  const p=state.players[seat];
+  if (!p.stockpile || p.lastShipment===state.round) return null;
+  const resource=Object.keys(RESOURCES).filter(k=>p.stockpile[k]>=2).sort((a,b)=>p.stockpile[b]-p.stockpile[a])[0];
+  if (!resource) return null;
+  const towns=state.cities.filter(c=>c.seat===seat);
+  const city=isProduce(resource)
+    ? towns.slice().sort((a,b)=>a.population-b.population)[0]
+    : towns.find(c=>c.queue && c.queue.required-c.queue.progress>=4);
+  return {type:'shipment',market:city?'city':'sell',resource,...(city?{city:city.id}:{})};
+}
