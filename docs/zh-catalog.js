@@ -24,6 +24,14 @@ function section(pairs) {
   }
 }
 section(`
+Hydrographic Charts|水道测绘
+Ships and fishing crews gain 1 movement point when their next turn begins.|舰艇和渔船从下一回合起每回合增加 1 点移动力。
+Field Medicine|战地医疗
+Land combat units resting on friendly territory outside a city recover 6 health at the start of their turn.|位于己方领土且不在城内的地面战斗单位，回合开始时恢复 6 生命。
+District Railways|地区铁路
+Ground units spend only 1 movement between friendly districts, including bridge crossings.|地面单位在相邻己方地块间移动只消耗 1 点移动力，过桥同样适用。
+Coastal Radar|海岸雷达
+Each working harbor observes four hexes in every direction from its berth.|每座运作中的港口可观测以泊位为中心、半径四格的区域。
 Topographic Mapping|地形测绘
 Scouts and mounted scouts observe one additional ring of hexes.|侦察兵和骑乘侦察兵的视野半径增加一格。
 Crop Rotation|轮作制

@@ -232,7 +232,8 @@ function mint(state, prefix) { return prefix + state.nextId++; }
 function spawn(state,seat,type,tile) {
   const def = UNIT_TYPES[type];
   const maxHp = def.maxHp + (def.strength && adopted(state,seat,'mobilization') ? 20 : 0);
-  const unit = {id:mint(state,'u'),seat,type,tile,hp:maxHp,maxHp,moves:def.moves,maxMoves:def.moves,charges:type === 'builder' ? 3 : def.charges || 0};
+  const movement = def.moves + Number(def.domain==='sea' && knows(state,seat,'hydrography'));
+  const unit = {id:mint(state,'u'),seat,type,tile,hp:maxHp,maxHp,moves:movement,maxMoves:movement,charges:type === 'builder' ? 3 : def.charges || 0};
   state.units.push(unit);
   return unit;
 }
@@ -455,7 +456,10 @@ function bridgeTo(state,from,to) {
   return getMap(state).bridgesByTile?.[from]?.find(bridge=>bridge.to===to);
 }
 function routeStepCost(state,unit,from,to) {
-  return UNIT_TYPES[unit.type].domain!=='sea' && bridgeTo(state,from,to) ? 2 : movementCost(state,unit,to);
+  const ground=UNIT_TYPES[unit.type].domain!=='sea';
+  const step=ground && bridgeTo(state,from,to) ? 2 : movementCost(state,unit,to);
+  if (step===2 && ground && state.board[from].owner===unit.seat && state.board[to].owner===unit.seat && knows(state,unit.seat,'railways')) return 1;
+  return step;
 }
 export function getRouteDetail(state,unitId,target) {
   const unit=unitOrNull(state,unitId),path=getMovePath(state,unitId,target);
@@ -761,9 +765,12 @@ function endTurn(state,seat) {
   const recovery=adopted(state,next,'mutualAid') ? 12 : 6;
   for (const city of towns) city.hp=Math.min(city.maxHp,city.hp+recovery);
   for (const unit of state.units) if (unit.seat===next) {
+    const def=UNIT_TYPES[unit.type];
+    if (def.domain==='sea' && knows(state,next,'hydrography')) unit.maxMoves=def.moves+1;
     unit.moves=unit.maxMoves;
     const repairs=towns.some(c=>c.tile===unit.tile || (UNIT_TYPES[unit.type].domain==='sea' && c.portTile && hexDistance(c.portTile,unit.tile)<=1));
-    if (repairs) unit.hp=Math.min(unit.maxHp,unit.hp+12);
+    const fieldAid=def.strength>0 && def.domain!=='sea' && state.board[unit.tile].owner===next && knows(state,next,'fieldMedicine');
+    unit.hp=Math.min(unit.maxHp,unit.hp+(repairs ? 12 : fieldAid ? 6 : 0));
   }
 }
 // Compute spotter-assisted forecasts on the authority without disclosing rival

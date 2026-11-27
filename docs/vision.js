@@ -39,7 +39,10 @@ export function getVisibleTiles(state, seat) {
     for (const id of footprint(tile,radius)) if (Object.hasOwn(state.board,id)) visible.add(id);
   };
   for (const unit of state.units) if (unit.seat===seat) reveal(unit.tile,unitSight(state,unit.type,seat));
-  for (const city of state.cities) if (city.seat===seat) reveal(city.tile,getSightRadius('city'));
+  for (const city of state.cities) if (city.seat===seat) {
+    reveal(city.tile,getSightRadius('city'));
+    if (city.portTile && city.buildings.includes('harbor') && state.players[seat]?.technologies?.includes('radar')) reveal(city.portTile,4);
+  }
   for (const [id,holding] of Object.entries(state.board)) if (holding.owner===seat) visible.add(id);
   return visible;
 }
