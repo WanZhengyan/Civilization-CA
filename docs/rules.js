@@ -3,6 +3,7 @@ import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './visi
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
+import {extraHousing} from "./civic-agenda.js";
 import { foodForecast, feedCity } from "./population.js";
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
@@ -363,16 +364,20 @@ export function getCityYield(state,cityId) {
   const civics = knows(state, city.seat, 'civics');
   const steam = has('workshop') && knows(state, city.seat, 'steam');
   const trade = tradesBySea(state,city);
-  return {
+  const result = {
     food: 4 + work.food + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
     production:universityYield(city,'production')+ 3 + work.production + materialBonus + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
+  if (farms && adopted(state,city.seat,'irrigationDistricts')) result.food += 2;
+  if (has('harbor') && adopted(state,city.seat,'harborCommission')) result.capital += 3;
+  if (adopted(state,city.seat,'exposition')) result.influence += 2 * city.buildings.filter(id=>WONDERS[id]).length;
+  return result;
 }
 export function getPopulationReport(state, cityId) {
   const city = cityOrNull(state, cityId);
-  return city ? foodForecast(city, getCityYield(state, cityId).food) : null;
+  return city ? foodForecast(city, getCityYield(state, cityId).food, extraHousing(state.players[city.seat])) : null;
 }
 export function getStats(state,seat) {
   let territories=0,developments=0,landmarks=0,improvements=0,productive=0,fisheries=0;
@@ -391,7 +396,7 @@ export function getStats(state,seat) {
   const monuments=cities.filter(c=>c.buildings.includes('monument')).length;
   const settled = count > 0 || state.opening !== 'settlers';
   const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
-  return {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
+  const stats = {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
     score:state.legacyFinalScores?.[seat] ?? score,
     cultureIncome:cities.reduce((n,c)=>n+universityYield(c,'culture'),0)+Number(settled)+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
       +(adopted(state,seat,'conservation') ? cities.filter(c=>hasPark(state,c)).length : 0),
@@ -400,6 +405,14 @@ export function getStats(state,seat) {
     capitalIncome:3*Number(settled)+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +2*cities.filter(c=>tradesBySea(state,c)).length,
     influenceIncome:2*Number(settled)+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
+  if (adopted(state,seat,'harborCommission')) stats.capitalIncome += 3 * cities.filter(c=>c.buildings.includes('harbor')).length;
+  if (adopted(state,seat,'normalSchools')) stats.scienceIncome += 2 * cities.filter(c=>c.population>=3).length;
+  if (adopted(state,seat,'exposition')) {
+    const campuses=cities.reduce((n,c)=>n+c.buildings.filter(id=>WONDERS[id]).length,0);
+    stats.cultureIncome += 2 * campuses;
+    stats.influenceIncome += 2 * campuses;
+  }
+  return stats;
 }
 function refreshScores(state) { state.players.forEach((p,i)=>{p.score=getStats(state,i).score;}); }
 function record(state,seat,type,text,tile,detail={}) {
@@ -677,7 +690,7 @@ function cloneGame(state) {
 function produceCityTurn(state,city) {
   const yieldNow=getCityYield(state,city.id);
   const previousPopulation=city.population;
-  feedCity(city, foodForecast(city,yieldNow.food));
+  feedCity(city, foodForecast(city,yieldNow.food,extraHousing(state.players[city.seat])));
   if (city.population!==previousPopulation) {
     const verb=city.population>previousPopulation?' grew to ':' fell to ';
     record(state,city.seat,'population',city.name+verb+city.population+' residents.',city.tile,{city:city.id});
@@ -743,7 +756,8 @@ function endTurn(state,seat) {
   }
   state.turn=next;state.actionsLeft=ACTIONS_PER_TURN+Number(adopted(state,next,'federation'));
   const towns=state.cities.filter(c=>c.seat===next);
-  for (const city of towns) city.hp=Math.min(city.maxHp,city.hp+6);
+  const recovery=adopted(state,next,'mutualAid') ? 12 : 6;
+  for (const city of towns) city.hp=Math.min(city.maxHp,city.hp+recovery);
   for (const unit of state.units) if (unit.seat===next) {
     unit.moves=unit.maxMoves;
     const repairs=towns.some(c=>c.tile===unit.tile || (UNIT_TYPES[unit.type].domain==='sea' && c.portTile && hexDistance(c.portTile,unit.tile)<=1));

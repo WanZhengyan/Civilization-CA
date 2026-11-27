@@ -1,6 +1,21 @@
 // The English UI copy is the catalog key. The rules and network protocol keep
 // their canonical IDs in both languages.
 export const catalog = new Map();
+section(`
+Irrigation Districts|灌溉合作区
+A city with a working farm or orchard gains 2 food per turn.|有运行中的农场或果园的城市每回合额外获得 2 粮食。
+Mutual Aid Pacts|互助公约
+Damaged cities recover 6 additional health when their turn begins.|受损城市在己方回合开始时额外恢复 6 点生命值。
+Harbor Commissions|港务委员会
+Each city with a harbor earns 3 additional capital per turn.|每座建有港口的城市每回合额外获得 3 资金。
+Teachers Colleges|师范学院
+Cities with at least 3 residents generate 2 additional science per turn.|人口达到 3 的城市每回合额外获得 2 科研点。
+Community Land Trusts|社区土地信托
+Every city gains 2 housing spaces, including newly founded settlements.|每座城市额外获得 2 个住房名额，新建城市也能享受。
+California Expositions|加州博览会
+Each completed university generates 2 additional culture and 2 influence per turn.|每座已建成的大学每回合额外提供 2 文化和 2 影响力。
+`);
+
 function section(pairs) {
   for (const line of pairs.trim().split('\n')) {
     const [key, value] = line.split('|');

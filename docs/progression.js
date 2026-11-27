@@ -33,7 +33,10 @@ export function eraFor(known = [], adopted = []) {
   }, ERAS.frontier);
 }
 
+import {REGIONAL_CIVICS} from './civic-agenda.js';
+
 export const CIVICS = {
+  ...REGIONAL_CIVICS,
   charter: {name: 'Municipal Charter', era: 'frontier', requires: [], cost: 7,
     description: 'Each city generates 1 extra culture per turn.'},
   publicWorks: {name: 'Public Works', era: 'frontier', requires: [], cost: 8,
