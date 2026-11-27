@@ -1,5 +1,11 @@
 # Campaign updates
 
+## Compare natural-wonder land before founding
+
+The settlement survey now explains when a known natural wonder will improve land claimed by a proposed city. Each candidate lists the wonder, the number of immediately workable neighboring districts and the exact yield effect. Undiscovered wonders remain private, and the estimate uses the same ownership, occupation and protected-land rules as the city workforce.
+
+165 checks passed. The 18 fixed campaigns produced the same actions and final states as the reference. A live two-seat room previewed two La Brea districts, then founded the city and exposed exactly those two districts to its workforce. The next experiment is whether computer governors should use this visible comparison before founding immediately.
+
 ## Exploring the California coast
 
 The Los Angeles Basin, San Francisco Bay and San Diego Bay now follow distinct playable outlines. Shipping routes, founding sites and shared frontiers use the same hexes you see on screen. Two colors meet at each contested boundary. The full-window map supports panning beneath the councils and field commands.

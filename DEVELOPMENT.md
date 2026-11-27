@@ -52,3 +52,13 @@ On the standard 18 openings, the 6.0 opponent could use the position of an unsee
 | Campaigns reaching round 30 | 5 | 2 |
 
 Each version repeated its own results on a second run. The next balance question is whether human players have enough early information to choose between founding immediately and spending a turn exploring.
+
+## Comparing a discovered wonder before founding
+
+Hypothesis: if the settlement survey states how many immediately claimed work districts benefit from a discovered natural wonder, a player can compare founding now with moving to another candidate without receiving hidden map information.
+
+The fixed reference was the Los Angeles opening at seed 39, seat zero. Before the change, the settler could see Topanga Canyon and the field guide described its yield, but no settlement candidate connected that yield to the land the new city would actually control. The candidate survey reports two nearby workable districts and the exact production and science effect. Founding on that site produced exactly two eligible Topanga districts in the workforce system. San Francisco seed 1 and San Diego seed 9 were also checked against their regional wonders.
+
+The change is retained. All 165 tests passed, including 80 seeds for every map and seat to prove that the preview never names an undiscovered wonder. The reference and candidate reports for all 18 fixed AI campaigns had identical actions and final states (combined report hash `c04d6168b3a18d0511f3d68cde3da61c6e3226f1bb153ee3f9efe1ba022e0ee2`), so the added advice did not alter balance. In a local two-seat room, the host previewed two La Brea districts, founded the city, received exactly two eligible districts, passed to the guest, and both seats reloaded the next round consistently. English and Simplified Chinese count labels are covered by the localization checks.
+
+The gain is a concrete founding tradeoff using the same numbers that later drive city yields. The cost is extra height in a candidate card when a wonder is relevant; candidates without a known wonder remain unchanged. The survey still does not summarize ordinary terrain yields, resource prospects or travel risk, and automated play cannot establish whether a person finds the comparison quickly enough. The next isolated question is whether a computer settler should compare these same known wonder prospects instead of always founding immediately, without letting it inspect hidden wonders.

@@ -91,6 +91,36 @@ test('only worked neighboring districts earn the bonus and room and authority yi
   assert.ok(!getCitizenWorkforce(active,'capital','science').workedTiles.some(t=>t.naturalWonders));
 });
 
+test('settlement survey previews only discovered natural-wonder districts and matches the city actually founded',()=>{
+  const raw=createGame(undefined,'la',{seed:39}),view=campaignView(raw,0);
+  const settler=view.units.find(unit=>unit.seat===0 && unit.type==='settler');
+  const assessment=getSettlementAssessment(view,settler.id,settler.tile);
+  assert.deepEqual(assessment.naturalWonderProspects,[{
+    id:'topanga',name:'Topanga Canyon',
+    effect:'Each adjacent worked district gains 1 production and 1 science.',
+    bonus:[0,1,1],districts:2
+  }]);
+  const founded=applyAction(raw,0,{type:'found',unit:settler.id});
+  const city=founded.cities.find(candidate=>candidate.seat===0);
+  const eligible=getCitizenWorkforce(founded,city.id).eligibleTiles
+    .filter(tile=>tile.naturalWonders?.includes('topanga'));
+  assert.equal(eligible.length,assessment.naturalWonderProspects[0].districts);
+
+  for(const region of ['la','sf','sd'])for(let seed=0;seed<80;seed++) {
+    const game=createGame(undefined,region,{seed});
+    for(let seat=0;seat<game.players.length;seat++) {
+      const privateView=campaignView(game,seat),unit=privateView.units.find(candidate=>candidate.seat===seat && candidate.type==='settler');
+      const known=new Set(discoveredNaturalWonders(privateView).map(wonder=>wonder.id));
+      const preview=getSettlementAssessment(privateView,unit.id,unit.tile);
+      for(const prospect of preview.naturalWonderProspects) assert.ok(known.has(prospect.id));
+      for(const hidden of Object.entries(game.board).filter(([tile,cell])=>cell.naturalWonder && !privateView.intel.explored.includes(tile))) {
+        assert.ok(!preview.naturalWonderProspects.some(prospect=>prospect.id===hidden[1].naturalWonder));
+      }
+    }
+  }
+  assert.equal(translate('2 nearby districts','zh-CN'),'2 块相邻可工作地块');
+});
+
 test('older saves keep their geography and both languages explain every discoverable site and effect',()=>{
   const s=createGame(['A','B'],'sf',{seed:70});
   for(const [tile] of sites(s))delete s.board[tile].naturalWonder;

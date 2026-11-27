@@ -55,6 +55,7 @@ main{max-width:1680px;margin:auto;padding:0 clamp(20px,3.2vw,55px)}.campaign-hea
 .survey-options-group{display:grid;gap:6px}.survey-option{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid #414c4e;border-radius:4px;background:#272e35}
 .survey-option strong,.survey-option small{display:block}.survey-option strong{font-size:14px;color:#e9e7d6}.survey-option small{color:#b4bfbe;font-size:11px;line-height:1.5}
 .survey-option .modal-secondary{min-height:31px;white-space:nowrap;font-size:12px}
+.survey-prospect{margin-top:6px;padding:6px 8px;border-left:2px solid #8fc9a4;border-radius:0 3px 3px 0;background:#202b2a}.survey-prospect strong{color:#bce7c9;font-size:12px}.survey-prospect small:last-child{color:#d8dfda}
 @media(max-width:700px){
   .tactics .side{grid-template-columns:1fr 1fr;grid-template-rows:auto auto;align-content:start}
   .tactics .command-inspector{min-height:0}.tactics .turn-panel{min-height:54px}

@@ -163,7 +163,8 @@ function renderSurveyDialog(){
       const here=u.tile===id;
       const label=here?(data.status==="now"?"Found city":"Wait here"):"Move here";
       const cost=here?"Current hex":data.moveCost+" movement";
-      html+='<div class="survey-option"><div><strong>'+esc(mapRegion.byId[id].name)+'</strong><small>'+esc(cost)+' · '+esc(terrain[mapRegion.byId[id].terrain])+'</small><small>'+esc(nearestCityText(data))+'</small></div><button class="modal-secondary" data-survey-site="'+esc(id)+'" '+(here && data.status!=="now"?"disabled":"")+'>'+label+'</button></div>';
+      const prospects=data.naturalWonderProspects.map(prospect=>'<div class="survey-prospect"><strong>'+esc(prospect.name)+'</strong><small>'+prospect.districts+' nearby '+(prospect.districts===1?'district':'districts')+'</small><small>'+esc(prospect.effect)+'</small></div>').join('');
+      html+='<div class="survey-option"><div><strong>'+esc(mapRegion.byId[id].name)+'</strong><small>'+esc(cost)+' · '+esc(terrain[mapRegion.byId[id].terrain])+'</small><small>'+esc(nearestCityText(data))+'</small>'+prospects+'</div><button class="modal-secondary" data-survey-site="'+esc(id)+'" '+(here && data.status!=="now"?"disabled":"")+'>'+label+'</button></div>';
     }
     html+='</div>';
   }
