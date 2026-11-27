@@ -14,7 +14,9 @@ A bilingual, turn-based strategy game for one to four players. Each California c
 
 Choose **Play solo** on the title screen to select a region and start or resume its local save. **Create room** opens the host setup. **Join room** accepts a room code or an invitation link. The same menu can reconnect a saved seat. Switch between English and 简体中文 on the title screen or during play.
 
-On the board, use **Fit region** to see the playable perimeter. The double line marks the last playable hex and hatching marks the area outside. The **Layers** menu controls the hex grid. Each side of a contested border carries its civilization’s color.
+Drag the map or pinch to zoom. Technology and Civics sit on the left, with Field Command on the right. **Fit region** shows the whole playable coastline. A double line marks the last playable hex, and a shared border shows the color of each civilization on its own side. Select a frontier district to identify its neighbors.
+
+The city production menu shows the units, buildings and universities your civilization has unlocked. The science and civic trees show what you can unlock next. Open **Battle reports** to see who attacked, how much damage each side took and where the fight happened. **Replay on map** returns to that district. When the attacker fired from beyond your sight, the report identifies the impact location and keeps the source hidden.
 
 The visitor footer counts anonymous browser profiles on each site from the day the counter launched. Refreshing or opening a second tab on the same site does not add another visitor. The public totals are shared between the two hosts. Day and month follow Los Angeles time.
 
@@ -34,6 +36,8 @@ The visitor footer counts anonymous browser profiles on each site from the day t
 | UC Berkeley | Park Conservancies (civic) | 4 science |
 | Caltech | Steam Power (technology) | 5 science |
 
+California also has six natural wonders, two in each new regional campaign. A unit can discover La Brea Tar Pits in Los Angeles, Mount Tamalpais in the Bay Area, or Cabrillo Tide Pools in San Diego. Citizens working neighboring districts receive the site's bonus. Open **Field guide → Wonders → Show on map** to revisit a discovery. An older campaign keeps its original coastline and terrain when you resume it.
+
 A favored site adds one unit of the university’s specialty yield. Existing improvements and resource deposits are protected from campus construction.
 
 Open **Change map** to choose a different region. For 2–4 people, choose **Create room**, select the map and share the invitation. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
@@ -41,6 +45,8 @@ Open **Change map** to choose a different region. For 2–4 people, choose **Cre
 ## 中文快速开始
 
 首页可以开始或继续单人战役、创建房间，也可以用房间码或邀请链接加入多人游戏。地图上的双线为可玩边缘，界外有斜纹，地块格线可以在图层中单独开关。开局只有一名开拓者。所有单位的基础视野都是两格，侦察兵移动更快，研究地形测绘后进入丘陵只需一点移动力。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
+
+科技与市政位于地图左侧，战场指挥位于右侧。在城市生产里可以查看当前已解锁的选项，后续解锁条件可在科技树和市政树中查看。打开「战报」可回放敌袭、查看伤害和反击。新战役中每个地区有两处自然奇观，市民在相邻地块工作会获得加成。在「游戏指南 → 奇观」中可以定位自己发现的地点。
 
 ## Run locally
 

@@ -1,5 +1,13 @@
 # Campaign updates
 
+## Exploring the California coast
+
+The Los Angeles Basin, San Francisco Bay and San Diego Bay now follow distinct playable outlines. Shipping routes, founding sites and shared frontiers use the same hexes you see on screen. Two colors meet at each contested boundary. The full-window map supports panning beneath the councils and field commands.
+
+All mobile units see up to two hexes. Scouts cover more ground per turn, and Topographic Mapping makes foothill movement cheaper for scouts. A bilingual battle journal records attacks, damage, counterattacks and captures that your seat witnesses. Replay an incoming attack to find its location. Shots from beyond sight reveal only what the defender observed.
+
+Cities show production as its era and research requirements are met. Units, buildings, university charters, local resources and improvements have individual illustrations. Each new region also contains two discoverable natural wonders. Inspect a wonder to see how nearby workers benefit, or find it again in the field guide. Existing campaigns can finish on their original map.
+
 ## The California campaign table
 
 Start on an illustrated California coast. Choose a region and save for solo play, host an online game, or join a friend by code or link. The map has a defined playable perimeter, independent tile-grid controls, colored territory edges and a fit-region view. Anonymous browser totals appear at the lower left.
