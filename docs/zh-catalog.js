@@ -785,4 +785,14 @@ Raiders struck the city and looted up to 3 capital.|劫掠队袭击城市，掠�
 Barbarian raiders clashed with your military unit.|野蛮人劫掠队与你的部队交战。
 Repel a raid|抵御劫掠
 A lookout near an established city may return to its camp. Intercept it before it reports, or attack the camp before the party leaves two rounds later. A military defender within one hex of the city, or city walls, repels the raid. Raiders leave civilian units alone.|哨探在已建立一段时间的城市附近侦察后，会返回营地。可以中途拦截它，或在两轮集结期内清剿营地。城内或邻格有军事单位、或城市修有城墙时，可击退袭击。劫掠队不会主动攻击平民单位。
+University wonders|大学奇观
+Unlocks university|解锁大学
+UCLA|加州大学洛杉矶分校
+Stanford University|斯坦福大学
+UC Berkeley|加州大学伯克利分校
+Caltech|加州理工学院
+A public arts campus generating 3 culture and 1 science per turn.|公共艺术校园，每回合提供 3 点文化和 1 点科研。
+An engineering quad generating 2 production and 2 science per turn.|工程学院，每回合提供 2 点生产力和 2 点科研。
+A public research campus generating 4 science per turn.|公立研究校园，每回合提供 4 点科研。
+A research observatory generating 5 science per turn.|科研天文台，每回合提供 5 点科研。
 `);

@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.7 · University wonders from science and civics
+
+A research discovery rarely changed the long-term identity of a city. UCLA, Stanford, UC Berkeley and Caltech have distinct unlock requirements, costs and effects; players can examine the relevant charter in their councils.
+
+86 checks passed. 18 fixed campaigns replayed identically twice. Give the player a meaningful choice of campus site.
+
 ## 5.6 · Intercept raids before they reach a city
 
 Stationary camps gave the player little reason to choose between patrolling and defending. Returning lookouts can trigger raids. Defenders and walls repel attackers. Civilian settlers are protected and a raid cannot capture a city.

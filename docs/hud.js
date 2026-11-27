@@ -3,6 +3,7 @@ import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resource
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
+import {WONDERS, universitiesUnlockedBy} from './wonders.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -374,7 +375,8 @@ function productionOptions(){
   const list=getProductionOptions(view.state,c.id);
   const groups=[
     ["Train a unit",list.filter(x=>x.kind==="unit"&&!isSeaUnit(x.item))],
-    ["Construct a building",list.filter(x=>x.kind==="building"&&!portBuildings.has(x.item))],
+    ["Construct a building",list.filter(x=>x.kind==="building"&&!portBuildings.has(x.item)&&!WONDERS[x.item])],
+    ["University wonders",list.filter(x=>WONDERS[x.item])],
     ["Port and fleet",list.filter(x=>isSeaUnit(x.item)||portBuildings.has(x.item))]
   ];
   const html=groups.filter(([,opts])=>opts.length).map(([heading,opts])=>{
@@ -417,7 +419,7 @@ function paintResearch(){
         const label=o.completed?"Complete":o.active?"In progress":o.locked?"Locked":o.turns===0?"Ready":turnsText(o.turns);
         const needs=o.requires.map(key=>optionNames[key]||key);
         const prereq=needs.length?'<span class="project-prereq">Requires '+esc(needs.join(" + "))+'</span>':'';
-        return '<button class="project-option" data-project="'+esc(o.item)+'" data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+prereq+'<span class="project-meta"><span>'+esc(o.cost+" "+c.resource)+'</span><b>'+esc(label)+'</b></span></button>';
+        return '<button class="project-option" data-project="'+esc(o.item)+'" data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+prereq+'<span class="project-meta"><span>'+esc(o.cost+" "+c.resource)+'</span><b>'+esc(label)+'</b></span></button>';
       }).join("");
       return '<section class="council-tier"><h3>'+esc(eraName(tier))+'</h3><div class="project-grid">'+cards+'</div></section>';
     });

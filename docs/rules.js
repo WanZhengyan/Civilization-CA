@@ -3,6 +3,7 @@ import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEM
 export {RESOURCES, canSeeDeposits, canSurvey};
 import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
 import { foodForecast, feedCity } from "./population.js";
+import {WONDERS, universityYield} from './wonders.js';
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
@@ -189,6 +190,7 @@ export const UNIT_TYPES = {
   ...VESSELS
 };
 export const BUILDINGS = {
+  ...WONDERS,
   ...PORT_BUILDINGS,
   granary: {name:"Granary", required:10, description:"Provides 2 food and housing for 2 more citizens."},
   neighborhood: {name:"Residential quarter", required:16, description:"Provides housing for 3 more citizens."},
@@ -356,7 +358,7 @@ export function getCityYield(state,cityId) {
   const trade = tradesBySea(state,city);
   return {
     food: 4 + work.food + cropBonus + fisheries * 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
-    production: 3 + work.production + materialBonus + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
+    production:universityYield(city,'production')+ 3 + work.production + materialBonus + (has('shipyard') ? 2 : 0) + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
@@ -384,9 +386,9 @@ export function getStats(state,seat) {
   const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
   return {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
     score:state.legacyFinalScores?.[seat] ?? score,
-    cultureIncome:Number(settled)+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
+    cultureIncome:cities.reduce((n,c)=>n+universityYield(c,'culture'),0)+Number(settled)+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
       +(adopted(state,seat,'conservation') ? cities.filter(c=>hasPark(state,c)).length : 0),
-    scienceIncome:2*Number(settled)+count+cities.reduce((sum,c)=>sum+getCitizenWorkforce(state,c.id).yields.science,0)+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
+    scienceIncome:cities.reduce((n,c)=>n+universityYield(c,'science'),0)+2*Number(settled)+count+cities.reduce((sum,c)=>sum+getCitizenWorkforce(state,c.id).yields.science,0)+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
       +(adopted(state,seat,'publicRadio') ? 2*count : 0),
     capitalIncome:3*Number(settled)+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +2*cities.filter(c=>tradesBySea(state,c)).length,
@@ -591,6 +593,7 @@ export function getProductionOptions(state,cityId) {
     else if (city.seat!==state.turn) reason='Wait for the city owner’s turn.';
     else if (city.queue) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
+    else if (def.civic && !adopted(state,city.seat,def.civic)) reason='Requires '+CIVICS[def.civic].name+'.';
     else if (item==='harbor' && !getPortSite(state,city.id)) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
     else if ((item==='shipyard' || def.domain==='sea') && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
     else if (item==='frigate' && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
