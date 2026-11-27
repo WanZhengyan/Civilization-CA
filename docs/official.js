@@ -10,7 +10,6 @@ for (const [dataAttribute, attribute] of [['zh', null], ['zhAlt', 'alt'], ['zhLa
 function showLanguage(language) {
   const isChinese = language === 'zh-CN';
   document.documentElement.lang = language;
-  document.title = isChinese ? 'Civilization CA · 加州战役' : 'Civilization CA · The California campaigns';
   for (const entry of records) {
     const value = isChinese ? entry.zh : entry.en;
     if (entry.attribute) entry.node.setAttribute(entry.attribute, value);
