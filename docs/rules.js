@@ -1,7 +1,7 @@
 // Shared rules for the browser and the authoritative room service.
-import {TECHS, eraFor} from './progression.js';
-export {TECHS, ERAS} from './progression.js';
-export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies); }
+import {TECHS, CIVICS, eraFor} from './progression.js';
+export {TECHS, CIVICS, ERAS} from './progression.js';
+export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
 export const MAX_ROUNDS = 30;
 export const TARGET_SCORE = 100;
 export const ACTIONS_PER_TURN = 2;
@@ -180,6 +180,13 @@ export const IMPROVEMENTS = {
 function knows(state, seat, technology) {
   return state.players[seat]?.technologies?.includes(technology) === true;
 }
+function adopted(state, seat, civic) {
+  return state.players[seat]?.civics?.includes(civic) === true;
+}
+function hasPark(state, city) {
+  return [city.tile,...adjacent[city.tile]].some(id => state.board[id].owner===city.seat
+    && ['forest','hills'].includes(TILE_BY_ID[id].terrain));
+}
 const PRODUCTS = {...UNIT_TYPES, ...BUILDINGS};
 const terrainCost = {coast:1, urban:1, plains:1, hills:2, forest:2};
 export function hexDistance(a, b) {
@@ -192,7 +199,8 @@ export function hexDistance(a, b) {
 function mint(state, prefix) { return prefix + state.nextId++; }
 function spawn(state,seat,type,tile) {
   const def = UNIT_TYPES[type];
-  const unit = {id:mint(state,'u'),seat,type,tile,hp:def.maxHp,maxHp:def.maxHp,moves:def.moves,maxMoves:def.moves,charges:type === 'builder' ? 3 : 0};
+  const maxHp = def.maxHp + (def.strength && adopted(state,seat,'mobilization') ? 20 : 0);
+  const unit = {id:mint(state,'u'),seat,type,tile,hp:maxHp,maxHp,moves:def.moves,maxMoves:def.moves,charges:type === 'builder' ? 3 : 0};
   state.units.push(unit);
   return unit;
 }
@@ -215,12 +223,16 @@ function addResearch(state) {
     let name = player.name;
     if (player.bot && player.name === faction.nameZh) name = faction.name;
     if (hasBots && seat === 0 && !player.bot && player.name === "你") name = "You";
-    return {...player, name, research: null, science: 0, technologies: []};
+    return {...player, name, research: null, science: 0, technologies: [], culture: 0, civic: null, civics: []};
   });
   return {...state, rulesVersion: 3, players};
 }
 export function migrateGame(state) {
-  if (!state || state.rulesVersion === 3) return state;
+  if (!state) return state;
+  if (state.rulesVersion === 3) {
+    if (state.players.every(p => Array.isArray(p.civics) && Number.isFinite(p.culture) && Object.hasOwn(p,'civic'))) return state;
+    return {...state, players: state.players.map(p => ({culture: 0, civic: null, civics: [], ...p}))};
+  }
   if (state.rulesVersion === 2) return addResearch(state);
   const next = {...state,rulesVersion:2,nextId:1,units:[],cities:[],
     board:Object.fromEntries(Object.entries(state.board).map(([id,tile])=>[id,{...tile,improvement:null}])),
@@ -266,8 +278,8 @@ export function getCityYield(state,cityId) {
   const steam = has('workshop') && knows(state, city.seat, 'steam');
   const trade = TILE_BY_ID[city.tile].terrain === 'coast' && knows(state, city.seat, 'navigation');
   return {
-    food: 2 + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
-    production: 3 + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
+    food: 2 + (adopted(state,city.seat,'conservation') && hasPark(state,city) ? 1 : 0) + farms * 2 + (has('granary') ? 2 : 0) + (knows(state, city.seat, 'agronomy') ? 2 : 0),
+    production: 3 + Number(adopted(state,city.seat,'publicWorks')) + Math.floor(city.population / 2) + mines * 2 + (has('workshop') ? 2 : 0) + (knows(state, city.seat, 'industry') ? 2 : 0) + (steam ? 2 : 0) + (knows(state, city.seat, 'motorization') ? 2 : 0),
     capital: city.population + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
@@ -289,7 +301,10 @@ export function getStats(state,seat) {
   const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
   return {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
     score:state.legacyFinalScores?.[seat] ?? score,
-    scienceIncome:2+count+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0),
+    cultureIncome:1+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
+      +(adopted(state,seat,'conservation') ? cities.filter(c=>hasPark(state,c)).length : 0),
+    scienceIncome:2+count+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
+      +(adopted(state,seat,'publicRadio') ? 2*count : 0),
     capitalIncome:3+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +(knows(state,seat,'navigation') ? 2*cities.filter(c=>TILE_BY_ID[c.tile].terrain==='coast').length : 0),
     influenceIncome:2+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
@@ -315,7 +330,7 @@ export function getActions(state,seat,id) {
   let reason='';
   if (state.phase!=='playing') reason='The campaign has ended.';
   else if (state.turn!==seat) reason='Wait for your turn.';
-  else if (state.actionsLeft<=0) reason='You have used both civic actions this turn.';
+  else if (state.actionsLeft<=0) reason='You have used all district orders this turn.';
   else if (order.type!=='develop' && !adjacent[id].some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
   else if (player.capital<order.cost.capital) reason='You need '+order.cost.capital+' capital.';
   else if (player.influence<order.cost.influence) reason='You need '+order.cost.influence+' influence.';
@@ -445,38 +460,50 @@ export function getProductionOptions(state,cityId) {
     return {item,label:def.name,kind,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};
   });
 }
-export function getResearchOptions(state, seat) {
+const SCIENCE = {tree: TECHS, bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
+  order:'research', event:'discovery', verb:'discovered'};
+const CULTURE = {tree: CIVICS, bank:'culture', income:'cultureIncome', known:'civics', focus:'civic',
+  order:'civic', event:'adoption', verb:'adopted'};
+
+function councilOptions(state, seat, track) {
   const player = state.players[seat];
   if (!player) return [];
-  const income = getStats(state, seat).scienceIncome;
-  return Object.entries(TECHS).map(([item, tech]) => {
-    const completed = knows(state, seat, item);
-    const active = player.research === item;
-    const missing = tech.requires.filter(key => !knows(state, seat, key));
+  const known = player[track.known] || [];
+  const bank = player[track.bank] || 0;
+  const income = getStats(state, seat)[track.income];
+  return Object.entries(track.tree).map(([item, project]) => {
+    const completed = known.includes(item);
+    const active = player[track.focus] === item;
+    const missing = project.requires.filter(key => !known.includes(key));
     let reason = "";
     if (state.phase !== "playing") reason = "The campaign has ended.";
     else if (state.turn !== seat) reason = "Wait for your turn.";
-    else if (completed) reason = "Your faction already knows this technology.";
-    else if (active) reason = "This is your current research project.";
-    else if (missing.length) reason = "Requires " + missing.map(key=>TECHS[key].name).join(" + ") + ".";
-    const turns = completed ? 0 : Math.max(0, Math.ceil((tech.cost - player.science) / income));
-    return {item, label: tech.name, description: tech.description, cost: tech.cost, era: tech.era, requires: tech.requires, locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
+    else if (completed) reason = "Your faction has already completed this project.";
+    else if (active) reason = "This is your current project.";
+    else if (missing.length) reason = "Requires " + missing.map(key=>track.tree[key].name).join(" + ") + ".";
+    const turns = completed ? 0 : Math.max(0, Math.ceil((project.cost - bank) / income));
+    return {item, label: project.name, description: project.description, cost: project.cost, era: project.era,
+      requires: project.requires, locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
   });
 }
-function checkDiscovery(state, seat) {
-  const player = state.players[seat], item = player.research;
-  if (!item || player.science < TECHS[item].cost) return;
-  player.science -= TECHS[item].cost;
-  player.technologies = [...player.technologies, item];
-  player.research = null;
-  record(state, seat, 'discovery', FACTIONS[seat].name+' discovered '+TECHS[item].name+'.', null, {item});
+export function getResearchOptions(state, seat) { return councilOptions(state,seat,SCIENCE); }
+export function getCivicOptions(state, seat) { return councilOptions(state,seat,CULTURE); }
+
+function finishProject(state, seat, track) {
+  const player = state.players[seat], item = player[track.focus];
+  if (!item || player[track.bank] < track.tree[item].cost) return;
+  player[track.bank] -= track.tree[item].cost;
+  player[track.known] = [...player[track.known], item];
+  player[track.focus] = null;
+  record(state, seat, track.event, FACTIONS[seat].name+' '+track.verb+' '+track.tree[item].name+'.', null, {item});
 }
-function setResearch(state, seat, item) {
-  const option = getResearchOptions(state, seat).find(tech => tech.item === item);
-  if (!option?.enabled) throw new Error(option?.reason || "Choose an available technology.");
-  state.players[seat].research = item;
-  record(state, seat, 'research', FACTIONS[seat].name+' began researching '+option.label+'.', null, {item});
-  checkDiscovery(state, seat);
+function selectProject(state, seat, item, track) {
+  const option = councilOptions(state, seat, track).find(project => project.item === item);
+  if (!option?.enabled) throw new Error(option?.reason || "Choose an available council project.");
+  state.players[seat][track.focus] = item;
+  const verb = track === SCIENCE ? ' began researching ' : ' began debating ';
+  record(state, seat, track.order, FACTIONS[seat].name+verb+option.label+'.', null, {item});
+  finishProject(state, seat, track);
 }
 function cloneGame(state) {
   // Records are cloned at the action boundary so optimistic retries cannot mutate the old revision.
@@ -516,7 +543,9 @@ function endTurn(state,seat) {
   player.capital+=income.capitalIncome;player.influence+=income.influenceIncome;
   for (const city of state.cities) if (city.seat===seat) produceCityTurn(state,city);
   player.science += income.scienceIncome;
-  checkDiscovery(state, seat);
+  player.culture += income.cultureIncome;
+  finishProject(state, seat, SCIENCE);
+  finishProject(state, seat, CULTURE);
   refreshScores(state);
   record(state,seat,'end',FACTIONS[seat].name+' ended its turn.');
   const next=(seat+1)%state.players.length;
@@ -528,7 +557,7 @@ function endTurn(state,seat) {
     }
     state.round++;
   }
-  state.turn=next;state.actionsLeft=ACTIONS_PER_TURN;
+  state.turn=next;state.actionsLeft=ACTIONS_PER_TURN+Number(adopted(state,next,'federation'));
   const towns=state.cities.filter(c=>c.seat===next);
   for (const city of towns) city.hp=Math.min(city.maxHp,city.hp+6);
   for (const unit of state.units) if (unit.seat===next) {
@@ -633,8 +662,8 @@ export function applyAction(source,seat,action) {
   if (!action || typeof action!=='object') throw new Error('Choose an action.');
   const next=cloneGame(state);
   if (action.type==='end') {endTurn(next,seat);return next;}
-  if (action.type==='research') {
-    setResearch(next, seat, action.item);
+  if (action.type==='research' || action.type==='civic') {
+    selectProject(next, seat, action.item, action.type==='research' ? SCIENCE : CULTURE);
   } else if (action.type==='produce') {
     const city=cityOrNull(next,action.city);
     if (!city || city.seat!==seat) throw new Error('Choose one of your cities.');
@@ -729,6 +758,12 @@ export function chooseBotAction(source) {
     const priorities = [threatened ? 'tactics' : opening, 'ballistics', 'industry', 'steam', 'tactics', 'motorization', 'radio', 'agronomy', 'navigation', 'civics'];
     const project = priorities.find(key => !knows(state, seat, key) && TECHS[key].requires.every(parent => knows(state, seat, parent)));
     if (project) return {type: 'research', item: project};
+  }
+  if (!player.civic && player.civics.length < Object.keys(CIVICS).length) {
+    const opening = seat%2 ? 'publicWorks' : 'charter';
+    const priorities = [opening,'charter','federation','publicWorks','mobilization','conservation','publicRadio'];
+    const project = priorities.find(key => !adopted(state,seat,key) && CIVICS[key].requires.every(parent=>adopted(state,seat,parent)));
+    if (project) return {type:'civic',item:project};
   }
   const available=state.units.filter(u=>u.seat===seat && u.moves>0);
   const plans=available.map(u=>[u,getUnitOptions(state,u.id)]);

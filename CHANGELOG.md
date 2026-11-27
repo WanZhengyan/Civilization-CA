@@ -1,5 +1,11 @@
 # Release notes
 
+## 3.3 · Civics and a culture economy
+
+Choosing a treasury technology consumed the same research slot as engineering. A separate culture budget now lets cities research science and adopt civic policies in parallel. County Federation adds a third district order on the next turn.
+
+28 checks passed. 6 fixed campaigns replayed identically twice. The next test is whether a discovery changes the units a city can actually train.
+
 ## 3.2 · Research across three eras
 
 Four independent research buttons left little reason to plan ahead. A prerequisite tree now links coastal navigation, industry and land warfare. Banking 100 science cannot skip either route into motorization.

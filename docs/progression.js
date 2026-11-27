@@ -26,9 +26,24 @@ export const TECHS = {
     description: 'Each city produces 2 more production per turn.'}
 };
 
-export function eraFor(known = []) {
-  return known.reduce((era, id) => {
-    const next = ERAS[TECHS[id]?.era];
+export function eraFor(known = [], adopted = []) {
+  return [...known.map(id => TECHS[id]), ...adopted.map(id => CIVICS[id])].reduce((era, project) => {
+    const next = ERAS[project?.era];
     return next && next.rank > era.rank ? next : era;
   }, ERAS.frontier);
 }
+
+export const CIVICS = {
+  charter: {name: 'Municipal Charter', era: 'frontier', requires: [], cost: 7,
+    description: 'Each city generates 1 extra culture per turn.'},
+  publicWorks: {name: 'Public Works', era: 'frontier', requires: [], cost: 8,
+    description: 'Each city produces 1 more production per turn.'},
+  conservation: {name: 'Park Conservancies', era: 'industrial', requires: ['charter'], cost: 10,
+    description: 'Cities near an owned woodland or foothill gain 1 food and 1 culture per turn.'},
+  federation: {name: 'County Federation', era: 'industrial', requires: ['charter'], cost: 11,
+    description: 'Gain a third district order at the start of each turn.'},
+  publicRadio: {name: 'Public Broadcasting', era: 'modern', requires: ['conservation'], cost: 13,
+    description: 'Each city generates 2 more science per turn.'},
+  mobilization: {name: 'Civil Mobilization', era: 'modern', requires: ['publicWorks', 'federation'], cost: 12,
+    description: 'New military units enter service with 20 extra maximum health.'}
+};

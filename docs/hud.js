@@ -1,3 +1,4 @@
+import {paintCompactCivics} from "./council.js";
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -356,6 +357,7 @@ function paint(next){
   if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end"].includes(event.type))flash(Game.eventText(event));
   previousEvent=eventKey;
   redraw();paintResearch();
+  paintCompactCivics(view,Game.doAction);
   if(el("production-modal").open)productionOptions();
   if(el("combat-modal").open)drawCombat();
 }
