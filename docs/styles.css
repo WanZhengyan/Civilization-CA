@@ -217,3 +217,5 @@ main{max-width:1680px;margin:auto;padding:0 clamp(20px,3.2vw,55px)}.campaign-hea
 .language-preference p{margin:0 0 .5rem}
 .language-preference .modal-tab[aria-pressed="true"]{border-color:#c6a760;color:#f1d996;background:#37352b}
 html[lang="zh-CN"] :is(.section-label,.eyebrow,.modal-kicker,.resource-label,.entity-stat small,.agenda-title){letter-spacing:.05em}
+
+.unit-sight{display:flex;align-items:center;justify-content:space-between;padding:5px 0;color:#b6c9cd;font-size:12px}.unit-sight span{display:flex;gap:5px;align-items:center}.unit-sight svg{width:13px;height:13px}.unit-sight small{font-weight:normal}

@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.6 · Sight belongs to each formation
+
+Explorers and infantry shared access to the same open board. Units and cities now have individual sight radii. The scout sees farther than an ordinary infantry unit.
+
+61 checks passed. 18 fixed campaigns replayed identically twice. Keep a record of seen terrain when the scout leaves.
+
 ## 4.5 · Train a dedicated land scout
 
 Settlers were costly to risk just to examine another valley. Cities can train a foot scout with three movement points; militia have two. The early scout is separate from mounted scouts.

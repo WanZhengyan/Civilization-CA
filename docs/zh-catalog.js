@@ -672,3 +672,8 @@ section(`
 Bay Bridge|海湾大桥
 Coronado Bridge|科罗纳多大桥
 `);
+
+section(`
+Sight radius|视野半径
+hexes|格
+`);

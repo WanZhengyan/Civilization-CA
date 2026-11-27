@@ -1,3 +1,4 @@
+import {getSightRadius} from './vision.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
 import {Game} from "./game.js";
@@ -235,6 +236,7 @@ function inspect(){
   if(activeUnit){
     const u=activeUnit,o=selectedOptions;
     info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+(["builder","workboat"].includes(u.type)?stat("Charges",u.charges):(UNIT_TYPES[u.type].range?stat("Range",UNIT_TYPES[u.type].range):stat("Terrain",terrain[tile.terrain])))+'</div>'+healthBar(u.hp,u.maxHp);
+    info+='<div class="unit-sight"><span>'+icon("inspect")+' Sight radius</span><strong>'+getSightRadius(u.type)+' <small>hexes</small></strong></div>';
     if(own){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
