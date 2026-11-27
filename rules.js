@@ -1,4 +1,4 @@
-import {placeNaturalWonders, neighboringWonders} from './natural-wonders.js';
+import {NATURAL_WONDERS, placeNaturalWonders, neighboringWonders} from './natural-wonders.js';
 import {REGIMENTS, matchup, formationChoices, signalPosition} from './regiments.js';
 import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
 import {getVision, getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
@@ -573,6 +573,22 @@ function settlementRestriction(state, seat, tile, nearest) {
 function canSettle(state, seat, id) {
   return !settlementRestriction(state, seat, getMap(state).byId[id], nearestSettlement(state, id));
 }
+function settlementWonderProspects(state, seat, tileId) {
+  const map=getMap(state),prospects=new Map();
+  for(const workTile of map.neighbors(tileId)) {
+    const holding=state.board[workTile];
+    if(!terrainCost[map.byId[workTile].terrain] || holding.naturalWonder ||
+      (holding.owner!==null && holding.owner!==seat) || wildAt(state,workTile) ||
+      state.cities.some(city=>city.tile===workTile) ||
+      state.units.some(unit=>unit.tile===workTile && unit.seat!==seat)) continue;
+    for(const id of neighboringWonders(state.board,map,workTile)) {
+      const current=prospects.get(id);
+      if(current) current.districts++;
+      else prospects.set(id,{id,name:NATURAL_WONDERS[id].name,effect:NATURAL_WONDERS[id].effect,bonus:[...NATURAL_WONDERS[id].bonus],districts:1});
+    }
+  }
+  return [...prospects.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
 export function getSettlementAssessment(state, unitId, tileId) {
   const unit = unitOrNull(state, unitId);
   const tile = getMap(state).byId[tileId];
@@ -581,13 +597,15 @@ export function getSettlementAssessment(state, unitId, tileId) {
   const assessment = {
     status: 'invalid', reason: '', canFoundThisTurn: false, canFoundNextTurn: false,
     reachable: false, nearestCity: nearest, distanceToNearestCity: nearest?.distance ?? null,
-    terrainCost: tile && charted ? terrainCost[tile.terrain] ?? null : null, moveCost: null, movesAfter: null
+    terrainCost: tile && charted ? terrainCost[tile.terrain] ?? null : null, moveCost: null, movesAfter: null,
+    naturalWonderProspects: []
   };
   if (!tile) return {...assessment, reason: 'Select a tile on the map.'};
   if (!charted) return {...assessment,reason:'Uncharted territory. Move closer to explore.'};
   if (unit?.type !== 'settler') return {...assessment, reason: 'Select a settler to survey this tile.'};
   if (state.phase !== 'playing') return {...assessment, reason: 'The campaign has ended.'};
   if (unit.seat !== state.turn) return {...assessment, reason: 'Wait for the settler’s turn.'};
+  assessment.naturalWonderProspects=settlementWonderProspects(state,unit.seat,tileId);
 
   const cost = tileId === unit.tile ? 0 : findRoutes(state, unit).costs.get(tileId);
   assessment.reachable = cost !== undefined;

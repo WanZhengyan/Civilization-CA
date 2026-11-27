@@ -40,6 +40,7 @@ const phraseRules = [
   [/^HEX ([\d /]+)$/,n=>'地块 '+n],
   [/^Room ([A-Z0-9]{6})$/,code=>'房间 '+code],
   [/^View sites \((\d+)\)$/i,n=>'查看选址（'+n+'）'],
+  [/^(\d+) nearby districts?$/i,n=>n+' 块相邻可工作地块'],
   [/^(\d+) sites? within reach\. Follow a blue flag to settle next turn\.$/,n=>'移动范围内有 '+n+' 处候选地。蓝旗表示下回合可建城。'],
   [/^(\d+) sites? (?:is|are) ready to settle this turn\. Follow a gold flag or open View sites\.$/,n=>'本回合有 '+n+' 处可立即建城。寻找金旗，或打开「查看选址」。'],
   [/^(.+) is (\d+) hex(?:es)? away\.( Cities must be at least 3 hexes apart\.)?$/, (name,n,rule)=>'距'+cityLabel(name)+' '+n+' 格。'+(rule?'城市间至少相距 3 格。':'')],
