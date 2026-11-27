@@ -36,7 +36,7 @@ export function paintCompactCivics(view, order) {
       const desc = document.createElement('small');
       desc.textContent = option.description;
       const status = document.createElement('small');
-      status.textContent = option.reason || option.cost + ' culture · ' + option.turns + ' turns';
+      status.textContent = option.reason || option.cost + ' culture · ' + (option.turns===null ? 'Awaiting city income' : option.turns + (option.turns===1 ? ' turn' : ' turns'));
       detail.append(name,desc,status);
       button.append(detail);
       button.onclick = () => { dialog.close(); order({type:'civic',item:option.item}); };

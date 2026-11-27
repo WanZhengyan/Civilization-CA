@@ -9,7 +9,50 @@ function section(pairs) {
   }
 }
 section(`
+Manage citizens|管理居民
+City planning|城市规划
+Citizen focus|居民工作重心
+Worked districts|居民工作地块
+Food / production / science per worker|每名居民的粮食 / 生产力 / 科研点
+Balanced|均衡发展
+Food supply|粮食优先
+Industry focus|工业优先
+Science focus|科研优先
+City garden|城市菜园
+City workshop|城市工坊
+Study hall|研习室
+Assign citizens|分配居民
+Select your city and open Manage citizens. Food, industry and science priorities change which controlled districts are worked. Each citizen works one district or a specialist job in town. The same district cannot support two cities.|选中城市后打开「管理居民」。粮食、工业或科研优先级会改变居民使用的领土地块。每名居民可工作一块土地或在城内担任专职工作。同一地块只能服务一座城市。
+Choose a valid citizen focus.|请选择有效的居民工作重心。
+Residents / housing|居民 / 住房
+Completed|已建成
+Housing full|住房已满
+Residential quarter|住宅区
+Housing investments|住房建设
+Plan housing|规划住房
+Under construction|正在建设
+Provides housing for 3 more citizens.|为三名额外居民提供住房。
+Provides 2 food and housing for 2 more citizens.|提供两份粮食和两名额外居民的住房。
+A new city has room for three citizens. A granary adds two places and a residential quarter adds three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.|新城可容纳三名居民。粮仓增加两处住房，住宅区增加三处。住房满额时，城市可以储备下一次人口增长所需的粮食；扩建住房后即可继续增长。可在「管理居民」中启动住房项目。
+Stored food|存粮
+Harvest|粮食产量
+Consumption|粮食消耗
+Food balance|粮食结余
+Population loss|人口减少
+Next citizen|新增人口
+Population stable|人口稳定
+Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.|每位居民每回合消耗两份粮食。盈余的粮食储存起来供人口增长。遇到短缺时先用存粮，存粮耗尽后失去一名居民，但始终保留第一户人家。生产力用于推进城市项目。
+`);
+section(`
 Civitas LA · The Los Angeles Campaign|Civitas LA · 洛杉矶战役
+Scout|侦察兵
+Light reconnaissance infantry. Moves three points per turn, can skirmish with units, and cannot occupy cities.|轻装侦察步兵。每回合有三点移动力，可以与敌军交战，不能占领城市。
+Train a scout|训练侦察兵
+A Scout is available as soon as you found a city. It has three movement points to a Militia unit’s two. Forests and hills still cost two points to enter.|建城后即可训练侦察兵。侦察兵每回合有三点移动力，民兵有两点。进入林地或丘陵需要两点。
+Choose your first city site|选择首都的位置
+Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.|每个文明都从一名开拓者起步。你可以就地建都，也可以先去探索。建城后可获得收入并训练单位。
+Found capital|建立首都
+Civilization drawn at start|开局随机分配文明
 Los Angeles|洛杉矶
 The Los Angeles Basin|洛杉矶盆地
 Regional campaign|地区战役
@@ -182,6 +225,7 @@ Invite link|邀请链接
 Start when everyone has joined.|所有人加入后即可开始。
 Send the invite link to a friend. Two players can start a campaign.|把邀请链接发给好友。两位玩家即可开局。
 You have a seat. The host will start the campaign.|你已加入，请等待房主开始战役。
+This site is unavailable for settlement.|此地无法建立城市。
 This campaign has ended.|战役已结束。
 Campaign in progress.|战役进行中。
 Starting…|正在开始…
@@ -309,10 +353,14 @@ The room service is temporarily unavailable. Please try again.|联机服务暂�
 `);
 section(`
 First turn|第一回合
+Use stored goods|使用库存物资
+Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.|每处已改良并连通城市的资源在回合结束时提供一份物资。打开「物资账簿」可将两份同类物资卖得五点资金，或运送到己方城市。每回合可发运一次。
+Survey for deposits|寻找资源
+Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.|开局时资源尚未显现。选择开拓者的「勘探资源」，消耗一点移动力即可看见视野内的资源。建立首都也会自动开启勘探。单位离开后，已发现的资源仍会标在地图上。
 Send out your settler|派出开拓者
 Select the Settler on the map or in your roster. Point at a highlighted hex to preview the route. Click a reachable hex to move. You can also tap a highlighted destination on a touch screen.|在地图或名册中选择开拓者。指向高亮地块可预览路线，点击即可移动；触屏上直接轻点目的地。
 Found a city|建立城市
-A settler with movement left can found a city on friendly or neutral land at least three hexes from any city. Choose Found city. The settler becomes the city and nearby open land joins your faction.|开拓者仍有移动力时，可在己方或中立陆地上建城。新城与所有城市至少相距三格。选择「建造城市」后，开拓者会建立新城，附近空地随之并入领土。
+With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.|开拓者还有移动力时，可以在距任何城市至少三格的己方或中立陆地上建城。首座城市选择「建立首都」，之后选择「建造城市」。附近的空地会并入领土。
 Give your capital a project|安排首府生产
 Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.|在名册中打开「城市」，选择首府并指定生产项目。结束回合时，城市会积累粮食与生产力。
 Open the Research council and select a project. Your cities generate science each turn. Completed research gives the whole faction a lasting benefit.|打开科技议会并选择项目。城市每回合产出科研点；完成研究后，全阵营都会获得长期收益。
@@ -322,7 +370,7 @@ City growth|城市发展
 Food and production|粮食与生产
 Food grows your population. Production completes the unit or building in a city’s queue. More residents contribute capital and can raise production.|粮食推动人口增长，生产力用于完成队列中的单位或建筑。更多居民能增加收入，也能提高生产力。
 Improve nearby land|改良周边土地
-Builders have three charges. Build a farm on a friendly coast, lowland or urban hex, or a mine in woodland or foothills. Within two hexes of a friendly city, farms add food and mines add production to the nearest city.|建设者可施工三次。在己方海岸、低地或城区修建农场，在林地或丘陵修建矿场。距己方城市两格以内的设施会惠及最近的城市：农场增加粮食，矿场增加生产力。
+A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.|建设者可以施工三次。选择能经己方陆地在两步内连通己方城市的地块，并按资源选择设施。谷物需要农场，柑橘需要果园，木材需要伐木场，石料需要采石场，铁矿需要矿场。
 Choose a building|选择建筑
 A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.|粮仓提供粮食，工坊提高生产力，纪念碑增加影响力，城墙强化防御。每座城市可各建一座。
 Make room for recruits|留出部署空间
@@ -623,7 +671,7 @@ Your treasury cannot cover this upgrade.|金库中的资金不足以升级。
 No field upgrade is available.|当前没有可用的战场升级。
 Choose your map|选择地图
 Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.|选择「切换地图」可前往洛杉矶、旧金山或圣迭戈。每个地区的单人进度独立保存。多人联机时由房主在建房时选择地图。
-Open Technology and Civics beside the map. Choose a project in each council. Your faction earns science and culture separately every turn.|打开地图旁的「科技」和「市政」，分别选定一项议程。你的阵营在每回合分别积累科研点和文化。
+Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.|打开地图旁的「科技」和「市政」，分别选择一项议程。建立首都后，你的文明每回合分别积累科研点和文化。
 Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.|初始每回合有两次地区指令，可用于拓展、开发或争夺领土。通过「郡县联邦」后增加为三次。各单位单独消耗移动力。结束回合后结算收入，轮到下一个阵营行动。
 Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.|先查看所选单位的移动力。陆地单位进入海岸、低地或城区耗一点，进入林地或丘陵耗两点。船只在水面航行。已被其他单位占据的地块无法通行。
 Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.|陆地单位部署在城内或相邻的己方、中立可通行空地。舰船从港口或相邻空水域下水。结束回合前请留出部署空间。
@@ -663,4 +711,138 @@ N|北
 section(`
 Bay Bridge|海湾大桥
 Coronado Bridge|科罗纳多大桥
+`);
+
+section(`
+Sight radius|视野半径
+hex|格
+hexes|格
+Awaiting city income|建城后开始积累
+`);
+
+section(`
+Activity spotted in view.|在视野内发现动静。
+Uncharted territory. Move closer to explore.|尚未探索。派单位靠近以揭开迷雾。
+Uncharted territory|未知区域
+Outside current sight|目前没有视野
+Only the city owner can inspect its economy.|只有城市所属文明可以查看其经济情况。
+Explore the fog|探索迷雾
+Dark tiles are uncharted. Move a Scout to see three hexes in every direction. The shaded terrain behind it stays on your map, but enemy positions disappear when your units lose sight.|深色地块尚未探索。侦察兵可以看见周围三格。走过的地形会留在地图上，离开视野的敌军位置将被隐藏。
+Grain|谷物
+Citrus|柑橘
+Timber|木材
+Stone|石料
+Iron ore|铁矿
+Fish shoal|鱼群
+Resource|资源
+Survey resources|勘探资源
+1 movement|1 点移动力
+Resource survey completed.|资源勘探已开启。
+This unit cannot start a resource survey.|此单位无法开始资源勘探。
+`);
+
+section(`
+In sight|视野内
+Choose a tile within your current sight.|请选择当前视野内的地块。
+Orchard|果园
+Lumber camp|伐木场
+Quarry|采石场
+Build orchard|建造果园
+Build lumber camp|建造伐木场
+Build quarry|建造采石场
+Build to harvest|所需设施
+Supplying city|供应城市
+Work an owned site connected to a city within two land steps.|在与己方城市相连、两格以内的领土上施工。
+Barbarian camp|野蛮人营地
+Barbarian lookout|野蛮人哨探
+Neutral forces|中立部队
+Send a close-combat unit to clear the camp for 12 capital.|派近战单位清剿营地，可获得 12 资金。
+This lookout belongs to a nearby barbarian camp.|这名哨探来自附近的野蛮人营地。
+Clearing the camp adds 12 capital to your treasury.|清剿营地后，国库将增加 12 资金。
+Camp cleared. Your treasury gains 12 capital.|营地已清剿，国库增加 12 资金。
+A barbarian patrol was dispersed.|已击溃野蛮人巡逻队。
+Your unit engaged the barbarians.|你的部队与野蛮人交战。
+Clear a camp|清剿营地
+Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.|带红旗的帐篷是营地，遇到哨探意味着附近可能有营地。选中部队可预览攻击。远程单位可以削弱营地，幸存的近战单位可以清剿营地并获得 12 资金。
+`);
+
+section(`
+Economy|经济
+Supply ledger|物资账簿
+Stored goods|库存物资
+Destination city|接收城市
+Stored|库存
+Harvest|每回合采集
+Sell for 5 capital|出售得 5 资金
+Supply 4 food|补给 4 粮食
+Supply 4 production|补给 4 生产力
+Each worked deposit adds one good at the end of your turn. Dispatch two of the same good once per turn.|每处已开发的资源在回合结束时收获 1 份物资。每回合可将 2 份相同物资出售或运送给城市一次。
+Shipment dispatched this turn.|本回合已发货。
+Resource shipment dispatched.|物资已发运。
+This shipment requires two stored goods.|本次装运需要 2 份同类物资。
+Your shipment for this turn has already left.|本回合的物资已发运。
+Select a city with an unfinished production project.|请选择正在生产且尚未完工的城市。
+Choose one of your cities to receive goods.|请选择一座己方城市以接收物资。
+Barbarian raiders|野蛮人劫掠队
+Guard the city with a military unit or city walls to repel these raiders.|在城内或相邻地块驻军，或修建城墙，可以击退劫掠队。
+A lookout spotted your city. Intercept it before it returns to camp.|野蛮人哨探发现了你的城市。趁它返回营地之前拦截它。
+A lookout returned to camp. A raiding party is preparing.|哨探已经返回营地。野蛮人正在集结劫掠队。
+The city defenses repelled the raid.|城市守军击退了劫掠队。
+Raiders struck the city and looted up to 3 capital.|劫掠队袭击城市，掠走最多 3 资金。
+Barbarian raiders clashed with your military unit.|野蛮人劫掠队与你的部队交战。
+Repel a raid|抵御劫掠
+A lookout near an established city may return to its camp. Intercept it before it reports, or attack the camp before the party leaves two rounds later. A military defender within one hex of the city, or city walls, repels the raid. Raiders leave civilian units alone.|哨探在已建立一段时间的城市附近侦察后，会返回营地。可以中途拦截它，或在两轮集结期内清剿营地。城内或邻格有军事单位、或城市修有城墙时，可击退袭击。劫掠队不会主动攻击平民单位。
+University wonders|大学奇观
+Unlocks university|解锁大学
+UCLA|加州大学洛杉矶分校
+Stanford University|斯坦福大学
+UC Berkeley|加州大学伯克利分校
+Caltech|加州理工学院
+A public arts campus generating 3 culture and 1 science per turn.|公共艺术校园，每回合提供 3 点文化和 1 点科研。
+An engineering quad generating 2 production and 2 science per turn.|工程学院，每回合提供 2 点生产力和 2 点科研。
+A public research campus generating 4 science per turn.|公立研究校园，每回合提供 4 点科研。
+A research observatory generating 5 science per turn.|科研天文台，每回合提供 5 点科研。
+`);
+
+section(`
+Site bonus|选址加成
+Standard campus yield|标准校园产出
+Commission campus|在此建造校园
+Back to production|返回生产菜单
+Choose a campus site in this city’s territory.|请选择这座城市领土内的一块校园用地。
+Claim an empty land tile within two hexes of the city.|请先控制距该城市两格以内的空闲陆地。
+Choose a surveyed campus site.|请选择一处可用的校园地块。
+`);
+
+section(`
+Charter fee|筹建费
+Available worldwide.|尚未被建成
+Under construction|正在筹建
+Already opened|已建成
+A rival charter is underway.|已有其他阵营在筹建这所大学。
+A competing campus opened first. The charter fee was returned.|对手抢先建成了这所大学，筹建费已全额退还。
+This university has already opened.|这所大学已在本局建成。
+One of your cities already holds this charter.|己方已有城市正在筹建这所大学。
+`);
+
+section(`
+University wonder|大学奇观
+University opened|大学建成
+Dismiss campus notice|关闭大学建成通知
+Universities|大学奇观
+Charter a university|解锁大学
+Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.|采用市政宪章解锁加州大学洛杉矶分校，研究工坊工程解锁斯坦福大学，通过“公园保护区”市政解锁加州大学伯克利分校，研究蒸汽动力解锁加州理工学院。在城市生产菜单中选择大学奇观。
+Survey the campus|选择校园地块
+Choose an empty land tile in your territory within two hexes of the host city. Deposits, improvements, city centers and reserved sites are protected. A matching terrain grants one additional point in the listed specialty every turn.|在建设城市两格内选择一块己方空地。资源地块、改良设施、市中心和已预留地块均不能选。地形适宜时，该校每回合额外提供一点特色产出。
+Compete for a charter|竞争世界奇观
+Pay the charter fee and assign city production. The first campus of its kind to open wins the charter for this world. A competing city stops work and recovers its fee. Its spent production is lost.|支付筹建费并投入城市生产力。第一座建成的同名大学成为本局唯一的该校。竞争失败的城市会停工并收回筹建费；已投入的生产力不会返还。
+Read the opening report|查看大学落成
+A completed campus appears on the map. Select the campus tile to inspect its effect. Capturing its host city transfers the campus with the city.|建成后可在地图上选择校园地块，查看其效果。占领大学所属城市也会接管该校。
+`);
+
+section(`
+Civilization CA · California Campaigns|Civilization CA · 加州战役
+Founding expedition|建都远征
+Choose a site for your first city. Surveying or founding can reveal local resources.|选择第一座城市的位置。勘探或建城后可发现附近的资源。
+Locate settler|定位开拓者
 `);

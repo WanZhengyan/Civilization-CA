@@ -32,7 +32,7 @@ const BAY_AREA = {
     '8,10':['San Mateo'], '9,11':['Redwood City'], '11,12':['Palo Alto'],
     '14,12':['San Jose'], '13,11':['Fremont'], '13,9':['Hayward'],
     '13,7':['San Leandro'], '12,6':['Alameda'], '12,5':['Oakland','cranes'],
-    '13,5':['Fruitvale'], '12,4':['Emeryville'], '12,3':['Berkeley','campanile'],
+    '13,5':['Fruitvale'], '12,4':['Emeryville'], '12,3':['Berkeley','cityhall'],
     '13,3':['Berkeley Hills'], '12,2':['Albany'], '10,1':['Richmond','cranes'],
     '11,1':['North Richmond'], '12,1':['El Cerrito'], '8,3':['Angel Island']
   },

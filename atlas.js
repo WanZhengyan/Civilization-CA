@@ -1,3 +1,6 @@
+import {drawResource} from './resource-art.js';
+import {drawCampus} from './campus-art.js';
+import {WONDERS} from './wonders.js';
 import {translate} from './i18n.js';
 /* Illustrated, pointy-top, odd-row-offset California campaign maps. */
 const W = 72, H = 76, ROW = H * .75, COLS = 17, ROWS = 13;
@@ -7,8 +10,15 @@ const dY = [-H / 2, -H / 4, H / 4, H / 2, H / 4, -H / 4];
 const FACTION = ['#efbb62','#69b7c7','#8ab98a','#dc8c9f'];
 const places = {
   griffith: 'Griffith Observatory', hollywood: 'Hollywood', pier: 'Santa Monica',
-  downtown: 'Downtown LA', ucla: 'UCLA', rosebowl: 'Rose Bowl', airport: 'LAX'
+  downtown: 'Downtown LA', westwood: 'Westwood', rosebowl: 'Rose Bowl', airport: 'LAX'
 };
+export function getAtlasPlace(tile, holding) {
+  const campus=WONDERS[holding?.wonder];
+  if(campus) return {name:campus.name, landmark:null};
+  if(!tile.landmark) return null;
+  const name=tile.landmark==='studios' ? 'Burbank' : places[tile.landmark] || tile.name;
+  return {name,landmark:tile.landmark};
+}
 const pos = (q,r) => [W / 2 + (q + (r & 1) * .5) * W, H / 2 + r * ROW];
 const idFor = (q,r) => q + ',' + r;
 function noise(q, r, salt=0) {
@@ -344,7 +354,7 @@ function ridgeSilhouette(g,x,y,s,rng) {
   line(g,[peak+2,-h+1,peak+5,-h*.58,peak+4,-h*.31,peak+9,-1],'#b3ab80',.8);
   g.restore();
 }
-function renderAtlas(tiles,map) {
+function renderAtlas(tiles,map,landmarkTiles) {
   const margin=144,resolution=1.55,buffer=document.createElement('canvas');
   buffer.width=Math.ceil((worldW+2*margin)*resolution);buffer.height=Math.ceil((worldH+2*margin)*resolution);
   const g=buffer.getContext('2d');g.scale(resolution,resolution);g.translate(margin,margin);
@@ -389,8 +399,8 @@ function renderAtlas(tiles,map) {
       line(g,[x-2,y+2,x-2,y-8,x+1,y-9,x+1,y],bridge.color,1.6);
     }
   }
-  for(const t of tiles.filter(t=>t.landmark)){
-    const [x,y]=pos(t.q,t.r),scales={downtown:1.97,griffith:1.76,hollywood:1.52,pier:1.73,ucla:1.66,studios:1.69,airport:1.65,rosebowl:1.73};
+  for(const t of landmarkTiles){
+    const [x,y]=pos(t.q,t.r),scales={downtown:1.97,griffith:1.76,hollywood:1.52,pier:1.73,westwood:1.66,studios:1.69,airport:1.65,rosebowl:1.73};
     scene.push({y:y+4,run:()=>{
       g.save();g.shadowColor='#434c4060';g.shadowBlur=2.8;
       drawLandmark(g,t.landmark,x,y+2,scales[t.landmark]||1.55);g.restore();
@@ -449,6 +459,20 @@ function drawImprovement(g,tile,kind) {
     }
     town(g,9,2,5,4,6,0);
     poly(g,[4,-5.7,8,-10.2,13,-7.8,13,-6.2,9,-4.6],'#bd7859','#614f41',.8);
+  }else if(kind==='orchard'){
+    poly(g,[-20,1,-2,-8,20,1,1,12],'#a48c5c','#644e34',1);
+    for(const [a,b] of [[-11,1],[-3,-3],[5,-5],[-3,5],[5,1],[12,-1]]) {
+      line(g,[a,b+3,a,b-1],'#594937',1.6);
+      ellipse(g,a,b-2,3.1,2.3,'#72804d');ellipse(g,a+1,b-2,1.1,1.1,'#e2a553');
+    }
+  }else if(kind==='lumberCamp'){
+    town(g,5,0,6,4,5,1);
+    for(let i=0;i<3;i++){line(g,[-15,2+i*2.1,-4,-2+i*2.1],'#675139',2.6);ellipse(g,-15,2+i*2.1,1.4,1.2,'#d3b17d');}
+  }else if(kind==='quarry'){
+    for(let n=0;n<3;n++) {
+      const w=17-4*n,h=n*2.8;
+      poly(g,[-w,h,0,h-w*.4,w,h,0,h+w*.45],['#877f68','#afa188','#c0af91'][n],'#655f54',.8);
+    }
   }else if(kind==='fishery'){
     // The mesh reads as a floating pen, distinct from solid rows on farmland.
     poly(g,[-13,-1,0,-7,14,-1,1,6],'#6c9687','#cdb27d',1.65);
@@ -694,7 +718,7 @@ function battleFX(g,e,model,f) {
   }
 }
 const UNIT_INSIGNIA = {
-  melee:'M', ranged:'R', settler:'S', builder:'B', scout:'S', cavalry:'C', riflemen:'R',
+  melee:'M', ranged:'R', settler:'S', builder:'B', scout:'◈', cavalry:'C', riflemen:'R',
   artillery:'A', armor:'T', cutter:'C', frigate:'F', workboat:'W'
 };
 function paintUnits(g,model,scale,now) {
@@ -762,6 +786,8 @@ function paintUnits(g,model,scale,now) {
   return motion.length>0;
 }
 
+import {drawBarbarians} from "./barbarian-art.js";
+
 function renderOverlay(g,tiles,model,scale,labels,territories) {
   const {board={},players=[],selectedId,hoverId}=model;
   const getFaction=owner=>players[owner]?.color||FACTION[owner%4]||FACTION[0];
@@ -785,7 +811,16 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     }
   }
   for(const t of tiles){const improvement=board[t.id]?.improvement;if(improvement)drawImprovement(g,t,improvement);}
+  if(model.showResources) for(const tile of tiles) {
+    const resource=board[tile.id]?.resource;
+    if(resource)drawResource(g,...pos(tile.q,tile.r),resource);
+  }
+  for(const t of tiles){
+    const holding=board[t.id];
+    if(holding?.wonder){const [x,y]=pos(t.q,t.r);drawCampus(g,holding.wonder,x,y,getFaction(holding.owner));}
+  }
   for(const c of model.cities||[])drawCity(g,c,model);
+  drawBarbarians(g,model,pos);
   tacticalLayer(g,model,scale);projectedRoute(g,model,scale);settlementMarkers(g,model,scale);
   const lookup=model.byId;
   for(const [id,hover] of [[model.targetId||hoverId,true],[selectedId,false]]){
@@ -800,8 +835,9 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
       for(let k=0;k<6;k++){const xx=x+dX[k],yy=y+dY[k];ellipse(g,xx,yy,1.7,1.7,'#ffedb8');}
     }
   }
-  for(const t of tiles)if(t.capitalFor!=null&&board[t.id]?.owner!=null){
-    const [x,y]=pos(t.q,t.r);flag(g,x+22,y+8,getFaction(board[t.id].owner));
+  for(const city of model.cities || [])if(city.originalSeat!=null){
+    const t=lookup.get(city.tile);
+    const [x,y]=pos(t.q,t.r);flag(g,x+22,y+8,getFaction(city.seat));
   }
   if(!labels)return;
   // Wide ocean lettering uses two lines, like a small-scale nautical chart.
@@ -841,12 +877,13 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
     }
     labelBounds.push(best.rect);return [best.xx,best.yy];
   }
-  for(const t of tiles)if(t.landmark){
+  for(const t of tiles){
+    const place=getAtlasPlace(t,board[t.id]);
+    if(!place || model.cityTiles.has(t.id))continue;
     const [x,y]=pos(t.q,t.r),owner=board[t.id]?.owner;
-    const name=translate(t.landmark==='studios'?'Burbank':places[t.landmark]||t.name);
-    const lx=x+(t.landmark==='hollywood'?-22:t.landmark==='griffith'?15:0);
-    const ly=y+(t.landmark==='hollywood'?18:t.landmark==='griffith'?28:24);
-    if(model.cityTiles.has(t.id))continue;
+    const name=translate(place.name);
+    const lx=x+(place.landmark==='hollywood'?-22:place.landmark==='griffith'?15:0);
+    const ly=y+(place.landmark==='hollywood'?18:place.landmark==='griffith'?28:24);
     const [nx,ny]=placeLabel(lx,ly,name);label(g,name,nx,ny,owner!=null && territories?getFaction(owner):'#a5997a',labelScale);
   }
   for(const city of model.cities){
@@ -856,7 +893,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   if(scale>1.02){
     const names=region.districts;
-    for(const t of tiles) if(names.includes(t.name)&&!t.landmark&&!model.cityTiles.has(t.id)){
+    for(const t of tiles) if(names.includes(t.name)&&!getAtlasPlace(t,board[t.id])&&!model.cityTiles.has(t.id)){
       const [x,y]=pos(t.q,t.r);g.save();g.font='italic 13px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
       g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(translate(t.name),x,y+14);g.fillStyle='#eee1bd';g.fillText(translate(t.name),x,y+14);g.restore();
     }
@@ -874,16 +911,30 @@ export function createAtlas(host, options = {}) {
   let tiles=options.tiles||defaultTiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
   let labels=true,territories=true,fresh=true,gesture=null,didDrag=false,disposed=false;
-  function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'));}
+  let landmarkTiles=tiles.filter(tile=>tile.landmark);
+  function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'),landmarkTiles);}
   function draw(){
     request=0;if(disposed||boxW<2||boxH<2)return;ensureBackground();
     const dpi=canvas.width/boxW,s=base*zoom;
     ctx.setTransform(dpi,0,0,dpi,0,0);ctx.fillStyle='#203d48';ctx.fillRect(0,0,boxW,boxH);
     ctx.save();ctx.translate(boxW/2,boxH/2);ctx.scale(s,s);ctx.translate(-cx,-cy);
     const {buffer,margin,resolution}=background;
+    // Paint every uncharted hex as a nautical survey grid. Clip the entire
+    // illustrated layer so terrain never flashes before the first observation.
+    if(model.fog) {
+      for(const tile of tiles) if(!model.fog.explored.has(tile.id)){
+        const path=hexPath(tile.q,tile.r);
+        ctx.fillStyle=(tile.q+tile.r)%3===0?'#263944':'#263843';ctx.fill(path);
+        ctx.strokeStyle='#314650';ctx.lineWidth=.65;ctx.stroke(path);
+        const [x,y]=pos(tile.q,tile.r);ctx.fillStyle='#64757a';ctx.fillRect(x-.65,y-.65,1.3,1.3);
+      }
+      ctx.save();ctx.clip(model.fog.window);
+    }
     ctx.drawImage(buffer,-margin,-margin,buffer.width/resolution,buffer.height/resolution);
-    renderOverlay(ctx,tiles,model,s,labels,territories);
+    renderOverlay(ctx,model.fog ? model.fog.knownTiles : tiles,model,s,labels,territories);
+    if(model.fog){ctx.fillStyle='#24333c9c';ctx.fill(model.fog.memory);}
     if(paintUnits(ctx,model,s,performance.now()))schedule();
+    if(model.fog)ctx.restore();
     ctx.restore();
     // A very light vignette holds together all the terrain colours at the edge of the atlas.
     const shadow=ctx.createRadialGradient(boxW*.49,boxH*.45,Math.min(boxW,boxH)*.34,boxW*.5,boxH*.49,Math.hypot(boxW,boxH)*.57);
@@ -997,18 +1048,33 @@ export function createAtlas(host, options = {}) {
         model.region=region;
         canvas.setAttribute('aria-label',region.name+' strategy map. Use arrow keys to preview a district. Press Enter or Space to select it. Use plus and minus to zoom, and Home to reset the view.');
       }
-      if(nextTiles && nextTiles!==tiles){
+      const tilesChanged=nextTiles && nextTiles!==tiles;
+      if(tilesChanged){
         tiles=nextTiles;model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
         model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
         zoom=1;resetCenter();options.onZoom?.(100);
       }
       const state=o.state||o;if(o.state)model.state=o.state;
-      if(state.board)model.board=state.board;if(state.players)model.players=state.players;
+      if(state.intel && model.intel!==state.intel) {
+        const explored=new Set(state.intel.explored), visible=new Set(state.intel.visible);
+        const window=new Path2D(),memory=new Path2D(),knownTiles=tiles.filter(t=>explored.has(t.id));
+        for(const t of knownTiles){window.addPath(hexPath(t.q,t.r));if(!visible.has(t.id)) memory.addPath(hexPath(t.q,t.r));}
+        model.intel=state.intel;model.fog={explored,visible,window,memory,knownTiles};
+      } else if(!state.intel){model.fog=null;model.intel=null;}
+      if(tilesChanged || (state.board && state.board!==model.board)){
+        if(state.board)model.board=state.board;
+        // Only the seat's observed parcels may replace the printed landmark artwork.
+        const next=tiles.filter(t=>t.landmark && getAtlasPlace(t,model.board[t.id])?.landmark);
+        if(next.length!==landmarkTiles.length || next.some((t,i)=>t!==landmarkTiles[i]))background=null;
+        landmarkTiles=next;
+      }
+      if(state.players)model.players=state.players;
       if(Array.isArray(state.units)){
         updateBattleMotion(model,state,performance.now());model.units=state.units;
       }
       if(Array.isArray(state.cities)){model.cities=state.cities;model.cityTiles=new Set(state.cities.map(c=>c.tile));}
       if(Object.hasOwn(o,'selectedUnitId')&&o.selectedUnitId!==model.selectedUnitId){model.selectedUnitId=o.selectedUnitId;model.previewPath=[];}
+      if(Object.hasOwn(o,'showResources'))model.showResources=o.showResources;
       if(Object.hasOwn(o,'settlementSites'))model.settlementSites=o.settlementSites;
       else if(Object.hasOwn(o,'settlementSurvey')){
         const sites=o.settlementSurvey||[];
@@ -1024,7 +1090,7 @@ export function createAtlas(host, options = {}) {
     },
     zoomBy(factor){if(Number.isFinite(factor)&&factor>0)animateZoom(zoom*factor,boxW/2,boxH/2);},
     reset(){cancelAnimationFrame(tween);zoom=1;resetCenter();options.onZoom?.(100);schedule();},
-    focus(id){const t=model.byId.get(id);if(t){[cx,cy]=pos(t.q,t.r);bound();schedule();}},
+    focus(id,opening=false){const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} [cx,cy]=pos(t.q,t.r);bound();schedule();}},
     setLabels(show){labels=Boolean(show);schedule();},
     setTerritories(show){territories=Boolean(show);schedule();},
     destroy(){disposed=true;observer.disconnect();input.abort();cancelAnimationFrame(request);cancelAnimationFrame(tween);cancelAnimationFrame(resizeFrame);canvas.remove();background=null;}
@@ -1268,31 +1334,10 @@ function drawLandmark(g, kind, x, y, scale = 1) {
     building(20,1.9,6.4,6,15,warm,5);
     building(8,6,6.8,6,17,blue,6);
     building(-6.2,5.3,4.9,6.2,10.8,warm,3);
-  } else if (kind === 'ucla') {
-    shade(27.5,6.5);
-    const brick=['#e5ad7e','#bd886a','#98695e'];
-    const tile=['#d59a70','#bc795a','#925c4b'];
-    solid(0,6,19,17,2,['#e3cb9c','#9d876b','#8d765d']);
-    solid(-1,3,16,13,8,brick);
-    solid(-1,-4.5,16.4,13.4,1.2,tile);
-    for(const [cx,cy] of [[-15,-3.8],[13,-4.8]]) {
-      solid(cx,cy,4.6,5.3,15.6,brick);
-      solid(cx,cy-13.9,5,5.6,1.2,cream);
-      solid(cx,cy-15.2,4.7,5.2,3.3,brick);
-      const top=cy-20.2;
-      put([[cx-5.6,top-1.8],[cx,top+.65],[cx+6.1,top-1.7],[cx,top-5.3]],'#c38361',ink,.65);
-      for(const xx of [-3,-.95,1.4,3.5]) {
-        arch(cx+xx,cy-15.5-Math.abs(xx)*.32,.59,1.8,'#67493e');
-        arch(cx+xx,cy-9-Math.abs(xx)*.32,.57,2.45,'#755446');
-      }
-    }
-    // The west front has a continuous arched entrance gallery.
-    for(let i=0;i<7;i++) {
-      const xx=-11.1+i*3.45, yy=2.7-Math.abs(xx+1)*.27;
-      arch(xx,yy,1.02,3.8,'#614e42');
-      line([[xx-1.4,yy-2.5],[xx-1.4,yy-.12]],'#e0b98c',.53);
-    }
-    oval(-.7,-5.3,1.6,1.6,'#735449','#deb487',.5);
+  } else if (kind === 'westwood' || kind === 'cityhall') {
+    solid(0,1,13,5,6,cream);
+    solid(4,-2,3.5,4,12,cream);
+    solid(4,-14,2,2,2,cream);
   } else if (kind === 'rosebowl') {
     shade(28,7);
     oval(0,-3,27,11,'#aa9588','#464648',.9,-.08);

@@ -5,7 +5,7 @@ export const PORT_BUILDINGS = {
 
 // A slipway must touch the shore reached from the city via its owned land.
 // Reserve the water hex when the order is placed so simultaneous queues never overlap.
-export function findPortSite(state, city, byId, neighbors) {
+export function findPortSite(state, city, byId, neighbors, visible) {
   if (!city) return null;
   if (city.portTile) return city.portTile;
   if (city.queue?.item === 'harbor' && city.queue.portTile) return city.queue.portTile;
@@ -18,7 +18,7 @@ export function findPortSite(state, city, byId, neighbors) {
       for (const id of neighbors(shore)) {
         const tile = byId[id];
         if (tile.terrain === 'ocean') {
-          if (!reserved.has(id) && state.board[id].owner == null && !state.board[id].improvement) return id;
+          if ((!visible || visible.has(id)) && !reserved.has(id) && state.board[id].owner == null && !state.board[id].improvement) return id;
         } else if (!seen.has(id) && tile.terrain !== 'mountains' && state.board[id].owner === city.seat) {
           seen.add(id);
           next.push(id);

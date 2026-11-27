@@ -1,6 +1,8 @@
+import {ledgerBody} from './resource-ledger.js';
+import {getResourceLedger} from './rules.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
 import {mapPicker, installMapStyles} from './regions-ui.js';
-import { FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
+import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
 
 import {TARGET_SCORE, MAX_ROUNDS} from './rules.js';
 
@@ -32,7 +34,7 @@ function save(key, value) {
 
 function freshSolo(mapId = "la") {
   return createGame(FACTIONS.map((_, index) => ({
-    name: index ? FACTION_NAMES[index] : 'You',
+    name: index ? undefined : 'You',
     bot: index !== 0
   })), mapId);
 }
@@ -64,16 +66,28 @@ function storedSolo() {
 let renderView, toast, dialog, solo, room = null, token = null;
 let mode = 'solo', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
+let supplyCity='';
 let pending = false, errorMessage = '', playingBots = false;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
 let inviteOpen = false, resultShown = '', guideTab = 'start';
-const getState = () => mode === 'online' && room?.game ? room.game : solo;
+let renderedSource, renderedSeat, renderedView;
+function getState() {
+  const source=mode==='online' && room?.game ? room.game : solo;
+  const seat=currentSeat();
+  if (source!==renderedSource || renderedSeat!==seat) {
+    renderedSource=source;
+    renderedSeat=seat;
+    renderedView=campaignView(source,seat);
+  }
+  return renderedView;
+}
 const currentSeat = () => mode === 'online' && room ? room.you : 0;
 function emit() {
+  if (modal==='supplies' && dialog?.open) drawDialog();
   const state = getState();
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
   renderView?.({
-    state, seat: currentSeat(), room,
+    state, seat: currentSeat(), room, session: mode==='solo' ? solo.seed : room?.code,
     mode, busy: pending || (mode === 'solo' && playingBots) || (mode === 'online' && !room?.game)
   });
 }
@@ -383,7 +397,8 @@ const row = (title, subtitle, value = '') =>
   `<li class="modal-row"><div><strong>${title}</strong>${subtitle ? `<small>${subtitle}</small>` : ''}</div>${value ? `<span class="modal-number">${value}</span>` : ''}</li>`;
 const list = items => `<ul class="modal-list">${items.join('')}</ul>`;
 const actions = (...items) => `<div class="modal-actions">${items.join('')}</div>`;
-const factionMark = seat => `<i aria-hidden="true" class="modal-faction" style="background:${FACTIONS[seat].color};display:inline-block;width:.55rem;height:.55rem;border-radius:50%;margin-right:.55rem"></i>`;
+const seatFaction = seat => getState()?.players[seat]?.faction ?? seat;
+const factionMark = seat => `<i aria-hidden="true" class="modal-faction" style="background:${FACTIONS[seatFaction(seat)].color};display:inline-block;width:.55rem;height:.55rem;border-radius:50%;margin-right:.55rem"></i>`;
 
 // Old campaigns store a sentence alongside the structured order. Match the old
 // sentence patterns only, so names in a player's language stay exactly as entered.
@@ -395,8 +410,8 @@ function eventText(entry) {
   if (!entry) return '';
   const text = String(entry.text || '');
   if (!/[\u3400-\u9fff]/.test(text)) return text;
-  const faction = FACTION_NAMES[entry.seat] || 'A faction';
-  const oldFaction = oldFactions[entry.seat];
+  const faction = FACTION_NAMES[seatFaction(entry.seat)] || 'A faction';
+  const oldFaction = oldFactions[seatFaction(entry.seat)];
   const item = products[entry.item]?.name;
   let match;
   switch (entry.type) {
@@ -459,7 +474,7 @@ function multiplayerContent() {
   if (room && mode === 'online') {
     const lobby = room.phase === 'lobby';
     const host = room.you === room.host;
-    const roster = room.players.map(p => row(factionMark(p.id) + '<span translate="no">' + escapeHTML(p.name) + '</span>', FACTION_NAMES[p.id],
+    const roster = room.players.map(p => row((lobby ? '' : factionMark(p.id)) + '<span translate="no">' + escapeHTML(p.name) + '</span>', lobby ? 'Civilization drawn at start' : FACTION_NAMES[seatFaction(p.id)],
       [p.id === room.host && 'Host', p.id === room.you && 'You'].filter(Boolean).join(' · ')));
     const sharing = `<div class="modal-room"><span class="modal-muted">Room code</span><strong class="modal-code" translate="no">${escapeHTML(room.code)}</strong></div>` +
       actions(button('copy', 'Copy invite link'), button('show-link', inviteOpen ? 'Hide link' : 'Show link')) +
@@ -485,25 +500,39 @@ function multiplayerContent() {
 
 const guideSections = {
   start: {label:'First turn', entries:[
-    ['Send out your settler', 'Select the Settler on the map or in your roster. Point at a highlighted hex to preview the route. Click a reachable hex to move. You can also tap a highlighted destination on a touch screen.'],
-    ['Found a city', 'A settler with movement left can found a city on friendly or neutral land at least three hexes from any city. Choose Found city. The settler becomes the city and nearby open land joins your faction.'],
+    ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
+    ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
+    ['Explore the fog', 'Dark tiles are uncharted. Move a Scout to see three hexes in every direction. The shaded terrain behind it stays on your map, but enemy positions disappear when your units lose sight.'],
+    ['Survey for deposits', 'Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.'],
     ['Choose your map', 'Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
-    ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Your faction earns science and culture separately every turn.'],
+    ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
     ['Plan your turn', 'Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
   ]},
   city: {label:'City growth', entries:[
-    ['Food and production', 'Food grows your population. Production completes the unit or building in a city’s queue. More residents contribute capital and can raise production.'],
-    ['Improve nearby land', 'Builders have three charges. Build a farm on a friendly coast, lowland or urban hex, or a mine in woodland or foothills. Within two hexes of a friendly city, farms add food and mines add production to the nearest city.'],
+    ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
+    ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
+    ['Use stored goods', 'Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.'],
+    ['Plan housing', 'A new city has room for three citizens. A granary adds two places and a residential quarter adds three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.'],
+    ['Assign citizens', 'Select your city and open Manage citizens. Food, industry and science priorities change which controlled districts are worked. Each citizen works one district or a specialist job in town. The same district cannot support two cities.'],
     ['Choose a building', 'A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.'],
     ['Make room for recruits', 'Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.']
   ]},
   battle: {label:'Field tactics', entries:[
+    ['Train a scout', 'A Scout is available as soon as you found a city. It has three movement points to a Militia unit’s two. Forests and hills still cost two points to enter.'],
     ['Read the terrain', 'Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.'],
     ['Preview an attack', 'Select a military unit and click a highlighted enemy. The combat forecast shows the damage and possible losses. Choose Confirm attack to commit, or return to the map to reconsider. An attack spends the unit’s remaining movement.'],
     ['Take a city', 'Melee units strike adjacent targets and can take counterdamage. Rangers can strike from two hexes away without a counterattack. Defeat the garrison first. A ranged attack can reduce a city to one health point. A surviving melee attacker can capture it.'],
     ['Upgrade in the field', 'After the required discovery, select a veteran in your territory and pay the displayed capital cost to upgrade it. The unit keeps its health proportion and spends the rest of its movement.'],
+    ['Repel a raid', 'A lookout near an established city may return to its camp. Intercept it before it reports, or attack the camp before the party leaves two rounds later. A military defender within one hex of the city, or city walls, repels the raid. Raiders leave civilian units alone.'],
+    ['Clear a camp', 'Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.'],
     ['Recover', 'Units regain movement at the start of their faction’s turn. A unit in a friendly city heals up to 12 health. Each friendly city recovers up to 6.']
+  ]},
+  universities: {label:'Universities', entries:[
+    ['Charter a university', 'Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.'],
+    ['Survey the campus', 'Choose an empty land tile in your territory within two hexes of the host city. Deposits, improvements, city centers and reserved sites are protected. A matching terrain grants one additional point in the listed specialty every turn.'],
+    ['Compete for a charter', 'Pay the charter fee and assign city production. The first campus of its kind to open wins the charter for this world. A competing city stops work and recovers its fee. Its spent production is lost.'],
+    ['Read the opening report', 'A completed campus appears on the map. Select the campus tile to inspect its effect. Capturing its host city transfers the campus with the city.']
   ]},
   coast: {label:'At sea', entries:[
     ['Choose a harbor site', 'Found on the shore or connect a city to your own coast within two hexes. Choose Harbor in city production. The harbor reserves an adjacent water hex and earns capital.'],
@@ -525,6 +554,7 @@ function countLabel(n, singular, plural = singular + 's') {
 function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
+  if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending,escapeHTML)};
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
@@ -540,12 +570,12 @@ function content() {
     const winnersFirst = seat => Number(state.winners?.includes(seat));
     const ranked = state.players.map((p, seat) => ({seat, name:p.name, stats:getStats(state,seat)}))
       .sort((a,b)=>winnersFirst(b.seat)-winnersFirst(a.seat) || b.stats.score-a.stats.score);
-    const winners = (state.winners || []).map(seat => FACTION_NAMES[seat]);
-    const label = winners.join(' and ') + (state.victoryReason === 'domination' ? ' captured every original capital.' : winners.length > 1 ? ' tied on civic points and share victory.' : ' won on civic points.');
+    const winners = (state.winners || []).map(seat => FACTION_NAMES[seatFaction(seat)]);
+    const label = winners.join(' and ') + (state.victoryReason === 'survival' ? ' is the last civilization standing.' : state.victoryReason === 'domination' ? ' captured every original capital.' : winners.length > 1 ? ' tied on civic points and share victory.' : ' won on civic points.');
     return { kicker: 'Campaign records', title: state.phase === 'finished' ? 'Campaign complete' : 'Faction standings',
       body: desc(state.phase === 'finished' ? label : `Holding every original capital wins immediately. Civic points are compared at the end of the round when a faction reaches ${TARGET_SCORE}, or after round ${MAX_ROUNDS}.`) +
-        list(ranked.map(({seat,name,stats}) => row(factionMark(seat) + FACTION_NAMES[seat],
-          [mode === 'online' && '<span translate="no">'+escapeHTML(name)+'</span>', countLabel(stats.cities,'city','cities'), countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), escapeHTML(stats.score)+' pts'))) +
+        list(ranked.map(({seat,name,stats}) => row(factionMark(seat) + FACTION_NAMES[seatFaction(seat)],
+          [mode === 'online' && '<span translate="no">'+escapeHTML(name)+'</span>', seat===currentSeat()?countLabel(stats.cities,'city','cities'):'In sight', countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), (seat===currentSeat()||state.phase==='finished') ? escapeHTML(state.players[seat].score ?? stats.score)+' pts' : '—'))) +
         actions(button('back','Return to map','primary')) };
   }
   if (modal === 'campaign-atlas') {
@@ -558,7 +588,7 @@ function content() {
     body:mapPicker(selectedMap) + desc('Starting over replaces the saved campaign on the selected map. Your other regions keep their progress.') + actions(button('restart','Start new campaign','primary'),button('menu','Keep playing'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings','Faction standings'),button('log','Event log'),
-    button('help','Field guide'), mode === 'solo' ? button('campaign-atlas','Campaign atlas') : '', mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
+    button('help','Field guide'), button('supplies','Supply ledger'), mode === 'solo' ? button('campaign-atlas','Campaign atlas') : '', mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
 }
 
 function drawDialog() {
@@ -590,6 +620,13 @@ async function copyInvite() {
   }
 }
 function modalAction(act) {
+  if(act==='supplies'){open('supplies');return}
+  if(act.startsWith('cargo-')){
+    const [,resource,market]=act.split('-');
+    const city=dialog.querySelector('[name=supply-city]')?.value;
+    if(city)supplyCity=city;
+    doAction({type:'shipment',resource,market,city});return;
+  }
   if (act === 'language-en' || act === 'language-zh-CN') {
     setLanguage(act.slice(9));
     drawDialog();

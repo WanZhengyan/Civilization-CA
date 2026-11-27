@@ -1,3 +1,5 @@
+@import url("./city-planning.css");
+@import url("./campus.css");
 @import url("./production-art.css");
 :root{color-scheme:dark;--bg:#13161e;--surface:#1c202b;--panel:#1c202b;--edge:#363a47;--line:#323645;--ink:#f0ece3;--muted:#a4a7b3;--metal:#dcbc80;--gold:#ebc988;--serif:"Baskervville","Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;--sans:"Inter","Avenir Next",Arial,sans-serif}
 *{box-sizing:border-box}html{min-width:320px}body{margin:0;color:var(--ink);background:radial-gradient(ellipse at 65% 22%,#1b1e29 0%,#151820 48%,#11141b 100%);font-family:var(--sans);font-size:16px;-webkit-font-smoothing:antialiased}button,input{font:inherit}button{color:inherit;cursor:pointer;background:none;border:0}button:disabled{cursor:default;opacity:.57}button:focus-visible,input:focus-visible{outline:2px solid #e3c789;outline-offset:3px}button{transition:background .16s,color .16s,border-color .16s,transform .16s}button:enabled:active{transform:translateY(1px)}button svg,.section-label svg,.resource-icon svg,.turn-icon svg{width:17px;height:17px;stroke-width:1.65;flex-shrink:0}h1,h2,p{margin:0}[hidden]{display:none!important}
@@ -217,3 +219,18 @@ main{max-width:1680px;margin:auto;padding:0 clamp(20px,3.2vw,55px)}.campaign-hea
 .language-preference p{margin:0 0 .5rem}
 .language-preference .modal-tab[aria-pressed="true"]{border-color:#c6a760;color:#f1d996;background:#37352b}
 html[lang="zh-CN"] :is(.section-label,.eyebrow,.modal-kicker,.resource-label,.entity-stat small,.agenda-title){letter-spacing:.05em}
+
+.unit-sight{display:flex;align-items:center;justify-content:space-between;padding:5px 0;color:#b6c9cd;font-size:12px}.unit-sight span{display:flex;gap:5px;align-items:center}.unit-sight svg{width:13px;height:13px}.unit-sight small{font-weight:normal}
+.deposit-strip{display:flex;align-items:center;gap:.45rem;margin:.5rem 0 .2rem;padding:.4rem .45rem;border:1px solid #454a43;border-radius:3px}.deposit-strip i{width:.55rem;height:.55rem;transform:rotate(45deg)}.deposit-strip small{color:#acb7ad}.deposit-strip strong{font-size:.8rem;color:#e7d6b2;margin-left:auto}
+
+.site-detail{display:flex;justify-content:space-between;gap:.4rem;font-size:.76rem;color:#aebcb1}.site-detail strong{font-weight:550;color:#d7caae}
+
+.cargo-ledger{display:grid;gap:5px}.cargo-row{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid #424c4c;border-radius:4px;background:#21292d}.cargo-symbol{display:grid;place-items:center;width:25px;height:25px;border:1px solid var(--cargo);border-radius:50%;color:var(--cargo);font-family:Georgia,serif;font-weight:700}.cargo-balance{display:grid;gap:3px}.cargo-balance small{font-size:.76rem;color:#b4bbae}.cargo-actions{margin-left:auto;display:flex;gap:4px}.cargo-order,.cargo-destination select{background:#252d31;color:#e6d3a8;border:1px solid #746753;border-radius:3px;padding:6px;font:inherit;font-size:.76rem}.cargo-order:disabled{color:#92978d;border-color:#3f4746}.cargo-destination{display:flex;align-items:center;gap:9px;margin:9px 0 13px;font-size:.88rem}.cargo-destination select{max-width:60%}@media(max-width:520px){.cargo-row{display:grid;grid-template-columns:25px 1fr}.cargo-actions{grid-column:2;justify-self:start;margin:0}.cargo-order{min-height:36px}}
+
+
+.brand .brand-name { font-size: clamp(20px, 1.9vw, 29px); letter-spacing: .012em; white-space: nowrap; text-transform: none; }
+.brand-state { color: #d6b97e; font-size: .79em; letter-spacing: .045em; }
+.expedition-orders p { margin: 9px 0; color: #bbc4c5; font-size: .81rem; line-height: 1.5; }
+.expedition-orders button { width: 100%; min-height: 37px; padding: 6px 10px; color: #e3c994; border: 1px solid #71634c; border-radius: 3px; text-align: left; }
+.expedition-orders button:hover, .expedition-orders button:focus-visible { background: #3c3832; }
+@media (max-width: 480px) { .brand .brand-name { font-size: 18px; } }

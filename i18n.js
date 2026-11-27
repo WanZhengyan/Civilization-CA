@@ -29,6 +29,7 @@ function count(n,word) {
   return n+' '+(counters[normalized] || word);
 }
 const phraseRules = [
+  [/^(.+) (grew to|fell to) (\d+) residents\.$/,(city,verb,n)=>cityLabel(city)+(verb==='grew to'?'的人口增至':'的人口减至')+n+'。'],
   [/^Holding every original capital wins immediately\. Civic points are compared at the end of the round when a faction reaches (\d+), or after round (\d+)\.$/,(score,round)=>'占领所有初始首府即可立刻获胜。有阵营达到 '+score+' 分时，在本轮结束后比较积分；最迟于第 '+round+' 轮结算。'],
   [/^If a faction reaches (\d+) civic points, finish the current round and compare scores\. The same scoring applies after round (\d+)\. The highest score wins, and a tie shares victory\.$/,(score,round)=>'当任一阵营达到 '+score+' 分，在当前轮结束后比较积分。第 '+round+' 轮结束后也按此规则结算。最高分获胜，同分者共享胜利。'],
   [/^(?:TURN|Turn) (\d+)$/i, n=>'第 '+n+' 回合'],
@@ -59,7 +60,7 @@ const phraseRules = [
   [/^(\d+) (incoming damage|retaliation damage)$/,(n,k)=>(k==='incoming damage'?'受到伤害 ':'反击伤害 ')+n],
   [/^(Frontier|Industrial|Modern) Era$/i,n=>zh(n)],
   [/^Requires (.+?)\.?$/i,n=>'前置条件：'+zh(n)],
-  [/^(.+) (ended its turn|won on civic points|controls every original capital|captured every original capital|tied on civic points and share victory)\.$/,(n,verb)=>zh(n)+({'ended its turn':'结束了回合。','won on civic points':'取得了积分胜利。','controls every original capital':'占领了所有初始首府。','captured every original capital':'占领了所有初始首府。','tied on civic points and share victory':'积分并列，共享胜利。'}[verb])],
+  [/^(.+) (is the last civilization standing|ended its turn|won on civic points|controls every original capital|captured every original capital|tied on civic points and share victory)\.$/,(n,verb)=>zh(n)+({'is the last civilization standing':'成为最后幸存的文明。','ended its turn':'结束了回合。','won on civic points':'取得了积分胜利。','controls every original capital':'占领了所有初始首府。','captured every original capital':'占领了所有初始首府。','tied on civic points and share victory':'积分并列，共享胜利。'}[verb])],
   [/^(.+) (won|shared victory) with (\d+) (?:civic )?points\.$/,(n,v,points)=>zh(n)+'以 '+points+' 分'+(v==='won'?'获胜。':'并列获胜。')],
   [/^(.+) (began debating|adopted) (.+)\.$/,(n,v,item)=>zh(n)+(v==='adopted'?'通过了':'开始审议')+zh(item)+'。'],
   [/^Upgrade to (.+)$/,n=>'升级为'+zh(n)],
