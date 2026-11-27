@@ -55,9 +55,7 @@ function storedSolo() {
   if (candidate?.players?.length === FACTIONS.length && candidate.board &&
       ['finished', 'playing'].includes(candidate.phase) && Array.isArray(candidate.log)) {
     try {
-      const upgraded = migrateGame(candidate);
-      if (upgraded !== candidate) save(SOLO_KEY, upgraded);
-      return upgraded;
+      return migrateGame(candidate);
     } catch { /* An unreadable device save cannot be resumed. */ }
   }
   return null;
@@ -115,13 +113,16 @@ function roomURL(code) {
   url.searchParams.set('room', code);
   return url.href;
 }
-function updateURL(code) {
+function updateURL(code, board = false) {
   const url = new URL(location.href);
   if (code) url.searchParams.set('room', code);
   else url.searchParams.delete('room');
+  if (board) url.hash = 'campaign';
+  else if (url.hash === '#campaign') url.hash = '';
   history.replaceState(null, '', url);
 }
 function checkFinished() {
+  if (mode === 'home') return;
   const state = getState();
   if (!state || state.phase !== 'finished') return;
   const key = mode === 'solo' ? 'solo' : room?.code;
@@ -270,15 +271,38 @@ function returnToSolo() {
   clearTimeout(pollTimer);
   polling = false;
   mode = 'solo';
-  solo ||= storedSolo() || freshSolo(selectedMap);
+  // A room can be the first thing a visitor opens. Let them choose their
+  // first solo map instead of silently creating one when leaving the room.
+  if (!solo) {
+    enterTitle();
+    open('campaign-atlas');
+    return;
+  }
   showTitle(false);
   room = token = null;
   offline = inviteOpen = false;
   save(LAST_ROOM_KEY, null);
-  updateURL(null);
+  updateURL(null,true);
   close();
   emit();
   runBots();
+  checkFinished();
+}
+
+function enterTitle() {
+  if (pending) return;
+  archiveSolo();
+  roomEpoch++;
+  clearTimeout(pollTimer);
+  polling = false;
+  mode = 'home';
+  room = token = null;
+  offline = inviteOpen = false;
+  updateURL(null);
+  close();
+  showTitle(true);
+  window.scrollTo(0,0);
+  document.querySelector('[data-title="solo"]')?.focus({preventScroll:true});
 }
 
 async function seatRequest(form) {
@@ -387,7 +411,7 @@ function open(kind, tab, code) {
   if (changed) errorMessage = '';
   if (tab) roomTab = tab;
   if (code) joinCode = code;
-  if (changed && ['multiplayer','campaign-atlas','restart'].includes(kind) && previousModal !== 'campaign-atlas') selectedMap = getMap(getState()).id;
+  if (changed && ['multiplayer','campaign-atlas','restart'].includes(kind) && previousModal !== 'campaign-atlas' && mode !== 'home') selectedMap = getMap(getState()).id;
   if (changed && kind === 'multiplayer') inviteOpen = false;
   drawDialog();
   if (!dialog.open) dialog.showModal();
@@ -592,13 +616,13 @@ function content() {
     const saved=campaignSave(selectedMap);
     const status=saved ? getMap(selectedMap).name+' · Round '+saved.round : 'No campaign started on this map.';
     return {kicker:'California campaigns', title:'Campaign atlas',
-      body:mapPicker(selectedMap)+muted(status)+actions(button('load-region',saved?'Resume campaign':'Start campaign','primary'))};
+      body:mapPicker(selectedMap)+muted(status)+actions(button('load-region',saved?'Resume campaign':'Start campaign','primary'),saved?button('confirm-restart','Start new campaign'):'')};
   }
   if (modal === 'restart') return {kicker:'Solo campaign', title:'Start a new campaign?',
-    body:mapPicker(selectedMap) + desc('Starting over replaces the saved campaign on the selected map. Your other regions keep their progress.') + actions(button('restart','Start new campaign','primary'),button('menu','Keep playing'))};
+    body:muted(getMap(selectedMap).name) + desc('Starting over replaces the saved campaign on the selected map. Your other regions keep their progress.') + actions(button('restart','Start new campaign','primary'),button('campaign-atlas','Keep saved campaign'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings','Faction standings'),button('log','Event log'),
-    button('help','Field guide'), button('supplies','Supply ledger'), mode === 'solo' ? button('campaign-atlas','Campaign atlas') : '', mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
+    button('help','Field guide'), button('supplies','Supply ledger'), button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Campaign atlas') : '', mode === 'solo' ? button('confirm-restart','New solo campaign') : button('to-solo','Return to solo'))};
 }
 
 function drawDialog() {
@@ -630,6 +654,7 @@ async function copyInvite() {
   }
 }
 function modalAction(act) {
+  if(act==='title-screen'){enterTitle();return}
   if(act==='supplies'){open('supplies');return}
   if(act.startsWith('cargo-')){
     const [,resource,market]=act.split('-');
@@ -702,7 +727,7 @@ async function init({ render, toast: showToast }) {
   document.getElementById('title-screen').addEventListener('click', event => {
     const action = event.target.closest('[data-title]')?.dataset.title;
     if (pending || !action) return;
-    if (action === 'solo') open('campaign-atlas');
+    if (action === 'solo') { selectedMap = getMap(solo).id; open('campaign-atlas'); }
     if (action === 'create' || action === 'join') open('multiplayer',action);
   });
   dialog.addEventListener('click', e => {
@@ -740,6 +765,8 @@ async function init({ render, toast: showToast }) {
       if (modal) drawDialog();
       emit();
     }
+  } else if (!invite && location.hash === '#campaign' && solo) {
+    returnToSolo();
   } else if (invite) {
     open('multiplayer','join',invite);
     if (!validCode(invite)) showError('This invitation has an invalid room code.');
