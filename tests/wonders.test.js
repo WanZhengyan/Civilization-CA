@@ -28,7 +28,8 @@ test('university charters identify their exact research or civic and authorize p
   for (const [item,def] of Object.entries(WONDERS)) {
     const track=def.tech?'technologies':'civics',key=def.tech||def.civic;
     assert.ok(universitiesUnlockedBy(key).includes(def.name));
-    assert.equal(getProductionOptions(state,city.id).find(o=>o.item===item).enabled,false);
+    assert.ok(!getProductionOptions(state,city.id).some(o=>o.item===item));
+    assert.deepEqual(getWonderSites(state,city.id,item),[]);
     assert.throws(()=>applyAction(state,0,{type:'produce',city:city.id,item}));
     state.players[0][track]=[key];
     assert.equal(getProductionOptions(state,city.id).find(o=>o.item===item).enabled,true);
@@ -130,6 +131,7 @@ test('survey choices vary across random starts in all three regions with their a
       state = applyAction(state, 0, {type:'found', unit:pioneer.id});
       const city = state.cities.find(c => c.seat === 0);
       locations.add(city.tile);
+      state.players[0].civics=['charter'];
       const sites = getWonderSites(state, city.id, 'ucla');
       if (sites.length) viableOpenings++;
       for (const site of sites) {

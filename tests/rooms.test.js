@@ -309,3 +309,29 @@ test("an incoming strike survives polling, a lost response and reconnect without
   assert.deepEqual(rejoin.room.game.intel.battles,[hit]);
   assert.deepEqual((await seats.read(seats.host)).game.intel.battles,sent);
 });
+
+test('private production opens on civic completion and rejects guessed future projects over HTTP',async t=>{
+  const fixture=roomFixture(t), seats=await twoPlayers(fixture);
+  let room=await seats.start();
+  room=(await seats.act(seats.host,room.revision,{type:'found',unit:room.game.units.find(u=>u.seat===0).id})).room;
+  const city=room.game.cities.find(c=>c.seat===0);
+  const list=room=>rules.getProductionOptions(room.game,city.id).map(p=>p.item);
+  assert.ok(!list(room).includes('neighborhood'));
+  assert.ok(!list(room).includes('ucla'));
+  for(const item of ['neighborhood','ucla','artillery','shipyard','destroyer']) {
+    await seats.act(seats.host,room.revision,{type:'produce',city:city.id,item},422);
+  }
+  assert.equal((await seats.read(seats.host)).revision,room.revision);
+  room=(await seats.act(seats.host,room.revision,{type:'civic',item:'publicWorks'})).room;
+  assert.equal(room.game.players[0].civic,'publicWorks');assert.ok(!list(room).includes('neighborhood'));
+  for(let n=0;n<10 && !room.game.players[0].civics.includes('publicWorks');n++){
+    room=(await seats.act(seats.host,room.revision,{type:'end'})).room;
+    await seats.act(seats.guest,room.revision,{type:'end'});
+    room=await seats.read(seats.host);
+  }
+  assert.ok(list(room).includes('neighborhood'));assert.ok(!list(room).includes('ucla'));
+  const produced=(await seats.act(seats.host,room.revision,{type:'produce',city:city.id,item:'neighborhood'})).room;
+  assert.equal(produced.game.cities.find(c=>c.id===city.id).queue.item,'neighborhood');
+  const guest=await seats.read(seats.guest);
+  assert.ok(!rules.getProductionOptions(guest.game,city.id).length);
+});

@@ -1,7 +1,7 @@
 import {placeNaturalWonders, neighboringWonders} from './natural-wonders.js';
 import {REGIMENTS, matchup, formationChoices, signalPosition} from './regiments.js';
 import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
-import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
+import {getVision, getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
 export {RESOURCES, canSeeDeposits, canSurvey};
 import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
@@ -13,7 +13,7 @@ import { foodForecast, feedCity } from "./population.js";
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
 import {nextTechnology} from './applied-science.js';
-import {TECHS, CIVICS, ERA_UNITS, eraFor} from './progression.js';
+import {TECHS, CIVICS, ERAS, ERA_UNITS, eraFor} from './progression.js';
 export {TECHS, CIVICS, ERAS} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
 import {campaignChart, REGIONAL_SHAPE} from './region-shapes.js';
@@ -207,7 +207,7 @@ export const BUILDINGS = {
   ...WONDERS,
   ...PORT_BUILDINGS,
   granary: {name:"Granary", required:10, description:"Provides 2 food and housing for 2 more citizens."},
-  neighborhood: {name:"Residential quarter", required:16, description:"Provides housing for 3 more citizens."},
+  neighborhood: {name:"Residential quarter", era:"frontier", civic:"publicWorks", required:16, description:"Provides housing for 3 more citizens."},
   workshop: {name:"Workshop", required:13},
   monument: {name:"Monument", required:10},
   walls: {name:"City walls", required:14}
@@ -331,7 +331,9 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
 export function getWonderSites(state,cityId,item) {
-  return surveyCampus(state, cityOrNull(state,cityId), item, getMap(state), hexDistance);
+  const city=cityOrNull(state,cityId), campus=WONDERS[item];
+  if (!city || !campus || !productionUnlocked(state,city.seat,campus)) return [];
+  return surveyCampus(state, city, item, getMap(state), hexDistance);
 }
 export function getPortSite(state, cityId) {
   const map=getMap(state);
@@ -660,7 +662,7 @@ function fieldUpgrade(state, unit) {
   const source = UNIT_TYPES[unit.type];
   if (!source.upgrade) return null;
   const next = UNIT_TYPES[source.upgrade];
-  if (!knows(state,unit.seat,next.tech)) return null;
+  if (!productionUnlocked(state,unit.seat,next)) return null;
   let reason = '';
   if (state.board[unit.tile].owner !== unit.seat) reason = 'Move into your territory to upgrade.';
   else if (state.players[unit.seat].capital < source.upgradeCost) reason = 'Your treasury cannot cover this upgrade.';
@@ -673,11 +675,24 @@ export function getUnitOptions(state,unitId) {
   return {moves:[...findRoutes(state,unit).parents.keys()],attacks:attackTargets(state,unit),upgrade:fieldUpgrade(state,unit),
     canFound:unit.type==='settler' && canSettle(state,unit.seat,unit.tile),improvements:improvement ? [improvement]:[]};
 }
+function productionUnlocked(state,seat,definition,era=getEra(state,seat)) {
+  return (!definition.era || era.rank>=ERAS[definition.era].rank)
+    && (!definition.tech || knows(state,seat,definition.tech))
+    && (!definition.civic || adopted(state,seat,definition.civic));
+}
+
 export function getProductionOptions(state,cityId) {
   const city=cityOrNull(state,cityId);
-  if (!city) return [];
+  if (!city || (state.intel && state.intel.seat!==city.seat)) return [];
   const rate=getCityYield(state,city.id).production;
-  return Object.entries(PRODUCTS).map(([item,def])=>{
+  const era=getEra(state,city.seat), berth=getPortSite(state,city.id);
+  const map=getMap(state);
+  const hasCoast=city.buildings.includes('harbor') || berth || findPortSite(
+    state,city,map.byId,map.neighbors,getVision(state,city.seat).explored,true);
+  const available=Object.entries(PRODUCTS).filter(([item,def])=>
+    productionUnlocked(state,city.seat,def,era) &&
+    (hasCoast || !(Object.hasOwn(PORT_BUILDINGS,item) || def.domain==='sea')));
+  return available.map(([item,def])=>{
     const kind=Object.hasOwn(UNIT_TYPES,item) ? 'unit':'building';
     let reason='';
     if (state.phase!=='playing') reason='The campaign has ended.';
@@ -686,11 +701,9 @@ export function getProductionOptions(state,cityId) {
     else if (city.buildings.includes(item)) reason='This city already has that building.';
     else if (WONDERS[item] && campusStatus(state,item)==='complete') reason='This university has already opened.';
     else if (WONDERS[item] && state.cities.some(c=>c.seat===city.seat && c.queue?.item===item)) reason='One of your cities already holds this charter.';
-    else if (def.civic && !adopted(state,city.seat,def.civic)) reason='Requires '+CIVICS[def.civic].name+'.';
-    else if (item==='harbor' && !getPortSite(state,city.id)) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
+    else if (item==='harbor' && !berth) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
     else if ((item==='shipyard' || def.domain==='sea') && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
     else if ((item==='frigate' || def.shipyard) && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
-    else if (def.tech && !knows(state,city.seat,def.tech)) reason='Requires '+TECHS[def.tech].name+'.';
     else if (WONDERS[item] && state.players[city.seat].capital<def.grant) reason='You need '+def.grant+' capital.';
     else if (WONDERS[item] && !getWonderSites(state,city.id,item).length) reason='Claim an empty land tile within two hexes of the city.';
     return {item,label:def.name,kind,era:def.era || null,turns:Math.ceil(def.required/rate),required:def.required,enabled:!reason,reason};

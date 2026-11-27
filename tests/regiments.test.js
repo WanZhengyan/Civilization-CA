@@ -8,7 +8,7 @@ function piece(id,type,seat,tile) {
   const {moves,maxHp}=UNIT_TYPES[type];
   return {id,type,seat,tile,moves,maxMoves:moves,hp:maxHp,maxHp};
 }
-const canTrain=(s,type)=>getProductionOptions(s,s.cities[0].id).find(o=>o.item===type).enabled;
+const canTrain=(s,type)=>getProductionOptions(s,s.cities[0].id).some(o=>o.item===type && o.enabled);
 
 test('woodland and foothill routes have a lower cost for light infantry',()=>{
   const s=game(), map=getMap(s);

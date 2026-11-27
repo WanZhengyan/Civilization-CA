@@ -19,6 +19,8 @@ test('an actual housing project completes before lifting the capacity on the nex
   let state=createGame(players,'la',{seed:387});
   if(!state.cities.length)state=applyAction(state,0,{type:'found',unit:state.units.find(u=>u.seat===0).id});
   const city=state.cities.find(c=>c.seat===0);city.population=3;city.food=12;
+  assert.throws(()=>applyAction(state,0,{type:'produce',city:city.id,item:'neighborhood'}),/available production/);
+  state.players[0].civics=['publicWorks'];
   state=applyAction(state,0,{type:'produce',city:city.id,item:'neighborhood'});
   const pending=state.cities.find(c=>c.id===city.id);
   pending.queue.progress=pending.queue.required-1;
@@ -26,4 +28,14 @@ test('an actual housing project completes before lifting the capacity on the nex
   const built=next.cities.find(c=>c.id===city.id);
   assert.ok(built.buildings.includes('neighborhood'));assert.equal(built.population,3);
   assert.equal(getPopulationReport(next,city.id).housing,6);
+});
+
+test('in-progress residential quarters in old saves finish even if their owner has not adopted Public Works',()=>{
+  const game=createGame(players,'la',{seed:387});
+  let state=applyAction(game,0,{type:'found',unit:game.units[0].id});
+  state.cities[0].queue={item:'neighborhood',required:16,progress:15};
+  state=applyAction(JSON.parse(JSON.stringify(state)),0,{type:'end'});
+  assert.ok(state.cities[0].buildings.includes('neighborhood'));
+  assert.equal(state.cities[0].queue,null);
+  assert.ok(!state.players[0].civics.includes('publicWorks'));
 });

@@ -7,6 +7,7 @@ Council agenda|可审议项目
 Full civic tree|完整市政树
 Unlocks policy|解锁方针
 Unlocks unit|解锁单位
+Unlocks building|解锁建筑
 Fund a government program|推行施政方针
 In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.|在市政面板中打开施政方针。市政宪章解锁公众讲堂，公共工程解锁公共建设合同。比较各城市得到和付出的产出，再表决推行。打开完整市政树可查看后续方针和大学奇观。
 Government policy|施政方针
@@ -106,7 +107,7 @@ Plan housing|规划住房
 Under construction|正在建设
 Provides housing for 3 more citizens.|为三名额外居民提供住房。
 Provides 2 food and housing for 2 more citizens.|提供两份粮食和两名额外居民的住房。
-A new city has room for three citizens. A granary adds two places and a residential quarter adds three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.|新城可容纳三名居民。粮仓增加两处住房，住宅区增加三处。住房满额时，城市可以储备下一次人口增长所需的粮食；扩建住房后即可继续增长。可在「管理居民」中启动住房项目。
+A new city has room for three citizens. A granary adds two places. Public Works unlocks residential quarters, which add three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.|新城可容纳三名居民。粮仓增加两处住房。完成公共工程后可建造住宅区，再增加三处住房。住房满额时，城市可以储备下一次人口增长所需的粮食；扩建住房后即可继续增长。可在「管理居民」中启动住房项目。
 Stored food|存粮
 Harvest|粮食产量
 Consumption|粮食消耗
@@ -766,7 +767,7 @@ Found on the shore or connect a city to your own coast within two hexes. Choose 
 Put a crew to work|派渔船出海
 Train a Fishing crew at a harbor. Sail to open water within two water hexes of a friendly harbor and build a Fishery. Each crew has two charges.|在港口训练渔船队，驶入距己方港口两格水路内的空水域，再选择建设渔场。每支渔船队可施工两次。
 Launch a fleet|组建舰队
-A harbor trains Revenue cutters. Add a Shipyard and research Steam Power to build Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.|港口可建造海岸巡逻舰。增建船厂并研究蒸汽动力后，即可建造蒸汽护卫舰。舰船能炮击海岸，占领城市仍需地面部队。
+A harbor trains Revenue cutters. Research Steam Power to unlock the Shipyard, then build one to train Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.|港口可训练海岸巡逻舰。研究蒸汽动力可解锁船厂，在港口建好船厂即可训练蒸汽护卫舰。战舰可以炮击海岸，占领城市还需要陆军。
 `);
 section(`
 Harbor district|港区

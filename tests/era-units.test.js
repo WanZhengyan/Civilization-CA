@@ -12,12 +12,11 @@ test('training follows research and mobilized new units retain their actual serv
   let s=fresh();
   const id=city(s).id;
   const locked=option(s,'artillery');
-  assert.equal(locked.enabled,false);
-  assert.match(locked.reason,/Steam Power/);
-  assert.throws(()=>act(s,{type:'produce',city:id,item:'artillery'}),/Requires/);
+  assert.equal(locked,undefined);
+  assert.throws(()=>act(s,{type:'produce',city:id,item:'artillery'}),/available production/);
   s.players[0].technologies=['industry','steam'];
   s.players[0].civics=['mobilization'];
-  assert.equal(option(s,'armor').enabled,false);
+  assert.equal(option(s,'armor'),undefined);
   assert.equal(option(s,'artillery').enabled,true);
   s=act(s,{type:'produce',city:id,item:'artillery'});
   for(let n=0;n<10&&!s.units.some(u=>u.type==='artillery');n++)s=nextRound(s);

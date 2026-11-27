@@ -420,6 +420,7 @@ function productionOptions(){
   el("production-city").translate=!customCity(c);
   text("production-city",c.name);
   const list=getProductionOptions(view.state,c.id);
+  if(campusItem && !list.some(o=>o.item===campusItem)){campusItem=null;campusSite=null}
   if(campusItem && !c.queue) {
     const sites=getWonderSites(view.state,c.id,campusItem);
     if(!sites.some(s=>s.id===campusSite))campusSite=sites[0]?.id;
@@ -477,6 +478,8 @@ function paintResearch(){
         const label=o.completed?"Complete":o.locked?"Locked":o.turns===null?turnsText(null):o.active?"In progress":o.turns===0?"Ready":turnsText(o.turns);
         const needs=o.requires.map(key=>optionNames[key]||key);
         const prereq=needs.length?'<span class="project-prereq">Requires '+esc(needs.join(" + "))+'</span>':'';
+        const buildingNotes=Object.entries(BUILDINGS).filter(([item,def])=>!WONDERS[item] && (def.tech||def.civic)===o.item)
+          .map(([,def])=>'<span class="project-prereqs"><span>Unlocks building</span> · <span>'+esc(def.name)+'</span></span>').join('');
         let researchNotes='';
         if (id==='research') {
           const links=researchLinks(o.item,c.options,UNIT_TYPES);
@@ -484,7 +487,7 @@ function paintResearch(){
             if (items.length) researchNotes+='<span class="research-links"><span>'+esc(label)+'</span> · <span>'+items.map(name=>'<span>'+esc(name)+'</span>').join(', ')+'</span></span>';
           }
         }
-        return '<button class="project-option" data-project="'+esc(o.item)+'" data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+prereq+researchNotes+'<span class="project-meta"><span>'+esc(o.cost+" "+c.resource)+'</span><b>'+esc(label)+'</b></span></button>';
+        return '<button class="project-option" data-project="'+esc(o.item)+'" data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+buildingNotes+prereq+researchNotes+'<span class="project-meta"><span>'+esc(o.cost+" "+c.resource)+'</span><b>'+esc(label)+'</b></span></button>';
       }).join("");
       return '<section class="council-tier" data-era="'+esc(tier)+'"><h3>'+esc(eraName(tier))+'</h3><div class="project-grid">'+cards+'</div></section>';
     });

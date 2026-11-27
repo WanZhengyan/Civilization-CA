@@ -21,11 +21,11 @@ function finishProduction(s,city) {
 test('a harbor launches ships into water only and a blocked launch waits rather than spawning ashore',()=>{
   let state=portGame();
   const city=state.cities[1], interior=state.cities[0];
-  assert.match(getProductionOptions({...state,turn:0},interior.id).find(p=>p.item==='cutter').reason,/harbor/);
+  assert.ok(!getProductionOptions({...state,turn:0},interior.id).some(p=>p.item==='cutter'));
+  assert.ok(!getProductionOptions(state,city.id).some(p=>p.item==='frigate'));
+  state.players[1].technologies.push('steam');
   assert.match(getProductionOptions(state,city.id).find(p=>p.item==='frigate').reason,/shipyard/);
   city.buildings.push('shipyard');
-  assert.match(getProductionOptions(state,city.id).find(p=>p.item==='frigate').reason,/Steam/);
-  state.players[1].technologies.push('steam');
   assert.equal(getProductionOptions(state,city.id).find(p=>p.item==='frigate').enabled,true);
   state=order(state,{type:'produce',city:city.id,item:'cutter'});
   const water=[city.portTile,...neighbors(city.portTile)].filter(id=>TILE_BY_ID[id].terrain==='ocean');

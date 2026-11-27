@@ -19,6 +19,9 @@ test('a coastal harbor reserves a water hex, adds tax income, and enables a prod
   const city=state.cities[1], port=getPortSite(state,city.id);
   assert.equal(TILE_BY_ID[port].terrain,'ocean');
   assert.equal(getPortSite(state,state.cities[0].id),null);
+  assert.ok(!getProductionOptions(state,city.id).some(o=>o.item==='shipyard'));
+  assert.throws(()=>turn(state,{type:'produce',city:city.id,item:'shipyard'}),/available production/);
+  state.players[1].technologies.push('steam');
   assert.throws(()=>turn(state,{type:'produce',city:city.id,item:'shipyard'}),/harbor/);
   state=turn(state,{type:'produce',city:city.id,item:'harbor'});
   assert.equal(state.cities[1].queue.portTile,port);
@@ -37,9 +40,12 @@ test('a coastal harbor reserves a water hex, adds tax income, and enables a prod
 
 test('an inland city needs a connected chain of owned land to its shoreline', () => {
   const state=createClassicGame(['Inland','Coast']), city=state.cities[0];
-  assert.match(getProductionOptions(state,city.id).find(o=>o.item==='harbor').reason,/shore/);
+  assert.ok(!getProductionOptions(state,city.id).some(o=>o.item==='harbor'));
   city.tile='7,9';
   assert.equal(getPortSite(state,city.id),null);
+  state.exploration[0]['4,9']=null;
+  state.exploration[0]['5,9']=null;
+  assert.match(getProductionOptions(state,city.id).find(o=>o.item==='harbor').reason,/shore/);
   state.board['5,9'].owner=0;
   assert.equal(getPortSite(state,city.id),null,'isolated shoreline should not grant a port');
   state.board['6,9'].owner=0;
