@@ -917,3 +917,14 @@ Guards gain 14 attack damage against mounted scouts and cut their incoming charg
 Pikes against cavalry · +14 damage|长枪克制骑兵 · 伤害 +14
 Defending pike line · −14 damage|长枪卫队防守 · 伤害 −14
 `);
+
+section(`
+Siege Engineers|攻城工兵
+Signal Corps|通信队
+Siege infantry unit|攻城步兵
+Communications unit|通信部队
+Assault engineers deal 18 extra damage to an ungarrisoned walled city and can capture it.|攻击没有驻军的城墙时，攻城工兵额外造成 18 点伤害，并可占领城市。
+Supports adjacent friendly formations. They deal 8 more damage against rival civilizations. Multiple signal units do not stack.|支援相邻友军。其攻击其他文明时多造成 8 点伤害，多支通信队的效果不会叠加。
+Siege engineers at the walls · +18 damage|工兵攻城 · 伤害 +18
+Adjacent signal corps · +8 damage|邻近通信队 · 伤害 +8
+`);

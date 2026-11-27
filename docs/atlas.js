@@ -705,7 +705,7 @@ function battleFX(g,e,model,f) {
   }
 }
 const UNIT_INSIGNIA = {
-  pikes:'P', skirmisher:'K', melee:'M', ranged:'R', settler:'S', builder:'B', scout:'◈', cavalry:'C', riflemen:'R',
+  sappers:'E', signals:'S', pikes:'P', skirmisher:'K', melee:'M', ranged:'R', settler:'S', builder:'B', scout:'◈', cavalry:'C', riflemen:'R',
   artillery:'A', armor:'T', cutter:'C', frigate:'F', workboat:'W'
 };
 function paintUnits(g,model,scale,now) {

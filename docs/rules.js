@@ -1,4 +1,4 @@
-import {REGIMENTS, matchup, formationChoices} from './regiments.js';
+import {REGIMENTS, matchup, formationChoices, signalPosition} from './regiments.js';
 import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
 import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
@@ -1091,6 +1091,7 @@ function botMovement(state,unit,options) {
   const candidates=[unit.tile,...options.moves];
   const explored=new Set(state.intel.explored);
   let goals;
+  if (unit.type==='signals') return signalPosition(state,unit,options.moves,UNIT_TYPES,hexDistance);
   if (unit.type==='scout') return exploreFrontier(state,unit,options.moves);
   if (settle) goals=state.intel.visible.filter(id=>canSettle(state,unit.seat,id));
   else if (unit.type==='workboat') {

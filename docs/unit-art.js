@@ -461,7 +461,7 @@ function vessel(g,b,type,color,phase,strike) {
 }
 
 const KINDS = new Map([
-  ['pikes','pikes'],['skirmisher','skirmisher'],['settler','settler'],['scout','scout'],['builder','builder'],
+  ['sappers','sappers'],['signals','signals'],['pikes','pikes'],['skirmisher','skirmisher'],['settler','settler'],['scout','scout'],['builder','builder'],
   ['warrior','guard'],['guard','guard'],['melee','guard'],
   ['archer','archer'],['ranger','archer'],['ranged','archer'],
   ['cavalry','cavalry'],['horseman','cavalry'],['riflemen','riflemen'],['artillery','artillery'],
@@ -479,7 +479,7 @@ export function drawUnitArt(g,kind,x,y,options={}) {
   g.scale((options.facing<0?-1:1)*scale,scale);
   g.lineCap='round';g.lineJoin='round';
   const b=brush(g);
-  if(type==='pikes'||type==='skirmisher') drawRegiment(g,b,type,pigment(color),phase,strike);
+  if(['pikes','skirmisher','sappers','signals'].includes(type)) drawRegiment(g,b,type,pigment(color),phase,strike);
   else if(type==='cavalry') horseAndRider(g,b,color,phase,strike);
   else if(type==='riflemen') rifleCompany(g,b,color,phase,strike);
   else if(type==='artillery') fieldArtillery(g,b,color,phase,strike);

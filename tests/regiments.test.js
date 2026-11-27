@@ -37,3 +37,22 @@ test('pike and cavalry forecasts show their asymmetric modifiers and match the a
     assert.equal(next.units.find(u=>u.id==='b').hp,forecast.defenderHpAfter);
   }
 });
+
+test('engineers exploit walls after the garrison falls and friendly signal coverage does not stack',()=>{
+  const s=game(), town=s.cities[1];
+  town.tile='11,8';
+  town.buildings=['walls'];
+  s.units=[piece('a','sappers',0,'10,7')];
+  const unsupported=combatPreview(s,'a',town.tile);
+  assert.equal(unsupported.damage,40+18-7);
+  s.units.push(piece('signal','signals',0,'10,8'),piece('signal-2','signals',0,'9,7'));
+  const covered=combatPreview(s,'a',town.tile);
+  assert.equal(covered.damage,unsupported.damage+8);
+  assert.equal(covered.roleNotes.length,2);
+  s.units.push(piece('g','melee',1,town.tile));
+  const garrison=combatPreview(s,'a',town.tile);
+  assert.equal(garrison.roleNotes.length,1);
+  assert.equal(garrison.damage,40-7+8);
+  const next=applyAction(s,0,{type:'attack',unit:'a',tile:town.tile});
+  assert.equal(next.units.find(u=>u.id==='g').hp,garrison.defenderHpAfter);
+});
