@@ -238,7 +238,8 @@ function inspect(){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
       if(u.type==="settler"){
-        actions+=actionButton("found","Found city",o.canFound?"Settle here":"Unavailable","gold",disabled||!o.canFound);
+        const capital=state.opening==="settlers" && !state.cities.some(c=>c.originalSeat===view.seat);
+        actions+=actionButton("found",capital?"Found capital":"Found city",o.canFound?"Settle here":"Unavailable","gold",disabled||!o.canFound);
         const assessment=survey.get(u.tile);
         explanation=assessment?surveySummary(assessment,true):"Settle at least three hexes from every city, with movement remaining.";
         if(assessment?.nearestCity && !explanation.includes(assessment.nearestCity.name))explanation+=" "+nearestCityText(assessment);

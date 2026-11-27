@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.4 · One settler and no inherited capital
+
+The old opening handed players territory, an army and an established city. Each seat now begins with a single settler on neutral land. Founding consumes that unit and establishes the first capital at the chosen site. An unfounded surviving rival counts as a participant.
+
+58 checks passed. 18 fixed campaigns replayed identically twice. Can a player train an inexpensive explorer with a distinct travel range after founding?
+
 ## 4.3 · Draw a civilization independently of the map
 
 A given seat always represented the same civilization. Civilizations, colors and capitals now follow an independent draw. All twelve ordered two-player combinations occurred across 48 fixed seeds. Human names remain attached to their seats.

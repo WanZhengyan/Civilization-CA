@@ -226,7 +226,7 @@ function establish(state,seat,tile,original = false) {
   const city = {id:mint(state,'c'),name:getMap(state).byId[tile].name,seat,tile,hp:100,maxHp:100,population:1,food:0,buildings:[],queue:null,originalSeat:original ? seat : null};
   state.cities.push(city);
   state.board[tile] = {...state.board[tile],owner:seat,level:Math.max(1,state.board[tile].level)};
-  if (!original) for (const next of adjacent[tile]) {
+  if (!original || state.opening==='settlers') for (const next of adjacent[tile]) {
     const holding = state.board[next];
     if (holding.owner === null && terrainCost[getMap(state).byId[next].terrain] && !state.units.some(u=>u.tile===next && u.seat!==seat)) {
       state.board[next] = {...holding,owner:seat};
@@ -271,18 +271,13 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const seed = campaignSeed(requestedSeed);
   const allocation = shuffled(FACTIONS.map((_,i)=>i), seededRandom(seed,'civilizations'));
   const starts = selectStarts(getMap(mapId), players.length, seed, neighbors, hexDistance);
-  const next = {seed, mapId, rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
+  const next = {seed, mapId, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:0,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(getMap(mapId).tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
     players:players.map((player,seat)=>({
       name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[allocation[seat]].name,
       bot:player?.bot===true,faction:allocation[seat],color:FACTIONS[allocation[seat]].color,capital:12,influence:6,score:0
     })),log:[{round:1,seat:0,type:'start',text:'The campaign has begun.'}]};
-  starts.forEach(([home,settler,militia],seat)=>{
-    for (const id of [home,settler,militia]) next.board[id].owner = seat;
-    establish(next,seat,home,true);
-    spawn(next,seat,'settler',settler);
-    spawn(next,seat,'melee',militia);
-  });
+  starts.forEach(([site],seat)=>spawn(next,seat,'settler',site));
   refreshScores(next);
   return addResearch(next);
 }
@@ -331,16 +326,17 @@ export function getStats(state,seat) {
   const count=cities.length,population=cities.reduce((sum,c)=>sum+c.population,0);
   const buildings=cities.reduce((sum,c)=>sum+c.buildings.length,0);
   const monuments=cities.filter(c=>c.buildings.includes('monument')).length;
+  const settled = count > 0 || state.opening !== 'settlers';
   const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
   return {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
     score:state.legacyFinalScores?.[seat] ?? score,
-    cultureIncome:1+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
+    cultureIncome:Number(settled)+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
       +(adopted(state,seat,'conservation') ? cities.filter(c=>hasPark(state,c)).length : 0),
-    scienceIncome:2+count+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
+    scienceIncome:2*Number(settled)+count+Math.floor(population/3)+(knows(state,seat,'radio') ? 2*count : 0)
       +(adopted(state,seat,'publicRadio') ? 2*count : 0),
-    capitalIncome:3+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
+    capitalIncome:3*Number(settled)+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +2*cities.filter(c=>tradesBySea(state,c)).length,
-    influenceIncome:2+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
+    influenceIncome:2*Number(settled)+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
 }
 function refreshScores(state) { state.players.forEach((p,i)=>{p.score=getStats(state,i).score;}); }
 function record(state,seat,type,text,tile,detail={}) {
@@ -620,7 +616,7 @@ function produceCityTurn(state,city) {
 function finish(state,winners,reason) {
   state.phase='finished';state.winners=winners;state.actionsLeft=0;state.victoryReason=reason;
   const names=winners.map(i=>FACTIONS[state.players[i].faction].name).join(' and ');
-  const message=reason==='domination' ? names+' controls every original capital.' : names+(winners.length===1 ? ' won' : ' shared victory')+' with '+state.players[winners[0]].score+' civic points.';
+  const message=reason==='survival' ? names+' is the last civilization standing.' : reason==='domination' ? names+' controls every original capital.' : names+(winners.length===1 ? ' won' : ' shared victory')+' with '+state.players[winners[0]].score+' civic points.';
   record(state,winners[0],'finish',message);
 }
 function endTurn(state,seat) {
@@ -633,11 +629,12 @@ function endTurn(state,seat) {
   finishProject(state, seat, CULTURE);
   refreshScores(state);
   record(state,seat,'end',FACTIONS[state.players[seat].faction].name+' ended its turn.');
-  const next=(seat+1)%state.players.length;
-  if (next===0) {
-    const top=Math.max(...state.players.map(p=>p.score));
+  let next=(seat+1)%state.players.length;
+  while (state.players[next].eliminated && next!==seat) next=(next+1)%state.players.length;
+  if (next<=seat) {
+    const top=Math.max(...state.players.filter(p=>!p.eliminated).map(p=>p.score));
     if (state.round>=MAX_ROUNDS || top>=TARGET_SCORE) {
-      finish(state,state.players.map((p,i)=>p.score===top ? i : -1).filter(i=>i>=0),'civic');
+      finish(state,state.players.map((p,i)=>!p.eliminated && p.score===top ? i : -1).filter(i=>i>=0),'civic');
       return;
     }
     state.round++;
@@ -715,9 +712,22 @@ function resolveAttack(state, unit, target) {
   if (result.attackerDefeated || result.defeated) state.units = state.units.filter(other => other.hp > 0);
   const text = UNIT_TYPES[unit.type].name+(result.capture ? ' captured ' : ' attacked ')+name+' for '+result.damage+' damage.';
   record(state, unit.seat, 'attack', text, target, {unit: unit.id, from, ...result});
-  if (result.capture && state.players.every((p,seat) => state.cities.some(c => c.originalSeat === seat && c.seat === unit.seat))) {
+  if (state.opening==='settlers') {
+    for (const [seat,player] of state.players.entries()) {
+      if (player.eliminated || state.cities.some(c=>c.seat===seat) || state.units.some(u=>u.seat===seat && u.type==='settler')) continue;
+      player.eliminated=true;
+      state.units=state.units.filter(u=>u.seat!==seat);
+      for (const [id,h] of Object.entries(state.board)) if(h.owner===seat) state.board[id]={...h,owner:null,level:0};
+    }
+  }
+  const ownsCapitals=state.players.every((player,seat) => state.cities.some(c => c.originalSeat===seat && c.seat===unit.seat));
+  const remaining=state.players.map((p,i)=>p.eliminated ? -1 : i).filter(i=>i>=0);
+  if (result.capture && ownsCapitals) {
     refreshScores(state);
     finish(state, [unit.seat], 'domination');
+  } else if (state.opening==='settlers' && remaining.length===1) {
+    refreshScores(state);
+    finish(state, remaining, 'survival');
   }
 }
 function unitOrder(state,seat,action) {
@@ -745,7 +755,8 @@ function unitOrder(state,seat,action) {
     resolveAttack(state,unit,action.tile);
   } else if (action.type==='found') {
     if (unit.type!=='settler' || !canSettle(state,seat,id)) throw new Error('Found a city on friendly or neutral land at least three hexes from every other city.');
-    const city=establish(state,seat,id);
+    const first=state.opening==='settlers' && !state.cities.some(c=>c.originalSeat===seat);
+    const city=establish(state,seat,id,first);
     state.units=state.units.filter(u=>u.id!==unit.id);
     record(state,seat,'found',FACTIONS[state.players[seat].faction].name+' founded a city at '+city.name+'.',id,{city:city.id,unit:unit.id});
   } else {
@@ -876,6 +887,10 @@ export function chooseBotAction(source) {
   const state=migrateGame(source),seat=state.turn;
   if (state.phase!=='playing') throw new Error('The campaign has ended.');
   const player = state.players[seat];
+  if (!state.cities.some(c=>c.seat===seat)) {
+    const pioneer=state.units.find(u=>u.type==='settler' && u.seat===seat && u.moves>0);
+    if (pioneer && canSettle(state,seat,pioneer.tile)) return {type:'found',unit:pioneer.id};
+  }
   if (!player.research && player.technologies.length < Object.keys(TECHS).length) {
     const threatened = state.cities.some(city => city.seat === seat && state.units.some(
       unit => unit.seat !== seat && UNIT_TYPES[unit.type].range > 0 && hexDistance(unit.tile, city.tile) <= 2));

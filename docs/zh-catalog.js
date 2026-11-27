@@ -10,6 +10,9 @@ function section(pairs) {
 }
 section(`
 Civitas LA · The Los Angeles Campaign|Civitas LA · 洛杉矶战役
+Choose your first city site|选择首都的位置
+Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.|每个文明都从一名开拓者起步。你可以就地建都，也可以先去探索。建城后可获得收入并训练单位。
+Found capital|建立首都
 Civilization drawn at start|开局随机分配文明
 Los Angeles|洛杉矶
 The Los Angeles Basin|洛杉矶盆地

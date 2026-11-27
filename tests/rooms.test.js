@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { handleRoom } from "../lib/room-service.js";
+import {createClassicGame} from './classic-game.js';
 import * as rules from "../docs/rules.js";
 
 function roomFixture(t) {
@@ -98,18 +99,22 @@ test("each seat issues unit and city orders through the server and observes the 
   let room=await seats.start();
   assert.equal(room.game.rulesVersion,3);
   for (const [seat,token,observer] of [[0,seats.host,seats.guest],[1,seats.guest,seats.host]]) {
-    const city=room.game.cities.find(c=>c.seat===seat);
-    const unit=room.game.units.find(u=>u.seat===seat && u.type==="melee");
-    const otherUnit=room.game.units.find(u=>u.seat!==seat && u.type==="melee");
+    const unit=room.game.units.find(u=>u.seat===seat && u.type==="settler");
+    
     const options=rules.getUnitOptions(room.game,unit.id);
     const dst=options.moves[0];
     assert.ok(dst);
-    const wrongOwner=await fixture.request("POST",{op:"action",code:seats.code,revision:room.revision,action:{type:"move",unit:otherUnit.id,tile:dst}},token);
+    const wrongOwner=await fixture.request("POST",{op:"action",code:seats.code,revision:room.revision,action:{type:"move",unit:"foreign-unit",tile:dst}},token);
     assert.equal(wrongOwner.status,422);
     assert.equal((await seats.read(token)).revision,room.revision);
+    const site=options.moves.find(id=>rules.getSettlementAssessment(room.game,unit.id,id).canFoundThisTurn);
+    if(site){
+      room=(await seats.act(token,room.revision,{type:"move",unit:unit.id,tile:site})).room;
+      assert.equal(room.game.units.find(u=>u.id===unit.id).tile,site);
+    }
+    room=(await seats.act(token,room.revision,{type:"found",unit:unit.id})).room;
+    const city=room.game.cities.find(c=>c.seat===seat);
     room=(await seats.act(token,room.revision,{type:"produce",city:city.id,item:"workshop"})).room;
-    room=(await seats.act(token,room.revision,{type:"move",unit:unit.id,tile:dst})).room;
-    assert.equal(room.game.units.find(u=>u.id===unit.id).tile,dst);
     assert.deepEqual((await seats.read(observer)).game,room.game);
     room=(await seats.act(token,room.revision,{type:"end"})).room;
   }
@@ -180,6 +185,9 @@ test("lost responses to create or join can be retried with the same device ticke
 test("a saved tactical room keeps units, damage and production when receiving the research upgrade", async t => {
   const fixture=roomFixture(t), seats=await twoPlayers(fixture);
   let room=await seats.start();
+  const old=createClassicGame(["Downtown","海岸玩家"]);
+  fixture.sqlite.prepare("UPDATE game_rooms SET game=? WHERE code=?").run(JSON.stringify(old),seats.code);
+  room=await seats.read(seats.host);
   const city=room.game.cities.find(c=>c.seat===0);
   const unit=room.game.units.find(u=>u.seat===0 && u.type==="melee");
   room=(await seats.act(seats.host,room.revision,{type:"produce",city:city.id,item:"workshop"})).room;
@@ -213,7 +221,7 @@ test("a host chooses the region before inviting players and both seats recover t
   assert.equal(guest.room.mapId,"sf");
   const {room}=await fixture.call("POST",{op:"start",code,mapId:"la",revision:guest.room.revision},host.token);
   assert.equal(room.game.mapId,"sf");
-  assert.equal(room.game.cities.length,2);
-  assert.ok(room.game.cities.every(city=>rules.getMap("sf").byId[city.tile].name===city.name));
+  assert.equal(room.game.cities.length,0);
+  assert.equal(room.game.units.length,2);
   assert.deepEqual((await fixture.call("GET",{code},guest.token)).room.game,room.game);
 });

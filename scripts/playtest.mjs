@@ -8,11 +8,14 @@ function run(mapId, seats, opening) {
   const hash = createHash("sha256");
   const counts = {moves: 0, attacks: 0, captures: 0, citiesFounded: 0, unitsTrained: 0,
     buildingsCompleted: 0, improvements: 0, technologies: 0, civics: 0, shipsLaunched: 0, fisheries: 0};
-  let orders = 0;
+  let orders = 0, openingPlayed = false;
   while (state.phase === "playing") {
     // These fixed openings let a production change be compared across versions.
-    const action = opening === "workshop-first" && orders === 0
-      ? {type: "produce", city: state.cities.find(c => c.seat === 0).id, item: "workshop"}
+    const capital=state.cities.find(c=>c.seat===0);
+    const workshopOpening=opening==="workshop-first" && !openingPlayed && state.turn===0 && capital && !capital.queue;
+    if (workshopOpening) openingPlayed=true;
+    const action = workshopOpening
+      ? {type: "produce", city: capital.id, item: "workshop"}
       : chooseBotAction(state);
     const next = applyAction(state, state.turn, action);
     orders++;

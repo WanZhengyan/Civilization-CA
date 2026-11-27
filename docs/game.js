@@ -486,7 +486,7 @@ function multiplayerContent() {
 
 const guideSections = {
   start: {label:'First turn', entries:[
-    ['Send out your settler', 'Select the Settler on the map or in your roster. Point at a highlighted hex to preview the route. Click a reachable hex to move. You can also tap a highlighted destination on a touch screen.'],
+    ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
     ['Found a city', 'A settler with movement left can found a city on friendly or neutral land at least three hexes from any city. Choose Found city. The settler becomes the city and nearby open land joins your faction.'],
     ['Choose your map', 'Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
@@ -542,7 +542,7 @@ function content() {
     const ranked = state.players.map((p, seat) => ({seat, name:p.name, stats:getStats(state,seat)}))
       .sort((a,b)=>winnersFirst(b.seat)-winnersFirst(a.seat) || b.stats.score-a.stats.score);
     const winners = (state.winners || []).map(seat => FACTION_NAMES[seatFaction(seat)]);
-    const label = winners.join(' and ') + (state.victoryReason === 'domination' ? ' captured every original capital.' : winners.length > 1 ? ' tied on civic points and share victory.' : ' won on civic points.');
+    const label = winners.join(' and ') + (state.victoryReason === 'survival' ? ' is the last civilization standing.' : state.victoryReason === 'domination' ? ' captured every original capital.' : winners.length > 1 ? ' tied on civic points and share victory.' : ' won on civic points.');
     return { kicker: 'Campaign records', title: state.phase === 'finished' ? 'Campaign complete' : 'Faction standings',
       body: desc(state.phase === 'finished' ? label : `Holding every original capital wins immediately. Civic points are compared at the end of the round when a faction reaches ${TARGET_SCORE}, or after round ${MAX_ROUNDS}.`) +
         list(ranked.map(({seat,name,stats}) => row(factionMark(seat) + FACTION_NAMES[seatFaction(seat)],
