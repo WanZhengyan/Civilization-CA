@@ -1,3 +1,4 @@
+import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
 import {mapPicker, installMapStyles} from './regions-ui.js';
 import { FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
 
@@ -67,8 +68,10 @@ let inviteOpen = false, resultShown = '', guideTab = 'start';
 const getState = () => mode === 'online' && room?.game ? room.game : solo;
 const currentSeat = () => mode === 'online' && room ? room.you : 0;
 function emit() {
+  const state = getState();
+  if (state) observeCityNames(state.cities || [], getMap(state).byId);
   renderView?.({
-    state: getState(), seat: currentSeat(), room,
+    state, seat: currentSeat(), room,
     mode, busy: pending || (mode === 'solo' && playingBots) || (mode === 'online' && !room?.game)
   });
 }
@@ -454,9 +457,9 @@ function multiplayerContent() {
   if (room && mode === 'online') {
     const lobby = room.phase === 'lobby';
     const host = room.you === room.host;
-    const roster = room.players.map(p => row(factionMark(p.id) + escapeHTML(p.name), FACTION_NAMES[p.id],
+    const roster = room.players.map(p => row(factionMark(p.id) + '<span translate="no">' + escapeHTML(p.name) + '</span>', FACTION_NAMES[p.id],
       [p.id === room.host && 'Host', p.id === room.you && 'You'].filter(Boolean).join(' · ')));
-    const sharing = `<div class="modal-room"><span class="modal-muted">Room code</span><strong class="modal-code">${escapeHTML(room.code)}</strong></div>` +
+    const sharing = `<div class="modal-room"><span class="modal-muted">Room code</span><strong class="modal-code" translate="no">${escapeHTML(room.code)}</strong></div>` +
       actions(button('copy', 'Copy invite link'), button('show-link', inviteOpen ? 'Hide link' : 'Show link')) +
       (inviteOpen ? `<label class="modal-field">Invite link<input class="modal-input" data-invite-link readonly value="${escapeHTML(roomURL(room.code))}"></label>` : '');
     const status = lobby
@@ -482,25 +485,33 @@ const guideSections = {
   start: {label:'First turn', entries:[
     ['Send out your settler', 'Select the Settler on the map or in your roster. Point at a highlighted hex to preview the route. Click a reachable hex to move. You can also tap a highlighted destination on a touch screen.'],
     ['Found a city', 'A settler with movement left can found a city on friendly or neutral land at least three hexes from any city. Choose Found city. The settler becomes the city and nearby open land joins your faction.'],
+    ['Choose your map', 'Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
-    ['Choose research', 'Open the Research council and select a project. Your cities generate science each turn. Completed research gives the whole faction a lasting benefit.'],
-    ['Plan your turn', 'Each faction also gets two district actions to claim land, develop a district or contest a neighbor. Units use their own movement points. End turn collects income and passes play to the next faction.']
+    ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Your faction earns science and culture separately every turn.'],
+    ['Plan your turn', 'Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
   ]},
   city: {label:'City growth', entries:[
     ['Food and production', 'Food grows your population. Production completes the unit or building in a city’s queue. More residents contribute capital and can raise production.'],
     ['Improve nearby land', 'Builders have three charges. Build a farm on a friendly coast, lowland or urban hex, or a mine in woodland or foothills. Within two hexes of a friendly city, farms add food and mines add production to the nearest city.'],
     ['Choose a building', 'A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.'],
-    ['Make room for recruits', 'A new unit deploys in the city or on an adjacent open, passable hex in friendly or neutral territory. If all those hexes are occupied, clear one and end the turn to deploy it.']
+    ['Make room for recruits', 'Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.']
   ]},
   battle: {label:'Field tactics', entries:[
-    ['Read the terrain', 'Each unit starts its turn with two movement points. Coast, lowland and urban tiles cost one point. Woodland and foothills cost two. Mountains, open water and occupied hexes block movement.'],
+    ['Read the terrain', 'Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.'],
     ['Preview an attack', 'Select a military unit and click a highlighted enemy. The combat forecast shows the damage and possible losses. Choose Confirm attack to commit, or return to the map to reconsider. An attack spends the unit’s remaining movement.'],
     ['Take a city', 'Melee units strike adjacent targets and can take counterdamage. Rangers can strike from two hexes away without a counterattack. Defeat the garrison first. A ranged attack can reduce a city to one health point. A surviving melee attacker can capture it.'],
+    ['Upgrade in the field', 'After the required discovery, select a veteran in your territory and pay the displayed capital cost to upgrade it. The unit keeps its health proportion and spends the rest of its movement.'],
     ['Recover', 'Units regain movement at the start of their faction’s turn. A unit in a friendly city heals up to 12 health. Each friendly city recovers up to 6.']
   ]},
+  coast: {label:'At sea', entries:[
+    ['Choose a harbor site', 'Found on the shore or connect a city to your own coast within two hexes. Choose Harbor in city production. The harbor reserves an adjacent water hex and earns capital.'],
+    ['Put a crew to work', 'Train a Fishing crew at a harbor. Sail to open water within two water hexes of a friendly harbor and build a Fishery. Each crew has two charges.'],
+    ['Launch a fleet', 'A harbor trains Revenue cutters. Add a Shipyard and research Steam Power to build Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.']
+  ]},
   research: {label:'Research & victory', entries:[
-    ['Choose a specialization', 'Agronomy adds 2 food per city. Industrial Engineering adds 2 production per city. Field Tactics adds 7 military attack damage and 3 retaliation damage. Civic Administration adds 2 capital and 1 influence per city.'],
-    ['Build up science', 'At the end of your turn, gain 2 science, plus 1 per city and 1 for every 3 residents across your cities. You can switch projects and keep your accumulated science. Reaching the cost completes the discovery and leaves any surplus for the next project.'],
+    ['Choose a specialization', 'Workshop Engineering opens Steam Power and then Radio Networks. Field Tactics leads to Ballistics. Learn both Steam Power and Ballistics to unlock Motorization and train an Armored Column.'],
+    ['Build up science', 'Cities, population and discoveries contribute science. Culture funds a separate civic project at the same time. Switch projects without losing saved points. Surplus science and culture carry over.'],
+    ['Choose a civic path', 'Municipal Charter leads to County Federation for another district order, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
     ['Win by domination', 'Control every participating faction’s original capital to win immediately.'],
     ['Win on civic points', 'If a faction reaches 100 civic points, finish the current round and compare scores. The same scoring applies after round 30. The highest score wins, and a tie shares victory.'],
     ['Count civic points', 'Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.']
@@ -532,7 +543,7 @@ function content() {
     return { kicker: 'Campaign records', title: state.phase === 'finished' ? 'Campaign complete' : 'Faction standings',
       body: desc(state.phase === 'finished' ? label : 'Holding every original capital wins immediately. Civic points are compared at the end of the round when a faction reaches 100, or after round 30.') +
         list(ranked.map(({seat,name,stats}) => row(factionMark(seat) + FACTION_NAMES[seat],
-          [mode === 'online' && escapeHTML(name), countLabel(stats.cities,'city','cities'), countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), escapeHTML(stats.score)+' pts'))) +
+          [mode === 'online' && '<span translate="no">'+escapeHTML(name)+'</span>', countLabel(stats.cities,'city','cities'), countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), escapeHTML(stats.score)+' pts'))) +
         actions(button('back','Return to map','primary')) };
   }
   if (modal === 'campaign-atlas') {
@@ -552,7 +563,7 @@ function drawDialog() {
   if (!modal || !dialog) return;
   const scrolled = dialog.querySelector('.modal-body')?.scrollTop || 0;
   const { kicker, title, body } = content();
-  dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back">×</button></div><div class="modal-body">${body}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back">×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl() : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
   dialog.setAttribute('aria-labelledby','game-dialog-title');
   dialog.querySelector('.modal-body').scrollTop = scrolled;
 }
@@ -577,7 +588,14 @@ async function copyInvite() {
   }
 }
 function modalAction(act) {
-  if (['guide-start','guide-city','guide-battle','guide-research'].includes(act)) {
+  if (act === 'language-en' || act === 'language-zh-CN') {
+    setLanguage(act.slice(9));
+    drawDialog();
+    emit();
+    dialog.querySelector('[data-act="language-'+getLanguage()+'"]')?.focus();
+    return;
+  }
+  if (act.startsWith('guide-') && Object.hasOwn(guideSections,act.slice(6))) {
     guideTab = act.slice(6);
     drawDialog();
     dialog.querySelector('.modal-body').scrollTop = 0;
@@ -620,6 +638,7 @@ async function init({ render, toast: showToast }) {
   if (initialized) { emit(); return; }
   initialized = true;
   installMapStyles();
+  installLanguage();
   dialog = document.getElementById('modal');
   dialog.addEventListener('change', e => {
     if (e.target.name !== 'mapId') return;

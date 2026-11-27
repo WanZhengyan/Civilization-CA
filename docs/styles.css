@@ -212,3 +212,7 @@ main{max-width:1680px;margin:auto;padding:0 clamp(20px,3.2vw,55px)}.campaign-hea
   .tactics .side .turn-panel .end-turn { min-height: 44px; }
   .tactics .side .turn-panel { min-height: 55px; }
 }
+.language-preference{margin-top:1.2rem;border-top:1px solid #666252;padding-top:.8rem}
+.language-preference p{margin:0 0 .5rem}
+.language-preference .modal-tab[aria-pressed="true"]{border-color:#c6a760;color:#f1d996;background:#37352b}
+html[lang="zh-CN"] :is(.section-label,.eyebrow,.modal-kicker,.resource-label,.entity-stat small,.agenda-title){letter-spacing:.05em}

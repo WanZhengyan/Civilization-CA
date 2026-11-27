@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.0 · English and Simplified Chinese at the same table
+
+The English-only interface made the field guide, council decisions and network lobby difficult to share with Chinese-speaking friends. The game menu now changes the interface language live, including the map, canvas labels, project descriptions and chronicle. Each player retains their own preference and entered names. The guide covers sea routes and three eras in both languages.
+
+50 checks passed. 18 fixed campaigns replayed identically twice. Finally compare force silhouettes at map scale and check whether a standard campaign lasts long enough to use its advanced units.
+
 ## 3.9 · A map-first command screen
 
 The field inspector consumed map space while major research decisions and city queues were scattered. Technology and Civics now share the left edge of the map, with active choices, prerequisites and production timing. Field command measured 245 pixels wide on desktop. At a 390-pixel phone viewport both council targets measured 59 by 52 pixels.

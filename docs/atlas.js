@@ -1,3 +1,4 @@
+import {translate} from './i18n.js';
 /* Illustrated, pointy-top, odd-row-offset California campaign maps. */
 const W = 72, H = 76, ROW = H * .75, COLS = 17, ROWS = 13;
 const worldW = COLS * W + W / 2, worldH = (ROWS - 1) * ROW + H;
@@ -408,6 +409,7 @@ function renderAtlas(tiles,map) {
 }
 
 function smallCaps(g,txt,x,y,size,tracking,color) {
+  txt=translate(txt);
   g.save();g.font='500 '+size+'px Georgia, serif';g.textAlign='left';g.textBaseline='middle';
   const widths=[...txt].map(ch=>g.measureText(ch).width),whole=widths.reduce((a,b)=>a+b,0)+(txt.length-1)*tracking;
   let left=x-whole/2;
@@ -777,7 +779,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   }
   for(const t of tiles)if(t.landmark){
     const [x,y]=pos(t.q,t.r),owner=board[t.id]?.owner;
-    const name=t.landmark==='studios'?'Burbank':places[t.landmark]||t.name;
+    const name=translate(t.landmark==='studios'?'Burbank':places[t.landmark]||t.name);
     const lx=x+(t.landmark==='hollywood'?-22:t.landmark==='griffith'?15:0);
     const ly=y+(t.landmark==='hollywood'?18:t.landmark==='griffith'?28:24);
     if(model.cityTiles.has(t.id))continue;
@@ -786,13 +788,13 @@ function renderOverlay(g,tiles,model,scale,labels,territories) {
   for(const city of model.cities){
     const t=lookup.get(city.tile);if(!t)continue;
     const [x,y]=pos(t.q,t.r);
-    const name=city.name||t.name,[cx,cy]=placeLabel(x,y+26,name,true);cityCaption(g,city,cx,cy,name,getFaction(city.seat),labelScale);
+    const name=city.name && city.name!==t.name ? city.name : translate(t.name),[cx,cy]=placeLabel(x,y+26,name,true);cityCaption(g,city,cx,cy,name,getFaction(city.seat),labelScale);
   }
   if(scale>1.02){
     const names=region.districts;
     for(const t of tiles) if(names.includes(t.name)&&!t.landmark&&!model.cityTiles.has(t.id)){
       const [x,y]=pos(t.q,t.r);g.save();g.font='italic 13px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
-      g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(t.name,x,y+14);g.fillStyle='#eee1bd';g.fillText(t.name,x,y+14);g.restore();
+      g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(translate(t.name),x,y+14);g.fillStyle='#eee1bd';g.fillText(translate(t.name),x,y+14);g.restore();
     }
   }
 }
@@ -824,6 +826,7 @@ export function createAtlas(host, options = {}) {
     shadow.addColorStop(0,'#13212700');shadow.addColorStop(1,'#15283236');ctx.fillStyle=shadow;ctx.fillRect(0,0,boxW,boxH);
   }
   function schedule(){if(!request&&!disposed)request=requestAnimationFrame(draw);}
+  document.addEventListener('civitas-language',schedule,{signal:input.signal});
   function bound(){
     const hw=boxW/(base*zoom*2), hh=boxH/(base*zoom*2),pad=48;
     const loX=hw-pad,hiX=worldW-hw+pad,loY=hh-pad,hiY=worldH-hh+pad;
