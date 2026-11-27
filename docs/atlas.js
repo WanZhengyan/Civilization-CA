@@ -1,12 +1,11 @@
+import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartFrame,paintChartMargin,inkChartFrame} from './hex-survey.js';
 import {drawResource} from './resource-art.js';
 import {drawCampus} from './campus-art.js';
 import {WONDERS} from './wonders.js';
 import {translate} from './i18n.js';
 /* Illustrated, pointy-top, odd-row-offset California campaign maps. */
-const W = 72, H = 76, ROW = H * .75, COLS = 17, ROWS = 13;
+const COLS = 17, ROWS = 13;
 const worldW = COLS * W + W / 2, worldH = (ROWS - 1) * ROW + H;
-const dX = [0, W / 2, W / 2, 0, -W / 2, -W / 2];
-const dY = [-H / 2, -H / 4, H / 4, H / 2, H / 4, -H / 4];
 const FACTION = ['#efbb62','#69b7c7','#8ab98a','#dc8c9f'];
 const places = {
   griffith: 'Griffith Observatory', hollywood: 'Hollywood', pier: 'Santa Monica',
@@ -19,8 +18,6 @@ export function getAtlasPlace(tile, holding) {
   const name=tile.landmark==='studios' ? 'Burbank' : places[tile.landmark] || tile.name;
   return {name,landmark:tile.landmark};
 }
-const pos = (q,r) => [W / 2 + (q + (r & 1) * .5) * W, H / 2 + r * ROW];
-const idFor = (q,r) => q + ',' + r;
 function noise(q, r, salt=0) {
   let a = Math.imul((q | 0) + 973, 0x1f123bb5) ^ Math.imul((r | 0) + 191, 0x5f356495) ^ Math.imul(salt | 0, 0x2af1d57d);
   a = Math.imul(a ^ (a >>> 16), 0x45d9f3b);
@@ -34,10 +31,6 @@ function hexPath(q,r) {
   const [x,y] = pos(q,r), p = new Path2D();
   for (let k=0;k<6;k++) k ? p.lineTo(x+dX[k], y+dY[k]) : p.moveTo(x+dX[k], y+dY[k]);
   p.closePath(); return p;
-}
-function adjacent(q,r,k) {
-  const odd = r & 1;
-  return [[q+odd,r-1],[q+1,r],[q+odd,r+1],[q-1+odd,r+1],[q-1,r],[q-1+odd,r-1]][k];
 }
 function line(g, pts, color, width=1) {
   g.beginPath(); g.moveTo(pts[0],pts[1]);
@@ -911,13 +904,15 @@ export function createAtlas(host, options = {}) {
   let tiles=options.tiles||defaultTiles, model={selectedId:options.selectedId||null,hoverId:null,board:{},players:[],units:[],cities:[],cityTiles:new Set(),hitUnits:[],motions:[],selectedUnitId:null,haveState:false,moveTiles:[],attackTiles:[],byId:new Map(tiles.map(t=>[t.id,t]))};
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=worldW*.505,cy=worldH*.5,request=0,resizeFrame=0,tween=0;
   let labels=true,territories=true,fresh=true,gesture=null,didDrag=false,disposed=false;
+  let frame=chartFrame(tiles);
   let landmarkTiles=tiles.filter(tile=>tile.landmark);
   function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'),landmarkTiles);}
   function draw(){
     request=0;if(disposed||boxW<2||boxH<2)return;ensureBackground();
     const dpi=canvas.width/boxW,s=base*zoom;
-    ctx.setTransform(dpi,0,0,dpi,0,0);ctx.fillStyle='#203d48';ctx.fillRect(0,0,boxW,boxH);
+    ctx.setTransform(dpi,0,0,dpi,0,0);paintChartMargin(ctx,boxW,boxH);
     ctx.save();ctx.translate(boxW/2,boxH/2);ctx.scale(s,s);ctx.translate(-cx,-cy);
+    ctx.save();ctx.clip(frame);
     const {buffer,margin,resolution}=background;
     // Paint every uncharted hex as a nautical survey grid. Clip the entire
     // illustrated layer so terrain never flashes before the first observation.
@@ -935,6 +930,8 @@ export function createAtlas(host, options = {}) {
     if(model.fog){ctx.fillStyle='#24333c9c';ctx.fill(model.fog.memory);}
     if(paintUnits(ctx,model,s,performance.now()))schedule();
     if(model.fog)ctx.restore();
+    ctx.restore();
+    inkChartFrame(ctx,frame,s);
     ctx.restore();
     // A very light vignette holds together all the terrain colours at the edge of the atlas.
     const shadow=ctx.createRadialGradient(boxW*.49,boxH*.45,Math.min(boxW,boxH)*.34,boxW*.5,boxH*.49,Math.hypot(boxW,boxH)*.57);
@@ -1050,7 +1047,7 @@ export function createAtlas(host, options = {}) {
       }
       const tilesChanged=nextTiles && nextTiles!==tiles;
       if(tilesChanged){
-        tiles=nextTiles;model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
+        tiles=nextTiles;frame=chartFrame(tiles);model.byId=new Map(tiles.map(t=>[t.id,t]));background=null;
         model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
         zoom=1;resetCenter();options.onZoom?.(100);
       }
