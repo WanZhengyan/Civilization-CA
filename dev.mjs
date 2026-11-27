@@ -5,12 +5,18 @@ import { extname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { handleRoomHTTP } from "./lib/room-http.js";
 
+import { handleVisitsHTTP } from "./lib/visit-http.js";
+
 const docs = new URL("./docs/", import.meta.url);
 const local = new URL("./.civitas-local/", import.meta.url);
 await mkdir(local, {recursive:true});
 const sqlite = new DatabaseSync(new URL("rooms.sqlite", local));
 const schema = await readFile(new URL("./drizzle/0000_game_rooms.sql", import.meta.url), "utf8");
 if (!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='game_rooms'").get()) sqlite.exec(schema);
+if (!sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='site_visitors'").get()) {
+  const visitSchema = await readFile(new URL("./drizzle/0001_site_visitors.sql", import.meta.url), "utf8");
+  sqlite.exec(visitSchema);
+}
 const db = {
   prepare(sql) {
     const statement = sqlite.prepare(sql);
@@ -40,7 +46,7 @@ const previousPrefix = "/Civilization-LA/";
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url,"http://"+req.headers.host);
-    if (url.pathname === "/api/room") {
+    if (url.pathname === "/api/room" || url.pathname === "/api/visits") {
       const parts = [];
       let size = 0;
       for await (const part of req) {
@@ -50,7 +56,8 @@ const server = createServer(async (req, res) => {
       }
       const body = parts.length ? Buffer.concat(parts) : undefined;
       const request = new Request(url, {method:req.method, headers:req.headers, body});
-      const response = await handleRoomHTTP(request,db);
+      const handler = url.pathname === "/api/visits" ? handleVisitsHTTP : handleRoomHTTP;
+      const response = await handler(request, db);
       res.writeHead(response.status,Object.fromEntries(response.headers));
       res.end(Buffer.from(await response.arrayBuffer()));
       return;
