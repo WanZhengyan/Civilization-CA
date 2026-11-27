@@ -1,3 +1,4 @@
+import {REGIMENTS, matchup, formationChoices} from './regiments.js';
 import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
 import {getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
 import {RESOURCES, populateDeposits, canSeeDeposits, canSurvey, SPECIAL_IMPROVEMENTS, serviceCity, connectedDeposit, resourceAccounts, bankHarvest, shipGoods, planShipment} from './resources.js';
@@ -188,7 +189,8 @@ export const UNIT_TYPES = {
   melee: {name:"Militia", era:"frontier", captures:true, upgrade:"riflemen", upgradeCost:10, maxHp:100, moves:2, range:1, strength:42, required:10},
   ranged: {name:"Rangers", era:"frontier", captures:false, upgrade:"artillery", upgradeCost:12, maxHp:80, moves:2, range:2, strength:35, required:12},
   ...ERA_UNITS,
-  ...VESSELS
+  ...VESSELS,
+  ...REGIMENTS
 };
 export const BUILDINGS = {
   ...WONDERS,
@@ -450,6 +452,7 @@ export function getActions(state,seat,id,visible) {
 }
 function movementCost(state,unit, tileId) {
   const terrain=getMap(state).byId[tileId].terrain;
+  if (unit.type==='skirmisher' && (terrain==='forest'||terrain==='hills')) return 1;
   return UNIT_TYPES[unit.type].domain==='sea' ? Number(terrain==='ocean') : terrainCost[terrain];
 }
 function bridgeTo(state,from,to) {
@@ -826,7 +829,8 @@ export function combatPreview(state, unitId, target) {
   const strength = Math.round(UNIT_TYPES[unit.type].strength * (0.75 + 0.25 * unit.hp / unit.maxHp));
   const attackBonus = (knows(state, unit.seat, 'tactics') ? 7 : 0)
     + (UNIT_TYPES[unit.type].range > 1 && knows(state, unit.seat, 'ballistics') ? 5 : 0);
-  let damage = Math.min(opponent.hp, Math.max(1, strength + attackBonus - terrainDefense - (walls ? 7 : 0)));
+  const role=matchup(unit,defender,town,state,hexDistance);
+  let damage = Math.min(opponent.hp, Math.max(1, strength + role.damage + attackBonus - terrainDefense - (walls ? 7 : 0)));
   let retaliation = 0;
   if (melee) {
     if (defender) {
@@ -845,7 +849,7 @@ export function combatPreview(state, unitId, target) {
   const defeated = !!defender && defenderHpAfterHit === 0;
   const advances = melee && movementCost(state,unit,target)>0 && attackerHpAfter > 0 && (capture || (defeated && !town));
   return {
-    defenderType: defender ? 'unit' : 'city', defenderId: opponent.id,
+    defenderType: defender ? 'unit' : 'city', defenderId: opponent.id, roleNotes:role.notes,
     damage, retaliation, capture, defeated, advances, attackerDefeated: attackerHpAfter === 0,
     attackerHpBefore: unit.hp, defenderHpBefore: opponent.hp, attackerHpAfter, defenderHpAfterHit,
     defenderHpAfter: capture ? Math.ceil(town.maxHp / 2) : defenderHpAfterHit
@@ -1032,6 +1036,8 @@ function botProject(state,city) {
     if (city.buildings.includes('shipyard') && knows(state,city.seat,'steam') && count('frigate')===0) choices.push('frigate');
   }
   if (count('builder')===0) choices.push('builder');
+  const nearby=neighbors(city.tile).filter(id=>state.board[id]).map(id=>getMap(state).byId[id].terrain);
+  choices.push(...formationChoices(state,city,units,count,nearby));
   for (const type of ['armor','artillery','riflemen','cavalry']) {
     if (knows(state,city.seat,UNIT_TYPES[type].tech) && !count(type)) choices.push(type);
   }
@@ -1041,7 +1047,8 @@ function botProject(state,city) {
   if (city.buildings.includes('harbor')) choices.push('shipyard');
   choices.push('workshop','walls','monument','granary');
   if (count('melee')<4) choices.push('melee');
-  const option=choices.find(key=>!city.buildings.includes(key));
+  const enabled=new Set(getProductionOptions(state,city.id).filter(o=>o.enabled).map(o=>o.item));
+  const option=choices.find(key=>enabled.has(key));
   return option ? {type:'produce',city:city.id,item:option}:null;
 }
 // March toward terrain the faction has yet to chart. Only revealed terrain

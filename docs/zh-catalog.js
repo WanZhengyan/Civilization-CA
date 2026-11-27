@@ -883,3 +883,14 @@ Founding expedition|建都远征
 Choose a site for your first city. Surveying or founding can reveal local resources.|选择第一座城市的位置。勘探或建城后可发现附近的资源。
 Locate settler|定位开拓者
 `);
+
+section(`
+Trail Skirmishers|山径散兵
+Pike Guard|长枪卫队
+Light infantry unit|轻步兵
+Defensive infantry unit|防御步兵
+Light ranged infantry. Woodland and foothills cost only one movement point.|轻装远程步兵。进入林地或丘陵只消耗一点移动力。
+Guards gain 14 attack damage against mounted scouts and cut their incoming charge damage by 14.|攻击骑马侦察兵时额外造成 14 点伤害，抵御其冲锋时少受 14 点伤害。
+Pikes against cavalry · +14 damage|长枪克制骑兵 · 伤害 +14
+Defending pike line · −14 damage|长枪卫队防守 · 伤害 −14
+`);

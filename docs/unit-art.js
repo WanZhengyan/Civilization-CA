@@ -1,3 +1,4 @@
+import {drawRegiment} from './regiment-art.js';
 // Hand-drawn map-scale miniatures. Each pose uses feet-level local coordinates.
 const EDGE = '#28262c';
 const BOOT = '#554437';
@@ -460,7 +461,7 @@ function vessel(g,b,type,color,phase,strike) {
 }
 
 const KINDS = new Map([
-  ['settler','settler'],['scout','scout'],['builder','builder'],
+  ['pikes','pikes'],['skirmisher','skirmisher'],['settler','settler'],['scout','scout'],['builder','builder'],
   ['warrior','guard'],['guard','guard'],['melee','guard'],
   ['archer','archer'],['ranger','archer'],['ranged','archer'],
   ['cavalry','cavalry'],['horseman','cavalry'],['riflemen','riflemen'],['artillery','artillery'],
@@ -478,7 +479,8 @@ export function drawUnitArt(g,kind,x,y,options={}) {
   g.scale((options.facing<0?-1:1)*scale,scale);
   g.lineCap='round';g.lineJoin='round';
   const b=brush(g);
-  if(type==='cavalry') horseAndRider(g,b,color,phase,strike);
+  if(type==='pikes'||type==='skirmisher') drawRegiment(g,b,type,pigment(color),phase,strike);
+  else if(type==='cavalry') horseAndRider(g,b,color,phase,strike);
   else if(type==='riflemen') rifleCompany(g,b,color,phase,strike);
   else if(type==='artillery') fieldArtillery(g,b,color,phase,strike);
   else if(type==='armor') armoredColumn(g,b,color,phase,strike);

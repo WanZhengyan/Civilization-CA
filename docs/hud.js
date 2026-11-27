@@ -39,6 +39,8 @@ const symbols={
   settler:'<path d="M5 21V4l11 2-3 3 3 3-11-2M3 21h6"/>',
   builder:'<path d="m4 20 10-10m-3-2 4-4 5 5-3 3-4-3M4 20l2 1"/>',
   melee:'<path d="m5 19 3-3 8-10 4-2-1 5-10 9m-4-5 6 6"/>',
+  pikes:'<path d="M4 21 14 3l-4 2m4-2v5M10 21 20 3l-4 2m4-2v5"/>',
+  skirmisher:'<path d="M3 17 12 5l8 12-8-5zM7 20l5-7 5 7"/>',
   ranged:'<path d="M3 4q14-1 17 16L4 4m1 15 13-13m-5 0h5v5"/>',
   city:'<path d="M3 21h18M5 20V9h5v11m0-14 4-3 4 3v14m0-10h3v10M7 12h1m5-3h2m-2 4h2"/>',
   land:'<path d="m3 18 5-9 4 6 3-4 6 7H3z"/><circle cx="17" cy="6" r="2"/>',
@@ -472,8 +474,10 @@ function drawCombat(){
   const enemy=forecast.defenderType==="wild"?WILDS[defender.type].name:defender.type?items[defender.type]:defender.name;
   const attack=forecastRow("Attacker",items[u.type],forecast.attackerHpBefore,forecast.attackerHpAfter,u.maxHp,forecast.retaliation?forecast.retaliation+" retaliation damage":"No retaliation",faction(u.seat).color);
   const defend=forecastRow("Defender",enemy,forecast.defenderHpBefore,forecast.defenderHpAfterHit??forecast.defenderHpAfter,defender.maxHp,forecast.damage+" incoming damage",forecast.defenderType==="wild"?"#c38566":faction(defender.seat).color);
+  const notes=(forecast.roleNotes||[]).map(note=>'<li>'+esc(note)+'</li>').join('');
+  const modifiers=notes?'<ul class="formation-notes">'+notes+'</ul>':'';
   const outcome=forecast.defenderType==="wild" && defender.type==="camp" && forecast.defeated?"Clearing the camp adds 12 capital to your treasury.":forecast.capture?"Your unit will capture this city.":forecast.attackerDefeated&&forecast.defeated?"Both units will fall.":forecast.attackerDefeated?"Your unit will fall in this attack.":forecast.defeated?"The defending unit will fall.":"Both sides will hold their positions.";
-  el("combat-preview").innerHTML='<div class="forecast-grid">'+attack+defend+'</div><p class="forecast-outcome">'+esc(outcome)+'</p>';
+  el("combat-preview").innerHTML='<div class="forecast-grid">'+attack+defend+'</div>'+modifiers+'<p class="forecast-outcome">'+esc(outcome)+'</p>';
   return true;
 }
 function openCombat(unit,tile){
