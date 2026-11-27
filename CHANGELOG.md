@@ -1,5 +1,11 @@
 # Release notes
 
+## 4.8 · Private intelligence for every online seat
+
+Hiding graphics alone would still hand an opponent the underlying state. The room service returns a seat-specific board and history. Private seeds, hidden positions and unseen orders stay with the authoritative game; launching and rejoining a room both use the same projection.
+
+63 checks passed. 18 fixed campaigns replayed identically twice. Verify resource discovery using that same visibility boundary.
+
 ## 4.7 · A map that remembers exploration
 
 A previously seen district and an unvisited one looked the same. The atlas distinguishes unexplored ground, remembered terrain and currently visible positions. Enemy movements are live only inside current sight.

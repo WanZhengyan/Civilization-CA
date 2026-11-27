@@ -84,7 +84,7 @@ function select(tile,unit=null,city=false){
 function selectOpening(){
   const units=ownUnits(),starter=units.find(u=>u.type==="settler"&&u.moves>0)||units.find(u=>u.moves>0)||units[0];
   if(starter)select(starter.tile,starter.id);
-  else {const city=ownCities()[0];select(city?.tile || mapRegion.starts[view.seat][0],null,true)}
+  else {const city=ownCities()[0];select(city?.tile || view.state.intel?.explored?.[0] || mapRegion.tiles[0].id,null,true)}
 }
 function openMapOnMobile(){
   if(window.matchMedia("(max-width:700px)").matches)el("map-frame").scrollIntoView({block:"center",behavior:"smooth"});

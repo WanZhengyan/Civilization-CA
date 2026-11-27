@@ -1,7 +1,6 @@
-import {projectForSeat} from './vision.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
 import {mapPicker, installMapStyles} from './regions-ui.js';
-import { FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
+import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, createGame, applyAction, chooseBotAction, getStats, migrateGame, getMap } from './rules.js';
 
 import {TARGET_SCORE, MAX_ROUNDS} from './rules.js';
 
@@ -68,7 +67,7 @@ let selectedMap = 'la';
 let pending = false, errorMessage = '', playingBots = false;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
 let inviteOpen = false, resultShown = '', guideTab = 'start';
-const getState = () => projectForSeat(mode === 'online' && room?.game ? room.game : solo, currentSeat());
+const getState = () => campaignView(mode === 'online' && room?.game ? room.game : solo, currentSeat());
 const currentSeat = () => mode === 'online' && room ? room.you : 0;
 function emit() {
   const state = getState();
@@ -549,7 +548,7 @@ function content() {
     return { kicker: 'Campaign records', title: state.phase === 'finished' ? 'Campaign complete' : 'Faction standings',
       body: desc(state.phase === 'finished' ? label : `Holding every original capital wins immediately. Civic points are compared at the end of the round when a faction reaches ${TARGET_SCORE}, or after round ${MAX_ROUNDS}.`) +
         list(ranked.map(({seat,name,stats}) => row(factionMark(seat) + FACTION_NAMES[seatFaction(seat)],
-          [mode === 'online' && '<span translate="no">'+escapeHTML(name)+'</span>', countLabel(stats.cities,'city','cities'), countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), escapeHTML(stats.score)+' pts'))) +
+          [mode === 'online' && '<span translate="no">'+escapeHTML(name)+'</span>', seat===currentSeat()?countLabel(stats.cities,'city','cities'):'In sight', countLabel(stats.units,'unit'), countLabel(stats.territories,'district')].filter(Boolean).join(' · '), (seat===currentSeat()||state.phase==='finished') ? escapeHTML(state.players[seat].score ?? stats.score)+' pts' : '—'))) +
         actions(button('back','Return to map','primary')) };
   }
   if (modal === 'campaign-atlas') {

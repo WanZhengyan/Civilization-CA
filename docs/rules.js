@@ -1,4 +1,4 @@
-import {rememberVision} from './vision.js';
+import {getVisibleTiles, projectForSeat, rememberVision} from './vision.js';
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom, shuffled} from './opening.js';
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
@@ -396,7 +396,7 @@ export function getRouteDetail(state,unitId,target) {
 }
 // The search budget is the unit's remaining movement on this turn.
 function findRoutes(state,unit) {
-  const seen=state.intel && new Set(state.intel.visible);
+  const seen=(state.intel || state.opening==='settlers' || state.enforceSight) && getVisibleTiles(state,unit.seat);
   const costs=new Map([[unit.tile,0]]),parents=new Map(),queue=[unit.tile];
   const blocked=new Set(state.units.filter(u=>u.id!==unit.id).map(u=>u.tile));
   for (const c of state.cities) if (c.seat!==unit.seat) blocked.add(c.tile);
@@ -502,7 +502,8 @@ function attackTargets(state,unit) {
   const range=UNIT_TYPES[unit.type].range;
   if (!range) return [];
   // A land melee unit can contest a defended end of a bridge with a full crossing order.
-  const inRange=tile=>hexDistance(unit.tile,tile)<=range || (UNIT_TYPES[unit.type].captures && unit.moves>=2 && Boolean(bridgeTo(state,unit.tile,tile)));
+  const sight=(state.intel || state.opening==='settlers' || state.enforceSight) && getVisibleTiles(state,unit.seat);
+  const inRange=tile=>(!sight||sight.has(tile)) && (hexDistance(unit.tile,tile)<=range || (UNIT_TYPES[unit.type].captures && unit.moves>=2 && Boolean(bridgeTo(state,unit.tile,tile))));
   const occupied=state.units.filter(u=>u.seat!==unit.seat && inRange(u.tile)).map(u=>u.tile);
   const cities=state.cities.filter(c=>c.seat!==unit.seat && inRange(c.tile) && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
   return unit.type==='scout' ? occupied : [...new Set([...occupied,...cities])];
@@ -657,7 +658,27 @@ function endTurn(state,seat) {
     if (repairs) unit.hp=Math.min(unit.maxHp,unit.hp+12);
   }
 }
+// Compute spotter-assisted forecasts on the authority without disclosing rival
+// research or a city's private construction queue to the attacking client.
+export function campaignView(state, seat) {
+  if(!state || state.intel?.seat===seat) return state;
+  const view=projectForSeat(state,seat), forecasts={};
+  if(state.phase==='playing' && state.turn===seat) {
+    const visible=new Set(view.intel.visible);
+    for(const unit of view.units) {
+      if(unit.seat!==seat || !unit.moves || !UNIT_TYPES[unit.type].range)continue;
+      for(const target of attackTargets(state,unit)) {
+        if(!visible.has(target))continue;
+        const forecast=combatPreview(state,unit.id,target);
+        if(forecast)(forecasts[unit.id]??={})[target]=forecast;
+      }
+    }
+  }
+  return {...view,intel:{...view.intel,forecasts}};
+}
+
 export function combatPreview(state, unitId, target) {
+  if(state.intel) return state.intel.forecasts?.[unitId]?.[target] ?? null;
   const unit = unitOrNull(state, unitId);
   if (!active(state, unit) || !attackTargets(state, unit).includes(target)) return null;
 

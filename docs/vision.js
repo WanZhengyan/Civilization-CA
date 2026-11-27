@@ -98,12 +98,12 @@ export function projectForSeat(state,seat) {
     return [id,cellMemory];
   }));
   const players=state.players.map((player,index)=>index===seat ? player :
-    publicShape(player,['name','bot','faction','color','eliminated']));
+    publicShape(player,['name','bot','faction','color','eliminated',...(state.phase==='finished'?['score']:[])]));
   const cities=state.cities.filter(c=>c.seat===seat || visible.has(c.tile)).map(c=>c.seat===seat ? c :
     {...publicShape(c,['id','name','seat','tile','hp','maxHp','population','originalSeat']),buildings:[]});
   const units=state.units.filter(u=>u.seat===seat || visible.has(u.tile)).map(u=>u.seat===seat ? u :
     publicShape(u,['id','seat','type','tile','hp','maxHp','maxMoves']));
-  const view={...publicShape(state,['rulesVersion','mapId','round','turn','phase','victoryReason','winners','wonderRegistry']),
+  const view={...publicShape(state,['rulesVersion','opening','mapId','round','turn','phase','victoryReason','winners','wonderRegistry']),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
     log:state.log.map(e=>observedEvent(e,seat)).filter(Boolean),intel:{seat,visible:[...visible],explored:[...explored]}};
   if (state.barbarians) {
