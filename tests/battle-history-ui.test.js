@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {describeBattle,pendingIncoming} from '../docs/battle-history.js';
+import {describeBattle,pendingIncoming,recentIncomingReport} from '../docs/battle-history.js';
 import {battleMarkers,paintBattleReport} from '../docs/battle-overlay.js';
 import {createGame,getMap} from '../docs/rules.js';
 
@@ -31,6 +31,9 @@ test('playback schedules distinct incoming attacks across snapshots and caps rec
   assert.deepEqual(pendingIncoming(reports,0,5,0,15).map(r=>r.id),[10,11,12,13,14,15]);
   assert.deepEqual(pendingIncoming(reports,0,12,14,15).map(r=>r.id),[15]);
   assert.deepEqual(pendingIncoming(reports,0,15,0,15),[]);
+  assert.equal(recentIncomingReport(reports,0,0,18),null);
+  assert.equal(recentIncomingReport(reports,0,0,16).id,15);
+  assert.equal(recentIncomingReport(reports,0,15,16),null);
 });
 
 test('unseen origins never read a source tile, draw a flight path, or name an attacker',()=>{

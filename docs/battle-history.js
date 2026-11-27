@@ -45,6 +45,10 @@ export function describeBattle(report,players,region,seat,locale=getLanguage()) 
     action:zh?source+' 攻击了 '+target:source+' attacked '+target,details:details.join(' · ')};
 }
 
+export function recentIncomingReport(reports,seat,dismissed,round) {
+  return reports.findLast(r=>incoming(r,seat) && r.id>dismissed && r.round>=round-1) || null;
+}
+
 export function pendingIncoming(reports,seat,played,dismissed,round) {
   return reports.filter(r=>incoming(r,seat) && r.id>Math.max(played,dismissed) && (played>0 || r.round>=round-1)).slice(-maxPlayback);
 }
@@ -63,7 +67,7 @@ function button(cls) {
 }
 
 export function mountBattleReports(atlas) {
-  let view,region,key,records=[],recent=[],notice,playing,manual=false,timer,lastQueued=0;
+  let view,region,key,records=[],recent=[],notice,playing,manual=false,timer,lastQueued=0,lastRound=0;
   let played=0,dismissed=0,listVersion='';
   const frame=document.getElementById('map-frame');
   const strip=make('aside','battle-dispatch');strip.id='battle-dispatch';strip.hidden=true;
@@ -188,10 +192,11 @@ export function mountBattleReports(atlas) {
     }
     records=view.state.intel?.battles || [];
     const newest=records.at(-1)?.id || 0;
-    if(!changed && newest===lastQueued)return;
+    if(!changed && newest===lastQueued && lastRound===view.state.round)return;
+    lastRound=view.state.round;
     const delta=pendingIncoming(records,view.seat,played,dismissed,view.state.round).filter(r=>r.id>lastQueued);
     recent=recent.concat(delta).slice(-maxPlayback);lastQueued=newest;
-    if(!playing && !recent.length)notice=records.findLast(r=>incoming(r,view.seat) && r.id>dismissed) || null;
+    if(!playing && !recent.length)notice=recentIncomingReport(records,view.seat,dismissed,lastRound);
     renderNotice();if(dialog.open)drawHistory();next();
   }};
 }
