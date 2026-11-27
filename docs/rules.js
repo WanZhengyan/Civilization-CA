@@ -11,7 +11,7 @@ export {TECHS, CIVICS, ERAS} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
 import {LOS_ANGELES, regionalMaps, validMapId} from './maps.js';
 export {CAMPAIGN_MAPS, validMapId} from './maps.js';
-import {seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
+import {barbarianRound,seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
 
 export const MAX_ROUNDS = 30;
 export const TARGET_SCORE = 125;
@@ -707,6 +707,7 @@ function endTurn(state,seat) {
       return;
     }
     state.round++;
+    barbarianRound(state,getMap(state),neighbors,hexDistance,UNIT_TYPES,record);
   }
   state.turn=next;state.actionsLeft=ACTIONS_PER_TURN+Number(adopted(state,next,'federation'));
   const towns=state.cities.filter(c=>c.seat===next);

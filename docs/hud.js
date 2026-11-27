@@ -315,7 +315,7 @@ function inspect(){
     text("entity-kind","Neutral forces");text("entity-name",WILDS[neutral.type].name);text("entity-location",tile.name);
     info='<div class="entity-stats">'+stat("Health",neutral.hp,neutral.maxHp)+'</div>'+healthBar(neutral.hp,neutral.maxHp);
     actions="";
-    explanation=neutral.type==="camp"?"Send a close-combat unit to clear the camp for 12 capital.":"This lookout belongs to a nearby barbarian camp.";
+    explanation=neutral.type==="camp"?"Send a close-combat unit to clear the camp for 12 capital.":neutral.type==="raider"?"Guard the city with a military unit or city walls to repel these raiders.":"This lookout belongs to a nearby barbarian camp.";
   }
   const deposit=canSeeDeposits(state,view.seat) && RESOURCES[state.board[tile.id]?.resource];
   if(deposit)info+='<div class="deposit-strip"><i style="background:'+deposit.color+'"></i><small>Resource</small><strong>'+esc(deposit.name)+'</strong></div>';

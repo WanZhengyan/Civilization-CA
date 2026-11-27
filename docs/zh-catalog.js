@@ -776,4 +776,13 @@ This shipment requires two stored goods.|本次装运需要 2 份同类物资。
 Your shipment for this turn has already left.|本回合的物资已发运。
 Select a city with an unfinished production project.|请选择正在生产且尚未完工的城市。
 Choose one of your cities to receive goods.|请选择一座己方城市以接收物资。
+Barbarian raiders|野蛮人劫掠队
+Guard the city with a military unit or city walls to repel these raiders.|在城内或相邻地块驻军，或修建城墙，可以击退劫掠队。
+A lookout spotted your city. Intercept it before it returns to camp.|野蛮人哨探发现了你的城市。趁它返回营地之前拦截它。
+A lookout returned to camp. A raiding party is preparing.|哨探已经返回营地。野蛮人正在集结劫掠队。
+The city defenses repelled the raid.|城市守军击退了劫掠队。
+Raiders struck the city and looted up to 3 capital.|劫掠队袭击城市，掠走最多 3 资金。
+Barbarian raiders clashed with your military unit.|野蛮人劫掠队与你的部队交战。
+Repel a raid|抵御劫掠
+A lookout near an established city may return to its camp. Intercept it before it reports, or attack the camp before the party leaves two rounds later. A military defender within one hex of the city, or city walls, repels the raid. Raiders leave civilian units alone.|哨探在已建立一段时间的城市附近侦察后，会返回营地。可以中途拦截它，或在两轮集结期内清剿营地。城内或邻格有军事单位、或城市修有城墙时，可击退袭击。劫掠队不会主动攻击平民单位。
 `);

@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/WanZhengyan/Civilization-LA.git"
   },
-  "version": "5.5.0",
+  "version": "5.6.0",
   "private": true,
   "type": "module",
   "description": "A turn-based strategy game set in the Los Angeles Basin",

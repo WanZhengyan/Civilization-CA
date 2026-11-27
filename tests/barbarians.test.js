@@ -80,3 +80,63 @@ test('a lookout in sight reveals its own piece without revealing its home or ord
   assert.deepEqual(Object.keys(visible).sort(),['hp','id','maxHp','tile','type']);
   assert.ok(!visible.id.includes(party.tile));
 });
+
+import {barbarianRound} from '../docs/barbarians.js';
+import {UNIT_TYPES} from '../docs/rules.js';
+function raidFixture() {
+  const s=setup();
+  // Pick an interior land corridor of three consecutive hexes.
+  const map=getMap(s);
+  const free=id=>map.byId[id].terrain==='urban';
+  const t=map.tiles.find(tile=>free(tile.id) &&
+    neighbors(tile.id).some(mid=>free(mid) && neighbors(mid).some(end=>free(end) && hexDistance(end,tile.id)===2)));
+  const front=neighbors(t.id).find(mid=>free(mid) && neighbors(mid).some(end=>free(end)&&hexDistance(end,t.id)===2));
+  const home=neighbors(front).find(end=>free(end)&&hexDistance(end,t.id)===2);
+  const city={id:'capital',name:'Test City',tile:t.id,seat:0,buildings:[],hp:100,maxHp:100};
+  const camp={id:'base',type:'camp',tile:home,hp:48,maxHp:48};
+  const scout={id:'eyes',type:'lookout',tile:front,campId:'base',hp:24,maxHp:24};
+  s.round=7;s.cities=[city];s.units=[];
+  s.barbarians={camps:[camp],parties:[scout],settledSince:{capital:2}};s.log=[];
+  function next() {
+    s.round++;
+    barbarianRound(s,map,neighbors,hexDistance,UNIT_TYPES,(state,seat,type,text,tile)=>state.log.push({round:state.round,seat,type,text,tile}));
+  }
+  return {s,city,camp,scout,front,next};
+}
+test('scouting provides an interception turn and two rounds of warning before a raid launches',()=>{
+  const {s,city,next}=raidFixture();
+  next();assert.equal(s.barbarians.parties[0].report,city.id);assert.ok(!s.barbarians.camps[0].target);
+  next();const camp=s.barbarians.camps[0];
+  assert.equal(camp.target,city.id);assert.equal(camp.prepare,s.round+2);
+  next();assert.ok(!s.barbarians.parties.length);
+  next();assert.equal(s.barbarians.parties[0].type,'raider');
+  assert.ok(s.log.every(e=>e.seat===0));assert.ok(!s.log.some(e=>e.tile===camp.tile));
+  const before=s.players[0].capital;
+  for(let n=0;n<8 && !s.log.some(e=>e.text.includes('looted'));n++)next();
+  assert.equal(s.players[0].capital,before-3);assert.equal(city.hp,88);
+});
+test('city defenses stop an incoming raider; civilian founders and new towns cannot trigger it',()=>{
+  const {s,city,camp,front,next}=raidFixture();
+  const raid={id:'raid',campId:camp.id,type:'raider',target:city.id,tile:front,hp:44,maxHp:44};
+  s.barbarians.parties=[raid];city.buildings=['walls'];
+  const before=s.players[0].capital;
+  next();assert.equal(city.hp,100);assert.equal(s.players[0].capital,before);
+  assert.ok(s.log.at(-1).text.includes('repelled'));
+  city.buildings=[];s.barbarians.parties=[{...raid}];
+  s.units=[{id:'guard',seat:0,type:'melee',tile:city.tile,hp:84}];
+  next();assert.equal(city.hp,100);assert.equal(s.players[0].capital,before);
+  s.cities=[];s.units=[{id:'first',seat:0,type:'settler',tile:city.tile,hp:60}];
+  s.barbarians.parties=[{...raid}];next();assert.equal(s.units[0].hp,60);
+  s.cities=[city];s.barbarians.parties=[{id:'eyes2',type:'lookout',campId:camp.id,tile:front}];
+  next();assert.ok(!s.barbarians.parties[0].report && !s.barbarians.camps[0].target);
+});
+test('clearing a camp cancels any preparing raid and prevents fresh patrols',()=>{
+  const {s,city,camp,front,next}=raidFixture();
+  s.barbarians.camps[0]={...camp,target:city.id,prepare:s.round+1,hp:1};
+  s.barbarians.parties=[];
+  s.units=[{id:'guard',seat:0,type:'melee',tile:front,hp:88,maxHp:100,moves:2,maxMoves:2}];
+  const cleared=applyAction(s,0,{type:'attack',tile:camp.tile,unit:'guard'});
+  s.barbarians=cleared.barbarians;
+  for(let i=0;i<5;i++)next();
+  assert.ok(!s.barbarians.camps.length&&!s.barbarians.parties.length);
+});

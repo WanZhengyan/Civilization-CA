@@ -1,5 +1,11 @@
 # Release notes
 
+## 5.6 · Intercept raids before they reach a city
+
+Stationary camps gave the player little reason to choose between patrolling and defending. Returning lookouts can trigger raids. Defenders and walls repel attackers. Civilian settlers are protected and a raid cannot capture a city.
+
+84 checks passed. 18 fixed campaigns replayed identically twice. Test a longer-term peaceful project alongside frontier defense.
+
 ## 5.5 · Discover barbarian outposts
 
 Exploration had no independent opponent outside the rival capitals. Reachable neutral camps and lookouts are generated outside the starting buffer. A military unit can clear a camp for a treasury reward.

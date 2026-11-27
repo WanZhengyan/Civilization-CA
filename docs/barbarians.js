@@ -2,7 +2,8 @@
 // units so they cannot count as a faction, own a capital, or take a player turn.
 export const WILDS = {
   camp: {name:'Barbarian camp', maxHp:48, strength:12},
-  lookout: {name:'Barbarian lookout', maxHp:24, strength:6}
+  lookout: {name:'Barbarian lookout', maxHp:24, strength:6},
+  raider: {name:'Barbarian raiders', maxHp:44, strength:14}
 };
 
 function randomRank(seed, key) {
@@ -68,4 +69,115 @@ export function resolveWildAttack(state,unit,target,result,record) {
     state.players[unit.seat].capital+=12;
     record(state,unit.seat,'barbarian','Camp cleared. Your treasury gains 12 capital.',target.tile);
   } else record(state,unit.seat,'barbarian',result.defeated?'A barbarian patrol was dispersed.':'Your unit engaged the barbarians.',target.tile);
+}
+
+function legalNeighbors(state,id,map,neighbors) {
+  const crossings=(map.bridgesByTile?.[id]||[]).map(bridge=>bridge.to);
+  return [...neighbors(id),...crossings].filter(tile=>!['ocean','mountains'].includes(map.byId[tile].terrain));
+}
+function free(state,tile) {
+  return !state.units.some(u=>u.tile===tile) && !state.cities.some(c=>c.tile===tile) && !wildAt(state,tile);
+}
+
+// Path only through empty land. A scout seeks a lookout position or returns
+// beside its home. Neither the bridge span nor the destination city is occupied.
+function nextStep(state,party,goals,map,neighbors) {
+  const desired=new Set(goals);
+  if (desired.has(party.tile) || !desired.size) return null;
+  const search=[party.tile], first=new Map([[party.tile,null]]);
+  for (let i=0;i<search.length;i++) {
+    const origin=search[i];
+    for (const tile of legalNeighbors(state,origin,map,neighbors)) {
+      if (first.has(tile) || !free(state,tile)) continue;
+      const step=first.get(origin)||tile;
+      if (desired.has(tile)) return step;
+      first.set(tile,step);search.push(tile);
+    }
+  }
+  return null;
+}
+function scoutTurn(state,party,camp,settled,map,neighbors,distance,record) {
+  if (!camp) return false;
+  let town=settled.find(c=>c.id===party.report);
+  if (!town) {
+    delete party.report;
+    town=settled.filter(c=>distance(party.tile,c.tile)<=2).sort((a,b)=>distance(party.tile,a.tile)-distance(party.tile,b.tile))[0];
+    if (town) {
+      party.report=town.id;
+      record(state,town.seat,'barbarian','A lookout spotted your city. Intercept it before it returns to camp.',party.tile);
+      return true; // The player always gets an interception turn, even beside a camp.
+    }
+  }
+  if (town) {
+    if (distance(party.tile,camp.tile)<=1) {
+      if(!camp.target && (camp.cooldown||0)<=state.round) {
+        camp.target=town.id;camp.prepare=state.round+2;
+        record(state,town.seat,'barbarian','A lookout returned to camp. A raiding party is preparing.',town.tile);
+      }
+      return false;
+    }
+    const step=nextStep(state,party,legalNeighbors(state,camp.tile,map,neighbors),map,neighbors);
+    if(step)party.tile=step;
+  } else {
+    const nearby=legalNeighbors(state,party.tile,map,neighbors).filter(tile=>free(state,tile) && distance(tile,camp.tile)<=3);
+    const history=[...(party.trail||[]),party.tile].slice(-5);
+    const rank=tile=>(history.includes(tile)?-1e11:0)+distance(tile,camp.tile)*1e10+randomRank(state.seed,'patrol/'+party.id+'/'+state.round+'/'+tile);
+    const step=nearby.sort((a,b)=>rank(b)-rank(a))[0];
+    if(step){party.tile=step;party.trail=history;}
+  }
+  return true;
+}
+function raidTurn(state,party,town,defs,map,neighbors,distance,record) {
+  if (!town) return false;
+  if (distance(party.tile,town.tile)<=1) {
+    const guard=state.units.some(u=>u.seat===town.seat && defs[u.type]?.strength>0 && distance(u.tile,town.tile)<=1);
+    if (guard || town.buildings.includes('walls')) {
+      record(state,town.seat,'barbarian','The city defenses repelled the raid.',town.tile);
+    } else {
+      state.players[town.seat].capital=Math.max(0,state.players[town.seat].capital-3);
+      town.hp=Math.max(1,town.hp-12);
+      record(state,town.seat,'barbarian','Raiders struck the city and looted up to 3 capital.',town.tile);
+    }
+    return false;
+  }
+  const foe=state.units.find(u=>defs[u.type]?.strength>0 && defs[u.type]?.domain!=='sea' && u.seat===town.seat && distance(u.tile,party.tile)===1);
+  if (foe) {
+    foe.hp=Math.max(0,foe.hp-14);
+    party.hp-=Math.max(4,Math.round(defs[foe.type].strength*.4));
+    if(!foe.hp)state.units=state.units.filter(u=>u.id!==foe.id);
+    record(state,foe.seat,'barbarian','Barbarian raiders clashed with your military unit.',foe.tile);
+    return party.hp>0;
+  }
+  const step=nextStep(state,party,legalNeighbors(state,town.tile,map,neighbors),map,neighbors);
+  if(step)party.tile=step;
+  return true;
+}
+export function barbarianRound(state,map,neighbors,distance,defs,record) {
+  if (!state.barbarians) return;
+  const old=state.barbarians;
+  // No retroactive raids on a new city, including a player who delays founding.
+  const settledSince={};
+  for(const city of state.cities)settledSince[city.id]=old.settledSince?.[city.id]??state.round;
+  const settled=state.cities.filter(c=>state.round-settledSince[c.id]>=3);
+  const wilds=state.barbarians={nextPiece:old.nextPiece??1,settledSince,camps:old.camps.map(c=>({...c})),parties:old.parties.map(p=>({...p}))};
+  // Resolve one neutral phase per completed round, independent of seat count.
+  for (const party of [...wilds.parties]) {
+    const camp=wilds.camps.find(c=>c.id===party.campId);
+    const town=settled.find(c=>c.id===party.target);
+    const stays=party.type==='lookout'
+      ? scoutTurn(state,party,camp,settled,map,neighbors,distance,record)
+      : raidTurn(state,party,town,defs,map,neighbors,distance,record);
+    if (!stays) wilds.parties=wilds.parties.filter(p=>p.id!==party.id);
+  }
+  for (const camp of wilds.camps) {
+    if(!camp.target && (camp.cooldown||0)>state.round)continue;
+    if(camp.target && !settled.some(city=>city.id===camp.target)) {delete camp.target;delete camp.prepare;}
+    const raiding=Boolean(camp.target), type=raiding?'raider':'lookout';
+    if((raiding && state.round<camp.prepare) || wilds.parties.some(p=>p.campId===camp.id))continue;
+    const tile=legalNeighbors(state,camp.tile,map,neighbors).find(id=>free(state,id));
+    if(!tile)continue;
+    const maxHp=WILDS[type].maxHp;
+    wilds.parties.push({id:'w'+wilds.nextPiece++,type,campId:camp.id,tile,hp:maxHp,maxHp,...(raiding?{target:camp.target}:{})});
+    if(raiding) {delete camp.target;delete camp.prepare;camp.cooldown=state.round+5;}
+  }
 }
