@@ -724,9 +724,13 @@ const guideSections = {
     ['Launch a fleet', 'A harbor trains Revenue cutters. Research Steam Power to unlock the Shipyard, then build one to train Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.']
   ]},
   research: {label:'Research & victory', entries:[
-    ['Choose a specialization', 'Workshop Engineering opens Steam Power and then Radio Networks. Field Tactics leads to Ballistics. Learn both Steam Power and Ballistics to unlock Motorization and train an Armored Column.'],
+    ['Choose a specialization', state=>!state || state.researchPace===2
+      ? 'Follow Steam Power with Industrial Metallurgy and Electrical Engineering to unlock Radio Networks. The other branch of Rocketry runs through District Railways and Motorization.'
+      : 'Workshop Engineering opens Steam Power and then Radio Networks. Field Tactics leads to Ballistics. Learn both Steam Power and Ballistics to unlock Motorization and train an Armored Column.'],
     ['Build up science', 'Cities, population and discoveries contribute science. Culture funds a separate civic project at the same time. Switch projects without losing saved points. Surplus science and culture carry over.'],
-    ['Choose a civic path', 'Municipal Charter leads to County Federation for another district order, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
+    ['Choose a civic path', state=>!state || state.researchPace===2
+      ? 'Land Registry leads to County Federation, then Teachers Colleges and Public Libraries. Libraries increase the culture produced by monuments. On another branch, Park Conservancies rewards cities with suitable land.'
+      : 'Municipal Charter leads to County Federation for another district order, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
     ['Win by domination', state=>state?.teams ? 'A team wins immediately when its members collectively hold every original capital.' : 'In a campaign with rivals, control every participating civilization’s original capital to win immediately.'],
     ['Win on civic points', state=>{
       if(state?.teams)return '<span>Living teammates combine their civic points. Compare team totals at the end of the round when a team reaches the target, or after round 30. Tied teams share victory.</span> <strong>Team civic target</strong> · '+getScoreTarget(state);
@@ -886,6 +890,11 @@ function modalAction(act) {
       dismissDialog();
       locateDistrict?.(match.tile);
     }
+    return;
+  }
+  if(act==='plan-rocketry'){
+    dismissDialog();
+    document.dispatchEvent(new CustomEvent('civitas-plan-research',{detail:{item:'rocketry'}}));
     return;
   }
   if(act==='battle-reports'){dismissDialog();document.dispatchEvent(new Event('civitas-battle-history'));return;}

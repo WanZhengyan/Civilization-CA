@@ -27,8 +27,8 @@ import {getTeamId,sameTeam,teamLabel} from './teams.js';
 export {getTeamId,sameTeam,teamLabel};
 import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.js";
 import {nextTechnology} from './applied-science.js';
-import {TECHS, CIVICS, ERAS, ERA_UNITS, eraFor} from './progression.js';
-export {TECHS, CIVICS, ERAS} from './progression.js';
+import {TECHS, CIVICS, ERAS, ERA_UNITS, eraFor, councilTree} from './progression.js';
+export {TECHS, CIVICS, ERAS, councilTree} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
 import {planWaterways, waterwayChart} from './waterways.js';
 import {campaignChart, largeCampaignChart, neighborCoordinates, REGIONAL_SHAPE} from './region-shapes.js';
@@ -361,7 +361,7 @@ function drawOpeningSeat(seed,teams,count) {
   const pick=options=>options[Math.floor(random()*options.length)];
   return pick(pick([...members.values()]));
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 1} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!validVictoryMode(victoryMode)) throw new Error('Choose a valid victory mode.');
   if (!legacyVictory && practice && victoryMode==='conquest') throw new Error('Conquest requires a rival civilization.');
@@ -388,7 +388,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const waterPlan=waterways ? planWaterways(base,seed) : null;
   const map=waterwayChart(base,waterPlan);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, ...(waterPlan ? {waterways:waterPlan} : {}), ...(researchPace===1 ? {researchPace:1} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
+  const next = {seed, mapId, ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
     ...(teams ? {teams:[...teams]} : {}), ...(difficulty!=='normal' ? {difficulty} : {}),
     ...(drawInitiative===true ? {firstSeat} : {}), ...(!legacyVictory || scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:firstSeat,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
@@ -508,6 +508,9 @@ export function getCityYield(state,cityId) {
   if (farms && adopted(state,city.seat,'irrigationDistricts')) result.food += 2;
   if (has('harbor') && adopted(state,city.seat,'harborCommission')) result.capital += 3;
   if (adopted(state,city.seat,'exposition')) result.influence += 2 * city.buildings.filter(id=>WONDERS[id]).length;
+  if (has('workshop') && knows(state,city.seat,'mechanics')) result.production++;
+  if (adopted(state,city.seat,'landRegistry')) result.capital++;
+  if (city.population>=5 && adopted(state,city.seat,'regionalPlanning')) result.production++;
   const policy=state.players[city.seat].policy;
   if (policy==='contracts') { result.production+=2; result.food-=1; }
   if (policy==='relief') { result.food+=2; result.production-=1; }
@@ -555,6 +558,10 @@ export function getStats(state,seat) {
     stats.cultureIncome += 2 * campuses;
     stats.influenceIncome += 2 * campuses;
   }
+  if (knows(state,seat,'electricity')) stats.scienceIncome+=2*cities.filter(c=>c.buildings.includes('workshop')).length;
+  if (adopted(state,seat,'landRegistry')) stats.capitalIncome+=count;
+  if (adopted(state,seat,'publicLibraries')) stats.cultureIncome+=2*monuments;
+  if (adopted(state,seat,'regionalPlanning')) stats.cultureIncome+=cities.filter(c=>c.population>=5).length;
   const policy=state.players[seat].policy;
   if (policy==='lectures') { stats.cultureIncome+=count; stats.scienceIncome-=count; }
   if (policy==='grants') { stats.scienceIncome+=2*count; stats.capitalIncome-=2*count; }
@@ -898,9 +905,9 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
     return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,era:def.era || null,saved:parkedProduction(city,item),turns:Math.ceil((def.required-parkedProduction(city,item))/rate),required:def.required,enabled:!reason,reason};
   });
 }
-const SCIENCE = {tree: TECHS, bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
+const SCIENCE = {bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
   order:'research', event:'discovery', verb:'discovered'};
-const CULTURE = {tree: CIVICS, bank:'culture', income:'cultureIncome', known:'civics', focus:'civic',
+const CULTURE = {bank:'culture', income:'cultureIncome', known:'civics', focus:'civic',
   order:'civic', event:'adoption', verb:'adopted'};
 
 function councilOptions(state, seat, track) {
@@ -909,7 +916,8 @@ function councilOptions(state, seat, track) {
   const known = player[track.known] || [];
   const bank = player[track.bank] || 0;
   const income = getStats(state, seat)[track.income];
-  return Object.entries(track.tree).filter(([item])=>item!=='rocketry' || allowsScience(state)).map(([item, project]) => {
+  const tree=councilTree(state,track.focus);
+  return Object.entries(tree).filter(([item])=>item!=='rocketry' || allowsScience(state)).map(([item, project]) => {
     const completed = known.includes(item);
     const active = player[track.focus] === item;
     const missing = project.requires.filter(key => !known.includes(key));
@@ -918,12 +926,12 @@ function councilOptions(state, seat, track) {
     else if (!seatMayOrder(state,seat)) reason = "Wait for your turn.";
     else if (completed) reason = "Your faction has already completed this project.";
     else if (active) reason = "This is your current project.";
-    else if (missing.length) reason = "Requires " + missing.map(key=>track.tree[key].name).join(" + ") + ".";
-    const cost=councilProjectCost(state,track,item);
+    else if (missing.length) reason = "Requires " + missing.map(key=>tree[key].name).join(" + ") + ".";
+    const cost=councilProjectCost(state,track.focus,tree,item);
     const remaining = Math.max(0, cost - bank);
     const turns = completed || remaining === 0 ? 0 : income > 0 ? Math.ceil(remaining / income) : null;
     return {item, label: project.name, description: project.description, cost, remaining, era: project.era,
-      requires: project.requires, locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
+      requires: project.requires, ...(project.tier ? {tier:project.tier} : {}), locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
   });
 }
 export function getResearchOptions(state, seat) { return councilOptions(state,seat,SCIENCE); }
@@ -932,12 +940,13 @@ export function getCivicOptions(state, seat) { return councilOptions(state,seat,
 function finishProject(state, seat, track) {
   const player = state.players[seat], item = player[track.focus];
   if (!item) return;
-  const cost=councilProjectCost(state,track,item);
+  const tree=councilTree(state,track.focus);
+  const cost=councilProjectCost(state,track.focus,tree,item);
   if (player[track.bank] < cost) return;
   player[track.bank] -= cost;
   player[track.known] = [...player[track.known], item];
   player[track.focus] = null;
-  record(state, seat, track.event, FACTIONS[state.players[seat].faction].name+' '+track.verb+' '+track.tree[item].name+'.', null, {item});
+  record(state, seat, track.event, FACTIONS[state.players[seat].faction].name+' '+track.verb+' '+tree[item].name+'.', null, {item});
 }
 function selectProject(state, seat, item, track) {
   const option = councilOptions(state, seat, track).find(project => project.item === item);
@@ -1751,7 +1760,7 @@ function botDistrict(state,difficulty) {
     const parcel=state.board[id];
     // Both ordinary buildings and universities can reserve an unimproved plot.
     // Their location is private, so treat all plausible rival sites alike.
-    if(order.type==='contest' && (state.researchPace===1 || activeCharter) && !parcel.improvement && !parcel.resource &&
+    if(order.type==='contest' && (state.researchPace>=1 || activeCharter) && !parcel.improvement && !parcel.resource &&
       !['ocean','mountains'].includes(tile.terrain)){
       const unknown=sightFrom(state,id).some(other=>!visible.has(other));
       if(unknown || state.cities.some(city=>city.seat===parcel.owner && hexDistance(city.tile,id)<=2))continue;
@@ -1805,14 +1814,15 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
       }
     }
   }
-  if (!player.research && player.technologies.length < Object.keys(TECHS).length) {
+  const technologyTree=councilTree(state,'research');
+  if (!player.research && player.technologies.length < Object.keys(technologyTree).length) {
     const threatened = state.cities.some(city => city.seat === seat && state.units.some(
       unit => !sameTeam(state,seat,unit.seat) && UNIT_TYPES[unit.type].range > 0 && hexDistance(unit.tile, city.tile) <= 2));
     const modernRival=state.victoryMode!=='science' && (view.intel.diplomacy || []).some(row=>row.delegation?.era==='modern');
-    const project=nextTechnology(state,seat,threatened || modernRival,TECHS);
+    const project=nextTechnology(state,seat,threatened || modernRival,technologyTree);
     if (project) return {type: 'research', item: project};
   }
-  if (!player.civic && player.civics.length < Object.keys(CIVICS).length) {
+  if (!player.civic && player.civics.length < Object.keys(councilTree(state,'civic')).length) {
     const project=councilAgenda(state,seat);
     if (project) return {type:'civic',item:project};
   }
@@ -1851,7 +1861,7 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if(assault.advance)return assault.advance;
   // A fully trained unit waits in its city when no legal deployment space
   // remains. Bank that work if this government can launch from the same city.
-  if (state.researchPace===1 && allowsScience(state) && player.technologies.includes('rocketry')) {
+  if (state.researchPace>=1 && allowsScience(state) && player.technologies.includes('rocketry')) {
     const cities=state.cities.filter(city=>city.seat===seat);
     const stalled=cities.find(city=>city.queue && Object.hasOwn(UNIT_TYPES,city.queue.item) && city.queue.progress>=city.queue.required);
     if(stalled && !cities.some(city=>city.queue?.item===SCIENCE_PROJECT.id)) {

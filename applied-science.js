@@ -36,6 +36,21 @@ export const appliedScience = {
 // depend only on holdings, formations and wounded units the governor can see.
 export function nextTechnology(state, seat, threatened, tree) {
   const known=new Set(state.players[seat].technologies);
+  if (state.researchPace===2 && state.victoryMode==='science') {
+    if (threatened && !known.has('tactics')) return 'tactics';
+    // Follow the actual launch dependencies. The available-project list alone
+    // can send a governor through unrelated branches when its goal is locked.
+    function nextRequired(id) {
+      if (known.has(id)) return null;
+      for (const parent of tree[id].requires) {
+        const needed=nextRequired(parent);
+        if (needed)return needed;
+      }
+      return id;
+    }
+    const next=nextRequired('rocketry');
+    if (next)return next;
+  }
   const cities=state.cities.filter(city=>city.seat===seat);
   const units=state.units.filter(unit=>unit.seat===seat);
   const holdings=Object.values(state.board).filter(tile=>tile.owner===seat && !tile.pillaged);
