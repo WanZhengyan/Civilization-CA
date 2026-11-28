@@ -1,3 +1,5 @@
+import {getPopulationReport} from './rules.js';
+import {SETTLER_MIN_POPULATION,SETTLER_RESIDENT_COST} from './population.js';
 import {getWonderSites,getProductionOptions} from './rules.js';
 import {WONDERS,campusStatus} from './wonders.js';
 import {waterDistances,waterKind} from './water-navigation.js';
@@ -179,6 +181,22 @@ const lenses=[
           (site.favored?' · +1 '+specialty[Number(zh)]:'')+(option.enabled?'':' · '+translate(option.reason,lang));
       }).join(' / ');
       rows.set(id,reading(!available.length?2:bonus?1:0,info('en'),info('zh-CN'),bonus*10+available.length));
+    }
+    return rows;
+  }),
+  definition('growth','Population and food reserves','人口与粮仓','Find cities that need food or housing, and identify towns that can spare a settler household.','找出粮食紧张或住房不足的城市，查看哪些城市可以派出开拓者家庭。',[
+    ['Steady','稳定'],['Housing limit','住房已满'],['Growing','正在增长'],['Food deficit','粮食赤字']
+  ],({state,own})=>{
+    const rows=new Map();
+    for(const city of own){
+      const f=getPopulationReport(state,city.id),band=f.surplus<0?3:f.housingLimited?1:f.growthTurns?2:0;
+      const status=f.starvationTurns?['Resident lost in '+f.starvationTurns+' turns.','预计 '+f.starvationTurns+' 回合后减少一名居民。']:
+        f.housingLimited?['More housing needed to grow.','增加住房后可继续增长。']:
+        f.growthTurns?['Growth in '+f.growthTurns+' turns.','预计 '+f.growthTurns+' 回合后增加一名居民。']:['No growth forecast.','目前没有人口增长预期。'];
+      const departure=f.population>=SETTLER_MIN_POPULATION?['Can sponsor a settler for '+SETTLER_RESIDENT_COST+' resident.','可招募开拓者，完成时消耗 '+SETTLER_RESIDENT_COST+' 名居民。']:
+        ['Needs '+(SETTLER_MIN_POPULATION-f.population)+' more residents to sponsor a settler.','再增加 '+(SETTLER_MIN_POPULATION-f.population)+' 名居民即可招募开拓者。'];
+      rows.set(city.tile,reading(band,city.name+' · population '+f.population+'/'+f.housing+' housing. Food '+f.food+' stored, '+f.harvest+' harvested, '+f.consumption+' consumed. '+status[0]+' '+departure[0],
+        translate(city.name,'zh-CN')+' · 人口 '+f.population+'／住房 '+f.housing+'。存粮 '+f.food+'，收获 '+f.harvest+'，消耗 '+f.consumption+'。'+status[1]+departure[1],band===3?100-(f.starvationTurns||0):band===1?40:f.growthTurns?20-f.growthTurns:0));
     }
     return rows;
   }),

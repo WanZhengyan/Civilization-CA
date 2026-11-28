@@ -86,3 +86,12 @@ test('campus survey uses the researched school and authoritative specialty terra
     assert.equal(rows.get(site.id).band,Number(site.favored));assert.match(rows.get(site.id).en,/Stanford/);
   });
 });
+
+test('food relief distinguishes housing, starvation and readiness to recruit a settler',async()=>{
+  const {getPopulationReport}=await import('../docs/rules.js'),s=campaignView(capital(),0),c=s.cities[0];
+  const base=surveyLayer(s,0,'growth').get(c.tile);assert.match(base.en,/more residents/);
+  c.population=40;c.food=0;
+  const f=getPopulationReport(s,c.id),short=surveyLayer(s,0,'growth').get(c.tile);
+  assert.equal(short.band,3);assert.match(short.en,/Can sponsor a settler/);
+  assert.ok(short.en.includes('Resident lost in '+f.starvationTurns+' turns.'));
+});
