@@ -44,8 +44,9 @@ export function commerceLedger(state,seat,city,busy,esc) {
     const upgrade=route.graded?L('Graded road','已整修道路'):player.civics.includes('publicWorks')?
       '<button type="button" class="cargo-order" data-caravan-order="gradeRoad" data-origin="'+esc(route.origin)+'" data-destination="'+esc(route.destination)+'"'+(!enabled || player.capital<roadCost(route)?' disabled':'')+'>'+
       L('Grade road for both directions · ','双向整修道路 · ')+roadCost(route)+L(' gold · standard wagon travels 5 hexes per harvest',' 金币 · 普通商队每次收获可行 5 格')+'</button>':'';
-    return '<li><strong>'+cityText(state,route.destination,esc)+'</strong> · '+route.steps+L(' land hexes',' 格陆路')+' · '+route.turns+L(' harvests',' 次收获')+
-      upgrade+offers.map(o=>dispatchButton(o,enabled,esc)).join('')+'</li>';
+    const standing=player.foodLine?'':'<button type="button" class="cargo-order" data-caravan-order="scheduleFoodLine" data-origin="'+esc(route.origin)+'" data-destination="'+esc(route.destination)+'"'+(!enabled?' disabled':'')+'>'+L('Schedule relief · send 4 food when origin has 10+ and destination under 6','设立粮食救济线 · 起点至少存 10 粮且终点不足 6 粮时发运 4 粮')+'</button>';
+    return '<li><details><summary><strong>'+cityText(state,route.destination,esc)+'</strong> · '+route.steps+L(' land hexes',' 格陆路')+' · '+route.turns+L(' harvests',' 次收获')+
+      '</summary>'+upgrade+standing+offers.map(o=>dispatchButton(o,enabled,esc)).join('')+'</details></li>';
   }).join('');
   const active=(player.caravans || []).map(w=>'<p>'+cargoText(w.item)+' · '+cityText(state,w.destination,esc)+' · '+
     (w.returning?L('Returning cargo','原货返程')+' · ':'')+(w.remaining?w.remaining+L(' harvests left',' 次收获后抵达'):L('Awaiting a friendly destination','等待己方收货城市'))+
@@ -55,9 +56,13 @@ export function commerceLedger(state,seat,city,busy,esc) {
   const capacity=tradeCapacity(state,seat);
   const depot=city.buildings?.includes('shop') && capacity===1 ? '<button class="cargo-order" type="button" data-caravan-order="establishDepot" data-origin="'+esc(city.id)+'"'+
     (!enabled || player.capital<18?' disabled':'')+'>'+L('Open wagon depot · 18 gold · second crew','设立商队货栈 · 18 金币 · 增加第二支商队')+'</button>' : '';
+  const line=player.foodLine;
+  const standing=line?'<p>'+L('Standing food relief','常设粮食救济')+' · '+cityText(state,line.origin,esc)+' → '+cityText(state,line.destination,esc)+' · '+
+    L('After deliveries, dispatch 4 food when origin holds at least 10 and destination holds under 6. Manual dispatches have priority.','到货后，起点存粮至少 10 且终点不足 6 时，派车运送 4 粮。手动发运优先。')+
+    '<button class="cargo-order" type="button" data-caravan-order="cancelFoodLine"'+(!enabled?' disabled':'')+'>'+L('Cancel standing order','取消常设安排')+'</button></p>':'';
   const receipt=player.tradeReceipt;
   return '<section class="commerce-ledger" translate="no"><h3>'+L('Overland trade','陆路贸易')+'</h3><p>'+
-    L('Wagon routes from ','商队起点：')+cityText(state,city.id,esc)+' · '+L('Crews on the road ','在途商队 ')+(player.caravans?.length || 0)+' / '+capacity+'</p>'+(routes.length?'<button type="button" class="cargo-order" data-act="trade-market">'+L('Compare city markets','比较各城货运')+'</button>':'')+depot+(city.freightTimber?'<p>'+L('Lumber yard reserve','木料库存产能')+' · '+city.freightTimber+'</p>':'')+active+
+    L('Wagon routes from ','商队起点：')+cityText(state,city.id,esc)+' · '+L('Crews on the road ','在途商队 ')+(player.caravans?.length || 0)+' / '+capacity+'</p>'+(routes.length?'<button type="button" class="cargo-order" data-act="trade-market">'+L('Compare city markets','比较各城货运')+'</button>':'')+depot+(city.freightTimber?'<p>'+L('Lumber yard reserve','木料库存产能')+' · '+city.freightTimber+'</p>':'')+standing+active+
     (receipt?'<p>'+L('Last delivery','上次到货')+' · '+cargoText(receipt.item)+' · '+cityText(state,receipt.destination,esc)+' · '+(receipt.returning?L('Cargo returned; no freight paid','原货已退还，无运费收益'):rewardText(receipt))+'</p>':'')+
     (rows?'<ul>'+rows+'</ul>':'<p>'+L('Found a second city and explore a land corridor between them to open a wagon route.','建立第二座城市，并探明两城之间的陆路，便可开通商队路线。')+'</p>')+'</section>';
 }

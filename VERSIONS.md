@@ -102,3 +102,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.92 | Carry filed exhibits between friendly cities to open one-time touring exhibitions |
 | 7.0.93 | Plan field visits with real scout ranges, route costs and validated map focus |
 | 7.0.94 | Open contextual real-world field notes directly from explored district inspectors |
+| 7.0.95 | Authorize recurring shortage relief with explicit food reserves and manual priority |

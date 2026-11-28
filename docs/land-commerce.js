@@ -196,3 +196,25 @@ export function planOverlandCommerce(state,seat,routesFor) {
   }
   return best?.order || null;
 }
+
+export function scheduleFoodLine(state,seat,order,routes) {
+  const player=state.players[seat];
+  const route=routes.find(r=>r.destination===order.destination);
+  if(!route || player.foodLine)throw new Error('Choose a charted corridor and cancel any previous food line.');
+  player.foodLine={origin:route.origin,destination:route.destination};
+}
+export function cancelFoodLine(state,seat) {
+  if(!state.players[seat].foodLine)throw new Error('There is no standing food line to cancel.');
+  delete state.players[seat].foodLine;
+}
+export function fulfillFoodLine(state,seat,routesFor) {
+  const line=state.players[seat].foodLine;
+  if(!line)return;
+  const town=id=>state.cities.find(c=>c.id===id && c.seat===seat);
+  const source=town(line.origin),target=town(line.destination);
+  if(!source || !target){cancelFoodLine(state,seat);return;}
+  if(source.food<10 || target.food>=6)return;
+  const routes=routesFor(state,seat,source.id),route=routes.find(r=>r.destination===target.id);
+  const offer=route && freightOffer(state,seat,route,'provisions');
+  if(offer && !offer.reason)dispatchCaravan(state,seat,{...line,item:'provisions'},routes);
+}

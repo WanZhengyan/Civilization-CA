@@ -169,3 +169,18 @@ test('rival freight planners serve hungry towns without emptying their own reser
   state.players[0].capital=30;state.players[0].research='writing';state.cities[0].buildings=['academy'];
   assert.equal(planOverlandCommerce(state,0,getLandRoutes).item,'scholars');
 });
+test('a standing food line charges and delivers real provisions, obeys reserves and can be cancelled',()=>{
+  const {state,home,dest}=market(),order={type:'scheduleFoodLine',origin:home,destination:dest};
+  let next=applyAction(state,0,order);assert.equal(next.players[0].caravans,undefined);
+  assert.throws(()=>applyAction(next,0,order));
+  const unfunded=structuredClone(next);unfunded.cities[0].food=9;
+  assert.equal(applyAction(unfunded,0,{type:'end'}).players[0].caravans,undefined);
+  const satisfied=structuredClone(next);satisfied.cities[1].food=6;
+  assert.equal(applyAction(satisfied,0,{type:'end'}).players[0].caravans,undefined);
+  const control=applyAction(state,0,{type:'end'});
+  next=applyAction(next,0,{type:'end'});assert.equal(next.players[0].caravans.length,1);
+  assert.equal(next.cities[0].food,control.cities[0].food-4);
+  next=applyAction(next,0,{type:'cancelFoodLine'});assert.equal(next.players[0].foodLine,undefined);
+  while(next.players[0].caravans.length)next=applyAction(next,0,{type:'end'});
+  assert.equal(next.players[0].tradeReceipt.destination,dest);
+});
