@@ -6,7 +6,8 @@ import {mountDiplomacy,paintDiplomacy,publicContacts} from './diplomacy-ui.js';
 import {chartedWaterSites,knownCrossings,mountWaterKey,waterKind} from './water-key.js';
 import {getFreightManifest} from './rules.js';
 import {voyageQuote,voyageAllowance} from './voyage-stores.js';
-import {freightPanel,voyagePanel} from './harbor-ledger-ui.js';
+import {freightCourse} from './freight-course.js';
+import {freightPanel,freightCoursePanel,voyagePanel} from './harbor-ledger-ui.js';
 import {fishingTask} from './maritime.js';
 import {modeLabels} from './campaign-choices.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
@@ -119,7 +120,7 @@ function cityNameAttrs(city){return customCity(city)?' translate="no"':''}
 function lobby(){return view.mode==="online"&&view.room?.phase==="lobby"}
 function mayOrder(){return roomSeatTurn(view.state,view.seat)==="active"&&!lobby()&&!view.busy}
 let view,atlas,battleReports,selectedTile,selectedUnit,kind="tile",order="",matchKey="",activeRoster="units",timer,productionCity=null;
-let moveBar,moveDraft=null;
+let moveBar,moveDraft=null,freightBar,freightTarget=null;
 let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEvent="";
 const unavailableArt=new Set();
 let surveyUnitId=null;
@@ -134,7 +135,7 @@ function toast(message){
 }
 function select(tile,unit=null,city=false){
   if(!mapRegion.byId[tile])return;
-  moveDraft=null;order="";selectedTile=tile;
+  moveDraft=null;freightTarget=null;order="";selectedTile=tile;
   const candidates=view.state.units.filter(u=>u.tile===tile);
   const piece=candidates.find(u=>sameId(u.id,unit)) || (city ? null : candidates.find(u=>u.seat===view.seat)||candidates[0]);
   const place=cityAt(tile);
@@ -168,7 +169,7 @@ function onMapSelect(tileId,unitId,cityPlate=false,pointer="keyboard"){
     const options=getUnitOptions(view.state,unit.id);
     if(options.attacks.includes(tileId)){moveDraft=null;openCombat(unit.id,tileId);return}
     if(options.moves.includes(tileId) && order!=="attack"){
-      if(reviewPointerMove(pointer,compactMap())){
+      if(freightTarget || reviewPointerMove(pointer,compactMap())){
         moveDraft=previewMove(view.state,unit,tileId);
         openMapOnMobile();
         updateMap();
@@ -490,6 +491,7 @@ function currentMove(){
   const unit=getUnit();
   if(!moveDraft || unit?.seat!==view.seat || !mayOrder())return null;
   if(order==="inspect" || order==="attack" || parcelOrder || battle)return null;
+  if(moveDraft.freightBerth && currentFreightCourse()?.leg!==moveDraft.tile)return null;
   return previewMove(view.state,unit,moveDraft.tile);
 }
 function paintMove(){
@@ -506,6 +508,10 @@ function paintMove(){
   text("move-cost",moveDraft.cost);
   text("move-left",moveDraft.left+" / "+getUnit().maxMoves);
 }
+function currentFreightCourse(){
+  const unit=getUnit();
+  return freightTarget && unit?.seat===view.seat ? freightCourse(view.state,unit,freightTarget,selectedOptions?.moves || []) : null;
+}
 function updateMap(){
   paintMove();
   drawPlacement();
@@ -516,7 +522,16 @@ function updateMap(){
     if(assessment.status==="now")settlementSites.now.push(id);
     else if(assessment.status==="next-turn")settlementSites.nextTurn.push(id);
   }
-  atlas.update({reviewPath:moveDraft?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  const course=currentFreightCourse();
+  if(!course)freightTarget=null;
+  if(freightBar){
+    freightBar.hidden=!course || Boolean(moveDraft);
+    if(course && !moveDraft) {
+      const html=freightCoursePanel(course,esc,mayOrder());
+      if(freightBar._markup!==html){freightBar.innerHTML=html;freightBar._markup=html;}
+    }
+  }
+  atlas.update({reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -838,6 +853,15 @@ function chooseOrder(key){
   if(mayOrder() && ['record-terrain','file-atlas'].includes(key)){
     Game.doAction({type:key==='record-terrain'?'recordTransect':'fileTransect',unit:u.id});return;
   }
+  if(key.startsWith("freight-course:")){
+    freightTarget=key.slice("freight-course:".length);
+    const course=currentFreightCourse();
+    if(course){
+      order="";openMapOnMobile();updateMap();atlas.focus(course.port.berth);
+      freightBar.querySelector("button")?.focus({preventScroll:true});
+    }
+    return;
+  }
   if(key==="locate-station"){
     const station=nearestKnownStation(view.state,u,explored,hexDistance);
     if(station){atlas.focus(station);openMapOnMobile()}
@@ -935,6 +959,25 @@ function mount(){
     el("atlas").querySelector("canvas")?.focus({preventScroll:true});
     if(valid)Game.doAction({type:"move",unit:draft.unit,tile:draft.tile});
     else if(commit)toast("The route has changed. Choose a destination again.");
+  };
+  freightBar=document.createElement("section");
+  freightBar.className="move-review freight-chart";freightBar.hidden=true;
+  document.querySelector(".map-messages").prepend(freightBar);
+  freightBar.onclick=e=>{
+    if(e.target.closest("[data-course-close]")){
+      const source="freight-course:"+freightTarget;
+      freightTarget=null;updateMap();atlas.focus(getUnit().tile);inspectMapOnMobile();
+      const button=[...el("entity-commands").querySelectorAll("[data-order]")].find(item=>item.dataset.order===source);
+      button?.focus({preventScroll:true});
+    } else if(e.target.closest("[data-course-leg]") && mayOrder()){
+      const course=currentFreightCourse();
+      if(course?.leg){
+        const leg=previewMove(view.state,getUnit(),course.leg);
+        if(!leg)return;
+        moveDraft={...leg,freightBerth:course.port.berth};updateMap();atlas.focus(course.leg);
+        moveBar.querySelector("[data-move-confirm]")?.focus({preventScroll:true});
+      }
+    }
   };
   mountDiplomacy(action=>Game.doAction(action));
   document.querySelector('.map-messages')?.prepend(parcelBar);

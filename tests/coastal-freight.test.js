@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {applyAction,campaignView,createGame,getFreightManifest,getMap,getUnitOptions} from '../docs/rules.js';
+import {applyAction,campaignView,createGame,getFreightManifest,getRouteDetail,getMap,getUnitOptions} from '../docs/rules.js';
 import {freightPanel} from '../docs/harbor-ledger-ui.js';
+import {freightCourse} from '../docs/freight-course.js';
 
 function twoPorts() {
   let s=createGame(['Coast','Valley'],'la',{seed:17,mapSize:'large',victoryMode:'conquest'});
@@ -91,4 +92,41 @@ test('remembering a distant water tile cannot reveal a newly built allied berth 
   const projected=campaignView(s,0);
   assert.deepEqual(projected.intel.alliedFreightPorts,[]);
   assert.deepEqual(getFreightManifest(s,crew).routes,[]);
+});
+
+test('a projected freight course quotes the first payable unloading turn and offers only a normal legal leg',()=>{
+  let s=twoPorts();
+  const ship=s.units.find(u=>u.type==='workboat'),berth='8,16';
+  const plan=()=>{
+    const chart=campaignView(s,0),crew=chart.units.find(u=>u.id===ship.id);
+    return freightCourse(chart,crew,berth,getUnitOptions(chart,crew.id).moves);
+  };
+  const nextTurn=()=>{do{s=applyAction(s,s.turn,{type:'end'})}while(s.turn!==0)};
+  const before=plan();
+  assert.equal(before.steps,3);
+  assert.equal(before.unloadRound,s.round+2);
+  assert.equal(before.leg,null);
+  s=applyAction(s,0,{type:'loadFreight',unit:ship.id});
+  assert.equal(plan().unloadRound,before.unloadRound);
+  nextTurn();
+  const underway=plan(),chart=campaignView(s,0);
+  assert.equal(underway.leg,berth);
+  assert.equal(getRouteDetail(chart,ship.id,underway.leg).cost,3);
+  s=applyAction(s,0,{type:'move',unit:ship.id,tile:underway.leg});
+  assert.equal(plan().unloadRound,s.round+1);
+  assert.throws(()=>applyAction(s,0,{type:'landFreight',unit:ship.id}));
+  nextTurn();assert.equal(s.round,before.unloadRound);
+  assert.doesNotThrow(()=>applyAction(s,0,{type:'landFreight',unit:ship.id}));
+});
+
+test('a course avoids visible traffic without testing hidden occupants or disclosing an unknown port',()=>{
+  const s=twoPorts(),chart=campaignView(s,0),crew=chart.units.find(u=>u.type==='workboat'),berth='8,16';
+  const route=()=>freightCourse(chart,crew,berth,[]);
+  const original=route();
+  chart.units.push({id:'observed',seat:1,type:'cutter',tile:berth});
+  assert.equal(route().steps,undefined);assert.equal(route().unloadRound,null);
+  chart.intel.visible=chart.intel.visible.filter(id=>id!==berth);
+  assert.deepEqual(route().path,original.path);
+  chart.intel.explored=chart.intel.explored.filter(id=>id!==berth);
+  assert.equal(route(),null);
 });

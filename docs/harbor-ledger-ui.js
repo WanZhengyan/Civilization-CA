@@ -4,7 +4,7 @@ export function freightPanel(manifest,esc,button,locked) {
   if(!manifest)return '';
   const {origin,cargo,routes,delivery,type,ready,food}=manifest;
   const rows=routes.map(route=>'<div><b>'+esc(route.name)+'</b> · '+esc(route.berth)+' · '+label(route.steps+' '+(route.steps===1?'hex':'hexes'))+
-    ' · +'+route.gold+' '+label('Gold')+'</div>').join('');
+    ' · +'+route.gold+' '+label('Gold')+' <button type="button" class="service-commit freight-locate" data-order="freight-course:'+esc(route.berth)+'">'+label('Chart course')+'</button></div>').join('');
   const hint=!cargo && !routes.length?'Chart a water route to a second friendly harbor.':
     !cargo && origin.food<food?'The departure city needs 4 stored food.':
     cargo?'Unload at another friendly berth for food and gold, or return the crate to its origin.':'Take 4 food from this city and carry it to another friendly berth.';
@@ -25,4 +25,17 @@ export function voyagePanel(quote,esc,button,locked) {
       underway?'<div>'+label('Movement this turn')+' · '+after+' · '+label('Normal range next turn')+' · '+base+'</div>':'')+
     (harbor && !stocked?'<div>'+label('Movement next turn')+' · '+base+' → '+after+'</div><div>'+label('Price in gold')+' · '+price+' · '+label('Treasury')+' · '+budget+'</div>'+
       button('provisionVoyage','Outfit for a long voyage','Spends all remaining movement','gold',locked||!ready):'')+'</section>';
+}
+
+export function freightCoursePanel(course,esc,canSail) {
+  const {port,steps,unloadRound,cargo}=course;
+  const detail=steps===undefined ? label('The charted channel is occupied.') :
+    label(steps+' '+(steps===1?'hex':'hexes'))+' · +'+port.gold+' '+label('Gold')+
+    (unloadRound!==null?' · '+label('Earliest unloading')+' '+label('Turn '+unloadRound):'');
+  const reason=!cargo?'Load the crate at its departure harbor.':
+    steps===0?'Unload with movement remaining.':'Unloading needs movement after arrival.';
+  return '<div class="move-place"><strong>'+esc(port.name)+'</strong> <small>'+esc(port.berth)+'</small></div>'+
+    '<div class="move-budget">'+detail+'</div><div class="freight-guidance">'+label(reason)+'</div>'+
+    '<div class="move-controls"><button type="button" data-course-close>Close chart</button>'+
+    (canSail && course.leg?'<button type="button" data-course-leg>Review sailing leg</button>':'')+'</div>';
 }
