@@ -1,3 +1,5 @@
+import {settlerPopulationReason} from './population.js';
+
 // Deposits belong to the campaign, never to the public geographical template.
 export const RESOURCES = {
   grain:  {name:'Grain',        terrains:['plains','urban'], improvement:'farm',       color:'#e6c365', mark:'G'},
@@ -108,7 +110,7 @@ export const SHIPMENT = {goods:2, gold:5, yield:4};
 
 export function materialShipmentGain(city) {
   const project=city?.queue;
-  return project ? Math.min(SHIPMENT.yield,Math.max(0,project.required-project.progress)) : 0;
+  return project && !settlerPopulationReason(city) ? Math.min(SHIPMENT.yield,Math.max(0,project.required-project.progress)) : 0;
 }
 
 export function shipGoods(state, seat, order) {
@@ -120,6 +122,7 @@ export function shipGoods(state, seat, order) {
   if (market==='sell') player.capital+=SHIPMENT.gold;
   else if (city && market==='city') {
     if (isProduce(resource)) city.food+=SHIPMENT.yield;
+    else if (settlerPopulationReason(city)) throw new Error(settlerPopulationReason(city));
     else if (materialShipmentGain(city)) city.queue.progress+=materialShipmentGain(city);
     else throw new Error('Select a city with an unfinished production project.');
   } else throw new Error('Choose one of your cities to receive goods.');
@@ -134,6 +137,6 @@ export function planShipment(state,seat) {
   const towns=state.cities.filter(c=>c.seat===seat);
   const city=isProduce(resource)
     ? towns.slice().sort((a,b)=>a.population-b.population)[0]
-    : towns.find(c=>c.queue && c.queue.required-c.queue.progress>=4);
+    : towns.find(c=>materialShipmentGain(c)===SHIPMENT.yield);
   return {type:'shipment',market:city?'city':'sell',resource,...(city?{city:city.id}:{})};
 }

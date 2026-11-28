@@ -91,3 +91,13 @@ test('starvation or a blocked ring of tiles never consumes a resident before dep
   assert.equal(deployed.units.filter(u=>u.type==='settler').length,1);
   assert.equal(deployed.cities[0].queue,null);
 });
+
+test('materials cannot fund a paused settler and the city may receive food to grow again',()=>{
+  const state=capital(),city=state.cities[0];
+  city.queue={item:'settler',progress:10,required:14};
+  state.players[0].stockpile={stone:2,grain:2};
+  const send=resource=>applyAction(state,0,{type:'shipment',market:'city',city:city.id,resource});
+  assert.throws(()=>send('stone'),/3 residents/);
+  assert.equal(state.players[0].stockpile.stone,2);
+  assert.equal(send('grain').cities[0].food,4);
+});

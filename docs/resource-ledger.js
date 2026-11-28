@@ -1,3 +1,4 @@
+import {settlerPopulationReason} from './population.js';
 import {illustration} from './illustrations.js';
 import {RESOURCES,isProduce,materialShipmentGain,SHIPMENT} from './resources.js';
 import {BUILDINGS,UNIT_TYPES,getCityYield} from './rules.js';
@@ -23,7 +24,8 @@ function cityQuote(state,city,available,L,esc) {
       rows+=line(L('Earliest finish (harvests)','最早完工（收获回合）'),harvests(left)+' → '+harvests(left-gain));
       if (gain<SHIPMENT.yield) rows+='<p>'+L('Only '+gain+' of the '+SHIPMENT.yield+' production fits this project.',
         '该项目只需 '+gain+' 点，本批货物的 '+SHIPMENT.yield+' 点生产力只能用上 '+gain+' 点。')+'</p>';
-    } else if (!gain) rows+='<p>'+L('Production is full. The city checks completion at harvest.','生产进度已满，城市将在收获时结算项目。')+'</p>';
+    } else if (settlerPopulationReason(city)) rows+='<p>'+esc(translate(settlerPopulationReason(city)))+'</p>';
+    else if (!gain) rows+='<p>'+L('Production is full. The city checks completion at harvest.','生产进度已满，城市将在收获时结算项目。')+'</p>';
   } else rows+='<p>'+L('Choose a production project before sending materials.','为这座城市选择生产项目后即可运送材料。')+'</p>';
   return '<section class="shipment-quote" aria-live="polite">'+rows+'</section>';
 }

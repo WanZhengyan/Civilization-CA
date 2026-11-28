@@ -75,6 +75,7 @@ test('a delivery quotes only the usable production, follows the selected city an
   const {s,city}=market();
   const idle={...city,id:'idle',name:'Idle city',queue:null};
   s.cities.unshift(idle);
+  city.population=3;
   city.queue={item:'settler',required:14,progress:12};
   const markup=(state,id)=>ledgerBody(state,0,getResourceLedger(state,0),id,false,String);
   assert.match(markup(s,idle.id),/data-act="cargo-stone-city" disabled/);
