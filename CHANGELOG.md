@@ -1,5 +1,15 @@
 # Campaign updates
 
+## Compare scouting routes, plan coastal deliveries and review each battle
+
+A scout can compare reachable destinations by how many uncharted hexes it will reveal. Review the dotted footprint before moving. A fishing crew can chart a course to a known friendly berth, inspect its next legal leg and see the earliest round it can unload.
+
+In Citizen management, compare a proposed focus with current food, production and science before applying it. Housing projects use the normal map placement and project switch review. The supply ledger updates when you change cities. A shipment shows the food or production the city can receive and whether materials will bring the project forward.
+
+On the battle map, step through the reports your side witnessed at your own pace. The selected attack stays in view until you leave it. Return to the same line in the journal or back to the command map.
+
+In fresh campaigns, computer admirals consider the charted sailing distance before buying voyage supplies for a warship. They can keep a firing position in mind for the next turn if a spotter moves away. They still need sight to shoot. Existing rooms and saves keep their original naval decisions.
+
 ## Explore inland, specialize cities and trade along the coast
 
 - Train a scout to visit trading posts, field archives and trail lodges. Each offers two exchanges. Each civilization can visit the same station once. A scout can also record three different terrains at least three hexes apart. Publishing the notebook at home pays 8 gold and 6 influence, and gives its city 1 influence per harvest.

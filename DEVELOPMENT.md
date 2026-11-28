@@ -26,6 +26,26 @@ Compare the same seat count and opening across revisions. Look at campaign lengt
 
 For each version, keep a short review with the hypothesis, reference and candidate revisions, report files, the manual observations and the decision. Keep the change when the evidence addresses the original question, or revise it and repeat.
 
+## Read an order before committing it
+
+The public reference was `a21ce99`. We used the same starting settlers or the same sequence of legal orders on both versions. The question was whether a player could distinguish two orders with different consequences, choose between them, and get the result the interface quoted.
+
+| Decision | What the reference showed | What happened on the candidate |
+| --- | --- | --- |
+| Scout from Venice Canals, Large LA seed 17, round 4 | Nine legal destinations. Two carried the same district name, cost two moves and left one move. | The two map previews showed ten and nine new hexes. Actual exploration went from 19 to 29 and 19 to 28 respectively. Choosing Cancel left the scout in place. |
+| Ship two iron to Bel Air, Large LA seed 3, round 11 | Switching the destination from an idle city left the delivery button disabled. The label promised four production for a settler already at 12/14. | The English desktop and 390-pixel Chinese ledger both offered two production. Dispatch took stock from seven to five and the settler to 14/14. The earliest completion stayed at the next harvest. |
+| Change citizen assignments and build housing, Large LA seed 624101 | Choosing a focus committed it before showing the change in food or science. The housing shortcut could choose a site without the player reviewing it. | At round 5, science focus raised science income from 5 to 11 and changed food surplus from +7 to −2. Food went from 4 to 2 to 0; the city lost one resident at the third harvest. In the Chinese round-six case, canceling a granary left 6/14 invested in the settler. Confirming tile 18,23 built the granary in two turns and raised housing from three to five. |
+| Sail a freight crew from Marina del Rey to Venice, Large LA seed 17 | The manifest named the other berth without showing a course or when it could unload. | Before loading on round 12, the captain could chart a three-hex route. After sailing on round 13, the crew had no movement. It unloaded four food for five gold on round 14, exactly as forecast. |
+| Reconstruct consecutive bombardments, Large LA seed 114, round 31 | Two incoming Canoga Park attacks had the same button name. Map replay disappeared after 2.35 seconds. | The defender stepped between reports 3/4 and 4/4, distinguishing 65→7 HP from 7→0. Returning to the journal retained the filter and the selected row. A Chinese phone could also return directly to the command map. |
+
+**Naval governor.** On nine staged coastlines spanning all three regions, a cutter arrived at its own harbor with one move left and a spotter could see a target. The old governor declined the supply order in each case. Using charted sailing distance identified a one-round advantage. A first candidate sometimes lost the opportunity when the spotter moved out of sight. Remembering the firing station for the next sailing turn let all nine governors land a hit the following round. On SF seed 5, provisioning used 6 gold (224→218). The cutter sailed on round 18 and dealt 36 damage to the port without return damage. Immediate departure with a stationary spotter first hit on round 19. A two-seat room replay kept the planned destination private; the cutter regained sight before shooting. Changing the unseen port’s HP did not change the move.
+
+All 18 standard playtests run twice. Eighteen fixed Large games ran for up to 40 rounds across three maps. They saw 13 opportunities to reach an owned berth with one move left, but no known target justified the detour in those games. A night at berth uses time, gold and home defense. This release supports a measured tactical opportunity. The nine matched Large council campaigns retained their finish rounds and their seven science wins and two conquest wins.
+
+**Compatibility.** Both seats in a newly created lobby receive the same naval decision rule. Existing games and lobbies use their original algorithm. Eighteen prior saved games, including nine without the previous campaign feature marker, matched all 7,316 subsequent actions and intermediate state hashes. Six older research-pace games matched another 1,383 actions.
+
+**Next experiment.** Repeat the coastal sortie with an active harbor defender and a contestable escort. Compare damage dealt before either ship withdraws, the gold spent, and whether moving the scout sacrifices the attacker's ability to protect its own coast.
+
 ## Decisions on land and at sea
 
 The reference was `89bd050`. Its scouts could reveal land and resources, but could neither visit field stations nor return a completed survey. Two cities could not exchange food by boat. Once a player picked a distant council goal, the planner gave a time at current income without offering a legal way to change it. We tested whether adding choices at these points could produce different, verifiable outcomes while keeping the old campaigns playable.
