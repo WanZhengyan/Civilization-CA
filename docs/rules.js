@@ -458,7 +458,8 @@ export function getWonderSites(state,cityId,item) {
 export function getProjectSites(state,cityId,item) {
   const city=cityOrNull(state,cityId),map=getMap(state);
   if (!city || !Object.hasOwn(BUILDINGS,item) || (state.intel && state.intel.seat!==city.seat)) return [];
-  if (!cityProjectUnlocked(state,city,item,BUILDINGS[item])) return [];
+  const definition=BUILDINGS[item];
+  if (!cityProjectUnlocked(state,city,item,definition) || (definition.building && !city.buildings.includes(definition.building))) return [];
   if (WONDERS[item]) return getWonderSites(state,cityId,item);
   const describe=id=>({...map.byId[id],range:hexDistance(city.tile,id),favored:false});
   if (item==='harbor') {
@@ -1786,6 +1787,12 @@ function botProject(state,city,difficulty) {
       if (!count('frigate')) choices.push('frigate');
     } else if (knows(state,city.seat,'steam') && (!basin || basin.tiles.size>=8)) choices.push('shipyard');
   }
+  if (defensible) {
+    if (forecast.surplus<=1 && !forecast.housingLimited) choices.push('grainMill');
+    if (state.players[city.seat].capital<3*BUILDINGS.shop.required) choices.push('shop');
+    if (pursuingOrbitalResearch(state,city.seat)) choices.push('academy','foundry');
+    if (state.players[city.seat].civic) choices.push('printingHouse');
+  }
   if (count('builder')===0) choices.push('builder');
   const charted=new Set(state.intel.explored),map=getMap(state);
   const nearby=map.neighbors(city.tile).filter(id=>charted.has(id)).map(id=>map.byId[id].terrain);
@@ -1797,7 +1804,7 @@ function botProject(state,city,difficulty) {
   if (count('melee')<2) choices.push('melee');
   if (cities.length<3 && count('settler')===0) choices.push('settler');
   if (city.buildings.includes('harbor') && !survey) choices.push('shipyard');
-  choices.push('workshop','walls','monument','granary');
+  choices.push('workshop','walls','monument','granary','foundry','academy','shop','grainMill','printingHouse');
   if (count('melee')<4) choices.push('melee');
   const enabled=new Set(getProductionOptions(state,city.id).filter(o=>o.enabled).map(o=>o.item));
   const option=choices.find(key=>enabled.has(key));
