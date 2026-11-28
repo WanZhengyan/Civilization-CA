@@ -1,3 +1,4 @@
+import {newGazetteer,gazetteerContent,gazetteerAction,bindGazetteer,districtProfiles} from './gazetteer.js';
 import {fieldGuideOrders} from './campaign-field-guide.js';
 import {installSoundtrack,soundtrackControls} from './music-controls.js';
 import {fishingGuide,inlandGuide,freightGuide,voyageGuide} from './maritime-guide.js';
@@ -9,6 +10,7 @@ import {discoveredNaturalWonders} from './natural-wonders.js';
 import {invitationCode, launchDestination} from './launch.js';
 import {buildGuideIndex, guideSearchBox, bindGuideSearch} from './guide-search.js';
 import {armyHandbook, handbookRows} from './army-handbook.js';
+import {freightExchange} from './commerce-ledger.js';
 import {ledgerBody} from './resource-ledger.js';
 import {getResourceLedger} from './rules.js';
 import {getLanguage, translate, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
@@ -105,6 +107,7 @@ let selectedSize = DEFAULT_MAP_SIZE, selectedRivals = 3, selectedDifficulty = 'n
 let selectedMode='standard', selectedCivilization='random', roomVictoryMode='standard', joinCivilization='random';
 let roomSetup=newRoomSetup();
 let supplyCity='';
+let gazetteer = newGazetteer();
 let pending = false, errorMessage = '', playingBots = false;
 let unconfirmedOrder=null;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
@@ -150,7 +153,7 @@ function showTitle(visible) {
 
 function emit() {
   if (mode === 'home' || (mode === 'online' && !room?.game)) return;
-  if (modal==='supplies' && dialog?.open) drawDialog();
+  if (['supplies','trade-market'].includes(modal) && dialog?.open) drawDialog();
   const state = getState();
   soundtrack?.music.setScene(state ? getEra(state,currentSeat()).id : null);
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
@@ -749,10 +752,10 @@ const guideSections = {
   battle: {label:'Field tactics', entries:[
     ['Train a scout', 'Train a Scout after founding a city. It has three movement points to a Militia unit’s two. Move again after revealing new ground. Topographic Mapping makes foothills cost only one point for scouts and mounted scouts.'],
     ['Choose a frontier formation', 'Trail skirmishers cross woods and hills for one movement point. Pike Guards make poor targets for cavalry and gain a bonus when attacking mounted scouts.'],
-    ['Support an assault', 'Siege Engineers can capture a walled city after its garrison falls. Keep a Signal Corps one hex from a friendly attacker to add 8 damage against rival civilizations. Check the forecast to see the active bonuses.'],
+    ['Support an assault', 'Siege Engineers attack city walls directly, including in garrisoned cities. An adjacent friendly Signal Corps adds 8 damage against rival civilizations.'],
     ['Read the terrain', 'Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.'],
     ['Preview an attack', 'Select a military unit and click a highlighted enemy. The combat forecast shows the damage and possible losses. Choose Confirm attack to commit, or return to the map to reconsider. An attack spends the unit’s remaining movement.'],
-    ['Take a city', 'Rangers, ranged infantry, artillery and armed ships deal damage without losing HP to retaliation, even against an adjacent target. Every attack spends the remaining movement. Melee attackers can take counterdamage. Defeat the garrison first. Shooting can reduce cities and camps to 1 HP. Send a surviving capture-capable land unit to take them.'],
+    ['Take a city', 'Against a rival city, attacks hit the city first. Ranged attacks draw no retaliation and leave at least 1 HP. A surviving capture-capable land unit can take the city and defeat its garrison. Every attack spends the remaining movement. Neutral raids use their own defenses.'],
     advancementGuide,
     ['Repel a raid', 'A lookout near an established city may return to its camp. Intercept it before it reports, or attack the camp before the party leaves two rounds later. A military defender within one hex of the city, or city walls, repels the raid. Raiders leave civilian units alone.'],
     ['Clear a camp', 'Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.'],
@@ -876,6 +879,8 @@ function teamStandings(state){
 function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
+  if (modal === 'trade-market') return {kicker:getLanguage()==='zh-CN'?'经济':'Economy',title:getLanguage()==='zh-CN'?'城际货运市场':'Intercity freight exchange',body:freightExchange(state,currentSeat(),pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML)};
+  if(modal==='gazetteer')return gazetteerContent(gazetteer,getLanguage(),mode==='home'?null:state);
   if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML,getStats(state,currentSeat()))};
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
@@ -886,7 +891,7 @@ function content() {
     const guides=guideTab==='formations' ? armyHandbook(escapeHTML) :
       list(guideTopics(guideTab,getLanguage(),guideState).map(({title,body,key})=>
         row('<span tabindex="-1" data-guide-target="'+key+'">'+title+'</span>',body)));
-    return {kicker:'Field guide', title:'How to play', body:guideSearchBox(getLanguage())+'<div data-guide-chapter>'+tabs +
+    return {kicker:'Field guide', title:'How to play', body:actions(button('gazetteer',getLanguage()==='zh-CN'?'加州地名志':'California gazetteer'))+guideSearchBox(getLanguage())+'<div data-guide-chapter>'+tabs +
       (influenceLink ? actions(influenceLink) : '') +
       (guideTab==='start' && (!guideState || guideState.civilizationTraits===1) ? compareCivilizations() : '')+
       (guideTab==='universities' ? wonderJournal(guideState) : '')+guides+'</div>' +
@@ -943,7 +948,8 @@ function content() {
       actions(button('campaign-atlas','Edit settings'),button('restart','Replace and start','primary'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings',state?.victoryMode?'Victory progress':'Faction standings'),button('log','Event log'),
-    button('help','Field guide'), button('supplies','Supply ledger'), mode==='solo' && tutorial ? button('restart-tutorial','Restart tutorial') : '', button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
+    state?.phase==='playing' ? button('advisors',getLanguage()==='zh-CN'?'顾问团':'Advisors') : '',
+    button('help','Field guide'), button('gazetteer',getLanguage()==='zh-CN'?'加州地名志':'California gazetteer'), button('supplies','Supply ledger'), mode==='solo' && tutorial ? button('restart-tutorial','Restart tutorial') : '', button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
 }
 
 function drawDialog() {
@@ -951,6 +957,7 @@ function drawDialog() {
   const scrolled = dialog.querySelector('.modal-body')?.scrollTop || 0;
   const { kicker, title, body } = content();
   dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl()+soundtrackControls(soundtrack?.music) : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  if(modal==='gazetteer')bindGazetteer(dialog,gazetteer,getLanguage());
   if(modal==='help'){
     const state=mode==='home'?null:getState();
     bindGuideSearch(dialog,getLanguage(),
@@ -992,6 +999,19 @@ async function copyInvite() {
   }
 }
 function modalAction(act) {
+  if(act==='advisors'){dismissDialog();document.dispatchEvent(new Event('civitas-advisors'));return;}
+  if(act==='gazetteer'){
+    gazetteer=newGazetteer(mode==='home'?'la':getMap(getState()).id);
+    open('gazetteer');
+    return;
+  }
+  if(modal==='gazetteer' && act.startsWith('gaz-')){
+    const tile=gazetteerAction(gazetteer,act.slice(4),mode==='home'?null:getState());
+    if(tile){dismissDialog();locateDistrict?.(tile);return;}
+    drawDialog();
+    dialog.querySelector('[data-act="'+act+'"]')?.focus({preventScroll:true});
+    return;
+  }
   if (act.startsWith('locate-wonder-')) {
     const match=discoveredNaturalWonders(getState()).find(site=>site.id===act.slice('locate-wonder-'.length));
     if (match) {
@@ -1009,6 +1029,7 @@ function modalAction(act) {
   if(act==='title-screen'){enterTitle();return}
   if(act==='restart-tutorial' && mode==='solo' && tutorial){open('restart-tutorial');return}
   if(act==='confirm-tutorial' && modal==='restart-tutorial' && tutorial){enterTutorial(true);return}
+  if(act==='trade-market'){open('trade-market');return}
   if(act==='supplies'){open('supplies');return}
   if(act.startsWith('cargo-')){
     const [,resource,market]=act.split('-');
@@ -1087,6 +1108,12 @@ async function init({ render, locate, toast: showToast }) {
   installLanguage();
   dialog = document.getElementById('modal');
   soundtrack=installSoundtrack(dialog);
+  dialog.addEventListener('click', e=>{
+    const button=e.target.closest('[data-caravan-order]');
+    if (!button || button.disabled || !['supplies','trade-market'].includes(modal))return;
+    const {caravanOrder:type,origin,destination,item,service,wagon,season}=button.dataset;
+    doAction({type,origin,destination,item,service,wagon,...(season?{season:Number(season)}:{})});
+  });
   dialog.addEventListener('change', e => {
     const {name,value} = e.target;
     if (modal==='supplies' && name==='supply-city') {
@@ -1202,5 +1229,12 @@ async function init({ render, locate, toast: showToast }) {
   if (mode === 'solo') runBots();
   if (!modal && mode !== 'home') checkFinished();
 }
-export const Game = {init, doAction, setTutorialProgress, eventText, endTurn:()=>doAction('end'), open, close};
+function openDistrictNotes(tileId) {
+  if(mode==='home' || !districtProfiles(getState(),tileId).length)return;
+  gazetteer=newGazetteer(getMap(getState()).id);
+  gazetteer.section='district';
+  gazetteer.district=tileId;
+  open('gazetteer');
+}
+export const Game = {openDistrictNotes,init, doAction, setTutorialProgress, eventText, endTurn:()=>doAction('end'), open, close};
 window.Game = Game;

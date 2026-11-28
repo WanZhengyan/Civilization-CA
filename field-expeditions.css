@@ -1,0 +1,8 @@
+.field-desk {width:min(35rem,calc(100vw - 1.5rem));color:#ede9da}
+.field-desk .modal-body {display:grid;gap:.85rem;padding:1.1rem 1.35rem 1.45rem}
+.field-desk .modal-body :is(h3,p,ul,ol){margin:0}
+.field-desk .modal-body h3{font:normal 1.4rem var(--serif);color:#ead7a9}
+.field-desk .modal-body :is(ol,ul){padding-left:1.45rem;line-height:1.55}
+.field-desk :is(select,.btn){min-height:2.75rem;font:inherit;color:inherit;border:1px solid #6d8074;border-radius:4px;background:#273b35;padding:.4rem .7rem}
+.field-desk .btn{justify-self:start}
+.field-desk .btn:disabled{color:#a0a4a1;border-color:#59625d;background:#303833}

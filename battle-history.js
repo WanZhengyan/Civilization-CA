@@ -22,7 +22,7 @@ const labels={
   raided:['City raided','城市遭劫掠'], lost:['Attacker defeated','攻方被击败'], held:['No damage','未受伤害']
 };
 const words=(id,locale)=>labels[id][locale==='zh-CN'?1:0];
-const incoming=(r,seat)=>r.target.seat===seat && r.attacker.seat!==seat;
+const incoming=(r,seat)=>(r.target.seat===seat || r.garrisonLost?.some(g=>g.seat===seat)) && r.attacker.seat!==seat;
 const turn=(n,zh)=>zh?'第 '+n+' 回合':'Turn '+n;
 
 function combatant(part,players,locale) {
@@ -49,6 +49,10 @@ export function describeBattle(report,players,region,seat,locale=getLanguage()) 
   if(outcome)details.push(words(outcome,locale));
   if(report.attackerLost)details.push(words('lost',locale));
   if(report.loot>0)details.push(zh?'被掠走 '+report.loot+' 资金':report.loot+' capital looted');
+  if(report.garrisonLost?.length){
+    const names=report.garrisonLost.map(g=>combatant({...g,kind:'unit'},players,locale)).join(zh?'、':', ');
+    details.push(zh?'城陷时损失的驻军 · '+names:'Garrison lost on capture · '+names);
+  }
   if(report.garrison)details.push(zh?translate(report.garrison,locale)+'驻军':'Garrison of '+translate(report.garrison,locale));
   if(!details.length)details.push(words('held',locale));
   return {category:words(disposition,locale),turn:turn(report.round,zh),source,target,location,

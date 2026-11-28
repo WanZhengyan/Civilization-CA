@@ -1,3 +1,5 @@
+import {fieldOrder,corridorIncome} from './field-expeditions.js';
+import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon,establishDepot,gradeRoad,planOverlandCommerce,scheduleFoodLine,cancelFoodLine,fulfillFoodLine} from './land-commerce.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
@@ -37,6 +39,14 @@ import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.j
 import {nextTechnology} from './applied-science.js';
 import {TECHS, CIVICS, ERAS, ERA_UNITS, eraFor, councilTree} from './progression.js';
 export {TECHS, CIVICS, ERAS, councilTree} from './progression.js';
+export function getTradeDiversions(state,seat,id) {
+  if(!state?.players[seat] || state.intel && state.intel.seat!==seat)return [];
+  return diversionRoads(state,seat,id,getMap(state),getVision(state,seat).explored);
+}
+export function getLandRoutes(state,seat,origin) {
+  if (!state?.players[seat] || state.intel && state.intel.seat!==seat) return [];
+  return tradeCorridors(state,seat,origin,getMap(state),getVision(state,seat).explored);
+}
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
 import {planWaterways, waterwayChart} from './waterways.js';
 import {campaignChart, largeCampaignChart, neighborCoordinates, REGIONAL_SHAPE} from './region-shapes.js';
@@ -630,6 +640,8 @@ function calculateStats(state,seat,includeSources=false) {
       stats.scienceIncome+=yields.science || 0;
       stats.cultureIncome+=yields.culture || 0;
     }
+    if(city.fieldCollection==='science')stats.scienceIncome++;
+    if(city.fieldCollection==='culture')stats.cultureIncome++;
     const festival=festivalBenefit(state,city);
     stats.cultureIncome+=festival?.culture || 0;
     stats.capitalIncome+=festival?.capital || 0;
@@ -643,6 +655,7 @@ function calculateStats(state,seat,includeSources=false) {
   if (state.campaignVariety===1) sources.atlases=cities.reduce((n,city)=>n+(city.atlasCopies || 0),0);
   stats.capitalIncome+=bonus.capital || 0;
   if (adopted(state,seat,'harborCommission')) stats.capitalIncome += 3 * cities.filter(c=>c.buildings.includes('harbor')).length;
+  stats.cultureIncome+=corridorIncome(state,seat);
   if (adopted(state,seat,'normalSchools')) stats.scienceIncome += 2 * cities.filter(c=>c.population>=3).length;
   if (adopted(state,seat,'exposition')) {
     const campuses=cities.reduce((n,c)=>n+c.buildings.filter(id=>WONDERS[id]).length,0);
@@ -885,9 +898,11 @@ function attackTargets(state,unit) {
   // A land melee unit can contest a defended end of a bridge with a full crossing order.
   const sight=(state.intel || state.opening==='settlers' || state.enforceSight) && getVisibleTiles(state,unit.seat);
   const inRange=tile=>(!sight||sight.has(tile)) && (hexDistance(unit.tile,tile)<=range || (UNIT_TYPES[unit.type].captures && unit.moves>=2 && Boolean(bridgeTo(state,unit.tile,tile))));
-  const occupied=state.units.filter(u=>!sameTeam(state,u.seat,unit.seat) && inRange(u.tile)).map(u=>u.tile);
-  const cities=state.cities.filter(c=>!sameTeam(state,c.seat,unit.seat) && inRange(c.tile) && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
-  const wilds=[...(state.barbarians?.camps||[]),...(state.barbarians?.parties||[])].filter(t=>inRange(t.tile) && (t.type!=="camp" || unit.type!=="scout" && (t.hp>1 || UNIT_TYPES[unit.type].captures)));
+  const hostileTowns=state.cities.filter(c=>!sameTeam(state,c.seat,unit.seat));
+  const cityTiles=new Set(hostileTowns.map(c=>c.tile));
+  const occupied=state.units.filter(u=>!cityTiles.has(u.tile) && !sameTeam(state,u.seat,unit.seat) && inRange(u.tile)).map(u=>u.tile);
+  const cities=hostileTowns.filter(c=>inRange(c.tile) && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
+  const wilds=[...(state.barbarians?.camps||[]),...(state.barbarians?.parties||[])].filter(t=>!cityTiles.has(t.tile) && inRange(t.tile) && (t.type!=="camp" || unit.type!=="scout" && (t.hp>1 || UNIT_TYPES[unit.type].captures)));
   return [...new Set([...occupied,...(unit.type==='scout'?[]:cities),...wilds.map(p=>p.tile)])];
 }
 export function getUpgradePlans(state,unitId,seat) {
@@ -1225,10 +1240,13 @@ function settleSeatEconomy(state,seat) {
   const income=getStats(state,seat),player=state.players[seat];
   bankHarvest(state,seat,map.byId,map.neighbors);
   player.capital+=income.capitalIncome;player.influence+=income.influenceIncome;
+  harvestCaravans(state,seat);
+  fulfillFoodLine(state,seat,getLandRoutes);
   const borders = getCityExpansions(state,seat);
   for (const city of state.cities) if (city.seat===seat) {
     const parcel=advanceCityBorder(state,city,borders.get(city.id));
     if (parcel) record(state,seat,'border','The city incorporated a district.',parcel,{city:city.id});
+    workTimber(city);
     produceCityTurn(state,city);
     endFestivalHarvest(state,city);
     if (state.phase==='finished') {refreshScores(state); return;}
@@ -1348,12 +1366,12 @@ function calculateCombatPreview(state,unitId,target) {
   const unit = unitOrNull(state, unitId);
   if (!active(state, unit) || !attackTargets(state, unit).includes(target)) return null;
 
-  const wild=wildAt(state,target);
+  const town = state.cities.find(city => city.tile === target && !sameTeam(state,city.seat,unit.seat));
+  const wild=!town && wildAt(state,target);
   if (wild) return wildForecast(unit,UNIT_TYPES[unit.type],wild,state);
 
-  // A garrison absorbs the hit before the city can be damaged.
-  const defender = state.units.find(other => other.tile === target && !sameTeam(state,other.seat,unit.seat));
-  const town = state.cities.find(city => city.tile === target && !sameTeam(state,city.seat,unit.seat));
+  const occupants=state.units.filter(other=>other.tile===target && !sameTeam(state,other.seat,unit.seat));
+  const defender = town ? null : occupants[0];
   const opponent = defender || town;
   const canCapture = UNIT_TYPES[unit.type].captures === true;
   const mode=attackMode(UNIT_TYPES[unit.type]);
@@ -1395,6 +1413,7 @@ function calculateCombatPreview(state,unitId,target) {
   const advances = melee && movementCost(state,unit,target)>0 && attackerHpAfter > 0 && (capture || (defeated && !town));
   return {
     attackMode:mode, defenderType: defender ? 'unit' : 'city', defenderId: opponent.id, roleNotes:role.notes,
+    ...(town && {cityGarrison:occupants.map(g=>({id:g.id,seat:g.seat,type:g.type}))}),
     damage, retaliation, capture, defeated, advances, attackerDefeated: attackerHpAfter === 0,
     attackerHpBefore: unit.hp, defenderHpBefore: opponent.hp, attackerHpAfter, defenderHpAfterHit,
     defenderHpAfter: capture ? Math.ceil(town.maxHp / 2) : defenderHpAfterHit
@@ -1411,11 +1430,12 @@ function resolveAttack(state, unit, target) {
   const from = unit.tile;
   const isUnit = result.defenderType === 'unit';
   const defender = isUnit ? unitOrNull(state, result.defenderId) : cityOrNull(state, result.defenderId);
-  const garrison = isUnit && state.cities.find(c => c.tile === target && sameTeam(state,c.seat,defender.seat));
-  const recordResult = prepareBattle(state, unit, defender, result, {garrison:garrison?.name});
+  const recordResult = prepareBattle(state, unit, defender, result);
   const name = isUnit ? UNIT_TYPES[defender.type].name+' in '+getMap(state).byId[target].name : defender.name;
   defender.hp = result.defenderHpAfter;
   if (result.capture) {
+    const defeatedGarrison=new Set(result.cityGarrison.map(g=>g.id));
+    state.units=state.units.filter(other=>!defeatedGarrison.has(other.id));
     defender.seat = unit.seat;
     defender.borderProgress = 0;
     delete defender.festival;
@@ -1593,7 +1613,10 @@ function resolveOrder(source,seat,action) {
     unitOrNull(next, action.unit).skippedRound = next.round;
     return next;
   }
-  if (action.type==='recordTransect' || action.type==='fileTransect') {
+  if(action.type==='fieldStudy'){
+    const receipt=fieldOrder(next,seat,action,getMap(next),hexDistance);
+    record(next,seat,'fieldStudy',receipt,next.units.find(u=>u.id===action.unit).tile,{unit:action.unit});
+  } else if (action.type==='recordTransect' || action.type==='fileTransect') {
     const entry=runAtlasOrder(next,seat,action,getMap(next),hexDistance);
     record(next,seat,action.type,entry.text,entry.tile,{unit:action.unit});
   } else if (action.type==='visitStation') {
@@ -1613,6 +1636,20 @@ function resolveOrder(source,seat,action) {
   } else if (action.type==='delegation') {
     sendDelegation(next,seat,action.target,getVisibleTiles(next,seat));
     record(next,seat,'delegation','Diplomatic delegation dispatched.',null,{target:action.target});
+  } else if (action.type==='scheduleFoodLine') {
+    scheduleFoodLine(next,seat,action,getLandRoutes(next,seat,action.origin));
+  } else if (action.type==='cancelFoodLine') {
+    cancelFoodLine(next,seat);
+  } else if (action.type==='gradeRoad') {
+    gradeRoad(next,seat,action,getLandRoutes(next,seat,action.origin));
+  } else if (action.type==='establishDepot') {
+    establishDepot(next,seat,action.origin);
+  } else if (action.type==='divertWagon') {
+    divertWagon(next,seat,action,getTradeDiversions(next,seat,action.wagon));
+  } else if (action.type==='recallWagon') {
+    recallWagon(next,seat,action.wagon);
+  } else if (action.type==='dispatchCaravan') {
+    dispatchCaravan(next,seat,action,getLandRoutes(next,seat,action.origin));
   } else if (action.type==='shipment') {
     shipGoods(next,seat,action);
     record(next,seat,'shipment','Resource shipment dispatched.');
@@ -2118,9 +2155,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
         let value=Number(result.capture)*500+Number(result.defeated)*80+result.damage-result.retaliation
           -Number(result.attackerDefeated)*40-result.defenderHpAfterHit*.1;
         if(difficulty==='hard') {
-          // Clear a garrison with a ranged formation before committing infantry.
           if(result.attackerDefeated && !result.defeated && !result.capture)continue;
-          if(result.defeated && state.cities.some(c=>c.tile===tile))value+=60;
+          if(result.capture && result.cityGarrison?.length)value+=60;
           if(result.defenderType==='city' && !UNIT_TYPES[unit.type].captures && !result.damage)continue;
           if(UNIT_TYPES[unit.type].range>1 && result.damage>0)value+=10;
         }
@@ -2159,6 +2195,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if (policy) return policy;
   const shipment=planShipment(state,seat);
   if(shipment)return shipment;
+  const wagon=planOverlandCommerce(state,seat,getLandRoutes);
+  if(wagon)return wagon;
   for (const city of state.cities) if (city.seat===seat && city.focusRound!==state.round) {
     const food=getPopulationReport(state,city.id);
     const focusResearch=player.research && pursuingOrbitalResearch(state,seat);

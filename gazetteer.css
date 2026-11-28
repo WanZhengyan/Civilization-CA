@@ -1,0 +1,16 @@
+.gaz {color:#e6e9df; font:1rem/1.5 var(--sans); min-width:0}
+.gaz-intro,.gaz-place p {color:#c3cdc6; margin:0 0 .8rem}
+.gaz-switch,.gaz-nav {display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .9rem}
+.gaz-choice {min-height:2.75rem;padding:.35rem .75rem;border:1px solid #62706e;border-radius:.3rem;color:#d7ded7;background:#203032;font:inherit}
+.gaz-choice[aria-pressed=true] {color:#f4e3bb;background:#354344;border-color:#c2a572}
+.gaz :is(button,a,select,input):focus-visible {outline:2px solid #f4ce7e;outline-offset:2px}
+.gaz-place {border-top:2px solid #b89a67;padding:1rem .2rem .25rem}
+.gaz-place h3,.gaz h4 {font:normal 1.5rem/1.25 var(--serif);margin:.1rem 0 .5rem;color:#f2e7cc}
+.gaz-facts {display:flex;flex-wrap:wrap;gap:.65rem 2rem;margin:.75rem 0}
+.gaz-facts dt {font-size:.87rem;color:#c2cec7}.gaz-facts dd {color:#f6deb0;margin:0;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.gaz a {color:#a9d7d8;text-decoration:underline;text-underline-offset:.15rem}
+.gaz-places{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.75rem}.gaz-places .gaz-choice{border-radius:1.3rem;padding-inline:.85rem}
+.gaz-table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}.gaz-table caption{text-align:start;color:#c0ceca;margin:.35rem 0}.gaz-table th{text-align:start}.gaz-table td,.gaz-table th{padding:.3rem .1rem;border-bottom:1px solid #485556}.gaz-table td,.gaz-table thead th:last-child{text-align:end}.gaz-table tbody .gaz-choice{background:transparent;border:0;padding-inline:.25rem;text-decoration:underline;text-underline-offset:.16rem}
+.gaz-timeline{list-style:none;border-inline-start:2px solid #b49b6a;margin:.75rem .4rem;padding-inline-start:1rem}.gaz-timeline li{margin:.4rem 0}
+.gaz-label{display:grid;gap:.35rem}.gaz-label input{width:100%;padding:.55rem;color:inherit;background:#1f3032;border:1px solid #72817c;border-radius:.3rem;font:inherit}.gaz-index{padding:0;list-style:none}.gaz-index li{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;border-bottom:1px solid #495652;padding:.22rem 0}.gaz-index li span{font-size:.86rem;color:#bdcbc4}
+.gaz-more{flex-basis:100%}.gaz-more summary{cursor:pointer;color:#d8c39a;padding:.35rem 0}.gaz-label progress{width:100%;height:.8rem;accent-color:#c8a86c}

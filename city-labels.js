@@ -8,10 +8,12 @@ export function boxesOverlap(a,b,gap=0) {
 }
 
 export function cityLabelAt(marks,x,y,underlying,model) {
-  if(model.cityLabelPicking===false || model.moveTiles.includes(underlying) || model.attackTiles.includes(underlying))return null;
+  if(model.cityLabelPicking===false)return null;
   const mark=marks.find(({box})=>box && x>=box[0] && x<=box[2] && y>=box[1] && y<=box[3]);
   const tile=mark?.city.tile;
-  return model.cityTiles.has(tile) && (!model.fog || model.fog.visible.has(tile)) ? tile : null;
+  if(!model.cityTiles.has(tile) || (model.fog && !model.fog.visible.has(tile)))return null;
+  if(model.attackTiles.includes(tile))return tile;
+  return model.moveTiles.includes(underlying) || model.attackTiles.includes(underlying) ? null : tile;
 }
 
 // Measurements, collision distances and viewport insets are in CSS pixels,

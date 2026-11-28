@@ -51,6 +51,7 @@ function rowMarkup(row) {
     '<dl>'+stat(L('Production / turn','每回合生产力'),row.production)+stat(L('Food balance / turn','每回合粮食结余'),signed(food.surplus))+
     stat(L('Population / housing','人口／住房'),food.population+' / '+food.housing)+stat(L('Food reserve','粮食储备'),food.food+' / '+food.threshold)+'</dl>'+
     (outlook?'<p>'+outlook+'</p>':'')+'<p class="report-queue">'+queue+'</p><footer>'+
+    '<button type="button" data-report-city="'+esc(row.id)+'" data-report-command="profile">'+L('City view','城市档案')+'</button>'+
     '<button type="button" data-report-city="'+esc(row.id)+'" data-report-command="production">'+L('Review production','查看生产')+'</button>'+
     '<button type="button" data-report-city="'+esc(row.id)+'" data-report-command="citizens">'+L('Manage citizens','管理市民')+'</button></footer></article>';
 }

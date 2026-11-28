@@ -23,7 +23,15 @@ export const captureOrderHint='Finish the capture with a ground unit such as Mil
 
 export function cityAttackHint(forecast,definition,city) {
   if(!city)return '';
-  if(forecast.defenderType==='unit')return 'The garrison takes this attack. City HP stays the same.';
+  if(forecast.defenderType==='city' && forecast.cityGarrison?.length)
+    return forecast.capture?'On capture, the city garrison is defeated and removed.':'City defenses take the damage. The garrison keeps its current HP.';
   if(forecast.defenderType==='city' && !definition.captures)return 'This unit can weaken a city down to 1 HP.';
   return '';
+}
+
+// A teammate may change a siege while the confirmation dialog is open.
+export function siegeQuote(forecast) {
+  if(!Array.isArray(forecast?.cityGarrison))return undefined;
+  return JSON.stringify([forecast.defenderId,forecast.defenderHpBefore,forecast.defenderHpAfterHit,
+    forecast.attackerHpAfter,forecast.capture,forecast.cityGarrison.map(g=>g.id).sort()]);
 }

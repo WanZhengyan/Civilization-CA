@@ -1,7 +1,13 @@
+import {mountCampaignExplorer} from './campaign-explorer.js';
+import {mountAdvisors} from './advisors-ui.js';
+import {mountCampaignLenses} from './campaign-lenses.js';
+import {openFieldDesk} from './field-expedition-ui.js';
+import {productionCard,settlerPopulationCard} from './settler-population-card.js';
 import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {mountTutorialCoach} from './tutorial-coach.js';
 import {mountTurnResults} from './turn-results.js';
 import {turnButtonState,paintTurnButton,pendingTurnTasks} from './turn-button.js';
+import {districtProfiles} from './gazetteer.js';
 import {getLanguage} from './i18n.js';
 import {mountInfluencePanel} from "./influence-panel.js";
 import {unchartedFrom,scoutingRoutes,openScoutingRoutes} from './scout-routes.js';
@@ -33,6 +39,7 @@ import {councilOverview,initialCouncilView,navigateCouncilButtons,renderCouncilB
 import {POLICIES} from './policy.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
+import {mountCityProfile} from './city-profile.js';
 import {openCityHall,paintCityHall} from './city-hall.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport} from "./rules.js";
@@ -44,7 +51,7 @@ import {roomSeatTurn,teamTurnLabels} from './room-turn.js';
 import {sameTeam,teamLabel} from './teams.js';
 import {cityKind,foundingLabel} from './district-command.js';
 import {WONDERS, campusStatus} from './wonders.js';
-import {captureOrderHint,cityAttackHint,forecastCounterLabel} from './attack-mode.js';
+import {captureOrderHint,cityAttackHint,forecastCounterLabel,siegeQuote} from './attack-mode.js';
 import {militaryTraining,trainingPanel} from './combat-training.js';
 import {fieldPosition,fieldPositionPanel} from './field-position.js';
 import {advancementPanel,recoveryPanel} from './unit-service-ui.js';
@@ -63,7 +70,7 @@ const unitRole={settler:"Civilian unit",builder:"Engineering unit",melee:"Melee 
 const isSeaUnit=item=>UNIT_TYPES[item]?.domain==="sea";
 const portBuildings=new Set(["harbor","shipyard"]);
 const eraName=id=>ERAS[id]?.name||id;
-let updateWaterKey,cityDirectory,influencePanel;
+let updateWaterKey,cityDirectory,cityProfile,influencePanel;
 const councilGoals={research:"",civics:""};
 const councilViews={};
 const routeOrigins={};
@@ -152,6 +159,7 @@ function customCity(city){return Boolean(city && city.name!==mapRegion.byId[city
 function cityNameAttrs(city){return customCity(city)?' translate="no"':''}
 function lobby(){return view.mode==="online"&&view.room?.phase==="lobby"}
 function mayOrder(){return roomSeatTurn(view.state,view.seat)==="active"&&!lobby()&&!view.busy}
+let updateExplorer;
 let view,atlas,battleReports,selectedTile,selectedUnit,kind="tile",order="",matchKey="",activeRoster="units",timer,productionCity=null;
 let moveBar,moveDraft=null,freightBar,freightTarget=null;
 let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEvent="";
@@ -191,16 +199,18 @@ function onMapSelect(tileId,unitId,cityPlate=false,pointer="keyboard"){
   }
   if (!explored.has(tileId) && moveDraft) {moveDraft=null;updateMap();}
   if(!explored.has(tileId)) {toast("Uncharted territory. Move closer to explore.");return}
+  const unit=getUnit(), targetUnit=view.state.units.find(u=>sameId(u.id,unitId));
+  const available=unit && unit.seat===view.seat && mayOrder() && order!=="inspect";
+  const options=available && getUnitOptions(view.state,unit.id);
+  if(options && options.attacks.includes(tileId)){
+    moveDraft=null;openCombat(unit.id,tileId);return;
+  }
   if(cityPlate && cityAt(tileId)){
     const inspecting=order==="inspect";
     select(tileId,null,true);if(inspecting)order="inspect";
     redraw();inspectMapOnMobile();return;
   }
-  const unit=getUnit(), targetUnit=view.state.units.find(u=>sameId(u.id,unitId));
-  const available=unit && unit.seat===view.seat && mayOrder() && order!=="inspect";
-  if(available && targetUnit?.seat!==view.seat){
-    const options=getUnitOptions(view.state,unit.id);
-    if(options.attacks.includes(tileId)){moveDraft=null;openCombat(unit.id,tileId);return}
+  if(options && targetUnit?.seat!==view.seat){
     if(options.moves.includes(tileId) && order!=="attack"){
       if(freightTarget || reviewPointerMove(pointer,compactMap(),view.tutorial && !view.tutorialProgress?.completed)){
         moveDraft=previewMove(view.state,unit,tileId);
@@ -428,6 +438,7 @@ function inspect(){
         const nearest=nearestKnownStation(state,u,explored,hexDistance);
         if(nearest)actions+=actionButton('locate-station','Nearest known station',FIELD_STATIONS[state.board[nearest].fieldStation].name);
       }
+      if(journal) actions+=actionButton('field-desk',getLanguage()==='zh-CN'?'野外考察':'Field expeditions',getLanguage()==='zh-CN'?'委托、观察与交付':'Commission, observe and file');
       actions+=notebookPanel(journal,disabled,actionButton,esc);
       if(canSurvey(state,u)) actions+=actionButton('survey','Survey resources','1 movement','gold',disabled);
       const plans=getUpgradePlans(state,u.id,view.seat);
@@ -460,6 +471,7 @@ function inspect(){
     if(own && c.buildingSites) info+='<div class="works-sites">'+Object.entries(c.buildingSites).map(([item,id])=>
       '<small>'+esc(items[item]||item)+' · '+esc(mapRegion.byId[id]?.name||id)+' · '+esc(id)+'</small>').join('')+'</div>';
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
+    if(own)actions+=actionButton('city-profile',getLanguage()==='zh-CN'?'城市档案':'City view',getLanguage()==='zh-CN'?'收支与规划':'Accounts and planning');
     if(own && state.campaignVariety===1) actions+=actionButton("city-hall","City hall","City charter");
   }else{
     const station=FIELD_STATIONS[holding?.fieldStation];
@@ -507,6 +519,10 @@ function inspect(){
     }
   }
   for(const bridge of knownCrossings(mapRegion,tile.id,explored))info+=stat("Crossing",bridge.name);
+  if(!activeUnit && !activeCity && districtProfiles(state,tile.id).length){
+    const zh=getLanguage()==='zh-CN';
+    actions+=actionButton('atlas-fieldnotes',zh?'阅读地区档案':'Read district field notes',zh?'地理数据与历史资料':'Geography and history');
+  }
   info+=depositStrip(depositId);
   if(deposit){
     const site=state.board[tile.id], supplier=getWorkingCity(state,tile.id);
@@ -544,6 +560,7 @@ function currentFreightCourse(){
   const unit=getUnit();
   return freightTarget && unit?.seat===view.seat ? freightCourse(view.state,unit,freightTarget,selectedOptions?.moves || []) : null;
 }
+let updateCampaignLens;
 function updateMap(){
   paintMove();
   drawPlacement();
@@ -563,7 +580,8 @@ function updateMap(){
       if(freightBar._markup!==html){freightBar.innerHTML=html;freightBar._markup=html;}
     }
   }
-  atlas.update({frontierHexes:moveDraft?.frontier,reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  const campaignLens=updateCampaignLens?.(view.state,view.seat,selectedTile,matchKey);
+  atlas.update({campaignLens,frontierHexes:moveDraft?.frontier,reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder,settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -622,7 +640,7 @@ function drawPlacement() {
 function startPlacement(draft,city) {
   closeProduction();productionDraft=null;parcelOrder={...draft,university:Boolean(WONDERS[draft.item])};
   order='inspect';selectedUnit=null;kind='city';selectedTile=city.tile;
-  closeMapPanel();atlas.focus(city.tile);redraw();el('atlas').querySelector('canvas')?.focus({preventScroll:true});
+  closeMapPanel();redraw();atlas.focus(parcelOrder?.site || city.tile);el('atlas').querySelector('canvas')?.focus({preventScroll:true});
 }
 
 function productDescription(item) {
@@ -659,8 +677,11 @@ function productionOptions(){
       const def=o.kind==="project"?SCIENCE_PROJECT:UNIT_TYPES[o.item]||BUILDINGS[o.item];
       const desc=productDescription(o.item);
       const growth=settlerPopulationReason(c,o.item) ? getPopulationReport(view.state,c.id) : null;
+      const lock=settlerPopulationCard(view.state,c,o.item);
       const race=WONDERS[o.item] ? '<small><span>Charter fee</span> · <span>'+def.grant+' capital</span> · <span>'+({open:'Available worldwide.',commissioned:'Under construction',complete:'Already opened'})[campusStatus(view.state,o.item)]+'</span></small>' : '';
-      return '<article class="production-item work-card">'+illustration(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+(o.turns===null?'':esc(turnsText(o.turns))+' · ')+esc(o.required)+' production</small>'+orderButtons(o,mayOrder(),growth)+'</span></article>';
+      const timing=(def.era?esc(eraName(def.era))+' · ':'')+(o.turns===null?'':esc(turnsText(o.turns))+' · ')+esc(o.required)+' production';
+      return productionCard({item:o.item,icon:illustration(o.item),name:items[o.item]||o.label,description:desc,
+        race,timing,controls:orderButtons(o,mayOrder(),growth),lock});
     }).join('')+'</div>'});
   el("production-options").innerHTML=(c.queue?cityQueue(c)+'<p class="work-rules">Changing projects saves invested production in this city. A paused university releases its land and refunds the charter fee.</p>':'')+
     '<p class="work-rules">Buy with treasury gold to finish immediately. One remaining production costs three gold.</p>'+html.join('');
@@ -758,10 +779,12 @@ function drawCombat(){
   if(!battle)return false;
   const u=view.state.units.find(u=>sameId(u.id,battle.unit)), forecast=u&&combatPreview(view.state,u.id,battle.tile);
   if(!mayOrder()||!forecast){closeCombat();return false}
-  if(battle.defenderId!=null && battle.defenderId!==forecast.defenderId){
-    closeCombat();toast('The defender changed. Select the target again to review the new forecast.');return false;
+  const quote=siegeQuote(forecast);
+  if(battle.defenderId!=null && (battle.defenderId!==forecast.defenderId || battle.siegeQuote!==quote)){
+    closeCombat();toast('The combat forecast changed. Select the target again to review it.');return false;
   }
   battle.defenderId=forecast.defenderId;
+  battle.siegeQuote=quote;
   const defender=forecast.defenderType==="wild"?wildAt(view.state,battle.tile):forecast.defenderType==="city"?view.state.cities.find(c=>sameId(c.id,forecast.defenderId)):view.state.units.find(u=>sameId(u.id,forecast.defenderId));
   if(!defender){closeCombat();return false}
   text("combat-where",mapRegion.byId[battle.tile].name);
@@ -828,7 +851,40 @@ function reviewScoutDestination(unit,target){
   moveDraft=draft;order="";openMapOnMobile();updateMap();atlas.focus(target);
   moveBar.querySelector('[data-move-confirm]').focus({preventScroll:true});
 }
-let tutorialCoach;
+let tutorialCoach,paintAdvisors;
+function reviewAdvice(link){
+  if(link.kind==='supplies'){
+    Game.open('supplies');
+    const selector=document.querySelector('dialog[open] [name="supply-city"]');
+    if(selector && link.city){
+      selector.value=link.city;
+      selector.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    document.querySelector('dialog[open] [data-act="cargo-'+link.resource+'-'+link.market+'"]')?.focus();
+    return;
+  }
+  if(link.kind==='research' || link.kind==='civics'){showAvailableCouncil(link.kind);showCouncilGoal(link.item);return;}
+  if(link.unit){
+    const unit=ownUnits().find(u=>u.id===link.unit);
+    if(!unit)return;
+    select(unit.tile,unit.id);atlas.focus(unit.tile);redraw();inspectMapOnMobile();
+    if(link.kind==='move' && mayOrder())reviewScoutDestination(unit,link.tile);
+    if(link.kind==='freight')chooseOrder('freight-course:'+link.tile);
+    if(link.kind==='care')document.querySelector('[data-order="'+(link.rest?'recover':'locate-care')+'"]')?.focus();
+    return;
+  }
+  const city=ownCities().find(c=>c.id===link.city);
+  if(!city)return;
+  select(city.tile,null,true);atlas.focus(city.tile);redraw();
+  if(link.kind==='production'){
+    openProduction();
+    const method=link.buy?'buy':'produce';
+    el('production-options').querySelector('[data-'+method+'="'+link.item+'"]')?.focus();
+  }
+  if(link.kind==='borders'){(document.querySelector('[data-influence-city="'+city.id+'"]') || el('influence-open')).click();}
+  if(link.kind==='citizens')chooseOrder('citizens');
+}
+
 function locateTutorialOrder(lesson){
   if(!view?.tutorial)return;
   const {step,city,unit}=lesson;
@@ -886,6 +942,8 @@ function paint(next){
   influencePanel?.paint();
   turnResults?.(view);
   cityDirectory?.paint();
+  paintAdvisors?.();
+  cityProfile?.paint();
   text("brand-region",mapRegion.shortName);text("campaign-title",mapRegion.name);
   text("chart-coordinate",mapRegion.coordinates);text("footer-region",mapRegion.shortName);
   document.querySelector(".map-panel").setAttribute("aria-label","Tactical map · "+mapRegion.shortName);
@@ -914,6 +972,7 @@ function paint(next){
   redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();showCampusOpening(state,seat,key);populationLedger();
   if(el("production-modal").open)productionOptions();
   if(el("combat-modal").open)drawCombat();
+  updateExplorer?.(key);
   battleReports.update(next,key,mapRegion);
   tutorialCoach?.paint();
 }
@@ -944,6 +1003,8 @@ function reviewHousing(cityId,item) {
 }
 function chooseOrder(key){
   if(moveDraft){moveDraft=null;updateMap();}
+  if(key==='city-profile'){cityProfile?.open(cityAt(selectedTile)?.id);return;}
+  if(key==='atlas-fieldnotes'){Game.openDistrictNotes(selectedTile);return;}
   if(key==="city-hall"){
     const c=cityAt(selectedTile);
     if(c?.seat===view.seat){openCityHall(c.id,action=>Game.doAction(action));paintCityHall(view.state,view.seat,mayOrder());}
@@ -971,6 +1032,15 @@ function chooseOrder(key){
     return;
   }
   const u=getUnit();if(!u||u.seat!==view.seat)return;
+  if(key==='field-desk'){
+    const session=matchKey,id=u.id,round=view.state.round;
+    const read=()=>{const unit=view.state.units.find(piece=>piece.id===id && piece.seat===view.seat);
+      return matchKey===session && view.state.round===round && unit ? {state:view.state,unit,map:mapRegion,distance:hexDistance,mayOrder:mayOrder(),
+        targets:getUnitOptions(view.state,id).moves,routeTo:target=>getRouteDetail(view.state,id,target)} : null;};
+    openFieldDesk(read,action=>{if(read()?.mayOrder) Game.doAction(action);},target=>{
+      const ctx=read();if(ctx?.mayOrder && getUnit()?.id===id)reviewScoutDestination(ctx.unit,target);
+    });return;
+  }
   if(mayOrder() && ['record-terrain','file-atlas'].includes(key)){
     Game.doAction({type:key==='record-terrain'?'recordTransect':'fileTransect',unit:u.id});return;
   }
@@ -1067,11 +1137,33 @@ function mount(){
     if(current)openPendingTask(current);
   });
   document.addEventListener('civitas-language',()=>turnResults(view));
-  cityDirectory=mountCityDirectory(()=>view,(city,command)=>{
+  function inspectCityReport(city,command,value){
+    if(command==='profile'){cityProfile.open(city.id);return;}
+    if(command==='tile'){
+      if(!view.state.board[value] || !(visible.has(value) || explored.has(value)))return;
+      closeMapPanel();select(value,null,true);atlas.focus(value);redraw();return;
+    }
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
-    if(command==='production')openProduction();
-    else chooseOrder('citizens');
-  });
+    if(command==='festival' || command==='charter'){
+      openCityHall(city.id,a=>Game.doAction(a),{type:command==='festival'?'cityFestival':'cityCharter',item:value});
+      paintCityHall(view.state,view.seat,mayOrder());
+    }else if(command==='border'){el('entity-info').querySelector('[data-influence-city]')?.click();}
+    else if(command==='supplies')chooseOrder('supplies');
+    else if(command==='production')openProduction();
+    else if(command==='work-quote' || command==='rush-quote'){
+      const option=getProductionOptions(view.state,city.id,{replace:true}).find(o=>o.item===value);
+      const buy=command==='rush-quote';
+      if(!mayOrder() || !option || !(buy?option.buyEnabled:option.enabled))return;
+      openProduction();productionDraft=draftOrder(city,option,buy);productionOptions();
+      el('production-options').querySelector('[data-work-confirm]')?.focus();
+    }else if(command==='building')reviewHousing(city.id,value);
+    else if(command==='focus'){
+      openCitizenLedger(city.id,(id,item)=>Game.doAction({type:'focus',city:id,item}),reviewHousing,value);
+      populationLedger();
+    }else if(command==='citizens')chooseOrder('citizens');
+  }
+  cityProfile=mountCityProfile(()=>view,inspectCityReport);
+  cityDirectory=mountCityDirectory(()=>view,inspectCityReport);
   parcelBar=document.createElement('section');parcelBar.className='work-sitebar';parcelBar.hidden=true;
   parcelBar.setAttribute('aria-label','Construction site selection');
   el('map-hint').before(parcelBar);
@@ -1084,7 +1176,15 @@ function mount(){
   };
   parcelBar.onclick=e=>{
     if (!parcelOrder) return;
-    if (e.target.closest('[data-site-cancel]')) {endPlacement();redraw();return;}
+    if (e.target.closest('[data-site-back]')) {
+      const city=view.state.cities.find(c=>c.id===parcelOrder.city && c.seat===view.seat);
+      endPlacement();
+      if(city){select(city.tile,null,true);redraw();openProduction();}
+      return;
+    }
+    if (e.target.closest('[data-site-cancel]')) {
+      endPlacement();redraw();el('atlas').querySelector('canvas')?.focus({preventScroll:true});return;
+    }
     if (!e.target.closest('[data-site-confirm]')) return;
     const city=view.state.cities.find(c=>c.id===parcelOrder.city && c.seat===view.seat);
     const option=city && getProductionOptions(view.state,city.id,{replace:true}).find(o=>o.item===parcelOrder.item);
@@ -1099,6 +1199,11 @@ function mount(){
   el("inspect-map").onclick=()=>{order=order==="inspect"?"":"inspect";hoverId=null;redraw()};
   el("layers").onclick=()=>toggleLayers(el("layers-menu").hidden);
   mountSurveyControls(atlas);
+  updateCampaignLens=mountCampaignLenses(el('layers-menu'),el('entity-info'),redraw,id=>{
+    if(!explored.has(id))return;
+    select(id);order='inspect';kind='tile';selectedUnit=null;toggleLayers(false);
+    atlas.focus(id,true);redraw();updateHint(id);inspectMapOnMobile();
+  },()=>{order='inspect';});
   updateWaterKey=mountWaterKey(el('layers-menu'),id=>{
     if(!explored.has(id) || !chartedWaterSites(mapRegion,explored).some(site=>site.id===id))return;
     select(id);kind='tile';selectedUnit=null;order='inspect';toggleLayers(false);
@@ -1145,12 +1250,13 @@ function mount(){
       }
     }
   };
+  paintAdvisors=mountAdvisors(()=>view,reviewAdvice);
   mountDiplomacy(action=>Game.doAction(action));
   influencePanel=mountInfluencePanel({
     getView:()=>view,issue:action=>Game.doAction(action),closeLedger:()=>Game.close(),
     showTile:locateDistrict
   });
-  document.querySelector('.map-messages')?.prepend(parcelBar);
+  document.querySelector('.map-workspace')?.append(parcelBar);
   el("map-labels").onchange=e=>atlas.setLabels(e.currentTarget.checked);
   el("territory-lines").onchange=e=>atlas.setTerritories(e.currentTarget.checked);
   document.addEventListener("click",e=>{if(!e.target.closest(".layers-wrap"))toggleLayers(false)});
@@ -1246,7 +1352,7 @@ function mount(){
     if(!view || !getResearchOptions(view.state,view.seat).some(o=>o.item===item))return;
     delete routeOrigins.research;openCouncil('research');showCouncilGoal(item);
   });
-  document.addEventListener('civitas-language',()=>{if(!view)return;paintTurnButton(el('end-turn'),view);roster();inspect();if(el('research-modal').open)paintResearch();else paintProjects()});
+  document.addEventListener('civitas-language',()=>{if(!view)return;if(el('production-modal').open)productionOptions();paintTurnButton(el('end-turn'),view);roster();inspect();if(el('research-modal').open)paintResearch();else paintProjects()});
   el("close-combat").onclick=closeCombat;el("cancel-combat").onclick=closeCombat;
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};
@@ -1259,6 +1365,9 @@ function mount(){
   el("production-options").onclick=e=>{
     const b=e.target.closest("button");
     if(!b||b.disabled||!productionCity)return;
+    if(b.hasAttribute('data-work-population')){
+      const id=productionCity;closeProduction();cityProfile?.open(id,'growth');return;
+    }
     if (b.hasAttribute('data-work-back')) {productionDraft=null;productionOptions();return;}
     if (b.hasAttribute('data-work-confirm')) {
       if (!productionDraft || !mayOrder()) return;
@@ -1285,6 +1394,7 @@ function mount(){
     openMapOnMobile();
     el("atlas").querySelector("canvas")?.focus({preventScroll:true});
   }
+  updateExplorer=mountCampaignExplorer({button:el('open-explorer'),getView:()=>view,getSelected:()=>selectedTile,locate:locateDistrict});
   Game.init({render:paint,locate:locateDistrict,toast}).catch(error=>{console.error(error);toast("The game could not load. Refresh to try again.")});
 }
 mount();

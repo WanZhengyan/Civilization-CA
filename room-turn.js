@@ -1,3 +1,4 @@
+import {siegeQuote} from './attack-mode.js';
 // Online games send a seat-specific view. Saved sequential campaigns continue
 // to use their single turn index.
 export function roomSeatTurn(state,seat) {
@@ -18,8 +19,9 @@ export function isComputerActing(state) {
 
 export function captureRoomOrder(room,action) {
   const orderKey=room.game?.teamPhase?.orderKey;
-  const defender=orderKey && action.type==='attack' ? room.game.intel?.forecasts?.[action.unit]?.[action.tile]?.defenderId : null;
-  const order=defender!=null ? {...action,defenderId:defender} : action;
+  const forecast=orderKey && action.type==='attack' ? room.game.intel?.forecasts?.[action.unit]?.[action.tile] : null;
+  const quote=siegeQuote(forecast);
+  const order=forecast?.defenderId!=null ? {...action,defenderId:forecast.defenderId,...(quote && {siegeQuote:quote})} : action;
   // Receipt support is advertised by the server so older hosts stay playable.
   const actionId=Array.isArray(room.orderReceipts)
     ? Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('')

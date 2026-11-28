@@ -57,3 +57,38 @@ dialog#production-modal {width:min(54rem,calc(100vw - 1.5rem))}
 .work-growth dt,.work-growth dd {margin:0;font-size:.82rem;line-height:1.4}
 .work-growth dt {color:#c4c8bd}
 .work-growth dd {color:#efd6a5;font-weight:650;font-variant-numeric:tabular-nums}
+
+.commerce-ledger{margin-block:1rem;padding:1rem;background:#223130;border:1px solid #495e5b;border-radius:6px}
+.commerce-ledger h3{margin-top:0}.commerce-ledger ul{list-style:none;padding:0}.commerce-ledger li{padding:.7rem 0;border-top:1px solid #485853}
+.commerce-offer{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .8rem;padding:.35rem 0}
+.commerce-offer span,.commerce-offer small{font-size:.86rem;color:#ccdad1}.commerce-offer button{min-height:40px}
+/* Keep the owning city's land in view throughout the order. */
+body:not(.on-title) dialog#production-modal {
+  position:fixed;inset:clamp(55px,9dvh,85px) auto auto max(8px,env(safe-area-inset-left));
+  margin:0;width:min(25rem,43vw);max-height:80dvh;
+}
+body:not(.on-title) dialog#production-modal::backdrop {background:transparent;backdrop-filter:none}
+#production-modal .modal-shell {max-height:80dvh}
+#production-modal .modal-body {overflow:auto;overscroll-behavior:contain}
+.map-workspace>.work-sitebar:not([hidden]) {
+  position:absolute;z-index:6;left:max(var(--gutter),env(safe-area-inset-left));top:calc(var(--top) + 16px);
+  display:grid;align-content:start;gap:.72rem;width:min(18rem,32vw);max-height:calc(100dvh - var(--top) - 88px);
+  overflow:auto;overscroll-behavior:contain;padding:.85rem;background:#202c31f7;border-color:#a78d5e;
+  box-shadow:0 6px 22px #0d161b77;border-radius:7px;scrollbar-width:thin;
+}
+.map-workspace:has(>.work-sitebar:not([hidden])) .strategy-rail {visibility:hidden}
+.work-sitebar [data-site-back] {justify-self:start;border:0;background:transparent;text-align:start;padding:0;text-decoration:underline}
+.work-sitebar .site-choice {display:grid;gap:.22rem}
+.work-sitebar .site-choice select {width:100%}
+.work-sitebar .work-bar-actions {margin:0;display:grid;grid-template-columns:1fr 1fr}
+.work-sitebar .site-terrain {color:#e8d29d}
+@media(max-width:680px),(max-height:510px) {
+  body:not(.on-title) dialog#production-modal {width:min(22rem,76vw);max-height:75dvh}
+  #production-modal .modal-shell {max-height:75dvh}
+  .map-workspace>.work-sitebar:not([hidden]) {
+    top:calc(var(--top) + 48px);width:clamp(124px,36vw,198px);max-height:calc(100dvh - var(--top) - 115px);
+    padding:.48rem;gap:.38rem;font-size:.75rem;
+  }
+  .work-sitebar .work-bar-actions {grid-template-columns:1fr}
+  .work-sitebar .work-quote {display:grid}
+}
