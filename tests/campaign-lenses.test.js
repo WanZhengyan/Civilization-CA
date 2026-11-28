@@ -102,3 +102,12 @@ test('works register places an active order and a completed building at their ca
   c.queue=null;c.buildings=['granary'];c.buildingSites={granary:site};
   assert.match(surveyLayer(s,0,'works').get(site).en,/Granary operating/);
 });
+
+test('medical service maps capped healing and removes the rest bonus when no movement remains',()=>{
+  const s=campaignView(capital(),0),c=s.cities[0];
+  const unit={id:'survivor',type:'melee',seat:0,tile:c.tile,hp:30,maxHp:100,maxMoves:2,moves:2};s.units=[unit];
+  const row=surveyLayer(s,0,'recovery').get(c.tile);assert.equal(row.rank,16);assert.equal(row.band,3);
+  unit.moves=0;assert.equal(surveyLayer(s,0,'recovery').get(c.tile).rank,12);
+  unit.hp=99;assert.equal(surveyLayer(s,0,'recovery').get(c.tile).rank,1);
+  unit.hp=100;assert.equal(surveyLayer(s,0,'recovery').size,0);
+});

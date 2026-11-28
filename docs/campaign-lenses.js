@@ -1,3 +1,5 @@
+import {getRouteDetail,hexDistance,UNIT_TYPES} from './rules.js';
+import {recoveryAt} from './unit-service.js';
 import {BUILDINGS} from './rules.js';
 import {getPopulationReport} from './rules.js';
 import {SETTLER_MIN_POPULATION,SETTLER_RESIDENT_COST} from './population.js';
@@ -229,6 +231,32 @@ const lenses=[
         translate(quote.label,'zh-CN')+' · '+translate(city.name,'zh-CN')+' · 生产进度 '+queue.progress+'/'+quote.required+'。'+(held?translate(quote.reason,'zh-CN'):'预计还需 '+quote.turns+' 回合。'));
     }
     for(const [id,site] of sites)rows.set(id,reading(site.band,site.en.join(' '),site.zh.join(' '),[0,3,1,4][site.band]));
+    return rows;
+  }),
+  definition('recovery','Medical evacuation routes','部队疗养路线','Compare the recovery available to an injured unit in place or at a destination it can reach this turn. Rest requires spare movement.','比较受伤单位留在原地或在本回合可抵达地点休整后的恢复量。主动休息需要剩余移动力。',[
+    ['No recovery','无恢复'],['Rest only','仅休息可恢复'],['Medical service','驻地疗养'],['Service and rest','驻地疗养加休息']
+  ],({state,seat})=>{
+    const rows=new Map(),sites=new Map();
+    for(const unit of state.units.filter(u=>u.seat===seat && u.hp<u.maxHp)){
+      const def=UNIT_TYPES[unit.type];
+      for(const tile of [unit.tile,...getUnitOptions(state,unit.id).moves]){
+        const cost=tile===unit.tile?0:getRouteDetail(state,unit.id,tile)?.cost;
+        if(cost==null)continue;
+        const report=recoveryAt(state,{...unit,tile,moves:unit.moves-cost},def,hexDistance);
+        const extra=report.canRest?report.restGain-report.gain:0;
+        const band=report.rate>0?(extra>0?3:2):extra>0?1:0;
+        const list=sites.get(tile)||[];list.push({unit,def,report,extra,band});sites.set(tile,list);
+      }
+    }
+    for(const [id,list] of sites){
+      list.sort((a,b)=>b.report.gain+b.extra-a.report.gain-a.extra);
+      const summary=zh=>list.map(({unit,def,report,extra})=>{
+        const name=zh?translate(def.name,'zh-CN'):def.name;
+        return name+' ('+unit.tile+') · '+unit.hp+'/'+unit.maxHp+' HP · '+(zh?'下回合恢复 ':'next turn +')+report.gain+
+          (extra?(zh?'，下令休息还可多恢复 ':'; rest order adds ')+extra:'')+(report.place?' · '+(zh?translate(report.place,'zh-CN'):report.place):'');
+      }).join(' / ');
+      rows.set(id,reading(list[0].band,summary(false),summary(true),list[0].report.gain+list[0].extra));
+    }
     return rows;
   }),
 ];
