@@ -3,7 +3,7 @@ const chapters = {
   start: [
     ['Travel with a scout', '派侦察兵出行',
       'Train a scout and select it at a trading post, field archive or trail lodge to choose an exchange. The same scout can also record three different terrains at least three hexes apart. Bring the notebook within one hex of one of your cities to publish your regional atlas.',
-      '训练侦察兵，抵达贸易站、野外档案馆或山径驿站后可以选择一次交换。也可以让同一名侦察兵在三个不同类型的地形做记录，各点之间至少相隔三格。带着记录返回己方城市一格以内，即可出版地区图志。']
+      '训练侦察兵，抵达商贸驿站、田野档案馆或山径驿舍后可以选择一次交换。也可以让同一名侦察兵在三个不同类型的地形做记录，各点之间至少相隔三格。带着记录返回己方城市一格以内，即可出版地区图志。']
   ],
   city: [
     ['Give a city a specialty', '让城市发展专长',
@@ -16,12 +16,12 @@ const chapters = {
   battle: [
     ['Hold a ridge or train a veteran', '坚守山脊或训练老兵',
       'With full movement, an armed land unit can fortify. While it holds, fieldworks absorb 4 additional damage in the open, 8 in woodland or 10 in foothills. At 3 combat XP, choose a permanent drill for extra attack damage or protection. Training spends the unit’s remaining movement.',
-      '移动力全满时，武装陆地单位可以构筑工事。保持防守时，开阔地额外减伤 4 点，林地 8 点，山丘 10 点。积累 3 点战斗经验后，可选择永久的突击或防护训练，并消耗本回合剩余移动力。']
+      '移动力全满时，武装陆地单位可以构筑工事。保持防守时，开阔地额外减伤 4 点，林地 8 点，丘陵 10 点。积累 3 点战斗经验后，可选择永久的突击或防护训练，并消耗本回合剩余移动力。']
   ],
   coast: [
     ['Carry freight between harbors', '在港口之间运粮',
       'At your harbor, a fishing crew can load 4 stored food once it knows a water route to another friendly port. Sail to the destination berth and unload for food and gold. For a longer voyage, provision a ship at your berth for 6 gold. Its next sailing turn gains two movement points.',
-      '己方港口与另一座友方港口之间的水路探明后，渔船可在本港装载 4 储粮，驶到另一港的泊位卸货并获得金币。需要远航时，可在本港花 6 金币补给；船只在下一个航行回合多出 2 点移动力。']
+      '己方港口与另一座友方港口之间的水路探明后，渔船队可在本港装载 4 储粮，驶到另一港的泊位卸货并获得金币。需要远航时，可在本港花 6 金币补给；船只在下一个航行回合多出 2 点移动力。']
   ],
   research: [
     ['Invest while a council is working', '在研究期间投资',
