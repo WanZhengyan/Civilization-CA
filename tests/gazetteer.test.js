@@ -47,3 +47,9 @@ test('three public-agency field sites present region-specific measures and map l
   gazetteerAction(v,'site-topanga');assert.match(gazetteerContent(v,'zh-CN').body,/36 英里步道/);
   gazetteerAction(v,'site-fort-point');assert.match(gazetteerContent(v,'en').body,/nps.gov\/places\/fort-point/);
 });
+test('players can step along three coastal engineering milestones and locate the matching endpoint',()=>{
+  const v=newGazetteer();gazetteerAction(v,'work-coronado-bridge');
+  const body=gazetteerContent(v,'en').body;
+  assert.ok(body.indexOf('1909')<body.indexOf('1937'));assert.match(body,/2.12-mile/);assert.match(body,/preceding project · 32/);
+  gazetteerAction(v,'work-golden-gate');assert.match(gazetteerContent(v,'zh-CN').body,/5 月 28 日/);
+});

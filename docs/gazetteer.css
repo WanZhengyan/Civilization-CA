@@ -11,3 +11,4 @@
 .gaz a {color:#a9d7d8;text-decoration:underline;text-underline-offset:.15rem}
 .gaz-places{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.75rem}.gaz-places .gaz-choice{border-radius:1.3rem;padding-inline:.85rem}
 .gaz-table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}.gaz-table caption{text-align:start;color:#c0ceca;margin:.35rem 0}.gaz-table th{text-align:start}.gaz-table td,.gaz-table th{padding:.3rem .1rem;border-bottom:1px solid #485556}.gaz-table td,.gaz-table thead th:last-child{text-align:end}.gaz-table tbody .gaz-choice{background:transparent;border:0;padding-inline:.25rem;text-decoration:underline;text-underline-offset:.16rem}
+.gaz-timeline{list-style:none;border-inline-start:2px solid #b49b6a;margin:.75rem .4rem;padding-inline-start:1rem}.gaz-timeline li{margin:.4rem 0}

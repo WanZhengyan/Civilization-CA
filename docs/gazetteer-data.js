@@ -48,3 +48,15 @@ export const landmarks=[
     context:['The original light guided ships approaching San Diego. Its campaign anchor is the Cabrillo headland.','这座旧灯塔曾为驶近圣迭戈的船只导航。在战役中对应卡布里约岬角。'],
     date:['Original light in service','原灯塔服役时期'],publisher:['National Park Service','美国国家公园管理局'],url:'https://www.nps.gov/articles/cabrillo.htm'}
 ];
+
+export const coastalWorks=[
+  {id:'municipal-pier',region:'la',anchor:'Santa Monica',name:['Santa Monica Municipal Pier','圣莫尼卡市政码头'],year:1909,
+    context:['The city records construction in 1908–1909. The adjacent pleasure pier followed in 1916.','市政府记录的建造期为 1908–1909 年。毗邻的游乐码头于 1916 年建成。'],
+    publisher:['City of Santa Monica · environmental impact report','圣莫尼卡市政府 · 环境影响报告'],url:'https://www.santamonica.gov/media/Housing-Element-Update-2021-to-2029/Housing%20Element%20EIR%20FINAL%20%28Reduced%29.pdf'},
+  {id:'golden-gate',region:'sf',anchor:'Golden Gate Bridge',name:['Golden Gate Bridge','金门大桥'],year:1937,
+    context:['Pedestrians crossed on May 27. Vehicle traffic began on May 28.','5 月 27 日先向行人开放，5 月 28 日开始通车。'],
+    publisher:['Golden Gate Bridge, Highway and Transportation District','金门大桥公路与交通管理区'],url:'https://www.goldengate.org/bridge/history-research/statistics-data/faqs/'},
+  {id:'coronado-bridge',region:'sd',anchor:'Coronado',name:['San Diego–Coronado Bridge','圣迭戈–科罗纳多大桥'],year:1969,
+    context:['The 2.12-mile bridge opened on August 3. The corresponding campaign district is the Coronado end of the crossing.','这座 2.12 英里的桥梁于 8 月 3 日通车。在战役中对应科罗纳多一侧。'],
+    publisher:['City of San Diego · Digital Archives','圣迭戈市政府 · 数字档案'],url:'https://www.sandiego.gov/digitalarchives/new-discoveries/bridging-the-Gap'}
+];
