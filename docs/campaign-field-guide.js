@@ -45,8 +45,8 @@ const chapters = {
   ],
   research: [
     ['Invest while a council is working', '在研究期间投资',
-      'Choose a goal in either council. Open the investment comparison to see how an available university or monument would change your income and the time to your goal. Review the building site and cost before placing the order.',
-      '在科技或市政议会选定目标，展开投资比较，查看当前可建的大学或纪念碑将如何改变每回合收入与所需时间。选址并核对成本后，再确认建造。']
+      'Choose a goal in either council. Open the investment comparison to see how a research building such as an Academy, or a cultural building such as a Printing house, would change your income and time to the goal. Review the building site and cost before placing the order.',
+      '在科技或市政议会选定目标，展开投资比较，查看可建的学院等科研建筑或印刷所等文化建筑能增加多少收入，以及目标能提早几回合完成。选址并核对成本后，再确认建造。']
   ]
 };
 

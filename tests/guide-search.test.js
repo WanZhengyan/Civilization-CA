@@ -47,3 +47,19 @@ test('typing preserves the field, Escape clears it, and Enter opens the first ma
   field.value='xxxxxxxx';field.dispatchEvent(new Event('input'));
   assert.match(count.textContent,/没有找到/);
 });
+
+test('building searches give the real city cost, prerequisites and benefit in the selected language',()=>{
+  for (const [key,query,title,details] of [
+    ['academy','学院','Academy',/Topographic Mapping.*22 production.*2 science/],
+    ['shop','商店','Shop',/Land Surveying.*12 production.*3 gold/],
+    ['foundry','铸造厂','Foundry',/Industrial Metallurgy.*Workshop.*27 production.*3 production/],
+  ]) {
+    const [result]=searchGuide(index,query,'en');
+    assert.equal(result.key,'building-'+key);
+    assert.equal(result.title,title);
+    const topic=index.find(t=>t.key===result.key);
+    assert.match(topic.en.body,details);
+    assert.ok(topic['zh-CN'].body.includes('生产力'));
+  }
+  assert.ok(!gameGuideIndex({}).some(t=>t.key==='building-printingHouse'));
+});

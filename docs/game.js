@@ -21,7 +21,7 @@ import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
 import {changeRoomSetup,difficultyField,difficultyLabel,newRoomSetup,roomSetupFields,teamLabel,validRoomTeams} from './room-setup.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
 
-import {ERAS, getEra, getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
+import {councilTree, ERAS, getEra, getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
 
 const SEATS_KEY = 'angel-basin.room-seats.v1';
 const LAST_ROOM_KEY = 'angel-basin.active-room.v1';
@@ -806,9 +806,24 @@ function guideTopics(chapter, language, state) {
     if(!state || state.victoryMode!=='conquest') entries.push(['Science victory',
       '<span>Research Radio Networks and Motorization, then Rocketry. In City production, choose Orbital Survey. Finish it in one city to win for your entire side.</span> <strong>Production required</strong> · '+SCIENCE_PROJECT.required]);
   }
-  return [...orders, ...entries].map(([title,detail],i)=>({
+  const topics=[...orders, ...entries].map(([title,detail],i)=>({
     key:'topic-'+i, title, body:typeof detail==='function'?detail(state):detail
   }));
+  if(chapter==='city') {
+    const tree=councilTree(state || {researchPace:2},'research');
+    const name=value=>translate(value,language);
+    for(const [item,building] of Object.entries(BUILDINGS)) {
+      if(!building.tech || !tree[building.tech] || !(building.yields || item==='workshop' || item==='walls'))continue;
+      const tech=name(tree[building.tech].name);
+      const facility=building.building ? name(BUILDINGS[building.building].name) : '';
+      const cost=building.required;
+      const requirement=language==='zh-CN'
+        ? '研究「'+tech+'」'+(facility?'，并在本城建成'+facility:'')+'后可建。需要 '+cost+' 生产力。'
+        : 'Research '+tech+(facility?' and build a '+facility+' in this city':'')+' to unlock. Costs '+cost+' production. ';
+      topics.push({key:'building-'+item,title:name(building.name),body:requirement+name(building.description)});
+    }
+  }
+  return topics;
 }
 
 export function gameGuideIndex(state) {
