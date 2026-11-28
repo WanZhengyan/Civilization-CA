@@ -57,3 +57,22 @@ test('the treasury shows both balances, actual signed income and a route to spen
  const html=ledgerBody(state,0,accounts,null,false,String,{capitalIncome:-2,influenceIncome:4});
  for(const token of ['Treasury</span> · 22','Influence</span> · 8','Income per turn</span> -2','Income per turn</span> +4','6 influence','data-influence-open'])assert.ok(html.includes(token),token);
 });
+
+import {drawCivicBuilding} from '../docs/construction-art.js';
+
+test('city buildings have individual map silhouettes even without faction colors',()=>{
+  const drawn=new Map();
+  for(const id of ['academy','shop','grainMill','foundry','printingHouse','workshop','shipyard','neighborhood']){
+    const geometry=[];
+    const g=new Proxy({},{
+      get:(_,key)=>(...args)=>geometry.push([key,...args]),
+      set:()=>true
+    });
+    drawCivicBuilding(g,id,20,25,'#ddd',.78);
+    assert.deepEqual(geometry.slice(0,3),[['save'],['translate',20,25],['scale',.78,.78]]);
+    assert.deepEqual(geometry.at(-1),['restore']);
+    const fingerprint=JSON.stringify(geometry);
+    assert.equal(drawn.has(fingerprint),false,id+' shares a silhouette with '+drawn.get(fingerprint));
+    drawn.set(fingerprint,id);
+  }
+});
