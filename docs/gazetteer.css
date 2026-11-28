@@ -1,0 +1,11 @@
+.gaz {color:#e6e9df; font:1rem/1.5 var(--sans); min-width:0}
+.gaz-intro,.gaz-place p {color:#c3cdc6; margin:0 0 .8rem}
+.gaz-switch,.gaz-nav {display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .9rem}
+.gaz-choice {min-height:2.75rem;padding:.35rem .75rem;border:1px solid #62706e;border-radius:.3rem;color:#d7ded7;background:#203032;font:inherit}
+.gaz-choice[aria-pressed=true] {color:#f4e3bb;background:#354344;border-color:#c2a572}
+.gaz :is(button,a,select,input):focus-visible {outline:2px solid #f4ce7e;outline-offset:2px}
+.gaz-place {border-top:2px solid #b89a67;padding:1rem .2rem .25rem}
+.gaz-place h3,.gaz h4 {font:normal 1.5rem/1.25 var(--serif);margin:.1rem 0 .5rem;color:#f2e7cc}
+.gaz-facts {display:flex;flex-wrap:wrap;gap:.65rem 2rem;margin:.75rem 0}
+.gaz-facts dt {font-size:.87rem;color:#c2cec7}.gaz-facts dd {color:#f6deb0;margin:0;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.gaz a {color:#a9d7d8;text-decoration:underline;text-underline-offset:.15rem}

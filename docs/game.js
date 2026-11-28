@@ -1,3 +1,4 @@
+import {newGazetteer,gazetteerContent,gazetteerAction} from './gazetteer.js';
 import {fieldGuideOrders} from './campaign-field-guide.js';
 import {installSoundtrack,soundtrackControls} from './music-controls.js';
 import {fishingGuide,inlandGuide,freightGuide,voyageGuide} from './maritime-guide.js';
@@ -106,6 +107,7 @@ let selectedSize = DEFAULT_MAP_SIZE, selectedRivals = 3, selectedDifficulty = 'n
 let selectedMode='standard', selectedCivilization='random', roomVictoryMode='standard', joinCivilization='random';
 let roomSetup=newRoomSetup();
 let supplyCity='';
+let gazetteer = newGazetteer();
 let pending = false, errorMessage = '', playingBots = false;
 let unconfirmedOrder=null;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
@@ -878,6 +880,7 @@ function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
   if (modal === 'trade-market') return {kicker:getLanguage()==='zh-CN'?'经济':'Economy',title:getLanguage()==='zh-CN'?'城际货运市场':'Intercity freight exchange',body:freightExchange(state,currentSeat(),pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML)};
+  if(modal==='gazetteer')return gazetteerContent(gazetteer,getLanguage(),mode==='home'?null:state);
   if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML,getStats(state,currentSeat()))};
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
@@ -888,7 +891,7 @@ function content() {
     const guides=guideTab==='formations' ? armyHandbook(escapeHTML) :
       list(guideTopics(guideTab,getLanguage(),guideState).map(({title,body,key})=>
         row('<span tabindex="-1" data-guide-target="'+key+'">'+title+'</span>',body)));
-    return {kicker:'Field guide', title:'How to play', body:guideSearchBox(getLanguage())+'<div data-guide-chapter>'+tabs +
+    return {kicker:'Field guide', title:'How to play', body:actions(button('gazetteer',getLanguage()==='zh-CN'?'加州地名志':'California gazetteer'))+guideSearchBox(getLanguage())+'<div data-guide-chapter>'+tabs +
       (influenceLink ? actions(influenceLink) : '') +
       (guideTab==='start' && (!guideState || guideState.civilizationTraits===1) ? compareCivilizations() : '')+
       (guideTab==='universities' ? wonderJournal(guideState) : '')+guides+'</div>' +
@@ -946,7 +949,7 @@ function content() {
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings',state?.victoryMode?'Victory progress':'Faction standings'),button('log','Event log'),
     state?.phase==='playing' ? button('advisors',getLanguage()==='zh-CN'?'顾问团':'Advisors') : '',
-    button('help','Field guide'), button('supplies','Supply ledger'), mode==='solo' && tutorial ? button('restart-tutorial','Restart tutorial') : '', button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
+    button('help','Field guide'), button('gazetteer',getLanguage()==='zh-CN'?'加州地名志':'California gazetteer'), button('supplies','Supply ledger'), mode==='solo' && tutorial ? button('restart-tutorial','Restart tutorial') : '', button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
 }
 
 function drawDialog() {
@@ -996,6 +999,17 @@ async function copyInvite() {
 }
 function modalAction(act) {
   if(act==='advisors'){dismissDialog();document.dispatchEvent(new Event('civitas-advisors'));return;}
+  if(act==='gazetteer'){
+    gazetteer=newGazetteer(mode==='home'?'la':getMap(getState()).id);
+    open('gazetteer');
+    return;
+  }
+  if(modal==='gazetteer' && act.startsWith('gaz-')){
+    gazetteerAction(gazetteer,act.slice(4));
+    drawDialog();
+    dialog.querySelector('[data-act="'+act+'"]')?.focus({preventScroll:true});
+    return;
+  }
   if (act.startsWith('locate-wonder-')) {
     const match=discoveredNaturalWonders(getState()).find(site=>site.id===act.slice('locate-wonder-'.length));
     if (match) {
