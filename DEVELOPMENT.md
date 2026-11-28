@@ -37,7 +37,7 @@ npm test
 npm run --silent playtest > playtest-candidate.json
 ```
 
-The current script plays 18 campaigns twice, six on each California map. It covers two, three and four factions. For each region, each configuration uses the normal AI opening and a second opening in which the first seat commissions a workshop after founding. Every later decision comes from the rules engine. Each pair must produce identical actions, final state and counters. The replay hash covers the actions and final state. Timings are excluded so a faster computer cannot change the report.
+The current script plays 18 campaigns twice, six on each California map. It covers two, three and four factions. For each region, each configuration uses the normal AI opening and a second opening in which the first seat trains a scout after founding. Every later decision comes from the rules engine. Each pair must produce identical actions, final state and counters. The replay hash covers the actions and final state. Timings are excluded so a faster computer cannot change the report.
 
 Compare the same seat count and opening across revisions. Look at campaign length, movement, cities founded or captured, completed projects, technology and winners together. More attacks can mean either a productive campaign or a stalled front. These 18 scenarios use reproducible seeds, drawing their factions and starting locations from the same rules as a new campaign. Their winner counts cannot estimate a human player's chance of winning.
 

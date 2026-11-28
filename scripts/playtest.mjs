@@ -13,10 +13,10 @@ function run(mapId, seats, opening) {
   while (state.phase === "playing") {
     // These fixed openings let a production change be compared across versions.
     const capital=state.cities.find(c=>c.seat===0);
-    const workshopOpening=opening==="workshop-first" && !openingPlayed && state.turn===0 && capital && !capital.queue;
-    if (workshopOpening) openingPlayed=true;
-    const action = workshopOpening
-      ? {type: "produce", city: capital.id, item: "workshop"}
+    const scoutOpening=opening==="scout-first" && !openingPlayed && state.turn===0 && capital && !capital.queue;
+    if (scoutOpening) openingPlayed=true;
+    const action = scoutOpening
+      ? {type: "produce", city: capital.id, item: "scout"}
       : chooseBotAction(state);
     const next = applyAction(state, state.turn, action);
     orders++;
@@ -62,7 +62,7 @@ function run(mapId, seats, opening) {
 const results = [];
 for (const mapId of ["la", "sf", "sd"]) {
   for (const seats of [2, 3, 4]) {
-    for (const opening of ["standard", "workshop-first"]) {
+    for (const opening of ["standard", "scout-first"]) {
       const first = run(mapId, seats, opening);
       assert.deepEqual(run(mapId, seats, opening), first, `Replay diverged for ${mapId}, ${seats} seats, ${opening}.`);
       results.push(first);
