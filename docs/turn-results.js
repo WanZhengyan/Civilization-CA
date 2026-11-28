@@ -32,7 +32,7 @@ export function previousTurnResults(view,lang=getLanguage()){
       // city names may have been customized. Only localize map-generated names.
       const place=city?.name && city.name!==district ? city.name : t(district || '');
       const kind=unit?(zh?'新单位已部署':'Unit deployed'):(zh?'城市项目已完成':'City project completed');
-      rows.push({name:t(built.name),detail:[kind,place].filter(Boolean).join(' · '),next:tasks.find(task=>task.kind==='production' && task.id===e.city)});
+      rows.push({name:t(built.name),detail:[kind,place,e.residentsDeparted===1 ? (zh?'迁出 1 名居民':'1 resident departed') : ''].filter(Boolean).join(' · '),next:tasks.find(task=>task.kind==='production' && task.id===e.city)});
     }
   }
   return rows;

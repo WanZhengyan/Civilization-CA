@@ -766,6 +766,8 @@ Each city earns 2 more capital and 1 more influence per turn.|每座城市每回
 Founds a new city at least three hexes from another city. Train or buy at 3 or more residents. One resident leaves when the settler deploys.|在距离其他城市至少三格的位置建立新城。本城达到 3 人口才能训练或购买开拓者，部署时迁出 1 名居民。
 Settlers need 3 residents in this city.|本城达到 3 人口才能招募开拓者。
 Waiting for 3 residents|等待本城达到 3 人口
+Train your next settler|训练下一名开拓者
+Your starting settler is free. Use a scout to explore while your capital grows. A city can train or buy another settler at 3 residents. One resident leaves on deployment. If the city falls below 3, it keeps its work until it grows again.|开局会获得一名开拓者。首都发展初期可以派侦察兵探路。本城达到 3 人口便可训练或购买新的开拓者，部署时迁出 1 名居民。若人口降到 3 以下，训练暂停，已有进度会保留到人口恢复。
 Current residents|本城当前人口
 Residents leaving on deployment|部署时迁出的人口
 City of 3 or more residents|本城至少 3 人口

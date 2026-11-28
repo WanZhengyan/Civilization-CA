@@ -43,6 +43,9 @@ test('buying a settler deducts one resident only on successful deployment and a 
   assert.equal(bought.cities[0].population,2);
   assert.equal(bought.players[0].capital,state.players[0].capital-gold);
   assert.equal(bought.units.filter(u=>u.type==='settler').length,1);
+  const report=bought.log.find(e=>e.type==='complete' && e.item==='settler');
+  assert.equal(report.residentsDeparted,1);
+  assert.match(report.text,/One resident left/);
   assert.throws(()=>applyAction(bought,0,payload),/Production changed/);
   assert.equal(option(bought).enabled,false);
   assert.equal(city.population,3);

@@ -1187,7 +1187,9 @@ function completeCityProject(state,city) {
     city.buildings.push(queue.item);
     if (queue.item==='walls') {city.maxHp+=50; city.hp=Math.min(city.maxHp,city.hp+50);}
   }
-  record(state,city.seat,'complete',city.name+' completed '+PRODUCTS[queue.item].name+'.',city.tile,{item:queue.item,city:city.id});
+  const departure=queue.item==='settler';
+  const message=departure ? city.name+' sent out a settler. One resident left the city.' : city.name+' completed '+PRODUCTS[queue.item].name+'.';
+  record(state,city.seat,'complete',message,city.tile,{item:queue.item,city:city.id,...(departure?{residentsDeparted:SETTLER_RESIDENT_COST}:{})});
   city.queue=null;
   advanceProduction(city);
 }
