@@ -16,6 +16,7 @@ import {naturalWonderArt} from './natural-wonder-art.js';
 import {mountMapWorkspace, compactMap, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
 import {illustration, illustrationPath} from './illustrations.js';
 import {mountBattleReports} from './battle-history.js';
+import {directoryButton,mountCityDirectory} from './city-directory.js';
 import {councilInvestments,investmentPanel} from './council-investment.js';
 import {councilStages,stageHeading,renderCouncilPath,prerequisiteLine,projectQuote} from './council-path.js';
 import {researchLinks,syncResearchLens} from './research-catalog.js';
@@ -51,7 +52,7 @@ const unitRole={settler:"Civilian unit",builder:"Engineering unit",melee:"Melee 
 const isSeaUnit=item=>UNIT_TYPES[item]?.domain==="sea";
 const portBuildings=new Set(["harbor","shipyard"]);
 const eraName=id=>ERAS[id]?.name||id;
-let updateWaterKey;
+let updateWaterKey,cityDirectory;
 const councilGoals={research:"",civics:""};
 let mapRegion,councilKind="research",lastCouncilMarkup="",lastProjectsMarkup="";
 const itemDesc={settler:"Founds a new city at least three hexes from another city.",builder:"Builds farms and mines in your territory. Three charges.",melee:"Fights adjacent enemies and captures weakened cities.",ranged:"Strikes enemies up to two hexes away.",granary:"Adds 2 food per turn to help this city grow.",workshop:"Adds 2 production per turn in this city.",monument:"Adds 3 influence per turn.",walls:"Increases this city’s defenses."};
@@ -520,13 +521,13 @@ function updateMap(){
 function roster(){
   const unitTab=activeRoster==="units",ownList=unitTab?ownUnits():ownCities();
   el("roster-units").setAttribute("aria-pressed",String(unitTab));el("roster-cities").setAttribute("aria-pressed",String(!unitTab));
-  el("roster").innerHTML=ownList.map(o=>{
+  el("roster").innerHTML=(!unitTab && ownList.length ? directoryButton() : "")+(ownList.map(o=>{
     const active=unitTab ? kind==="unit"&&sameId(o.id,selectedUnit) : kind==="city"&&o.tile===selectedTile;
     const label=unitTab ? items[o.type]||o.type : o.name;
     const turns=unitTab?null:projectTurns(o);
     const subtitle=unitTab?o.moves+' / '+o.maxMoves+' movement':o.queue?(items[o.queue.item]||o.queue.item)+' · '+(turns?turnsText(turns):'Awaiting deployment'):'Awaiting production';
     return '<button class="roster-unit" aria-pressed="'+active+'" data-roster-id="'+esc(o.id)+'"><span class="roster-symbol">'+icon(unitTab?o.type:'city')+'</span><span><b'+(unitTab?'':cityNameAttrs(o))+'>'+esc(label)+'</b><small>'+esc(subtitle)+'</small></span></button>';
-  }).join('')||'<div class="roster-empty">'+(unitTab?'You have no units in the field.':'You have no cities.')+'</div>';
+  }).join('')||'<div class="roster-empty">'+(unitTab?'You have no units in the field.':'You have no cities.')+'</div>');
   el("next-unit").disabled=!mayOrder()||!ownUnits().some(u=>u.moves>0);
 }
 function redraw(){inspect();updateMap();roster()}
@@ -544,7 +545,7 @@ function paintProjects(){
     const title = settler ? "Founding expedition" : "City projects";
     if (heading.lastChild.textContent !== title) heading.lastChild.textContent = title;
   }
-  const markup=settler ? '<div class="expedition-orders"><p>Choose a site for your first city. Surveying or founding can reveal local resources.</p><button type="button" data-founding-unit="'+esc(settler.id)+'">Locate settler</button></div>' : cities.map(city=>{
+  const markup=settler ? '<div class="expedition-orders"><p>Choose a site for your first city. Surveying or founding can reveal local resources.</p><button type="button" data-founding-unit="'+esc(settler.id)+'">Locate settler</button></div>' : (cities.length?directoryButton():'')+cities.map(city=>{
     const turns=projectTurns(city);
     const status=turns===null?"Choose production":turns===0?"Awaiting deployment":items[city.queue.item]||city.queue.item;
     return '<button class="watch-city" type="button" data-watch="'+esc(city.id)+'">'+illustration(city.queue?.item)+'<strong'+cityNameAttrs(city)+'>'+esc(city.name)+'</strong><span>'+esc(status)+'</span>'+(turns>0?'<small>'+esc(turnsText(turns))+'</small>':'')+'</button>';
@@ -737,6 +738,7 @@ function paint(next){
   if(!mayOrder())order="";
   const player=state.players[seat],stats=getStats(state,seat),f=faction(seat);
   paintDiplomacy(next,stats);
+  cityDirectory?.paint();
   text("brand-region",mapRegion.shortName);text("campaign-title",mapRegion.name);
   text("chart-coordinate",mapRegion.coordinates);text("footer-region",mapRegion.shortName);
   document.querySelector(".map-panel").setAttribute("aria-label","Tactical map · "+mapRegion.shortName);
@@ -872,6 +874,11 @@ function toggleLayers(open){el("layers-menu").hidden=!open;el("layers").setAttri
 function mount(){
   atlas=createAtlas(el("atlas"),{viewInsets:chartViewInsets,onSelect:onMapSelect,onHover:updateHint,onZoom:percent=>text("map-zoom",Math.round(percent)+"%")});
   battleReports=mountBattleReports(atlas);
+  cityDirectory=mountCityDirectory(()=>view,(city,command)=>{
+    closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
+    if(command==='production')openProduction();
+    else chooseOrder('citizens');
+  });
   parcelBar=document.createElement('section');parcelBar.className='work-sitebar';parcelBar.hidden=true;
   parcelBar.setAttribute('aria-label','Construction site selection');
   el('map-hint').before(parcelBar);
@@ -959,6 +966,7 @@ function mount(){
     el("switch-"+id).onclick=()=>openCouncil(id);
   }
   el("watch-cities").onclick=e=>{
+    if(e.target.closest("[data-cities-compare]")){cityDirectory.open();return;}
     const founder=e.target.closest("[data-founding-unit]");
     if(founder){
       const unit=ownUnits().find(u=>sameId(u.id,founder.dataset.foundingUnit));
@@ -998,7 +1006,7 @@ function mount(){
     if(!view || !getResearchOptions(view.state,view.seat).some(o=>o.item===item))return;
     openCouncil('research');showCouncilGoal(item);
   });
-  document.addEventListener('civitas-language',()=>{if(view && el('research-modal').open)paintResearch()});
+  document.addEventListener('civitas-language',()=>{if(!view)return;roster();if(el('research-modal').open)paintResearch();else paintProjects()});
   el("close-combat").onclick=closeCombat;el("cancel-combat").onclick=closeCombat;
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};
@@ -1027,7 +1035,7 @@ function mount(){
   };
   el("roster-units").onclick=()=>showRoster("units");el("roster-cities").onclick=()=>showRoster("cities");
   for(const [id,type] of [["units-summary","units"],["cities-summary","cities"]])el(id).onclick=()=>{showRoster(type);showMapPanel("roster")};
-  el("roster").onclick=e=>{const b=e.target.closest("[data-roster-id]");if(b)chooseRoster(b.dataset.rosterId)};
+  el("roster").onclick=e=>{if(e.target.closest("[data-cities-compare]")){cityDirectory.open();return;}const b=e.target.closest("[data-roster-id]");if(b)chooseRoster(b.dataset.rosterId)};
   el("next-unit").onclick=nextReady;
   function locateDistrict(tile){
     if(!explored.has(tile))return;
