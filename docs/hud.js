@@ -833,6 +833,16 @@ function reviewScoutDestination(unit,target){
 }
 let tutorialCoach,paintAdvisors;
 function reviewAdvice(link){
+  if(link.kind==='supplies'){
+    Game.open('supplies');
+    const selector=document.querySelector('dialog[open] [name="supply-city"]');
+    if(selector && link.city){
+      selector.value=link.city;
+      selector.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    document.querySelector('dialog[open] [data-act="cargo-'+link.resource+'-'+link.market+'"]')?.focus();
+    return;
+  }
   if(link.kind==='research' || link.kind==='civics'){showAvailableCouncil(link.kind);showCouncilGoal(link.item);return;}
   if(link.unit){
     const unit=ownUnits().find(u=>u.id===link.unit);

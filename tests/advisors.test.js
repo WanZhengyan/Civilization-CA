@@ -80,3 +80,10 @@ test('charter advice shows the natural alternative and disappears after a charte
   const deal=read(s).find(r=>r.desk==='borders');assert.ok(deal);assert.match(deal.detail,/leaving 12/);
   c.borderCharterRound=s.round;assert.ok(!read(s).some(r=>r.desk==='borders'));
 });
+
+test('material dispatch quotes the capped remaining construction and its cash alternative',()=>{
+  let s=capital();const c=s.cities[0];s=applyAction(s,0,{type:'produce',item:'scout',city:c.id});
+  s.players[0].stockpile={iron:3};s.cities[0].queue.progress=s.cities[0].queue.required-2;
+  const card=read(s).find(r=>r.desk==='supplies');assert.equal(card.link.city,c.id);assert.match(card.detail,/\+2 production/);
+  const after=applyAction(s,0,{type:'shipment',resource:'iron',city:c.id,market:'city'});assert.ok(!read(after).some(r=>r.desk==='supplies'));
+});

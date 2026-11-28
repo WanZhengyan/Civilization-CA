@@ -25,3 +25,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.15 | Rank building unlocks by unfinished research and cities able to use the investment |
 | 7.0.16 | Compare civic paths by total new income across eligible settlements |
 | 7.0.17 | Weigh immediate border charters against natural acquisition on the seat’s chart |
+| 7.0.18 | Match one-per-turn storehouse shipments with city shortages and the cash alternative |

@@ -1,3 +1,5 @@
+import {getResourceLedger} from "./rules.js";
+import {isProduce,materialShipmentGain,SHIPMENT} from "./resources.js";
 import {councilCourse} from "./council-path.js";
 import {housingCapacity} from "./population.js";
 import {scoutingRoutes} from "./scout-routes.js";
@@ -184,7 +186,34 @@ function influenceDesk({state,seat,cities,map,L,t,name,add,active}){
   }
 }
 
-const desks=[influenceDesk,civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function supplyDesk({state,seat,cities,L,t,name,add,active}){
+  if(!active || state.players[seat].lastShipment===state.round)return;
+  const cargo=Object.entries(getResourceLedger(state,seat)).filter(([,a])=>a.stock>=SHIPMENT.goods);
+  const bookings=[];
+  for(const [key,a] of cargo){
+    const food=isProduce(key);
+    for(const city of cities){
+      const f=getPopulationReport(state,city.id);
+      if(food && (f.housingLimited && f.surplus>=0 || f.surplus>=0 && f.food>=f.threshold))continue;
+      const gain=food?SHIPMENT.yield:materialShipmentGain(city);
+      if(!gain)continue;
+      const score=food?(f.starvationTurns?95-f.starvationTurns:50+Math.max(0,3-(f.growthTurns||4))):50+gain;
+      bookings.push({key,a,city,food,gain,score});
+    }
+  }
+  bookings.sort((a,b)=>b.score-a.score || b.a.stock-a.a.stock);
+  const best=bookings[0];
+  const [key,account]=best?[best.key,best.a]:cargo.sort((a,b)=>b[1].stock-a[1].stock)[0]||[];
+  if(!key)return;
+  const item=t(RESOURCES[key].name),rest=account.stock-SHIPMENT.goods,dest=best&&name(best.city);
+  const value=best&&(best.food?L('stored food','储粮'):L('production on the current project','当前项目生产力'));
+  const trade=best?L('Deliver to '+dest+' for +'+best.gain+' '+value+' or sell for '+SHIPMENT.gold+' gold.',
+    '运至'+dest+'可增加 '+best.gain+' '+value+'，也可出售得 '+SHIPMENT.gold+' 金币。'):L('Sell for '+SHIPMENT.gold+' gold. No city currently needs this shipment.','出售可得 '+SHIPMENT.gold+' 金币。目前没有城市需要这批物资。');
+  add('supplies',L('Choose a shipment · ','分配本回合货运 · ')+item,trade+L(' Uses this turn’s shipment and leaves '+rest+' in stock.','将占用本回合的货运机会，发运后库存 '+rest+'。'),
+    best?.score||38,{kind:'supplies',city:best?.city.id,resource:key,market:best?'city':'sell'});
+}
+
+const desks=[supplyDesk,influenceDesk,civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;
