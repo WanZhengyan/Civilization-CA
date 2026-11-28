@@ -2,6 +2,11 @@
 // network actions and identifiers use the same representation in both languages.
 import { catalog } from './zh-catalog.js';
 
+const mapViewCopy = new Map([
+  ['relief view','立体地形'],
+  ['switch between relief terrain and the flat strategic map.','切换立体地形与平面战略地图。']
+]);
+
 const preference = 'civitas.language';
 export function loadLanguage(storage) {
   try { return storage?.getItem(preference) === 'zh-CN' ? 'zh-CN' : 'en'; }
@@ -87,7 +92,7 @@ const phraseRules = [
 ];
 function zh(source) {
   if (typeof source !== 'string' || !source) return source;
-  const direct = catalog.get(source.toLowerCase());
+  const direct = mapViewCopy.get(source.toLowerCase()) ?? catalog.get(source.toLowerCase());
   if (direct !== undefined) return direct;
   // Resolve the whole semantic phrase before its component chips, so a
   // prerequisite such as “Requires A + B.” keeps one localized prefix.

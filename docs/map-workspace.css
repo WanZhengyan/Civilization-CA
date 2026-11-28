@@ -30,6 +30,11 @@ body:not(.on-title) .map-workspace {
 .map-workspace .map-heading>.section-label,.map-workspace .drag-hint {display:none}
 .map-workspace .map-head-tools {display:flex;align-items:center;gap:3px;position:static}
 .map-workspace .map-head-tools button {min-height:34px}
+.map-workspace .relief-view {display:flex;align-items:center;gap:5px;padding:4px 7px;white-space:nowrap;color:#bdc7c9;border:1px solid transparent;border-radius:4px;font-size:14px}
+.map-workspace .relief-view svg {width:18px;height:18px;flex-shrink:0}
+.map-workspace .relief-view:hover {background:#323e43}
+.map-workspace .relief-view[aria-pressed=true] {color:#e8d19b;background:#394139;border-color:#677256}
+.map-workspace .relief-view:focus-visible {outline:2px solid #f1d398;outline-offset:2px}
 .map-workspace .map-buttons {position:static;display:flex;margin-left:2px;padding:0 0 0 5px;gap:1px;border:0;border-left:1px solid #49514c;border-radius:0;background:none;box-shadow:none}
 .map-workspace .map-buttons button {width:28px}
 .map-workspace .layers-menu {z-index:8;min-width:230px;max-width:calc(100vw - 24px);max-height:62dvh;overflow:auto;background:#1e292c;box-shadow:0 5px 18px #111b1dcc}
@@ -134,6 +139,10 @@ body:not(.on-title):has(.map-workspace) #visitor-counts {z-index:4}
   .map-workspace .drawer-plan>.drawer-close,.map-workspace .drawer-command>.drawer-close{display:grid;min-width:31px;min-height:31px}
   .map-workspace .map-drawer[hidden]{display:none}
   .map-workspace:has(.map-drawer:not([hidden])) .map-intel{visibility:hidden}
+}
+@media(max-width:600px){
+  .map-workspace .relief-view {justify-content:center;min-width:36px;padding:4px 7px}
+  .map-workspace .relief-view span {display:none}
 }
 @media(max-width:365px){
   .map-workspace .brand-mark{display:none}

@@ -919,7 +919,23 @@ function nextReady(){
 function showRoster(type){activeRoster=type;roster()}
 function toggleLayers(open){el("layers-menu").hidden=!open;el("layers").setAttribute("aria-expanded",String(open))}
 function mount(){
-  atlas=createAtlas(el("atlas"),{viewInsets:chartViewInsets,onSelect:onMapSelect,onHover:updateHint,onZoom:percent=>text("map-zoom",Math.round(percent)+"%")});
+  const reliefPreference='civilization-ca.relief-view.v1';
+  let reliefView=true;
+  try {reliefView=localStorage.getItem(reliefPreference)!=='false';} catch {/* Rendering still works when browser storage is unavailable. */}
+  atlas=createAtlas(el("atlas"),{reliefView,viewInsets:chartViewInsets,onSelect:onMapSelect,onHover:updateHint,onZoom:percent=>text("map-zoom",Math.round(percent)+"%")});
+  const reliefButton=document.createElement('button');
+  reliefButton.id='map-relief';reliefButton.className='relief-view';reliefButton.type='button';
+  reliefButton.setAttribute('aria-label','Relief view');
+  reliefButton.setAttribute('aria-pressed',String(reliefView));
+  reliefButton.title='Switch between relief terrain and the flat strategic map.';
+  reliefButton.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m2 18 7-12 5 8 3-5 5 9-10 4z"/><path d="m9 6 1 12 12 0M2 18h8l2 4"/></svg><span>Relief view</span>';
+  el('inspect-map').after(reliefButton);
+  reliefButton.onclick=()=>{
+    reliefView=!reliefView;
+    atlas.setReliefView(reliefView);
+    reliefButton.setAttribute('aria-pressed',String(reliefView));
+    try {localStorage.setItem(reliefPreference,String(reliefView));} catch {/* Keep the selected view for this session. */}
+  };
   battleReports=mountBattleReports(atlas);
   cityDirectory=mountCityDirectory(()=>view,(city,command)=>{
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();

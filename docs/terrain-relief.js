@@ -1,0 +1,302 @@
+import {W,H,dX,dY,pos,adjacent,idFor,chartExtent} from './hex-survey.js';
+
+// This is an orthographic, lit terrain mesh painted into a cached atlas.  Keep
+// this pitch in step with the camera: a vertical unit of height remains upright
+// after the camera foreshortens the horizontal ground plane.
+export const RELIEF_PITCH = .70;
+const LIGHT = [-.52,-.67,.78];
+const LIGHT_LENGTH = Math.hypot(...LIGHT);
+const COLORS = {
+  plains:[153,177,102], forest:[103,151,87], urban:[159,177,113],
+  hills:[166,174,110], mountains:[173,169,140], coast:[216,202,148],
+  ocean:[37,116,139]
+};
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+function hash(x,y,salt=0){
+  let n=Math.imul((x|0)+973,0x1f123bb5)^Math.imul((y|0)+191,0x5f356495)^Math.imul(salt|0,0x2af1d57d);
+  n=Math.imul(n^(n>>>16),0x45d9f3b);
+  return ((n^(n>>>16))>>>0)/4294967296;
+}
+function randomFor(tile,salt=0){
+  let n=Math.floor(hash(tile.q,tile.r,salt)*4294967295);
+  return ()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};
+}
+export function reliefProject([x,y,z=0]){return [x,y-z/RELIEF_PITCH];}
+function color(rgb,light=1){return 'rgb('+rgb.map(v=>Math.round(clamp(v*light,0,255))).join(',')+')';}
+export function reliefFacetLight(a,b,c){
+  const u=b.map((v,i)=>v-a[i]),v=c.map((n,i)=>n-a[i]);
+  let normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+  if(normal[2]<0)normal=normal.map(n=>-n);
+  const length=Math.hypot(...normal)||1;
+  const facing=normal.reduce((sum,n,i)=>sum+n*LIGHT[i],0)/(length*LIGHT_LENGTH);
+  return .56+Math.max(0,facing)*.54;
+}
+function path(g,vertices){
+  g.beginPath();
+  vertices.forEach((p,i)=>g[i?'lineTo':'moveTo'](...reliefProject(p)));
+  g.closePath();
+}
+function facet(g,points,rgb,boost=1){
+  path(g,points);g.fillStyle=color(rgb,reliefFacetLight(...points)*boost);g.fill();
+  // Match the fill at subpixel boundaries instead of exposing white seams.
+  g.strokeStyle=g.fillStyle;g.lineWidth=.34;g.lineJoin='round';g.stroke();
+}
+function flat(g,points,fill){path(g,points);g.fillStyle=fill;g.fill();}
+function line(g,points,stroke,width=1){
+  g.beginPath();points.forEach((p,i)=>g[i?'lineTo':'moveTo'](...reliefProject(p)));
+  g.strokeStyle=stroke;g.lineWidth=width;g.lineCap='round';g.lineJoin='round';g.stroke();
+}
+function ellipse(g,x,y,rx,ry,fill){
+  g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fillStyle=fill;g.fill();
+}
+function hexPoints(tile){const [x,y]=pos(tile.q,tile.r);return dX.map((dx,i)=>[x+dx,y+dY[i],0]);}
+function gaussian(x,y,cx,cy,rx,ry){return Math.exp(-(((x-cx)/rx)**2+((y-cy)/ry)**2));}
+function elevation(tile,dx,dy){
+  if(tile.terrain==='ocean'||tile.waterway)return 0;
+  const boundary=Math.min((W/2-Math.abs(dx))/9,(H/2-Math.abs(dy)-Math.abs(dx)*H/(2*W))/8);
+  const edge=clamp(boundary,0,1),pad=clamp((Math.hypot(dx,dy)-6)/9,0,1);
+  const variation=.85+hash(tile.q,tile.r,8)*.3;
+  let z;
+  if(tile.terrain==='mountains'){
+    z=42*gaussian(dx,dy,-11,16,12,13)+31*gaussian(dx,dy,13,13,10,14)+13*gaussian(dx,dy,-20,-2,15,16);
+  }else if(tile.terrain==='hills'){
+    z=24*gaussian(dx,dy,-13,15,18,18)+17*gaussian(dx,dy,17,12,13,16);
+  }else if(tile.terrain==='forest'){
+    z=8*gaussian(dx,dy,-17,12,21,22)+5*gaussian(dx,dy,20,2,16,18);
+  }else if(tile.terrain==='coast'){
+    z=1.4*gaussian(dx,dy,10,9,23,24);
+  }else{
+    z=2.8*gaussian(dx,dy,-18,11,19,24)+1.7*gaussian(dx,dy,20,-2,15,20);
+  }
+  return z*edge*pad*variation;
+}
+
+// A wedge subdivision produces shared vertices at hex seams and a stable
+// gameplay clearing at every tile center. All heights depend on this tile only.
+export function terrainReliefMesh(tile){
+  const [x,y]=pos(tile.q,tile.r),triangles=[];
+  const steps=tile.terrain==='mountains'||tile.terrain==='hills'?7:4;
+  for(let side=0;side<6;side++){
+    const next=(side+1)%6;
+    const vertex=(i,j)=>{
+      const dx=(dX[side]*i+dX[next]*j)/steps,dy=(dY[side]*i+dY[next]*j)/steps;
+      return [x+dx,y+dy,elevation(tile,dx,dy)];
+    };
+    for(let i=0;i<steps;i++)for(let j=0;j<steps-i;j++){
+      triangles.push([vertex(i,j),vertex(i+1,j),vertex(i,j+1)]);
+      if(i+j<steps-1)triangles.push([vertex(i+1,j),vertex(i+1,j+1),vertex(i,j+1)]);
+    }
+  }
+  return triangles.sort((a,b)=>a.reduce((s,p)=>s+p[1]+p[2]*.7,0)-b.reduce((s,p)=>s+p[1]+p[2]*.7,0));
+}
+function ground(g,tile){
+  const [x,y]=pos(tile.q,tile.r),rng=randomFor(tile,91);
+  if(tile.terrain==='ocean'||tile.waterway){
+    const ocean=tile.waterway==='lake'?[49,132,145]:tile.waterway?[49,129,142]:COLORS.ocean;
+    const tone=.95+hash(tile.q,tile.r,8)*.07;
+    flat(g,hexPoints(tile),color(ocean,tone));
+    return;
+  }
+  const base=COLORS[tile.terrain]||COLORS.plains;
+  for(const triangle of terrainReliefMesh(tile)){
+    const z=triangle.reduce((sum,p)=>sum+p[2],0)/3;
+    const stone=tile.terrain==='mountains'?clamp((z-9)/24,0,1):tile.terrain==='hills'?clamp((z-14)/28,0,.25):0;
+    const material=mix(base,[191,186,162],stone);
+    facet(g,triangle,material,.98+rng()*.045);
+  }
+  // Sparse grass marks and warm glints break up the broad facets without the
+  // dense pixel noise that made the old magnified atlas look out of focus.
+  for(let i=0;i<19;i++){
+    const dx=(rng()-.5)*60,dy=(rng()-.5)*52;
+    if(Math.abs(dy)>H/2-Math.abs(dx)*H/(2*W)-3)continue;
+    const z=elevation(tile,dx,dy),p=reliefProject([x+dx,y+dy,z+.05]);
+    g.strokeStyle=i%3?'#456e342c':'#fff6be60';g.lineWidth=.65;
+    g.beginPath();g.moveTo(...p);g.lineTo(p[0]+1.5,p[1]-1.2);g.stroke();
+  }
+}
+function groundShadow(g,x,y,z,height,width){
+  const [px,py]=reliefProject([x,y,z]);
+  g.save();g.translate(px+height*.29,py+height*.18);g.rotate(.28);
+  ellipse(g,0,0,width+height*.36,width*.37,'#183e3838');
+  ellipse(g,-height*.16,-height*.05,width*.7,width*.3,'#173f4030');g.restore();
+}
+function cuboid(g,x,y,z,width,depth,height,rgb,roof){
+  const a=[x-width/2,y-depth/2,z],b=[x+width/2,y-depth/2,z],c=[x+width/2,y+depth/2,z],d=[x-width/2,y+depth/2,z];
+  const up=p=>[p[0],p[1],p[2]+height],A=up(a),B=up(b),C=up(c),D=up(d);
+  flat(g,[a,d,D,A],color(rgb,.76));flat(g,[d,c,C,D],color(rgb,.62));
+  flat(g,[c,b,B,C],color(rgb,.87));flat(g,[A,B,C,D],color(roof||rgb,1.13));
+  line(g,[A,D,C],color(rgb,1.23),.45);
+  return {a,b,c,d,A,B,C,D};
+}
+function pine(g,x,y,z,height,width,rgb){
+  groundShadow(g,x,y,z,height,width*.6);
+  cuboid(g,x,y,z,1.3,1.3,height*.58,[111,93,57]);
+  for(const [level,radius,lift] of [[.20,1,.8],[.43,.81,.91],[.65,.56,1]]){
+    const ring=Array.from({length:7},(_,i)=>{const a=i/7*Math.PI*2;return [x+Math.cos(a)*width*radius,y+Math.sin(a)*width*radius,z+height*level];});
+    const apex=[x-.6,y-.1,z+height*lift];
+    for(const i of [4,5,3,6,2,0,1])facet(g,[ring[i],ring[(i+1)%7],apex],rgb,.92+level*.13);
+  }
+}
+function tree(g,x,y,z,height,width,rgb,rng){
+  groundShadow(g,x,y,z,height,width*.75);
+  cuboid(g,x,y,z,1.4,1.4,height*.72,[109,89,54]);
+  const middle=z+height*.68,bottom=z+height*.39,top=z+height;
+  const ring=Array.from({length:8},(_,i)=>{const a=i/8*Math.PI*2;return [x+Math.cos(a)*width,y+Math.sin(a)*width,middle+(rng()-.5)*height*.12];});
+  const crown=[x-width*.17,y-width*.08,top],root=[x,y,bottom];
+  for(const i of [4,5,3,6,2,7,1,0]){
+    facet(g,[ring[(i+1)%8],ring[i],root],rgb,.76);
+    facet(g,[ring[i],ring[(i+1)%8],crown],rgb,1.02);
+  }
+}
+function boulder(g,x,y,z,width,height){
+  groundShadow(g,x,y,z,height,width*.7);
+  const points=[[-1,.12,.03],[-.7,-.6,.35],[.2,-.7,.51],[1,-.1,.14],[.7,.65,.02],[-.5,.7,0]]
+    .map(([a,b,c])=>[x+a*width,y+b*width,z+c*height]);
+  const peak=[x-width*.15,y-width*.03,z+height];
+  for(const i of [2,1,3,0,4,5])facet(g,[points[i],points[(i+1)%6],peak],[164,163,133]);
+}
+function urbanBuilding(g,x,y,z,rng){
+  const height=4+rng()*13,width=3.8+rng()*4,depth=3+rng()*4;
+  groundShadow(g,x,y,z,height,width*.75);
+  const warm=rng()>.45,wall=warm?[223,211,171]:[186,204,188],roof=warm?[172,120,76]:[126,163,157];
+  const {D,C}=cuboid(g,x,y,z,width,depth,height,wall,roof);
+  for(let floor=2.6;floor<height-1;floor+=3.5){
+    const y1=y+depth/2+.1;
+    for(const dx of [-width*.22,width*.22])line(g,[[x+dx,y1,z+floor],[x+dx,y1,z+floor+1.2]],'#486f6c',.65);
+  }
+  line(g,[D,C],'#f5e6be',.6);
+}
+function scenery(g,tile,isLandmark){
+  if(tile.terrain==='ocean'||tile.waterway)return;
+  const [x,y]=pos(tile.q,tile.r),rng=randomFor(tile,171),features=[];
+  const anchors=[[-23,-7],[-12,-15],[8,-17],[24,-5],[-27,8],[25,9],[-20,21],[-7,26],[14,23],[-5,15],[15,5],[0,-22]];
+  const add=(a,b,kind)=>{
+    const dx=a+(rng()-.5)*4,dy=b+(rng()-.5)*3,z=elevation(tile,dx,dy);
+    features.push({x:x+dx,y:y+dy,z,kind,random:rng()});
+  };
+  if(tile.terrain==='forest'){
+    anchors.forEach(([a,b],i)=>{if(i<9 || !isLandmark)add(a,b,i%3===0?'pine':'tree');});
+  }else if(tile.terrain==='urban'){
+    for(const i of isLandmark?[0,3,6]:[0,1,2,3,4,5,6,8])add(...anchors[i],'building');
+    if(!isLandmark)for(const i of [7,11])add(...anchors[i],'tree');
+  }else if(tile.terrain==='hills'){
+    for(const i of [0,3,6,8])add(...anchors[i],i%3?'rock':'tree');
+  }else if(tile.terrain==='mountains'){
+    for(const i of [0,3,6,8])add(...anchors[i],'rock');
+  }else if(tile.terrain==='coast'){
+    for(const i of [2,5,8])add(...anchors[i],i===5?'rock':'tree');
+  }else{
+    for(const i of [0,5,8])if(rng()>.2)add(...anchors[i],'tree');
+  }
+  features.sort((a,b)=>a.y-b.y);
+  for(const p of features){
+    if(p.kind==='building'){urbanBuilding(g,p.x,p.y,p.z,rng);continue;}
+    if(p.kind==='rock'){boulder(g,p.x,p.y,p.z,2+p.random*2.7,2.5+p.random*3.8);continue;}
+    const forest=tile.terrain==='forest',height=(forest?12:8)+p.random*(forest?8:6),width=(forest?4:3)+p.random*2;
+    const green=forest?mix([43,111,66],[104,149,65],p.random):mix([87,133,65],[145,160,76],p.random);
+    if(p.kind==='pine')pine(g,p.x,p.y,p.z,height,width,green);
+    else tree(g,p.x,p.y,p.z,height,width,green,rng);
+  }
+}
+function seaDetails(g,tile,known){
+  const [x,y]=pos(tile.q,tile.r),rng=randomFor(tile,31);
+  const coastal=[];
+  for(let side=0;side<6;side++){
+    const neighbor=known.get(idFor(...adjacent(tile.q,tile.r,side)));
+    if(neighbor&&neighbor.terrain!=='ocean'&&!neighbor.waterway)coastal.push(side);
+  }
+  for(const side of coastal){
+    const next=(side+1)%6,a=[x+dX[side],y+dY[side],0],b=[x+dX[next],y+dY[next],0];
+    const inside=p=>[p[0]+(x-p[0])*.21,p[1]+(y-p[1])*.21,0];
+    flat(g,[a,b,inside(b),inside(a)],'#53a7a3');
+    const wave=p=>[p[0]+(x-p[0])*.13,p[1]+(y-p[1])*.13,0];
+    line(g,[wave(a),wave(b)],'#c7e8c49c',1.15);
+  }
+  for(let i=0;i<6;i++){
+    const dx=(rng()-.5)*51,dy=(rng()-.5)*45,len=2.5+rng()*7;
+    if(Math.abs(dy)>H/2-Math.abs(dx)*H/(2*W)-3)continue;
+    line(g,[[x+dx-len/2,y+dy,0],[x+dx+len/2,y+dy-.7,0]],i%2?'#b1ded72b':'#163f7022',.7);
+  }
+  // Bright reflections are restricted to water, not a screen-space gloss.
+  if(hash(tile.q,tile.r,7)>.76){
+    for(let i=0;i<3;i++)line(g,[[x-4+i,y+3*i,0],[x+4-i,y+3*i,0]],'#c5e9ce4d',.8);
+  }
+}
+function coastBanks(g,tiles,known){
+  for(const tile of tiles){
+    if(tile.terrain==='ocean'||tile.waterway)continue;
+    const [x,y]=pos(tile.q,tile.r);
+    for(let side=0;side<6;side++){
+      const neighbor=known.get(idFor(...adjacent(tile.q,tile.r,side)));
+      if(!neighbor || (neighbor.terrain!=='ocean'&&!neighbor.waterway))continue;
+      const next=(side+1)%6,a=[x+dX[side],y+dY[side],0],b=[x+dX[next],y+dY[next],0];
+      const drop=side>=1&&side<=3?3.8:1.5;
+      const down=p=>[p[0],p[1]+drop,0];
+      flat(g,[a,b,down(b),down(a)],side<3?'#7b8056':'#89805b');
+      line(g,[a,b],'#e3d6a2',1.8);
+      line(g,[down(a),down(b)],'#255f6766',1);
+    }
+  }
+}
+function roads(g,map,known){
+  const positions=route=>route.map(([q,r])=>pos(q,r));
+  for(const route of map.routes||[]){
+    const points=positions(route);g.beginPath();let previous=false;
+    for(const [x,y] of points){
+      const row=Math.round((y-H/2)/(H*.75)),q=Math.round((x-W/2)/W-(row&1)*.5);
+      if(!known.has(idFor(q,row))){previous=false;continue;}
+      g[previous?'lineTo':'moveTo'](x,y);previous=true;
+    }
+    g.strokeStyle='#6f79544d';g.lineWidth=3.1;g.lineCap='round';g.lineJoin='round';g.stroke();
+    g.strokeStyle='#e7d4a8b3';g.lineWidth=1.7;g.stroke();
+  }
+  for(const crossing of map.crossings||[]){
+    const a=known.get(crossing.a),b=known.get(crossing.b);if(!a||!b)continue;
+    const pa=[...pos(a.q,a.r),0],pb=[...pos(b.q,b.r),0];
+    if(crossing.kind==='ferry'){
+      g.save();g.setLineDash([4,4]);line(g,[pa,pb],'#d6e6c580',1.4);g.restore();continue;
+    }
+    line(g,[[pa[0]+3,pa[1]+6,0],[pb[0]+3,pb[1]+6,0]],'#123c4b55',5);
+    line(g,[pa,pb],crossing.color||'#788d84',4.5);line(g,[pa,pb],'#e9dfba',1);
+    for(const f of [.23,.77]){
+      const x=pa[0]+(pb[0]-pa[0])*f,y=pa[1]+(pb[1]-pa[1])*f;
+      line(g,[[x-1.8,y,0],[x-1.8,y,10],[x+1.8,y,10],[x+1.8,y,0]],crossing.color||'#a36e4f',1.5);
+    }
+  }
+}
+
+export function reliefRasterLayout(tiles){
+  const extent=chartExtent(tiles),margin=64;
+  const left=extent.left-margin,top=extent.top-margin;
+  const width=extent.width+margin*2,height=extent.height+margin*2;
+  const resolution=Math.min(2,4095/Math.max(width,height),Math.sqrt(5_000_000/(width*height)));
+  return {left,top,width,height,margin,resolution};
+}
+
+export function renderReliefAtlas(tiles,map,landmarkTiles=[],paintLandmark){
+  // Passing explored tiles is intentional. Hidden terrain is never consulted,
+  // and the cropped raster keeps the opening sharp even on the Epic map.
+  const source=tiles.length?tiles:[{q:0,r:0,id:'0,0',terrain:'ocean'}];
+  const layout=reliefRasterLayout(source),{left,top,width,height,margin,resolution}=layout;
+  const buffer=typeof OffscreenCanvas==='function'?new OffscreenCanvas(Math.ceil(width*resolution),Math.ceil(height*resolution)):document.createElement('canvas');
+  buffer.width=Math.ceil(width*resolution);buffer.height=Math.ceil(height*resolution);
+  const g=buffer.getContext('2d');g.scale(resolution,resolution);g.translate(-left,-top);
+  const known=new Map(tiles.map(tile=>[tile.id,tile])),landmarks=new Map(landmarkTiles.filter(t=>known.has(t.id)).map(t=>[t.id,t]));
+  const ordered=[...tiles].sort((a,b)=>a.r-b.r||a.q-b.q);
+  // Flat water and the terrain mesh precede all upright objects.
+  for(const tile of ordered)ground(g,tile);
+  for(const tile of ordered)if(tile.terrain==='ocean'||tile.waterway)seaDetails(g,tile,known);
+  coastBanks(g,ordered,known);roads(g,map,known);
+  for(const tile of ordered){
+    const landmark=landmarks.get(tile.id);scenery(g,tile,Boolean(landmark));
+    if(landmark&&paintLandmark){
+      const [x,y]=pos(tile.q,tile.r);
+      // The original landmark studies use an upright screen-space height.
+      g.save();g.translate(x,y);g.scale(1,1/RELIEF_PITCH);g.translate(-x,-y);
+      groundShadow(g,x,y,0,20,14);paintLandmark(g,landmark,x,y);g.restore();
+    }
+  }
+  if(typeof buffer.transferToImageBitmap==='function')return {buffer:buffer.transferToImageBitmap(),margin,resolution,left,top};
+  return {buffer,margin,resolution,left,top};
+}
