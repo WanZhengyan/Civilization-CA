@@ -68,3 +68,18 @@ export const regionalEconomy={
   jobs:{label:['Total employment · 2023 (jobs)','就业岗位总数 · 2023（个）'],values:{'la-county':3987736,'sf-county':740362,'sd-county':1391721}},
   retail:{label:['Retail sales per capita · 2022 (USD)','人均零售额 · 2022（美元）'],values:{'la-county':22010,'sf-county':36554,'sd-county':18777}}
 };
+
+export const fieldTrips={
+  la:{name:['From canyon to city center','从峡谷走向市中心'],stops:[
+    ['topanga','Read the park’s trail inventory. Locate the canyon district when charted.','查阅公园步道资料，再定位已探索的峡谷地区。'],
+    ['municipal-pier','Read the pier construction dates and find the coastal district.','了解码头建设年代，寻找海岸地区。'],
+    ['los-angeles','Compare the city’s population with the county that contains it.','将洛杉矶市人口与所在县人口比较。']]},
+  sf:{name:['Through the Golden Gate','穿越金门海峡'],stops:[
+    ['fort-point','Start with the fort that watched the bay entrance.','从守望海湾入口的要塞出发。'],
+    ['golden-gate','Trace the bridge opening and its charted crossing district.','了解金门大桥通车历程，寻找对应的地区。'],
+    ['oakland','Compare the East Bay city with San Francisco’s city-county.','将东湾城市奥克兰与旧金山市县比较。']]},
+  sd:{name:['Navigating San Diego Bay','寻访圣迭戈湾'],stops:[
+    ['lighthouse','Find the dates of the original navigation light.','了解旧灯塔的服役年代。'],
+    ['coronado-bridge','Read about the bridge and locate its Coronado endpoint.','了解跨海大桥，寻找科罗纳多一侧。'],
+    ['chula-vista','Check how this South Bay city grew between censuses.','比较两次人口普查，了解这座南湾城市的变化。']]}
+};

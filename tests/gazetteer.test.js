@@ -85,3 +85,10 @@ test('survey counts shared districts once, respects the active map, and keeps un
   const v=newGazetteer();gazetteerAction(v,'section-survey');const body=gazetteerContent(v,'en',campaign).body;
   assert.match(body,/1 \/ 4/);assert.ok(!body.includes('15,3'));assert.ok(!body.includes('Pasadena'));
 });
+test('three-stop regional field trips offer context, adapt next objectives to exploration and save without duplicates',()=>{
+  const v=newGazetteer('sf');gazetteerAction(v,'section-trips');
+  assert.match(gazetteerContent(v,'en',{mapId:'sf',intel:{explored:['4,4']}}).body,/Next uncharted stop · Golden Gate Bridge/);
+  gazetteerAction(v,'region-la');gazetteerAction(v,'save-trip');gazetteerAction(v,'save-trip');
+  assert.deepEqual(v.pins,['topanga','municipal-pier','los-angeles']);gazetteerAction(v,'region-sd');
+  assert.match(gazetteerContent(v,'zh-CN').body,/寻访圣迭戈湾/);
+});
