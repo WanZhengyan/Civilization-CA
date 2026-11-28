@@ -217,3 +217,14 @@ body:not(.on-title):has(.map-workspace) #visitor-counts {z-index:4}
   .map-workspace .turn-panel:has([data-turn-count]:not([hidden])) .turn-top h2 {font-size:12px;line-height:1.1}
   .map-workspace #end-turn:has([data-turn-count]:not([hidden])) {min-height:32px}
 }
+
+.map-workspace .turn-results {
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:7px 0;color:#e5d5ac;font-size:12px;line-height:1.4;
+}
+.map-workspace .turn-results[hidden] {display:none}
+.turn-results summary {cursor:pointer;overflow-wrap:anywhere}
+.turn-results ul {display:grid;gap:7px;list-style:none;padding:0;margin:8px 0 2px}
+.turn-results li {display:grid;gap:2px;color:#e0e6dc}
+.turn-results small {color:#aab9b4;line-height:1.3}
+.turn-results button {justify-self:start;padding:3px 6px;border:1px solid #788576;border-radius:3px;color:#d5e4d4;background:#263735}

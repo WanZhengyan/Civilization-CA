@@ -1,4 +1,5 @@
 import {mountTutorialCoach} from './tutorial-coach.js';
+import {mountTurnResults} from './turn-results.js';
 import {turnButtonState,paintTurnButton,pendingTurnTasks} from './turn-button.js';
 import {getLanguage} from './i18n.js';
 import {mountInfluencePanel} from "./influence-panel.js";
@@ -783,7 +784,10 @@ function handleTurnButton(){
     Game.doAction(next.checked?{type:"end",requireReady:true}:{type:"end"});
     return;
   }
-  const task=next.task;
+  openPendingTask(next.task);
+}
+function openPendingTask(task){
+  if(!task || !mayOrder())return;
   if(task.kind==="research" || task.kind==="civics"){
     councilGoals[task.kind]="";
     openCouncil(task.kind);
@@ -842,6 +846,7 @@ function locateTutorialOrder(lesson){
     displayMapOnMobile();el("atlas").querySelector("canvas")?.focus({preventScroll:true});
   }
 }
+let turnResults;
 let expansionForecasts = new Map();
 function paint(next){
   expansionForecasts=getCityExpansions(next.state,next.seat);
@@ -861,6 +866,7 @@ function paint(next){
   const player=state.players[seat],stats=getStats(state,seat),f=faction(seat);
   paintDiplomacy(next,stats);
   influencePanel?.paint();
+  turnResults?.(view);
   cityDirectory?.paint();
   text("brand-region",mapRegion.shortName);text("campaign-title",mapRegion.name);
   text("chart-coordinate",mapRegion.coordinates);text("footer-region",mapRegion.shortName);
@@ -1049,6 +1055,12 @@ function mount(){
     try {localStorage.setItem(reliefPreference,String(reliefView));} catch {/* Keep the selected view for this session. */}
   };
   battleReports=mountBattleReports(atlas);
+  turnResults=mountTurnResults(el("watch-cities").closest("section"),task=>{
+    if(!task || !mayOrder())return;
+    const current=pendingTurnTasks(view).find(t=>t.kind===task.kind && t.id===task.id);
+    if(current)openPendingTask(current);
+  });
+  document.addEventListener('civitas-language',()=>turnResults(view));
   cityDirectory=mountCityDirectory(()=>view,(city,command)=>{
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
     if(command==='production')openProduction();
