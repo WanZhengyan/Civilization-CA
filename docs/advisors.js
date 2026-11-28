@@ -2,7 +2,7 @@ import {councilCourse} from "./council-path.js";
 import {housingCapacity} from "./population.js";
 import {scoutingRoutes} from "./scout-routes.js";
 // Advisors read only the seat's projected chart. They never issue orders.
-import {getCivicOptions,getResearchOptions,BUILDINGS,getMap,getPopulationReport,getCitizenWorkforce,getCityYield,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
+import {getCityExpansions,getBorderCharter,getCivicOptions,getResearchOptions,BUILDINGS,getMap,getPopulationReport,getCitizenWorkforce,getCityYield,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
 import {roomSeatTurn} from './room-turn.js';
 import {translate} from './i18n.js';
 
@@ -168,7 +168,23 @@ function civicDesk({state,seat,cities,L,t,name,add}){
     78,{kind:'civics',item:goal});
 }
 
-const desks=[civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function influenceDesk({state,seat,cities,map,L,t,name,add,active}){
+  if(!active || !state.intel.borderCharters)return;
+  const expansions=getCityExpansions(state,seat);
+  for(const city of cities){
+    const q=getBorderCharter(state,seat,city.id,expansions);
+    if(!q.enabled || !q.tile || q.turns==null)continue;
+    const site=t(map.byId[q.tile].name)+' ('+q.tile+')',remaining=state.players[seat].influence-q.cost;
+    const deposit=RESOURCES[state.board[q.tile]?.resource];
+    const benefit=deposit?L(' The visible deposit is '+t(deposit.name)+'.',' 该地已发现'+t(deposit.name)+'。'):'';
+    add('borders',L(q.turns<=1?'Keep influence at ':'Compare a border charter at ',q.turns<=1?'暂存影响力 · ':'评估边境特许 · ')+name(city),
+      L(site+' is due through growth in '+q.turns+' turns at the present rate. Annex it now for '+q.cost+' influence, leaving '+remaining+', or keep the full balance and wait.',
+        '按当前速度，'+site+'预计 '+q.turns+' 回合后自然并入。现在支付 '+q.cost+' 影响力可提前取得，余额 '+remaining+'；等待自然扩张可保留全部影响力。')+benefit,
+      43+Math.min(12,q.turns)+Number(!!deposit)*5,{kind:'borders',city:city.id});
+  }
+}
+
+const desks=[influenceDesk,civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;

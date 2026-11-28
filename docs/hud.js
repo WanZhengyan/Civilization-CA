@@ -849,6 +849,7 @@ function reviewAdvice(link){
     const method=link.buy?'buy':'produce';
     el('production-options').querySelector('[data-'+method+'="'+link.item+'"]')?.focus();
   }
+  if(link.kind==='borders'){(document.querySelector('[data-influence-city="'+city.id+'"]') || el('influence-open')).click();}
   if(link.kind==='citizens')chooseOrder('citizens');
 }
 

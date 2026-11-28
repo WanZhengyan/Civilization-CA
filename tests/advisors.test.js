@@ -74,3 +74,9 @@ test('civic proposals count only cities that meet each policy’s requirements',
   const school=read(s).find(r=>r.desk==='civic');assert.equal(school.link.item,'normalSchools');assert.match(school.detail,/gain 2 science/);
   s.cities[0].population=1;s.cities[0].buildings.push('harbor');assert.equal(read(s).find(r=>r.desk==='civic').link.item,'harborCommission');
 });
+
+test('charter advice shows the natural alternative and disappears after a charter is spent',()=>{
+  const s=capital(),c=s.cities[0];s.players[0].influence=18;
+  const deal=read(s).find(r=>r.desk==='borders');assert.ok(deal);assert.match(deal.detail,/leaving 12/);
+  c.borderCharterRound=s.round;assert.ok(!read(s).some(r=>r.desk==='borders'));
+});
