@@ -1,3 +1,4 @@
+import {growthPage} from './city-profile-growth.js';
 import {workforcePage} from './city-profile-people.js';
 import {getCityYield,getMap,getPopulationReport} from './rules.js';
 import {local,safe,label,cityLabel,section,table,action,signed} from './city-profile-format.js';
@@ -15,7 +16,8 @@ function overview(state,city){
 }
 
 const pages={overview:{name:()=>local('Overview','总览'),render:overview},
-  people:{name:()=>local('Workforce','劳动力'),render:workforcePage}};
+  people:{name:()=>local('Workforce','劳动力'),render:workforcePage},
+  growth:{name:()=>local('Food and housing','粮食与住房'),render:growthPage}};
 
 export function cityProfilePage(state,seat,id,page='overview'){
   if(!state || state.intel && state.intel.seat!==seat)return '';

@@ -20,3 +20,12 @@ test('a workforce profile locates worked land and accounts for every resident',(
   assert.match(text,/district workers and/);
   assert.match(text,/data-study-command="tile"/);
 });
+import {harvestCalendar} from '../docs/city-profile-growth.js';
+test('constant-land harvest calendar grows and credits the same next harvest without touching the save',()=>{
+  const state=capital(),city=state.cities[0];
+  const before=JSON.stringify(state),rows=harvestCalendar(state,city);
+  const actual=applyAction(state,0,{type:'end'}).cities[0];
+  assert.equal(rows[0].food,actual.food);assert.equal(rows[0].population,actual.population);
+  assert.ok(rows.at(-1).population>=rows[0].population);
+  assert.equal(JSON.stringify(state),before);
+});

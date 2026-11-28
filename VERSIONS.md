@@ -74,3 +74,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.64 | Follow three regional field trips with exploration-aware objectives and saveable stops |
 | 7.0.65 | Open an owner-only city profile with reconciled local harvest accounts |
 | 7.0.66 | Survey city occupations and locate the actual districts behind their yields |
+| 7.0.67 | Project five harvests of food and housing with changing populations and assignments |
