@@ -17,6 +17,7 @@ import {councilStages,stageHeading,renderCouncilPath,prerequisiteLine,projectQuo
 import {researchLinks,syncResearchLens} from './research-catalog.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
+import {openCityHall,paintCityHall} from './city-hall.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
@@ -403,6 +404,7 @@ function inspect(){
     if(own && c.buildingSites) info+='<div class="works-sites">'+Object.entries(c.buildingSites).map(([item,id])=>
       '<small>'+esc(items[item]||item)+' · '+esc(mapRegion.byId[id]?.name||id)+' · '+esc(id)+'</small>').join('')+'</div>';
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
+    if(own && state.campaignVariety===1) actions+=actionButton("city-hall","City hall","Municipal charter");
   }else{
     const station=FIELD_STATIONS[holding?.fieldStation];
     if(station){
@@ -772,12 +774,18 @@ function showCampusOpening(state,seat,key){
   old?.remove();host.before(banner);campusNoticeKey=id;
 }
 function populationLedger() {
+  paintCityHall(view.state,view.seat,mayOrder());
   paintCitizenLedger(view.state,view.seat,mayOrder(),city=>({
     population:getPopulationReport(view.state,city.id),workforce:getCitizenWorkforce(view.state,city.id),projects:getProductionOptions(view.state,city.id)
   }));
 }
 function chooseOrder(key){
   if(moveDraft){moveDraft=null;updateMap();}
+  if(key==="city-hall"){
+    const c=cityAt(selectedTile);
+    if(c?.seat===view.seat){openCityHall(c.id,action=>Game.doAction(action));paintCityHall(view.state,view.seat,mayOrder());}
+    return;
+  }
   if(key==="citizens"){
     const c=cityAt(selectedTile);
     if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}),(city,item)=>Game.doAction({type:"produce",city,item}));populationLedger()}

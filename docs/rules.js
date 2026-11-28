@@ -2,6 +2,7 @@ import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStatio
 import {sendDelegation,proposeDelegation} from './diplomacy.js';
 import {councilProjectCost} from './council-costs.js';
 import {allowsConquest,allowsScience,SCIENCE_PROJECT,validVictoryMode} from './victory-rules.js';
+import {charterBenefit,grantCharter,proposeCharter} from './city-charters.js';
 import {advanceCityBorder, planCityBorders} from './city-expansion.js';
 import {advancementRoutes,promotionOutcome,recoveryAt,nearestServiceStation} from './unit-service.js';
 import {fleetBasin,flotillaMove} from './naval-plan.js';
@@ -504,6 +505,8 @@ export function getCityYield(state,cityId) {
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
+  const charter=charterBenefit(state,city);
+  if (charter) for (const key of ['food','production','capital','influence']) result[key]+=charter[key] || 0;
   const bonus=capitalBonus(state,city.seat,city);
   result.food+=bonus.food || 0;
   result.production+=bonus.production || 0;
@@ -551,6 +554,11 @@ export function getStats(state,seat) {
     capitalIncome:3*Number(settled)+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +2*cities.filter(c=>tradesBySea(state,c)).length,
     influenceIncome:2*Number(settled)+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
+  for (const city of cities) {
+    const charter=charterBenefit(state,city);
+    stats.capitalIncome+=charter?.capital || 0;
+    stats.influenceIncome+=charter?.influence || 0;
+  }
   const bonus=capitalBonus(state,seat,cities.find(city=>city.originalSeat===seat));
   stats.scienceIncome+=bonus.science || 0;
   stats.capitalIncome+=bonus.capital || 0;
@@ -1422,6 +1430,10 @@ function resolveOrder(source,seat,action) {
   } else if (action.type==='policy') {
     const name=ratifyPolicy(next,seat,action.item);
     record(next,seat,'policy','Ruling policy · '+name,null,{item:action.item});
+  } else if (action.type==='cityCharter') {
+    const city=cityOrNull(next,action.city);
+    grantCharter(next,seat,city,action.item);
+    record(next,seat,'cityCharter','Municipal charter granted.',city.tile,{city:city.id,item:action.item});
   } else if (action.type==='focus') {
     const city=cityOrNull(next,action.city);
     if(!city || city.seat!==seat) throw new Error('Choose one of your cities.');
@@ -1902,6 +1914,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
       (city.population>=3 && player.research ? 'science' : 'balanced');
     if ((city.focus || 'balanced')!==focus) return {type:'focus',city:city.id,item:focus};
   }
+  const charter=proposeCharter(state,seat);
+  if (charter) return charter;
   const veteran=plans.find(([,options])=>options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
   if (veteran) return {type:'upgrade',unit:veteran[0].id,item:veteran[1].upgrade.to};
   for (const city of state.cities) if (city.seat===seat && !city.queue) {

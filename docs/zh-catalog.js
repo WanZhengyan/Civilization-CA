@@ -10,6 +10,29 @@ section(positionTranslations);
 import {stationCopy} from './field-stations.js';
 section(stationCopy);
 section(`
+City hall|市政厅
+Municipal charter|城市特许状
+A city with two residents can spend 18 gold on one permanent charter. The charter stays with the city if it changes hands.|至少有两位居民的城市可以花费 18 金币颁发一份永久特许状。城市易主后仍保留该特许状。
+Growers’ cooperative|种植合作社
+The granary supplies 3 additional food each harvest.|每次收获时，粮仓额外提供 3 点粮食。
+Machinists’ guild|机械工匠行会
+The workshop supplies 3 additional production each harvest.|每次收获时，工坊额外提供 3 点生产力。
+Merchants’ exchange|商贸交易所
+The monument attracts merchants, earning 3 gold and 1 influence each harvest.|纪念碑吸引商人，每次收获时额外获得 3 金币与 1 点影响力。
+Review charter|查看特许状
+Grant charter|颁发特许状
+Spend 18 gold to grant this city its permanent charter.|花费 18 金币，为本城颁发永久特许状。
+Charter in force|特许状已生效
+This city has already granted its charter.|本城已颁发特许状。
+The city needs two residents.|本城至少需要两位居民。
+Build a granary first.|请先建造粮仓。
+Build a workshop first.|请先建造工坊。
+Build a monument first.|请先建造纪念碑。
+The charter requires 18 gold.|颁发特许状需要 18 金币。
+Choose a charter for one of your cities.|请选择己方城市的特许状。
+Municipal charter granted.|城市特许状已颁发。
+`);
+section(`
 Applied Mechanics|应用力学
 Each workshop supplies 1 additional production per turn.|每座工坊每回合额外提供 1 点产能。
 Electrical Engineering|电气工程
