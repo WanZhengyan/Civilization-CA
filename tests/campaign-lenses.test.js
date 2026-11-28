@@ -39,3 +39,12 @@ test('three alternate focus maps show exact marginal yields without changing an 
     assert.equal(next.get(c.tile).rank,gain);
   } assert.equal(JSON.stringify(s),snap);
 });
+
+test('supply map hides unsurveyed resources and names the matching site improvement',()=>{
+  const s=campaignView(capital(),0),id=s.cities[0].tile;
+  s.board[id]={...s.board[id],owner:0,resource:'iron',improvement:null};
+  assert.match(surveyLayer(s,0,'supply').get(id).en,/Mine/);
+  s.board[id].improvement='mine';
+  assert.match(surveyLayer(s,0,'supply').get(id).en,/1 good/);
+  assert.equal(surveyLayer(campaignView(fresh(),0),0,'supply').size,0);
+});

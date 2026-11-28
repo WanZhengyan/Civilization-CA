@@ -1,3 +1,5 @@
+import {RESOURCES,connectedDeposit,serviceCity,canSeeDeposits} from './resources.js';
+import {IMPROVEMENTS} from './rules.js';
 import {getCitizenWorkforce} from './rules.js';
 import {assignWorkforce} from './workforce.js';
 import {neighboringWonders} from './natural-wonders.js';
@@ -73,6 +75,24 @@ const lenses=[
         }
         return rows;
       })),
+  definition('supply','Resource connections','物资供应','Find surveyed deposits, the improvement they need and which city receives their goods.','找到已勘探矿藏、所需设施以及接收物资的城市。',[
+    ['Surveyed deposit','已发现资源'],['Needs improvement','待修建'],['In supply','已接通'],['Service interrupted','供应中断']
+  ],({state,seat,map,known,visible})=>{
+    const rows=new Map();
+    if(!canSeeDeposits(state,seat))return rows;
+    for(const id of known){
+      const cell=state.board[id],deposit=RESOURCES[cell?.resource];
+      if(!deposit)continue;
+      const name=deposit.name,zh=translate(name,'zh-CN');
+      if(!visible.has(id) || cell.owner!==seat){rows.set(id,reading(0,name+' recorded. Production is shown for your visible holdings.',zh+'已记录。仅显示己方可见地块的生产情况。'));continue;}
+      const city=serviceCity(state,id,map.byId,map.neighbors),improvement=IMPROVEMENTS[deposit.improvement].name;
+      if(connectedDeposit(cell) && city)rows.set(id,reading(2,name+' · 1 good each harvest via '+city.name+'.',zh+' · 经'+translate(city.name,'zh-CN')+'每回合入库 1 份。',2));
+      else if(!cell.pillaged && cell.improvement!==deposit.improvement)rows.set(id,reading(1,'Improve '+name+' with '+improvement+'.',zh+'需要'+translate(improvement,'zh-CN')+'。',3));
+      else rows.set(id,reading(3,cell.pillaged?'Pillaged. Repair the site to resume production.':'The site needs a city connection.',
+        cell.pillaged?'遭劫掠。修复后才能恢复产出。':'该地块需要城市连接。',4));
+    }
+    return rows;
+  }),
 ];
 export const campaignLenses=lenses;
 export function surveyLayer(state,seat,id) {
