@@ -1,3 +1,6 @@
+import {captureRoomOrder,isComputerActing,mayResumeOrder,roomSeatTurn,teamMemberStatus} from './room-turn.js';
+import {DEFAULT_MAP_SIZE,validNewMapSize} from './maps.js';
+import {advancementGuide,recoveryGuide} from './unit-service-copy.js';
 import {naturalWonderArt} from './natural-wonder-art.js';
 import {discoveredNaturalWonders} from './natural-wonders.js';
 import {invitationCode, launchDestination} from './launch.js';
@@ -7,7 +10,7 @@ import {getResourceLedger} from './rules.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
 import {mapPicker, sizePicker, sizeName, rivalPicker, victoryPicker, installMapStyles} from './regions-ui.js';
 import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
-import {changeRoomSetup,difficultyField,difficultyLabel,roomPreset,roomSetupFields,teamLabel,validRoomTeams} from './room-setup.js';
+import {changeRoomSetup,difficultyField,difficultyLabel,newRoomSetup,roomSetupFields,teamLabel,validRoomTeams} from './room-setup.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
 
 import {getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
@@ -48,7 +51,7 @@ function campaignSave(mapId, size) {
 }
 function selectCampaignSettings(state) {
   selectedMap = getMap(state).id;
-  selectedSize = state?.mapSize || 'standard';
+  selectedSize=validNewMapSize(state?.mapSize)?state.mapSize:DEFAULT_MAP_SIZE;
   selectedRivals = state?.players ? state.players.length - 1 : 3;
   selectedGoal = getScoreTarget(state);
   selectedDifficulty = state?.difficulty || 'normal';
@@ -57,10 +60,11 @@ function selectCampaignSettings(state) {
 let renderView, locateDistrict, toast, dialog, solo, room = null, token = null;
 let mode = 'home', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
-let selectedSize = 'standard', selectedRivals = 3, selectedGoal = TARGET_SCORE, selectedDifficulty = 'normal';
-let roomSetup=roomPreset('open');
+let selectedSize = DEFAULT_MAP_SIZE, selectedRivals = 3, selectedGoal = TARGET_SCORE, selectedDifficulty = 'normal';
+let roomSetup=newRoomSetup();
 let supplyCity='';
 let pending = false, errorMessage = '', playingBots = false;
+let unconfirmedOrder=null;
 let pollTimer, polling = false, roomEpoch = 0, offline = false, initialized = false;
 let inviteOpen = false, resultShown = '', guideTab = 'start';
 let renderedSource, renderedSeat, renderedView;
@@ -102,7 +106,7 @@ function emit() {
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
   renderView?.({
     state, seat: currentSeat(), room, session: mode==='solo' ? solo.seed : room?.code,
-    mode, busy: pending || (mode === 'solo' && playingBots) || (mode === 'online' && !room?.game)
+    mode, busy: pending || (mode==='online' && !!unconfirmedOrder) || (mode === 'solo' && playingBots) || (mode === 'online' && !room?.game)
   });
 }
 function rememberSeat(code, seatToken) {
@@ -170,7 +174,7 @@ async function runBots() {
   }
 }
 
-async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId, mapSize, seats }) {
+async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId, mapSize, seats, orderKey }) {
   const isGet = !op;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
@@ -184,7 +188,7 @@ async function requestRoom({ op, code, name, revision, action, auth, ticket, map
         ...(!isGet && { 'Content-Type': 'application/json' }),
         ...(auth && { Authorization: 'Bearer ' + auth })
       },
-      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId, mapSize, seats })
+      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId, mapSize, seats, orderKey })
     });
     if (response.status === 204 && isGet && revision !== undefined) return { unchanged: true };
     let data;
@@ -222,6 +226,26 @@ function syncRoom(incoming) {
   }
 }
 
+function journalKey(code,seat) { return 'civitas.room-order.'+code+'.'+seat; }
+function rememberOrder(request) {
+  unconfirmedOrder=request;
+  if(!room) return;
+  try {
+    const key=journalKey(room.code,room.you);
+    if(request) sessionStorage.setItem(key,JSON.stringify(request));
+    else sessionStorage.removeItem(key);
+  } catch { /* This tab can recover in memory when storage is unavailable. */ }
+}
+function restoreOrder(incoming) {
+  try {
+    const key=journalKey(incoming.code,incoming.you);
+    const request=JSON.parse(sessionStorage.getItem(key) || 'null');
+    if(request?.op==='action' && mayResumeOrder(incoming,request)) return request;
+    sessionStorage.removeItem(key);
+  } catch { /* Starting in a fresh tab is safe. */ }
+  return null;
+}
+
 function connect(incoming, auth, showLobby = true) {
   clearTimeout(pollTimer);
   roomEpoch++;
@@ -234,6 +258,7 @@ function connect(incoming, auth, showLobby = true) {
   updateURL(incoming.code);
   mode = 'online';
   room = null;
+  unconfirmedOrder=restoreOrder(incoming);
   syncRoom(incoming);
   if (incoming.phase === 'lobby' && showLobby) open('multiplayer');
   else if (modal === 'multiplayer') close();
@@ -243,7 +268,7 @@ function connect(incoming, auth, showLobby = true) {
 function schedulePoll() {
   clearTimeout(pollTimer);
   if (mode !== 'online' || !room || room.phase === 'finished') return;
-  const computerTurn=!offline && room.game?.players[room.game.turn]?.bot;
+  const computerTurn=!offline && isComputerActing(room.game);
   pollTimer = setTimeout(poll, document.hidden ? 7000 : computerTurn ? 450 : 1400);
 }
 
@@ -256,6 +281,10 @@ async function poll() {
     if (epoch !== roomEpoch) return;
     if (offline) { offline = false; toast?.('Reconnected to the room.'); }
     if (!data.unchanged) syncRoom(data.room);
+    if(unconfirmedOrder && !pending){
+      if(mayResumeOrder(room,unconfirmedOrder)) await mutate('action',unconfirmedOrder.action,unconfirmedOrder);
+      else {rememberOrder(null);emit();}
+    }
   } catch (error) {
     if (epoch !== roomEpoch) return;
     if ([401, 403, 404].includes(error.status)) {
@@ -289,7 +318,7 @@ function returnToSolo() {
     return;
   }
   showTitle(false);
-  room = token = null;
+  room = token = unconfirmedOrder = null;
   offline = inviteOpen = false;
   updateURL(null,true);
   close();
@@ -313,7 +342,7 @@ function enterTitle() {
   clearTimeout(pollTimer);
   polling = false;
   mode = 'home';
-  room = token = null;
+  room = token = unconfirmedOrder = null;
   offline = inviteOpen = false;
   updateURL(null);
   close();
@@ -353,7 +382,7 @@ async function seatRequest(form) {
       }
     }
     const intent = [roomTab, roomTab === 'join' ? code : selectedMap, name].join('|') +
-      (roomTab === 'create' && selectedSize === 'large' ? '|large' : '')+(seats ? '|'+JSON.stringify(seats) : '');
+      (roomTab==='create'?'|'+selectedSize:'')+(seats ? '|'+JSON.stringify(seats) : '');
     let ticket = read(TICKET_KEY, null);
     if (ticket?.intent !== intent) {
       const bytes = crypto.getRandomValues(new Uint8Array(24));
@@ -363,12 +392,12 @@ async function seatRequest(form) {
     const data = await requestRoom({ op: roomTab, name, ticket:ticket.token, ...(roomTab === 'join' ? {code} : {mapId:selectedMap,mapSize:selectedSize,seats}) });
     if (seats && !data.room.configured) {
       save(TICKET_KEY,null);
-      throw new Error('This room service supports open human lobbies only. Choose the open lobby to play here.');
+      throw new Error('This server cannot create the requested roster. Reload the game and try again.');
     }
-    const standardOnly = roomTab === 'create' && selectedSize === 'large' && (data.room.mapSize || 'standard') === 'standard';
+    const adjustedSize=roomTab==='create' && (data.room.mapSize||'standard')!==selectedSize;
     connect(data.room, data.token);
     save(TICKET_KEY, null);
-    if (standardOnly) showError('This room server created a Standard map. Large maps are available in solo play.');
+    if(adjustedSize)showError('This room server opened a different chart size. Its map size is shown in the lobby.');
   } catch (error) { showError(error.message); }
   finally {
     pending = false;
@@ -377,21 +406,37 @@ async function seatRequest(form) {
   }
 }
 
-async function mutate(op, action) {
-  if (pending || !room || !token) return;
+async function mutate(op, action, retry=null) {
+  if (pending || !room || !token || (unconfirmedOrder && !retry)) return;
   const epoch = roomEpoch;
+  const request = retry || (op==='action' ? captureRoomOrder(room,action) : {op,code:room.code,revision:room.revision});
+  if(request.orderKey) rememberOrder(request);
   pending = true;
   errorMessage = '';
   emit();
   if (modal === 'multiplayer') drawDialog();
   try {
-    const result = await requestRoom({ op, code: room.code, revision: room.revision, action, auth: token });
-    if (epoch === roomEpoch) syncRoom(result.room);
+    const result = await requestRoom({...request,auth:token});
+    if (epoch === roomEpoch) {
+      if(request.orderKey) rememberOrder(null);
+      syncRoom(result.room);
+    }
   } catch (error) {
     if (epoch !== roomEpoch) return;
-    if (error.status === 409 || !error.status) {
-      try { syncRoom((await requestRoom({ code: room.code, auth: token })).room); }
-      catch { /* Polling also retries after connection errors. */ }
+    if(request.orderKey && (!error.status || error.status>=500)){
+      // The server may have committed this action before the connection dropped.
+      // Refresh first; polling replays the saved envelope only while its key lives.
+      if(!retry) toast?.('Connection interrupted. Your order will be checked on reconnect.');
+      return;
+    }
+    if(request.orderKey) rememberOrder(null);
+    if (error.status === 409 || error.status === 422 || !error.status) {
+      try {
+        const fresh=await requestRoom({code:room.code,auth:token});
+        if(epoch!==roomEpoch) return;
+        syncRoom(fresh.room);
+        if(retry && error.status===409 && !mayResumeOrder(room,request)) return;
+      } catch { /* Polling retries after connection errors. */ }
     }
     showError(error.message);
   } finally {
@@ -405,7 +450,7 @@ async function mutate(op, action) {
 
 function doAction(type, tile) {
   const state = getState();
-  if (mode === 'home' || pending || !state || state.phase !== 'playing' || state.turn !== currentSeat()) return;
+  if (mode === 'home' || pending || (mode==='online' && unconfirmedOrder) || !state || roomSeatTurn(state,currentSeat()) !== 'active') return;
   if (type === 'end') tile = undefined;
   const action = typeof type === 'object' && type ? type : tile === undefined ? {type} : {type, tile};
   if (mode === 'online') {
@@ -545,7 +590,7 @@ function multiplayerContent() {
       const name=p.open ? '<span>Waiting for player</span>' : p.bot ? '<span>Computer</span> '+(p.id+1) : '<span translate="no">'+escapeHTML(p.name)+'</span>';
       const attributes=[room.configured && 'Seat '+(p.id+1),room.configured && teamLabel(p.team),p.bot && difficultyLabel(p.difficulty || 'normal'),!lobby && FACTION_NAMES[seatFaction(p.id)]].filter(Boolean);
       return row((lobby ? '' : factionMark(p.id))+name,attributes.map(word=>'<span>'+escapeHTML(word)+'</span>').join(' · ') || 'Civilization drawn at start',
-        [p.id===room.host && 'Host',p.id===room.you && 'You',room.configured && !lobby && p.id===room.game?.firstSeat && 'Drew first turn'].filter(Boolean).map(word=>'<span>'+word+'</span>').join(' · '));
+        [p.id===room.host && 'Host',p.id===room.you && 'You',teamMemberStatus(room.game,p.id),room.configured && !lobby && !room.game?.teamPhase && p.id===room.game?.firstSeat && 'Drew first turn'].filter(Boolean).map(word=>'<span>'+word+'</span>').join(' · '));
     });
     const sharing = `<div class="modal-room"><span class="modal-muted">Room code</span><strong class="modal-code" translate="no">${escapeHTML(room.code)}</strong></div>` +
       actions(button('copy', 'Copy invite link'), button('show-link', inviteOpen ? 'Hide link' : 'Show link')) +
@@ -558,17 +603,19 @@ function multiplayerContent() {
     const footer = lobby && host ? button('start', pending ? 'Starting…' : 'Start campaign', 'primary', pending || !ready)
       : (lobby ? '' : button('back', 'Return to map', 'primary'));
     const target=room.configured ? muted('<span>Team civic target</span> · '+getScoreTarget(room.game || {teams:room.players.map(p=>p.team)})) : '';
+    const teamHelp=room.game?.teamPhase && room.phase==='playing' ? muted('Allies act together. Mark ready when you finish. The next team starts once every active ally is ready.') : '';
     return { title: lobby ? 'Room lobby' : 'Your room', kicker: 'Multiplayer', body:
-      sharing + muted(campaignSummary(room.game ? getMap(room.game) : getMap(room.mapId,room.mapSize),room.mapSize)) +target+ list(roster) + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
+      sharing + muted(campaignSummary(room.game ? getMap(room.game) : getMap(room.mapId,room.mapSize),room.mapSize)) +target+ list(roster) + teamHelp + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
   }
   const joining = roomTab === 'join';
   const disabled = pending ? ' disabled' : '';
   const codeField = joining ? `<label class="modal-field">Room code<input class="modal-input" type="text" name="code" aria-label="Room code or invite link" placeholder="Room code or invite link" autocomplete="off" spellcheck="false" autocapitalize="characters" maxlength="2048" value="${escapeHTML(joinCode)}" required${disabled}></label>` : '';
   const tabs = `<div class="modal-tabs" role="tablist" aria-label="Room options">${['create','join'].map((t, i) =>
     `<button type="button" class="modal-tab" role="tab" aria-selected="${t === roomTab}" data-act="tab-${t}"${disabled}>${i ? 'Join room' : 'Create room'}</button>`).join('')}</div>`;
+  const playerField = `<label class="modal-field">Player name<input class="modal-input" type="text" name="name" placeholder="Your name" maxlength="24" autocomplete="nickname" value="${escapeHTML(formName)}" required${disabled}></label>`;
   return { kicker: 'Multiplayer', title: joining ? 'Join room' : 'Create room', body: tabs +
-    desc(joining ? 'Enter a room code or invitation link. New players take the first open human seat. This device remembers your seat.' : 'Invite friends, face a computer opponent or form teams.') +
-    `<form class="modal-form" data-room-form><label class="modal-field">Player name<input class="modal-input" type="text" name="name" placeholder="Your name" maxlength="24" autocomplete="nickname" value="${escapeHTML(formName)}" required${disabled}></label>${codeField}${joining ? '' : roomSetupFields(roomSetup,pending)+campaignPicker(pending)}<button class="modal-primary" type="submit"${disabled || (!joining && !validRoomTeams(roomSetup) ? ' disabled' : '')}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
+    desc(joining ? 'Enter a room code or invitation link. New players take the first open human seat. This device remembers your seat.' : 'Choose the number of seats, then set a player and team for each.') +
+    `<form class="modal-form" data-room-form>${joining ? playerField+codeField : roomSetupFields(roomSetup,pending)+playerField+campaignPicker(pending)}<button class="modal-primary" type="submit"${disabled || (!joining && !validRoomTeams(roomSetup) ? ' disabled' : '')}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
 }
 
 function campaignPicker(disabled=false) {
@@ -597,7 +644,7 @@ const guideSections = {
   start: {label:'First turn', entries:[
     ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
     ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
-    ['Read city markers', 'City markers use the current owner’s color. Zoom in to read names in a crowded area. A crown marks the first city founded by a civilization and stays with that city after capture. Geographic labels also mark places where no city has been founded.'],
+    ['Read city markers', 'City markers use the owner’s color. A crown marks the first capital and stays with that city after capture. The green hex beside your city name estimates turns to the next district at its current population. Select the city to see the target and expansion progress. Zoom in when names overlap.'],
     ['Explore the fog', 'Each unit sees two hexes in every direction. Dark tiles are uncharted. Shaded tiles keep the terrain you explored, but enemies there are hidden.'],
     ['Survey for deposits', 'Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.'],
     ['Choose your map', 'Choose a region and map size. Each combination has its own solo save. Set the civic victory target and choose practice or up to three computer opponents. Online, the host sets the map for everyone.'],
@@ -610,10 +657,13 @@ const guideSections = {
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
     ['Develop a district', 'Select visible land you own. If a unit or city shares the hex, open District development in Field command. Each upgrade spends one district order and raises the level by one. Levels 1, 2 and 3 cost 5, 8 and 11 capital respectively. Level 3 is the maximum.'],
     ['Compare development returns', 'Each new level adds 1 civic point. Coast, lowland and urban districts also earn 1 more capital per turn. Woodland, foothills and mountains add 1 to base influence income. Check the preview for the change under your current policy.'],
+    ['Grow city borders', 'Each resident adds one border point at the end of your turn. A city starts at eight points per district. Each new district raises the next cost by two, up to sixteen. Only visible, unclaimed land within three connected land steps qualifies. If the frontier is blocked, explore or secure a clear route. Progress pauses until a parcel opens.'],
     ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
     ['Use stored goods', 'Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.'],
     ['Plan housing', 'A new city has room for three citizens. A granary adds two places. Public Works unlocks residential quarters, which add three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.'],
     ['Assign citizens', 'Select your city and open Manage citizens. Food, industry and science priorities change which controlled districts are worked. Each citizen works one district or a specialist job in town. The same district cannot support two cities.'],
+    ['Choose a construction tile', 'Choose a building in City production, then select one of the outlined map tiles and confirm. Municipal buildings can share the city center. Campuses need their own empty parcel. A harbor reserves a shore berth.'],
+    ['Change production or buy', 'You can change the current project. This city keeps its invested production until you resume the same item. Buying an ordinary project uses treasury gold and credits work already done. Universities must use city production.'],
     ['Choose a building', 'A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.'],
     ['Make room for recruits', 'Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.']
   ]},
@@ -625,10 +675,10 @@ const guideSections = {
     ['Read the terrain', 'Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.'],
     ['Preview an attack', 'Select a military unit and click a highlighted enemy. The combat forecast shows the damage and possible losses. Choose Confirm attack to commit, or return to the map to reconsider. An attack spends the unit’s remaining movement.'],
     ['Take a city', 'Melee units strike adjacent targets and can take counterdamage. Rangers can strike from two hexes away without a counterattack. Defeat the garrison first. A ranged attack can reduce a city to one health point. A surviving melee attacker can capture it.'],
-    ['Upgrade in the field', 'After the required discovery, select a veteran in your territory and pay the displayed capital cost to upgrade it. The unit keeps its health proportion and spends the rest of its movement.'],
+    advancementGuide,
     ['Repel a raid', 'A lookout near an established city may return to its camp. Intercept it before it reports, or attack the camp before the party leaves two rounds later. A military defender within one hex of the city, or city walls, repels the raid. Raiders leave civilian units alone.'],
     ['Clear a camp', 'Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.'],
-    ['Recover', 'Units regain movement at the start of their faction’s turn. A unit in a friendly city heals up to 12 health. Each friendly city recovers up to 6.']
+    recoveryGuide
   ]},
   universities: {label:'Wonders', entries:[
     ['Charter a university', 'Municipal Charter unlocks UCLA. Workshop Engineering unlocks Stanford University, Park Conservancies unlocks UC Berkeley, and Steam Power unlocks Caltech. Choose a city and open University wonders in its production menu.'],
@@ -702,7 +752,7 @@ function teamStandings(state){
 function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
-  if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending,escapeHTML)};
+  if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending,escapeHTML,getStats(state,currentSeat()))};
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
@@ -739,8 +789,11 @@ function content() {
   }
   if (modal === 'campaign-atlas') {
     const saved=campaignSave(selectedMap,selectedSize);
+    const archived=campaignSave(selectedMap,'standard');
+    const classic=archived?'<section class="solo-classic-save"><h3>Classic campaign</h3>'+
+      muted(campaignSummary(getMap(archived),'standard'))+actions(button('load-classic','Resume classic map'))+'</section>':'';
     return {kicker:'California campaigns', title:'Solo game setup',
-      body:savedCampaignCard(saved,true)+'<section class="solo-new-setup"><h3>New campaign settings</h3>'+
+      body:savedCampaignCard(saved,true)+classic+'<section class="solo-new-setup"><h3>New campaign settings</h3>'+
         rivalPicker(selectedRivals)+(selectedRivals ? difficultyField(selectedDifficulty) : '')+victoryPicker(selectedGoal)+sizePicker(selectedMap,selectedSize)+
         mapPicker(selectedMap,false,selectedSize)+actions(button('start-configured',saved?'Start new campaign':'Start campaign','primary'))+
         '</section>'};
@@ -827,8 +880,8 @@ function modalAction(act) {
   else if (act === 'to-solo' && !pending) { returnToSolo(); }
   else if (act === 'start') mutate('start');
   else if (act === 'campaign-atlas') open('campaign-atlas');
-  else if (act === 'load-region' && modal === 'campaign-atlas') {
-    const saved = campaignSave(selectedMap,selectedSize);
+  else if ((act==='load-region'||act==='load-classic') && modal==='campaign-atlas') {
+    const saved=campaignSave(selectedMap,act==='load-classic'?'standard':selectedSize);
     if (saved) enterSoloCampaign(saved);
     else drawDialog();
   } else if ((act === 'start-configured' && modal === 'campaign-atlas') || (act === 'restart' && modal === 'restart')) {
@@ -885,7 +938,7 @@ async function init({ render, locate, toast: showToast }) {
       const next=changeRoomSetup(roomSetup,name,value);
       if(next){
         keepForm();roomSetup=next;errorMessage='';drawDialog();
-        dialog.querySelector('select[name="'+name+'"]')?.focus({preventScroll:true});
+        dialog.querySelector(name==='roomSeatCount' ? '[name="roomSeatCount"]:checked' : 'select[name="'+name+'"]')?.focus({preventScroll:true});
         return;
       }
     }

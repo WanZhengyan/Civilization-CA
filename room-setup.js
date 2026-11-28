@@ -16,6 +16,13 @@ export const difficultyLabel=id=>levels[id] || levels.normal;
 const human=team=>({kind:'human',team});
 const bot=team=>({kind:'bot',team,difficulty:'normal'});
 
+// The live builder provisions a human host and an invitation for a second player.
+export function newRoomSetup(count=2) {
+  if (!Number.isInteger(count) || count<2 || count>4) throw new RangeError('Choose two to four seats.');
+  return {preset:'custom', seats:Array.from({length:count},(_,seat)=>human(seat))};
+}
+
+// Continue to read configurations from the previous setup interface.
 export function roomPreset(preset) {
   switch(preset){
     case 'open': return {preset,seats:[]};
@@ -31,7 +38,7 @@ export function changeRoomSetup(config,name,value) {
   }
   const seats=config.seats.map(s=>({...s}));
   if(name==='roomSeatCount' && ['2','3','4'].includes(value)){
-    while(seats.length<Number(value)) seats.push(bot(seats.length));
+    while(seats.length<Number(value)) seats.push(human(seats.length));
     seats.length=Number(value);
   }else{
     const match=/^seat-(kind|team|difficulty)-([0-3])$/.exec(name);
@@ -71,9 +78,10 @@ function difficultyGuide(seats) {
 }
 
 export function roomSetupFields(config,disabled=false) {
-  const preset=select('roomPreset','Room setup',presetLabels,config.preset,disabled);
-  if(!config.seats.length)return preset+'<p class="room-rule">Invite up to three friends. The host can start once two people have joined.</p>';
-  const count=select('roomSeatCount','Number of seats',{2:'2',3:'3',4:'4'},config.seats.length,disabled);
+  if (!config.seats.length) config=newRoomSetup();
+  const count='<fieldset class="room-size"><legend>Number of seats</legend><div>'+[2,3,4].map(n=>
+    '<label><input type="radio" name="roomSeatCount" value="'+n+'"'+(config.seats.length===n?' checked':'')+(disabled?' disabled':'')+'><span>'+n+'</span></label>'
+  ).join('')+'</div></fieldset>';
   const seats=config.seats.map((seat,i)=>{
     const kind=i===0 ? '<strong class="room-host">Host</strong>' : select('seat-kind-'+i,'Controller',{human:'Human player',bot:'Computer'},seat.kind,disabled);
     return '<fieldset class="room-seat"><legend>Seat '+(i+1)+'</legend><div>'+kind+
@@ -83,10 +91,14 @@ export function roomSetupFields(config,disabled=false) {
   const sizes=new Map();
   for(const seat of config.seats) sizes.set(seat.team,(sizes.get(seat.team) || 0)+1);
   const unequal=new Set(sizes.values()).size>1;
-  return preset+count+'<p class="room-rule">Teammates combine civic scores and share victory. Each player keeps their own units, treasury and vision.</p>'+
+  const teamHelp=[...sizes.values()].some(count=>count>1) ? '<p class="room-rule">Allies act together. Mark ready when you finish. The next team starts once every active ally is ready.</p>' : '';
+  const invites=config.seats.filter(s=>s.kind==='human').length-1;
+  const invitation=invites ? '<p class="room-rule"><strong>Human seats to invite</strong> · '+invites+'</p>'
+    : '<p class="room-rule">Only the host needs to join. Computer seats are filled automatically.</p>';
+  return count+'<div class="room-seats">'+seats+'</div>'+invitation+teamHelp+'<p class="room-rule">Allies share sight, discoveries and civic victory. Each player commands their own units and treasury.</p>'+
     '<p class="room-rule"><strong>Team civic target</strong> · '+getScoreTarget({teams:config.seats.map(s=>s.team)})+'</p>'+
     '<p class="room-rule">The starting team is drawn at random.</p>'+
     (unequal?'<p class="room-rule">Teams are uneven. The larger team has more civilizations contributing points.</p>':'')+
-    '<div class="room-seats">'+seats+'</div>'+difficultyGuide(config.seats)+
+    difficultyGuide(config.seats)+
     (validRoomTeams(config)?'':'<p class="modal-error" role="alert">Assign the seats to at least two different teams.</p>');
 }

@@ -1,3 +1,4 @@
+import {CAMPAIGN_SIZES,DEFAULT_MAP_SIZE} from './maps.js';
 import {CAMPAIGN_MAPS, SCORE_TARGETS, TARGET_SCORE, getMap} from './rules.js';
 import {chartPerimeter} from './hex-survey.js';
 
@@ -34,7 +35,7 @@ export function regionThumbnail(map) {
   return svg;
 }
 
-export function mapPicker(selected,disabled=false,mapSize='standard') {
+export function mapPicker(selected,disabled=false,mapSize=DEFAULT_MAP_SIZE) {
   return '<fieldset class="region-picker"><legend>Campaign map</legend>'+CAMPAIGN_MAPS.map(choice=>{
     const active=choice.id===selected;
     return '<label class="region-choice"><input type="radio" name="mapId" value="'+choice.id+'" '+(active?'checked ':'')+(disabled?'disabled':'')+'>'+regionThumbnail(getMap(choice.id,mapSize))+
@@ -43,16 +44,16 @@ export function mapPicker(selected,disabled=false,mapSize='standard') {
 }
 
 export function sizeName(mapSize) {
-  return mapSize === 'large' ? 'Large' : 'Standard';
+  return ({standard:'Classic',large:'Large',grand:'Grand',epic:'Epic'})[mapSize||'standard']||'Classic';
 }
 
-export function sizePicker(mapId,selected,disabled=false) {
-  const choices = ['standard','large'].map(size=>{
+export function sizePicker(mapId,selected=DEFAULT_MAP_SIZE,disabled=false) {
+  const choices = CAMPAIGN_SIZES.map(size=>{
     const count = getMap(mapId,size).tiles.length;
     return `<label><input type="radio" name="mapSize" value="${size}"${size===selected?' checked':''}${disabled?' disabled':''}>
       <span><strong>${sizeName(size)}</strong><small>${count} <span>playable hexes</span></small></span></label>`;
   });
-  return '<fieldset class="setup-setting"><legend>Map size</legend><div>'+choices.join('')+'</div></fieldset>';
+  return '<fieldset class="setup-setting size-options"><legend>Map size</legend><div>'+choices.join('')+'</div></fieldset>';
 }
 
 function soloOption(name, value, selected, title, detail, describedBy) {

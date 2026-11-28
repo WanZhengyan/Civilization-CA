@@ -16,7 +16,7 @@ export function cityLabelAt(marks,x,y,underlying,model) {
 
 // Measurements, collision distances and viewport insets are in CSS pixels,
 // independent of the world transform or the physical screen's pixel ratio.
-export function planCityLabels({cities,byId,visible,seat,selectedTile,project,view,scale,unitBoxes,measure,localize=translate}) {
+export function planCityLabels({cities,byId,visible,seat,forecasts,selectedTile,project,view,scale,unitBoxes,measure,localize=translate}) {
   const anchors=[];
   const right=view.left+view.width,bottom=view.top+view.height;
   for(const city of cities) {
@@ -28,20 +28,23 @@ export function planCityLabels({cities,byId,visible,seat,selectedTile,project,vi
     const name=city.name && city.name!==tile.name ? city.name : localize(tile.name);
     const priority=(selected?4:0)+(capital?2:0)+(city.seat===seat?1:0);
     const distance=(x-view.x)**2+(y-view.y)**2;
-    anchors.push({city,x,y,capital,selected,name,priority,distance,radius:capital?6:3.5});
+    const forecast=city.seat===seat ? forecasts?.get(city.id) : null;
+    const border=forecast ? String(forecast.turns ?? '–') : '';
+    anchors.push({city,x,y,capital,selected,name,border,priority,distance,radius:capital?6:3.5});
   }
   anchors.sort((a,b)=>b.priority-a.priority || a.distance-b.distance || a.city.tile.localeCompare(b.city.tile));
   const occupied=[...unitBoxes,...anchors.map(({x,y,radius:r})=>[x-r,y-r,x+r,y+r])];
   const height=scale<.6?20:23, maxText=Math.min(scale<.6?135:210,view.width-24);
   for(const mark of anchors) {
-    if(maxText<12 || view.height<height+4)continue;
+    const badge=mark.border ? 17+measure(mark.border) : 0, nameLimit=maxText-badge;
+    if(nameLimit<12 || view.height<height+4)continue;
     let text=mark.name;
-    if(measure(text)>maxText) {
+    if(measure(text)>nameLimit) {
       const letters=Array.from(text);
-      while(letters.length && measure(letters.join('')+'…')>maxText)letters.pop();
+      while(letters.length && measure(letters.join('')+'…')>nameLimit)letters.pop();
       text=letters.join('')+'…';
     }
-    const width=Math.ceil(measure(text))+16,hw=width/2,hh=height/2;
+    const width=Math.ceil(measure(text)+badge)+16,hw=width/2,hh=height/2;
     const dx=hw+mark.radius+5,dy=hh+Math.min(32,Math.max(mark.radius+4,19*scale));
     const candidates=[[0,dy],[0,-dy],[-dx,0],[dx,0],[-hw*.7,dy],[hw*.7,dy],[-hw*.7,-dy],[hw*.7,-dy]];
     for(const [dx0,dy0] of candidates) {
@@ -79,13 +82,21 @@ export function paintCityLabels(g,marks,scale,colorForSeat) {
     g.strokeStyle=colorForSeat(city.seat);g.lineWidth=1.7;g.stroke();
     if(capital)capitalCrown(g,x,y);
   }
-  for(const {box,text,city,selected} of marks) {
+  for(const {box,text,border,city,selected} of marks) {
     if(!box)continue;
     const [left,top,right,bottom]=box;
     g.beginPath();g.roundRect(left,top,right-left,bottom-top,3);g.fillStyle='#172831';g.fill();
     g.strokeStyle=selected?'#fff2c3':'#c7c5aa';g.lineWidth=selected?1.8:1;g.stroke();
     g.fillStyle=colorForSeat(city.seat);g.fillRect(left+2,top+3,3,bottom-top-6);
     g.fillStyle='#fff5db';g.fillText(text,left+9,(top+bottom)/2+.5);
+    if(border) {
+      const y=(top+bottom)/2, x=left+13+g.measureText(text).width;
+      g.save();g.strokeStyle='#a8dfb4';g.fillStyle='#b8ebbe';g.lineWidth=1.25;
+      g.beginPath();g.moveTo(x,y-2.5);g.lineTo(x+4,y-5);g.lineTo(x+8,y-2.5);
+      g.lineTo(x+8,y+2.5);g.lineTo(x+4,y+5);g.lineTo(x,y+2.5);g.closePath();g.stroke();
+      g.fillRect(x+2,y-.5,4,1);g.fillRect(x+3.5,y-2,1,4);
+      g.fillText(border,x+11,y+.5);g.restore();
+    }
     if(city.maxHp && city.hp<city.maxHp){
       g.fillStyle='#743f39';g.fillRect(left+2,bottom-3,right-left-4,2);
       g.fillStyle='#ffae88';g.fillRect(left+2,bottom-3,(right-left-4)*Math.max(0,city.hp/city.maxHp),2);

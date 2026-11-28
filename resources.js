@@ -50,6 +50,8 @@ export function populateDeposits(state, region, seed, adjacent) {
   return state;
 }
 export function canSeeDeposits(state, seat) {
+  if (state.intel?.seat===seat && state.intel.teamSurveyed) return true;
+  if (state.teams && state.players.some((p,i)=>state.teams[seat]===state.teams[i] && p.surveyEnabled===true)) return true;
   return state.players[seat]?.surveyEnabled === true || state.cities.some(city => city.seat === seat);
 }
 export function canSurvey(state, unit) {

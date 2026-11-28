@@ -42,7 +42,7 @@ export function selectStarts(map, count, seed, neighbors, distance) {
       && terrain.filter(fertile).length >= 2;
   }), random);
   // Backtrack on small peninsulas when a first pick would squeeze a fourth player.
-  const minimumSeparation=map.mapSize==='large' ? 9 : 5;
+  const minimumSeparation=4*(map.scaleFactor||1)+1;
   function pick(chosen, offset) {
     if (chosen.length === count) return chosen;
     for (let i = offset; i < candidates.length; i++) {
