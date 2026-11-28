@@ -75,11 +75,12 @@ export function paintSiteBar(bar,draft,city,option,sites,canOrder) {
   bar.hidden=!draft;
   if (!draft) {bar.replaceChildren();return;}
   const selected=sites.find(s=>s.id===draft.site);
-  const html='<div class="work-bar-title">'+illustration(option.item)+'<div><strong>'+escape(option.label)+'</strong><small>'+escape(city.name)+'</small></div></div>'+
+  const html='<button class="site-back" data-site-back type="button">Back to production</button><div class="work-bar-title">'+illustration(option.item)+'<div><strong>'+escape(option.label)+'</strong><small>'+escape(city.name)+'</small></div></div>'+
     workQuote(draft,city,option)+
     '<p><span>Choose a highlighted tile on the map.</span></p>'+
     '<label class="site-choice"><span>Construction tile</span><select data-site-list><option value="">Select a tile</option>'+
     sites.map(t=>'<option value="'+escape(t.id)+'" '+(selected?.id===t.id?'selected':'')+'>'+escape(t.name)+' · '+escape(t.id)+'</option>').join('')+'</select></label>'+
+    (selected?.terrain ? '<p class="site-terrain"><span>Terrain</span> · <span>'+escape(selected.terrain[0].toUpperCase()+selected.terrain.slice(1))+'</span></p>' : '')+
     (selected && Object.hasOwn(selected,'favored') && option.item && draft.university ? '<small><span>'+(selected.favored?'Specialty terrain':'Standard campus yield')+'</span></small>' : '')+
     (draft.type==='switchProduction' || (draft.type==='buyProduction' && city.queue && city.queue.item!==draft.item) ?
       '<small><span>Work saved if you switch</span> · '+Number(city.queue?.progress||0)+' / '+Number(city.queue?.required||0)+'</small>' : '')+

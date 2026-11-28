@@ -124,11 +124,11 @@ test('map selection contours draw only visible project sites',()=>{
 });
 import {paintSiteBar} from '../docs/work-orders.js';
 test('map order bar supports a keyboard tile choice, confirmation, cancellation and suited terrain',()=>{
- const s=fresh(),c=city(s),o={item:'ucla',label:'UCLA',enabled:true,kind:'building',turns:4,required:18},sites=[{id:'4,3',name:'City <A>',favored:true}];
+ const s=fresh(),c=city(s),o={item:'ucla',label:'UCLA',enabled:true,kind:'building',turns:4,required:18},sites=[{id:'4,3',name:'City <A>',favored:true,terrain:'hills'}];
  const draft={...draftOrder(c,o,false),site:'4,3',university:true};const bar={dataset:{}};
  assert.ok(!orderButtons(o,true).includes('data-buy'));
  paintSiteBar(bar,draft,c,o,sites,true);
- for (const label of ['data-site-list','data-site-confirm','data-site-cancel','Specialty terrain','&lt;A&gt;','./art/ucla.webp','>4 turns<','>18<','Charter fee','5 <span>gold']) assert(bar.innerHTML.includes(label));
+ for (const label of ['data-site-back','data-site-list','data-site-confirm','data-site-cancel','Terrain','Hills','Specialty terrain','&lt;A&gt;','./art/ucla.webp','>4 turns<','>18<','Charter fee','5 <span>gold']) assert(bar.innerHTML.includes(label));
 });
 import {drawCivicBuilding,drawWorkInProgress} from '../docs/construction-art.js';
 test('civic building and construction markers render separately from city flags',()=>{

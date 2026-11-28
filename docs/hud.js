@@ -638,7 +638,7 @@ function drawPlacement() {
 function startPlacement(draft,city) {
   closeProduction();productionDraft=null;parcelOrder={...draft,university:Boolean(WONDERS[draft.item])};
   order='inspect';selectedUnit=null;kind='city';selectedTile=city.tile;
-  closeMapPanel();atlas.focus(city.tile);redraw();el('atlas').querySelector('canvas')?.focus({preventScroll:true});
+  closeMapPanel();redraw();atlas.focus(parcelOrder?.site || city.tile);el('atlas').querySelector('canvas')?.focus({preventScroll:true});
 }
 
 function productDescription(item) {
@@ -1172,7 +1172,15 @@ function mount(){
   };
   parcelBar.onclick=e=>{
     if (!parcelOrder) return;
-    if (e.target.closest('[data-site-cancel]')) {endPlacement();redraw();return;}
+    if (e.target.closest('[data-site-back]')) {
+      const city=view.state.cities.find(c=>c.id===parcelOrder.city && c.seat===view.seat);
+      endPlacement();
+      if(city){select(city.tile,null,true);redraw();openProduction();}
+      return;
+    }
+    if (e.target.closest('[data-site-cancel]')) {
+      endPlacement();redraw();el('atlas').querySelector('canvas')?.focus({preventScroll:true});return;
+    }
     if (!e.target.closest('[data-site-confirm]')) return;
     const city=view.state.cities.find(c=>c.id===parcelOrder.city && c.seat===view.seat);
     const option=city && getProductionOptions(view.state,city.id,{replace:true}).find(o=>o.item===parcelOrder.item);
@@ -1244,7 +1252,7 @@ function mount(){
     getView:()=>view,issue:action=>Game.doAction(action),closeLedger:()=>Game.close(),
     showTile:locateDistrict
   });
-  document.querySelector('.map-messages')?.prepend(parcelBar);
+  document.querySelector('.map-workspace')?.append(parcelBar);
   el("map-labels").onchange=e=>atlas.setLabels(e.currentTarget.checked);
   el("territory-lines").onchange=e=>atlas.setTerritories(e.currentTarget.checked);
   document.addEventListener("click",e=>{if(!e.target.closest(".layers-wrap"))toggleLayers(false)});
