@@ -12,7 +12,7 @@ function combatant(kind, piece, hpAfter) {
 
 // Capture what the seats witnessed before a death or conquest changes their sight.
 export function prepareBattle(state, attacker, target, result, details = {}) {
-  const source = combatant(attacker.seat == null ? 'wild' : 'unit', attacker, result.attackerHpAfter);
+  const source = combatant(details.attackerKind ?? (attacker.seat == null ? 'wild' : 'unit'), attacker, result.attackerHpAfter);
   const victim = combatant(result.defenderType, target, result.defenderHpAfterHit);
   const outcome = details.outcome ?? (result.capture ? 'captured' : result.defeated ? 'destroyed' : 'hit');
   const witnesses = [];

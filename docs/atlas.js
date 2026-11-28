@@ -580,12 +580,17 @@ function drawCity(g,city,model) {
     poly(g,[x-10,y-1,x-5,y-5,x+4,y-1,x-2,y+2],'#b37657','#625345',.6);
   }
   if(buildings.length){
-    buildings.filter(name=>name!=='harbor'&&name!=='shipyard').slice(0,4).forEach((name,i)=>{
+    if(buildings.includes('walls')){
+      const modern=buildings.includes('modernWalls'),stone=modern?'#819498':'#aa9577';
+      for(const [xx,yy] of [[-15,5],[-6,11],[6,11],[16,5]]){
+        poly(g,[x+xx-4,y+yy-6,x+xx,y+yy-8,x+xx+4,y+yy-6,x+xx+4,y+yy,x+xx,y+yy+2,x+xx-4,y+yy],stone,'#4c5553',.65);
+      }
+      if(modern)line(g,[x+4,y+3,x+13,y-3],'#454f52',2.4);
+    }
+    buildings.filter(name=>!['harbor','shipyard','walls','modernWalls'].includes(name)).slice(0,4).forEach((name,i)=>{
       const [a,b]=[[-23,8],[17,10],[-16,-8],[19,-6]][i];
       const xx=x+a,yy=y+b;
-      if(name==='walls'){
-        for(let j=0;j<4;j++)town(g,xx+j*2.2,yy+j*.9,2.5,3,j%2?4.5:6,2);
-      }else if(name==='granary'){
+      if(name==='granary'){
         town(g,xx,yy,5,5,5,3);ellipse(g,xx-2,yy-7,3,1.5,'#d0ad72');
       }else {
         town(g,xx,yy,5,4,5+i*1.8,i%6,true);

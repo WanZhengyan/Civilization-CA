@@ -1,3 +1,4 @@
+import {cityCenterProject} from './city-defenses.js';
 import {SETTLER_MIN_POPULATION, SETTLER_RESIDENT_COST} from './population.js';
 import {illustration} from './illustrations.js';
 import {WONDERS} from './wonders.js';
@@ -42,6 +43,7 @@ function workQuote(draft,city,option) {
   const timing=purchase ? 'Immediately' : option.turns===0 && option.kind==='unit' ? 'Awaiting deployment' :
     option.turns+' '+(option.turns===1?'turn':'turns');
   let rows=row('Estimated completion',timing);
+  if (cityCenterProject(option.item)) rows+=row('City center',city.name+' · '+city.tile);
   if (option.item==='settler') rows+=row('Current residents',city.population)+row('Residents leaving on deployment',SETTLER_RESIDENT_COST);
   if (purchase) rows+=row('Gold cost',draft.gold);
   else {

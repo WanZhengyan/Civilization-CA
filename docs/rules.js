@@ -1,4 +1,5 @@
 import {ARREARS_REASON,rosterUpkeep,settlePayroll,unitUpkeep} from './unit-upkeep.js';
+import {FORTIFICATIONS,cityCenterProject,restoreCityDefenses,batteryTargets,batteryOrder,fireBattery} from './city-defenses.js';
 import {fieldOrder,corridorIncome} from './field-expeditions.js';
 import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon,establishDepot,gradeRoad,planOverlandCommerce,scheduleFoodLine,cancelFoodLine,fulfillFoodLine} from './land-commerce.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
@@ -298,7 +299,7 @@ export const BUILDINGS = {
   printingHouse: {name:'Printing house', era:'industrial', tech:'electricity', required:26, yields:{culture:3},
     description:'Generates 3 culture per turn for civics.'},
   monument: {name:"Monument", required:10},
-  walls: {name:"City walls", tech:"tactics", era:"frontier", required:14, description:"Adds 50 city health, reduces incoming damage by 7 and strengthens retaliation."}
+  ...FORTIFICATIONS
 };
 export const IMPROVEMENTS = {
   ...SPECIAL_IMPROVEMENTS,
@@ -372,7 +373,7 @@ function addResearch(state) {
 }
 export function migrateGame(state) {
   if (state?.intel) return state;
-  let migrated=modernizeFormations(migrateCore(state),UNIT_TYPES);
+  let migrated=restoreCityDefenses(modernizeFormations(migrateCore(state),UNIT_TYPES));
   if (migrated?.opening==='settlers' && migrated.resourceVersion!==1 && Number.isInteger(migrated.seed)) {
     migrated={...migrated,board:{...migrated.board},players:migrated.players.map((p,seat)=>({
       ...p,surveyEnabled:p.surveyEnabled ?? migrated.cities.some(city=>city.seat===seat)
@@ -496,6 +497,7 @@ export function getProjectSites(state,cityId,item) {
   if (!cityProjectUnlocked(state,city,item,definition) || (definition.building && !city.buildings.includes(definition.building))) return [];
   if (WONDERS[item]) return getWonderSites(state,cityId,item);
   const describe=id=>({...map.byId[id],range:hexDistance(city.tile,id),favored:false});
+  if (cityCenterProject(item)) return [describe(city.tile)];
   if (item==='harbor') {
     const visible=state.intel ? new Set(state.intel.visible) :
       ((state.opening==='settlers' || state.enforceSight) ? getVisibleTiles(state,city.seat) : null);
@@ -1018,7 +1020,7 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
     else if (financing) reason=financing;
     else if (city.queue && (!replace || city.queue.item===item)) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
-    else if (def.building && !city.buildings.includes(def.building)) reason='Build a workshop in this city first.';
+    else if (def.building && !city.buildings.includes(def.building)) reason=def.building==='walls' ? 'Build city walls in this city first.' : 'Build a workshop in this city first.';
     else if (WONDERS[item] && campusStatus(state,item)==='complete') reason='This university has already opened.';
     else if (WONDERS[item] && state.cities.some(c=>c.seat===city.seat && c.queue?.item===item)) reason='One of your cities already holds this charter.';
     else if (item==='harbor' && !berth) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
@@ -1212,7 +1214,10 @@ function completeCityProject(state,city) {
       }
     }
     city.buildings.push(queue.item);
-    if (queue.item==='walls') {city.maxHp+=50; city.hp=Math.min(city.maxHp,city.hp+50);}
+    if (cityCenterProject(queue.item)) {
+      const bonus=FORTIFICATIONS[queue.item].health;
+      city.maxHp+=bonus;city.hp=Math.min(city.maxHp,city.hp+bonus);
+    }
   }
   const departure=queue.item==='settler';
   const message=departure ? city.name+' sent out a settler. One resident left the city.' : city.name+' completed '+PRODUCTS[queue.item].name+'.';
@@ -1353,7 +1358,7 @@ function endTurn(state,seat) {
 // research or a city's private construction queue to the attacking client.
 export function campaignView(state, seat) {
   if(!state || state.intel?.seat===seat) return state;
-  state=actingPerspective(state,seat);
+  state=actingPerspective(restoreCityDefenses(state),seat);
   const view=projectForSeat(state,seat), forecasts={}, unavailableSites=[], portSites={}, workSites={}, districtChoices=[];
   const harborChoices={};
   for(const city of view.cities) if(city.seat===seat) {
@@ -1387,6 +1392,10 @@ export function campaignView(state, seat) {
     }
   }
   return {...view,intel:{...view.intel,turnReadiness:true,borderCharters:true,forecasts,unavailableSites,portSites,harborSites:harborChoices,workSites,districtChoices}};
+}
+
+export function getBatteryTargets(state,seat,cityId) {
+  return batteryTargets(state,seat,cityOrNull(state,cityId),hexDistance,UNIT_TYPES);
 }
 
 export function combatPreview(state, unitId, target) {
@@ -1662,6 +1671,8 @@ function resolveOrder(source,seat,action) {
   } else if (action.type==='visitStation') {
     const visit=visitFieldStation(next,seat,action);
     record(next,seat,'visitStation',visit.text,visit.tile,{unit:action.unit});
+  } else if (action.type==='cityBattery') {
+    fireBattery(next,seat,action,getBatteryTargets(next,seat,action.city),record);
   } else if (action.type==='charterBorder') {
     const offer = getBorderCharter(next, seat, action.city);
     if (!offer.enabled) throw new Error(offer.reason);
@@ -1788,6 +1799,7 @@ function botProject(state,city,difficulty) {
       if (city.id===nearest.id) choices.push('armor','cavalry','riflemen','melee');
     }
   }
+  if (city.buildings.includes('walls') && rivals.some(u=>UNIT_TYPES[u.type]?.strength && hexDistance(city.tile,u.tile)<=3)) choices.push('modernWalls');
   if(difficulty==='easy') {
     const danger=rivals.some(unit=>UNIT_TYPES[unit.type].strength && hexDistance(unit.tile,city.tile)<=2);
     if(danger && !count('melee'))choices.push('melee');
@@ -1872,7 +1884,7 @@ function botProject(state,city,difficulty) {
   if (count('melee')<2) choices.push('melee');
   if (cities.length<3 && count('settler')===0) choices.push('settler');
   if (city.buildings.includes('harbor') && !survey) choices.push('shipyard');
-  choices.push('workshop','walls','monument','granary','foundry','academy','shop','grainMill','printingHouse');
+  choices.push('modernWalls','workshop','walls','monument','granary','foundry','academy','shop','grainMill','printingHouse');
   if (count('melee')<4) choices.push('melee');
   const netIncome=getStats(state,city.seat).capitalIncome;
   const committed=cities.reduce((sum,c)=>sum+unitUpkeep(c.queue?.item),0);
@@ -2140,6 +2152,10 @@ export function chooseBotActionFromView(view,difficulty=view.players[view.turn]?
     visible.includes(port.portTile) && sameTeam(view,seat,port.seat))} : {};
   const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,borderCharters:view.influencePlanning===1,...observedBerths,...friendlyHarbors}};
   const player = state.players[seat];
+  for(const city of state.cities.filter(c=>c.seat===seat && c.buildings.includes('modernWalls'))){
+    const [target]=getBatteryTargets(state,seat,city.id);
+    if(target)return batteryOrder(city,state.round,target);
+  }
   if (!state.cities.some(c=>c.seat===seat)) {
     const pioneer=state.units.find(u=>u.type==='settler' && u.seat===seat && u.moves>0);
     if (pioneer && canSettle(state,seat,pioneer.tile)) return {type:'found',unit:pioneer.id};

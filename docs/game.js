@@ -753,6 +753,7 @@ const guideSections = {
   battle: {label:'Field tactics', entries:[
     ['Train a scout', 'Train a Scout after founding a city. It has three movement points to a Militia unit’s two. Move again after revealing new ground. Topographic Mapping makes foothills cost only one point for scouts and mounted scouts.'],
     ['Choose a frontier formation', 'Trail skirmishers cross woods and hills for one movement point. Pike Guards make poor targets for cavalry and gain a bonus when attacking mounted scouts.'],
+    ['Fire a city battery', 'Build City walls in the city center. After Motorization, upgrade to Modern fortifications. Select the city, choose Fire city battery, then click a highlighted field force to review the shot. A city can fire once per round.'],
     ['Support an assault', 'Siege Engineers attack city walls directly, including in garrisoned cities. An adjacent friendly Signal Corps adds 8 damage against rival civilizations.'],
     ['Read the terrain', 'Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.'],
     ['Preview an attack', 'Select a military unit and click a highlighted enemy. The combat forecast shows the damage and possible losses. Choose Confirm attack to commit, or return to the map to reconsider. An attack spends the unit’s remaining movement.'],
@@ -816,7 +817,7 @@ function guideTopics(chapter, language, state) {
     const tree=councilTree(state || {researchPace:2},'research');
     const name=value=>translate(value,language);
     for(const [item,building] of Object.entries(BUILDINGS)) {
-      if(!building.tech || !tree[building.tech] || !(building.yields || item==='workshop' || item==='walls'))continue;
+      if(!building.tech || !tree[building.tech] || !(building.yields || item==='workshop' || item==='walls' || item==='modernWalls'))continue;
       const tech=name(tree[building.tech].name);
       const facility=building.building ? name(BUILDINGS[building.building].name) : '';
       const cost=building.required;

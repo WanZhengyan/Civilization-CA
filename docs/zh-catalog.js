@@ -6,6 +6,25 @@ import {trainingTranslations} from './combat-training.js';
 import {positionTranslations} from './field-position.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
+section(`
+Modern fortifications|现代城防
+Fire a city battery|使用城防炮台
+Build City walls in the city center. After Motorization, upgrade to Modern fortifications. Select the city, choose Fire city battery, then click a highlighted field force to review the shot. A city can fire once per round.|在市中心建造城墙，研究机动化后可升级为现代城防。选中城市，选择「发动城防炮击」，再点击高亮敌军查看预估伤害。每座城市每轮可炮击一次。
+Built in the city center. Adds 50 city health, reduces incoming damage by 7 and strengthens retaliation.|建在市中心。城市生命上限增加 50，受到的伤害减少 7，并增强反击。
+Upgrades the city center. Adds 35 city health and one battery shot per round for up to 32 damage against visible field forces within two hexes.|升级市中心城防，城市生命上限增加 35。每轮可炮击一次，两格内可见的野战部队最多受到 32 点伤害。
+Build city walls in this city first.|请先在本城建成城墙。
+City center|市中心
+City battery|城防炮台
+Cancel targeting|取消瞄准
+Fire city battery|发动城防炮击
+Battery fired this round.|本轮已炮击。
+Two-hex range|射程两格
+No visible field forces in range.|射程内没有可见敌军。
+Choose a highlighted field formation.|请选择高亮地块上的敌方部队。
+This city can fire once per round.|这座城市每轮可炮击一次。
+City battery orders changed. Review the target again.|炮击指令已过期，请重新查看目标。
+The city battery fired on a field formation.|城防炮台攻击了一支野战部队。
+`);
 section(serviceTranslations);
 section(`
 Field expedition commissioned.|已委托野外考察。

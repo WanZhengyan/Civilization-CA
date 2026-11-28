@@ -1095,3 +1095,33 @@ test('rooms reject small-city settler orders and duplicate population charges af
   assert.equal(reconnected.game.cities[0].population,2);
   assert.equal(reconnected.game.units.filter(u=>u.seat===0 && u.type==='settler').length,1);
 });
+
+test('two allied city batteries must recheck a common target when an earlier shot changes its health',async t=>{
+  const f=roomFixture(t),seats=[{kind:'human',team:0},{kind:'human',team:0},{kind:'human',team:1}];
+  const host=await f.call('POST',{op:'create',name:'North',seats},null,201),code=host.room.code;
+  const ally=await f.call('POST',{op:'join',code,name:'South'}),rival=await f.call('POST',{op:'join',code,name:'East'});
+  await f.call('POST',{op:'start',code,revision:rival.room.revision},host.token);
+  let game=rules.createGame(['North','South','East'],'la',{seed:39,teams:[0,0,1],simultaneousTeams:true});
+  for(const seat of [0,1,2]){
+    game=rules.applyAction(game,seat,{type:'found',unit:game.units.find(u=>u.seat===seat).id});
+    game=rules.applyAction(game,seat,{type:'end'});
+  }
+  const [first,second]=game.cities,ring=rules.getMap(game).neighbors(first.tile);
+  first.buildings=['walls','modernWalls'];second.buildings=['walls','modernWalls'];second.tile=ring[0];
+  game.units=[{seat:2,id:'cavalry-test',type:'cavalry',tile:ring[1],hp:95,maxHp:95,moves:0,maxMoves:3}];game.barbarians={camps:[],parties:[]};
+  f.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(game),code);
+  const {captureRoomOrder}=await import('../docs/room-turn.js'),{batteryOrder}=await import('../docs/city-defenses.js');
+  async function quote(member,city){
+    const room=(await f.call('GET',{code},member.token)).room;
+    const target=rules.getBatteryTargets(room.game,room.you,city.id)[0];
+    return captureRoomOrder(room,batteryOrder(city,room.game.round,target));
+  }
+  const [a,b]=await Promise.all([quote(host,first),quote(ally,second)]);
+  const firstShot=(await f.call('POST',a,host.token,200)).room;
+  assert.equal(firstShot.game.units[0].hp,63);
+  await f.call('POST',b,ally.token,409);
+  const updated=await quote(ally,second);
+  const secondShot=(await f.call('POST',updated,ally.token,200)).room;
+  assert.equal(secondShot.game.units[0].hp,31);
+  assert.deepEqual(rules.getBatteryTargets(secondShot.game,1,second.id),[]);
+});
