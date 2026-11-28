@@ -10,6 +10,8 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 Civilization CA is an independent, unofficial browser game set in California. We modeled its hex map, city production, and separate technology and civics trees on *Sid Meier’s Civilization VI*.
 
+Made together with ChatGPT.
+
 This project has no affiliation with, sponsorship from, or endorsement by Firaxis Games, 2K, or Take-Two Interactive. *Civilization* and *Sid Meier’s Civilization* are registered trademarks of Take-Two Interactive Software, Inc.
 
 ## Your first campaign
@@ -156,5 +158,3 @@ Solo games use browser storage. Online rooms and visitor counts use a Cloudflare
 4. Set the `civitas-api-origin` meta tag in both HTML entry points to the Worker’s HTTPS origin. Publish the frontend and join a room from two browser sessions to check that both see the next turn and their own explored map. The maintained service accepts the project’s Pages origin, `https://wanzhengyan.github.io`. [D1 migration reference](https://developers.cloudflare.com/d1/reference/migrations/)
 
 Interface icons are from Lucide. See the [third-party notices](./THIRD-PARTY-NOTICES.txt).
-
-Made together with ChatGPT.
