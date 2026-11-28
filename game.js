@@ -1274,7 +1274,20 @@ async function init({ render, locate, toast: showToast }) {
   document.getElementById('title-nav').addEventListener('click',()=>goHome());
   title.addEventListener('click', event => {
     const locale = event.target.closest('[data-title-lang]')?.dataset.titleLang;
-    if (locale) setLanguage(locale);
+    if (!locale || locale === getLanguage()) return;
+    setLanguage(locale);
+    // These views render their own bilingual text, including search results.
+    if (modal === 'help' || modal === 'gazetteer') {
+      const query = dialog.querySelector('#guide-query')?.value;
+      const expanded = Array.from(dialog.querySelectorAll('details'), detail => detail.open);
+      drawDialog();
+      dialog.querySelectorAll('details').forEach((detail, index) => { detail.open = expanded[index]; });
+      if (query) {
+        const field = dialog.querySelector('#guide-query');
+        field.value = query;
+        field.dispatchEvent(new Event('input'));
+      }
+    }
   });
   // Back from a started campaign restores the selected setup. Reloading also
   // restores the seat or tutorial through the same validated deep-link path.

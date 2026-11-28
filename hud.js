@@ -1,3 +1,4 @@
+import {TERRAIN_LABELS as terrain} from './maps.js';
 import {trainedAs} from './unit-service.js';
 import {cityCenterProject,batteryOrder} from './city-defenses.js';
 import {getBatteryTargets} from './rules.js';
@@ -71,7 +72,6 @@ import {FACTIONS,getMap,getCivicOptions,getEra,ERAS,MAX_ROUNDS,getRouteDetail,ge
 const el=id=>document.getElementById(id);
 const names=FACTIONS.map(f=>f.name);
 const items=Object.fromEntries(Object.entries({...UNIT_TYPES,...BUILDINGS,...IMPROVEMENTS,[SCIENCE_PROJECT.id]:SCIENCE_PROJECT}).map(([key,v])=>[key,v.name]));
-const terrain={ocean:"Open ocean",coast:"Coast",plains:"Lowlands",urban:"Urban",forest:"Woodland",hills:"Foothills",mountains:"Mountains"};
 const unitRole={settler:"Civilian unit",builder:"Engineering unit",melee:"Melee unit",ranged:"Ranged unit"};
 const isSeaUnit=item=>UNIT_TYPES[item]?.domain==="sea";
 const portBuildings=new Set(["harbor","shipyard"]);
@@ -412,7 +412,7 @@ function inspect(){
   const territory=visible.has(tile.id) ? getActions(state,view.seat,tile.id)[0] : null;
   entityTabs(tile.id,activeUnit);
   const disabled=!mayOrder()||!own;
-  let info="",actions="",explanation="";
+  let info="",actions="",explanation="",nearestCity="";
   selectedOptions=activeUnit?getUnitOptions(state,activeUnit.id):null;
   updateSurvey();
   if(activeUnit){
@@ -433,7 +433,7 @@ function inspect(){
         actions+=actionButton("found",foundingLabel(state,view.seat),o.canFound?"Settle here":"Unavailable","gold",disabled||!o.canFound);
         const assessment=survey.get(u.tile);
         explanation=assessment?surveySummary(assessment,true):"Settle at least three hexes from every city, with movement remaining.";
-        if(assessment?.nearestCity && !explanation.includes(assessment.nearestCity.name))explanation+=" "+nearestCityText(assessment);
+        if(assessment?.nearestCity && !explanation.includes(assessment.nearestCity.name))nearestCity=nearestCityText(assessment);
       }else if(u.type==="builder"||u.type==="workboat"){
         const water=u.type==="workboat";
         const localSite=state.board[tile.id];
@@ -568,7 +568,7 @@ function inspect(){
   }
   if(order==="attack")explanation="Select an enemy outlined in red to review the combat forecast.";
   el("entity-info").innerHTML=info;
-  el("entity-commands").innerHTML='<div class="orders">'+actions+'</div>'+note(explanation);
+  el("entity-commands").innerHTML='<div class="orders">'+actions+'</div>'+note(explanation)+note(nearestCity);
 }
 function currentMove(){
   const unit=getUnit();

@@ -86,6 +86,11 @@ const SAN_DIEGO = {
 };
 
 const terrainKey = { '~':'ocean', c:'coast', u:'urban', p:'plains', h:'hills', f:'forest', m:'mountains' };
+export const TERRAIN_LABELS = {
+  ocean:'Open ocean', coast:'Coast', plains:'Lowlands', urban:'Urban',
+  forest:'Woodland', hills:'Foothills', mountains:'Mountains'
+};
+
 const terrainSuffix = {coast:'shore',urban:'district',plains:'lowlands',hills:'foothills',forest:'woodland',mountains:'ridge'};
 
 function chart(config) {
