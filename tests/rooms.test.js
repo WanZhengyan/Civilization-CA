@@ -791,22 +791,94 @@ test('room authority awards the selected science or conquest victory to both mem
 });
 
 
-test('rooms keep the council rules they were opened under, including unstarted lobbies',async t=>{
+test('new, coastal and earlier lobbies start and reconnect with the council rules they opened under',async t=>{
   const f=roomFixture(t);
-  for (const historical of [false,true]) {
+  for (const pace of [2,1,undefined]) {
     const seats=await twoPlayers(f);
-    if (historical) {
+    if (pace!==2) {
       const stored=f.sqlite.prepare('SELECT members FROM game_rooms WHERE code=?').get(seats.code);
       const members=JSON.parse(stored.members);
-      delete members[0].researchPace;delete members[0].waterwayVersion;
+      if(pace===undefined) {
+        delete members[0].researchPace;
+        delete members[0].waterwayVersion;
+      } else members[0].researchPace=pace;
       f.sqlite.prepare('UPDATE game_rooms SET members=? WHERE code=?').run(JSON.stringify(members),seats.code);
     }
     const started=await seats.start();
     assert.equal(started.victoryMode,'standard');
-    assert.equal(started.game.researchPace,historical ? undefined : 1);
+    assert.equal(started.game.researchPace,pace);
+    const quote=(options,id)=>options.find(item=>item.item===id);
+    const science=rules.getResearchOptions(started.game,0),civics=rules.getCivicOptions(started.game,0);
+    if(pace!==2){
+      assert.equal(quote(science,'steam').cost,pace===1?44:10);
+      assert.deepEqual(quote(science,'radio').requires,['steam']);
+      assert.equal(quote(civics,'publicRadio').cost,pace===1?57:13);
+      assert.deepEqual(quote(civics,'publicRadio').requires,['conservation']);
+    }else{
+      for(const [track,options] of [['research',science],['civic',civics]]){
+        const advanced=options.find(o=>o.era==='modern' && o.requires.some(key=>quote(options,key)?.era==='modern'));
+        assert(advanced?.locked);
+        await seats.act(seats.host,started.revision,{type:track,item:advanced.item},422);
+      }
+    }
     const rejoined=await seats.read(seats.guest);
-    assert.equal(rejoined.game.researchPace,started.game.researchPace);
+    assert.equal(rejoined.revision,started.revision);
+    assert.equal(rejoined.game.researchPace,pace);
+    assert.deepEqual(rules.getResearchOptions(rejoined.game,1).map(o=>[o.item,o.cost,o.requires]),
+      science.map(o=>[o.item,o.cost,o.requires]));
   }
+});
+
+test('two seats reconnect to the same council rules while prices, prerequisites and banks settle per seat', async t=>{
+  const f=roomFixture(t), seats=await twoPlayers(f);
+  let room=await seats.start();
+  const act=async action=>{room=(await seats.act(seats.host,room.revision,action)).room;};
+  const options=(track,game=room.game)=>track==='research'?rules.getResearchOptions(game,0):rules.getCivicOptions(game,0);
+  const specs=[
+    {track:'research',root:'industry',next:'mechanics',alternate:'agronomy',bank:'science',known:'technologies'},
+    {track:'civic',root:'charter',next:'landRegistry',alternate:'publicWorks',bank:'culture',known:'civics'}
+  ];
+  await act({type:'found',unit:room.game.units.find(u=>u.seat===0).id});
+  for(const {track,root,next} of specs){
+    const project=options(track).find(o=>o.item===next);
+    assert(project.locked);assert.deepEqual(project.requires,[root]);
+    const result=await seats.act(seats.host,room.revision,{type:track,item:next},422);
+    assert(result.error);
+    await act({type:track,item:root});
+  }
+  const switched=new Set();
+  for(let i=0;i<50;i++){
+    let self=room.game.players[0];
+    if(specs.every(s=>self[s.known].includes(s.next)))break;
+    for(const s of specs){
+      if(!self[s.known].includes(s.root) || self[s.known].includes(s.next))continue;
+      if(!self[s.track])await act({type:s.track,item:s.next});
+      self=room.game.players[0];
+      const alternate=options(s.track).find(o=>o.item===s.alternate);
+      if(!switched.has(s.track) && self[s.bank]>0 && alternate.enabled && alternate.remaining>0){
+        const saved=self[s.bank];
+        await act({type:s.track,item:s.alternate});await act({type:s.track,item:s.next});
+        assert.equal(room.game.players[0][s.bank],saved);
+        switched.add(s.track);
+      }
+    }
+    room=await seats.read(seats.host);
+    const before=room.game.players[0],stats=rules.getStats(room.game,0);
+    const orders=specs.map(s=>({track:s,quote:options(s.track).find(o=>o.item===before[s.track])}));
+    await act({type:'end'});
+    const after=room.game.players[0];
+    for(const {track:s,quote} of orders){
+      const paid=quote && after[s.known].includes(quote.item)?quote.cost:0;
+      assert.equal(after[s.bank],before[s.bank]+stats[s.bank+'Income']-paid);
+    }
+    const guest=await seats.read(seats.guest);
+    assert.equal(guest.game.players[0].science,undefined);
+    assert.equal(guest.game.players[0].civic,undefined);
+    await seats.act(seats.guest,guest.revision,{type:'end'});
+    room=await seats.read(seats.host);
+  }
+  assert.equal(switched.size,2);
+  for(const s of specs)assert(room.game.players[0][s.known].includes(s.next));
 });
 
 test('allied observation opens an authenticated private delegation, with one debit, expiry and ticket recovery', async t=>{

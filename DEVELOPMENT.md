@@ -26,6 +26,25 @@ Compare the same seat count and opening across revisions. Look at campaign lengt
 
 For each version, keep a short review with the hypothesis, reference and candidate revisions, report files, the manual observations and the decision. Keep the change when the evidence addresses the original question, or revise it and repeat.
 
+## Branching within each era
+
+The public reference was `93ba4ae`. Its seven Industrial technologies, four Industrial civics and four Modern civics had no prerequisites within their respective eras. We tested whether branching and pricing by prerequisite depth could extend a specialized campaign while keeping the first discovery attainable. Each new tree now has ten prerequisite edges within an era. Across both trees, every later stage in the same era costs more than any earlier stage in that era.
+
+Use `node scripts/playtest-council.mjs --summary` for the nine Large two-governor games on the original LA, SF and SD seeds at all three difficulties. The benchmark plays up to 180 rounds and lists how many games reached each milestone. The fixed human-order comparison uses LA seed 624101, an Arroyo capital with a passive rival and an investment policy that builds available workshops, monuments and universities. Run science and civic goals as separate games and use the selected goal's actual prerequisites in every version.
+
+| Opening or measurement | Reference | Lower prices | Intermediate prices | Released prices |
+| --- | ---: | ---: | ---: | ---: |
+| Median final round in nine Large games | 39 | 42 | 48 | 52 |
+| Rocketry in the single-city university game | 30 | 47 | 58 | 68 |
+| Orbital Survey completed in that science game | 34 | 51 | 62 | 72 |
+| California Expositions in the civic game | 20 | 42 | 48 | 54 |
+
+The first Frontier science and civic remained at median rounds 3 and 4 across the price trials. In the selected Large cohort, seven games ended in science and two in conquest. Eight reached Rocketry, at median round 50.5. Among those matching eight openings, the paired delay from the reference was 17.5 rounds. On three additional Normal starts held out from the price choice, the median end moved from 45 to 72. These small cohorts measure changes on these particular openings.
+
+The selected costs make city investment matter. A single city on the test opening that built no science or civic infrastructure took until round 143 for Rocketry and 163 for California Expositions. Both goals were attainable under the allowed orders. This long wait is also the main tradeoff. The next experiment is whether a first-time player can identify a worthwhile culture or science building directly from a long research estimate.
+
+**Rules and screens.** The full Rocketry route grew from 7 projects costing 461 science to 13 costing 1,298. California Expositions grew from 4 civics costing 130 culture to 10 costing 484. A civilization that reached Modern through civics alone remained unable to select Rocketry with 925 science banked. Five new projects paid their advertised prices and their yields changed by the stated amounts in a legal campaign. Six historical campaigns (three regions, both older pace settings) replayed 2,849 identical AI orders and reached identical final states over the comparison window. Twenty-five checkpoints from an active older save matched its existing council prices, orders and both reserves. In a Chinese round-two game, clicking **Plan Rocketry** showed 1,294 science remaining from 1,298 with four in reserve. Choosing Workshop Engineering started the project at 4/10. In a 390-pixel Chinese game with six culture in reserve, Public Broadcasting’s 292-point path showed 286 remaining. Both displays preserved the player's current turn and required an explicit order to change the active project.
+
 ## Occupying a port after bombardment
 
 The reference was `cd31a11`. Start the Large LA seed 17 conquest scenario from two settlers. Construct both ports and sail the cutter from the ocean through the river to the lake. After the first shot on round 11, turn the attacking government over to the Normal AI. Keep the defender on end-turn to isolate the occupation decision.

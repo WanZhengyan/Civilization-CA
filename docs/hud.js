@@ -11,6 +11,7 @@ import {naturalWonderArt} from './natural-wonder-art.js';
 import {mountMapWorkspace, compactMap, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
 import {illustration, illustrationPath} from './illustrations.js';
 import {mountBattleReports} from './battle-history.js';
+import {councilStages,stageHeading,renderCouncilPath,prerequisiteLine,projectQuote} from './council-path.js';
 import {researchLinks,syncResearchLens} from './research-catalog.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
@@ -42,6 +43,7 @@ const isSeaUnit=item=>UNIT_TYPES[item]?.domain==="sea";
 const portBuildings=new Set(["harbor","shipyard"]);
 const eraName=id=>ERAS[id]?.name||id;
 let updateWaterKey;
+const councilGoals={research:"",civics:""};
 let mapRegion,councilKind="research",lastCouncilMarkup="",lastProjectsMarkup="";
 const itemDesc={settler:"Founds a new city at least three hexes from another city.",builder:"Builds farms and mines in your territory. Three charges.",melee:"Fights adjacent enemies and captures weakened cities.",ranged:"Strikes enemies up to two hexes away.",granary:"Adds 2 food per turn to help this city grow.",workshop:"Adds 2 production per turn in this city.",monument:"Adds 3 influence per turn.",walls:"Increases this city’s defenses."};
 const symbols={
@@ -604,32 +606,34 @@ function paintResearch(){
     const oldPolicyPanel=council.previousElementSibling;
     if(id==='civics') addPolicyPanel(council,state,seat,mayOrder(),action=>{el('research-modal').close();Game.doAction(action)});
     else if(oldPolicyPanel?.classList.contains('civic-government')) oldPolicyPanel.remove();
-    const optionNames=Object.fromEntries(c.options.map(o=>[o.item,o.label]));
-    const tiers=[...new Set(c.options.map(o=>o.era))];
-    const eraGroups=tiers.map(tier=>{
-      const cards=c.options.filter(o=>o.era===tier).map(o=>{
-        const label=o.completed?"Complete":o.locked?"Locked":o.turns===null?turnsText(null):o.active?o.turns+(o.turns===1?" turn left":" turns left"):o.turns===0?"Ready":turnsText(o.turns);
-        const needs=o.requires.map(key=>optionNames[key]||key);
-        const prereq=needs.length?'<span class="project-prereq">Requires '+esc(needs.join(" + "))+'</span>':'';
-        const buildingNotes=Object.entries(BUILDINGS).filter(([item,def])=>!WONDERS[item] && (def.tech||def.civic)===o.item)
-          .map(([,def])=>'<span class="project-prereqs"><span>Unlocks building</span> · <span>'+esc(def.name)+'</span></span>').join('');
-        let researchNotes='';
-        if (id==='research') {
-          const links=researchLinks(o.item,c.options,UNIT_TYPES);
-          for (const [label,items] of [['Trains',links.formations],['Leads to',links.discoveries]]) {
+    const byId=new Map(c.options.map(o=>[o.item,o]));
+    const goal=byId.has(councilGoals[id])?councilGoals[id]:"";
+    const tiers=["frontier","industrial","modern"].filter(tier=>c.options.some(o=>o.era===tier));
+    const eraGroups=goal?[]:tiers.map(tier=>{
+      const stages=councilStages(c.options.filter(o=>o.era===tier));
+      const groups=stages.map(([stage,options])=>{
+        const cards=options.map(o=>{
+          const label=o.completed?"Complete":o.locked?"Locked":o.turns===null?turnsText(null):o.active?o.turns+(o.turns===1?" turn left":" turns left"):o.turns===0?"Ready":turnsText(o.turns);
+          const prereq=prerequisiteLine(o,byId);
+          const buildingNotes=Object.entries(BUILDINGS).filter(([item,def])=>!WONDERS[item] && (def.tech||def.civic)===o.item)
+            .map(([,def])=>'<span class="project-prereqs"><span>Unlocks building</span> · <span>'+esc(def.name)+'</span></span>').join('');
+          let researchNotes='';
+          const links=researchLinks(o.item,c.options,id==='research'?UNIT_TYPES:{});
+          for (const [label,items] of [['Trains',links.formations],[id==='research'?'Leads to':'Leads to civics',links.discoveries]]) {
             if (items.length) researchNotes+='<span class="research-links"><span>'+esc(label)+'</span> · <span>'+items.map(name=>'<span>'+esc(name)+'</span>').join(', ')+'</span></span>';
           }
-        }
-        return '<button class="project-option" data-project="'+esc(o.item)+'" data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" '+(!o.enabled||!mayOrder()?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+buildingNotes+prereq+researchNotes+'<span class="project-meta"><span>'+esc(o.cost+" "+c.resource)+'</span><b>'+esc(label)+'</b></span></button>';
+          return '<button class="project-option" data-project="'+esc(o.item)+'" '+(o.locked?'data-plan-item="'+esc(o.item)+'" ':'')+'data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" ' +(!o.locked && (!o.enabled||!mayOrder())?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+buildingNotes+prereq+researchNotes+'<span class="project-meta"><span translate="no">'+projectQuote(o,c.resource)+'</span><b>'+esc(o.locked?"View prerequisites":label)+'</b></span></button>';
+        }).join("");
+        return '<div class="council-stage-group">'+stageHeading(stage)+'<div class="project-grid">'+cards+'</div></div>';
       }).join("");
-      return '<section class="council-tier" data-era="'+esc(tier)+'"><h3>'+esc(eraName(tier))+'</h3><div class="project-grid">'+cards+'</div></section>';
+      return '<section class="council-tier" data-era="'+esc(tier)+'"><h3>'+esc(eraName(tier))+'</h3>'+groups+'</section>';
     });
     const bankNote=active ? '<p class="modal-muted">'+(id==='research'
       ? 'Changing research keeps your banked science.' : 'Changing debates keeps your banked culture.')+'</p>' : '';
-    const markup='<div class="council-summary"><strong>'+esc(c.balance+" "+c.resource+" banked")+'</strong><span>'+esc("+"+c.rate+" per turn")+'</span><span>'+c.completed+' / '+c.options.length+' complete</span></div>'+bankNote+eraGroups.join("");
+    const markup='<div class="council-summary"><strong>'+esc(c.balance+" "+c.resource+" banked")+'</strong><span>'+esc("+"+c.rate+" per turn")+'</span><span>'+c.completed+' / '+c.options.length+' complete</span></div>'+bankNote+renderCouncilPath(c,goal,mayOrder())+eraGroups.join("");
     if(markup!==lastCouncilMarkup){el("research-options").innerHTML=markup;lastCouncilMarkup=markup}
-    updateCivicAgenda(council,id==='civics',UNIT_TYPES);
-    syncResearchLens(id,el("research-options"));
+    updateCivicAgenda(council,id==='civics' && !goal,UNIT_TYPES);
+    syncResearchLens(id,el("research-options"),Boolean(goal));
   }
   paintProjects();
 }
@@ -639,6 +643,13 @@ function openCouncil(id){
   if(!dialog.open)dialog.showModal();
   paintResearch();
   dialog.querySelector(".council-scroll").scrollTop=0;
+}
+function showCouncilGoal(item,focusTitle=true){
+  councilGoals[councilKind]=item;paintResearch();
+  const panel=el('research-options');
+  const focus=item && focusTitle ? panel.querySelector('[data-path-title]') : panel.querySelector('[data-council-goal]');
+  focus?.focus({preventScroll:true});
+  el('research-modal').querySelector('.council-scroll').scrollTop=0;
 }
 function forecastRow(role,label,before,after,max,damage,color){
   const percent=percentage(before,max), remaining=percentage(after,max);
@@ -682,6 +693,7 @@ function paint(next){
   const regionKey=mapRegion.id+'-'+mapRegion.mapSize;
   const key=regionKey+':'+mode+':'+(room?.code||next.session||'')+':'+seat;
   const focusOpening=key!==matchKey||!selectedTile||(state.round===1&&!explored.has(selectedTile));
+  if(key!==matchKey){councilGoals.research="";councilGoals.civics="";}
   if(focusOpening){endPlacement();matchKey=key;activeRoster="units";selectOpening()}
   if(kind==="unit"){
     const u=getUnit();if(u)selectedTile=u.tile;else select(selectedTile,null,Boolean(cityAt(selectedTile)));
@@ -907,7 +919,23 @@ function mount(){
   };
   el("close-research").onclick=()=>el("research-modal").close();
   el("research-modal").onclick=e=>{if(e.target===el("research-modal"))el("research-modal").close()};
-  el("research-options").onclick=e=>{const b=e.target.closest("[data-project]");if(!b||b.disabled||!mayOrder())return;el("research-modal").close();Game.doAction({type:councilTypes[councilKind].action,item:b.dataset.project})};
+  const councilPanel=el("research-options");
+  councilPanel.onchange=e=>{if(e.target.matches("[data-council-goal]"))showCouncilGoal(e.target.value,false)};
+  councilPanel.onclick=e=>{
+    const plan=e.target.closest("[data-plan-item],[data-path-back]");
+    if(plan){showCouncilGoal(plan.dataset.planItem || "");return;}
+    const b=e.target.closest("[data-project],[data-route-order]");
+    if(!b || b.disabled || !mayOrder())return;
+    const item=b.dataset.routeOrder || b.dataset.project;
+    if(!councilTypes[councilKind].options(view.state,view.seat).some(o=>o.item===item && o.enabled))return;
+    el("research-modal").close();Game.doAction({type:councilTypes[councilKind].action,item});
+  };
+  document.addEventListener('civitas-plan-research',e=>{
+    const item=e.detail?.item;
+    if(!view || !getResearchOptions(view.state,view.seat).some(o=>o.item===item))return;
+    openCouncil('research');showCouncilGoal(item);
+  });
+  document.addEventListener('civitas-language',()=>{if(view && el('research-modal').open)paintResearch()});
   el("close-combat").onclick=closeCombat;el("cancel-combat").onclick=closeCombat;
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};

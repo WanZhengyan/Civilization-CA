@@ -1,3 +1,4 @@
+import {TECHS} from './progression.js';
 import {CIVILIZATIONS} from './civilizations.js';
 import {modeDetails,modeLabels,traitLine} from './campaign-choices.js';
 import {allowsConquest,allowsScience,scienceProgress} from './victory-rules.js';
@@ -31,10 +32,11 @@ export function victoryPanel(state,seat,escape) {
     const p=scienceProgress(state,seat);
     if(p){
       html+='<h3 class="journal-heading">Science victory</h3><ul class="victory-metrics">'+
-        p.prerequisites.map(t=>metric(t.id==='radio'?'Radio Networks':'Motorization',text(t.complete?'Complete':'Pending'))).join('')+
+        p.prerequisites.map(t=>metric(TECHS[t.id].name,text(t.complete?'Complete':'Pending'))).join('')+
         metric('Rocketry',text(p.hasRocketry?'Complete':'Pending'))+
         metric('Orbital Survey',p.production+' / '+p.required)+'</ul>';
       if(!finished){
+        if(!p.hasRocketry)html+='<button type="button" class="modal-secondary" data-act="plan-rocketry">Plan Rocketry</button>';
         html+=p.cityName?'<p class="modal-muted">'+text(p.paused?'Paused project':'Launch city')+' · <span translate="no">'+escape(p.cityName)+'</span></p>':
           '<p class="modal-muted">'+(p.hasRocketry?'Open City production and choose Orbital Survey.':'Research Radio Networks and Motorization to unlock Rocketry.')+'</p>';
       }

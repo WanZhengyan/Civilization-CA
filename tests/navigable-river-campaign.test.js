@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {createGame,applyAction,campaignView,chooseBotAction,getMap,getProjectSites,getUnitOptions,UNIT_TYPES} from '../docs/rules.js';
 import {waterDistances} from '../docs/water-navigation.js';
 
-function playToFirstLakeStrike() {
- const fresh=()=>createGame([{name:'Fleet'},{name:'Bank'}],'la',{seed:17,mapSize:'large',victoryMode:'conquest'});
+function playToFirstLakeStrike(researchPace=2) {
+ const fresh=()=>createGame([{name:'Fleet'},{name:'Bank'}],'la',{seed:17,mapSize:'large',victoryMode:'conquest',researchPace});
  let s=fresh();
  const map=getMap(s),destination=s.units[1].tile;
  const lakeside=map.neighbors(destination).find(id=>map.byId[id].waterway);
@@ -46,8 +46,8 @@ test('a newly founded coastal city launches a cutter which sails into a generate
  assert.deepEqual(s,replay);
 });
 
-test('a governor sends a ground force to occupy the capital bombarded by its cutter',()=>{
- let {s}=playToFirstLakeStrike();
+for(const researchPace of [1,2])test('a governor sends a ground force to occupy the capital bombarded by its cutter with council profile '+researchPace,()=>{
+ let {s}=playToFirstLakeStrike(researchPace);
  const objective=s.cities.find(city=>city.seat===1).tile;
  const siege=[],train=[],checked=new Set();
  while(s.phase==='playing' && s.round<=20){
@@ -71,9 +71,10 @@ test('a governor sends a ground force to occupy the capital bombarded by its cut
   s=applyAction(s,seat,action);
  }
  assert.deepEqual(checked,new Set(['commission','advance']));
- assert.deepEqual(train,['melee']);
+ assert.equal(train.length,1);assert.ok(UNIT_TYPES[train[0]].captures);
  assert.equal(siege.at(-2).type,'cutter');
- assert.deepEqual(siege.at(-1),{round:18,type:'melee',hp:1});
+ assert.equal(siege.at(-1).type,train[0]);assert.equal(siege.at(-1).hp,1);
+ if(researchPace===1)assert.deepEqual(siege.at(-1),{round:18,type:'melee',hp:1});
  assert.deepEqual(s.winners,[0]);assert.equal(s.victoryReason,'domination');
 });
 

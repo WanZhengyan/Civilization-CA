@@ -1,8 +1,9 @@
-import {CIVICS} from './progression.js';
+import {councilTree} from './progression.js';
 import {WONDERS} from './wonders.js';
 import {policyOptions} from './policy.js';
 
 export function councilAgenda(state,seat) {
+  const tree=councilTree(state,'civic');
   const cities=state.cities.filter(c=>c.seat===seat);
   const owns=key=>state.players[seat].civics.includes(key);
   const ideas=[seat%2 ? 'publicWorks' : 'charter'];
@@ -11,8 +12,8 @@ export function councilAgenda(state,seat) {
   if (cities.some(c=>c.buildings.some(id=>WONDERS[id]))) ideas.push('exposition','normalSchools','conservation');
   if (cities.some(c=>c.population>=3)) ideas.push('housingTrust','normalSchools','federation');
   if (Object.values(state.board).some(t=>t.owner===seat && !t.pillaged && ['farm','orchard'].includes(t.improvement))) ideas.push('irrigationDistricts');
-  ideas.push('charter','federation','publicWorks','conservation','irrigationDistricts','normalSchools','mobilization','publicRadio',...Object.keys(CIVICS));
-  return ideas.find(key=>!owns(key) && CIVICS[key].requires.every(owns));
+  ideas.push('charter','federation','publicWorks','conservation','irrigationDistricts','normalSchools','mobilization','publicRadio',...Object.keys(tree));
+  return ideas.find(key=>!owns(key) && tree[key].requires.every(owns));
 }
 
 export function proposePolicy(state,seat,foodForCity) {

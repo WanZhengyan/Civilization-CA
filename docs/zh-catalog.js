@@ -6,6 +6,18 @@ import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
 section(`
+Applied Mechanics|应用力学
+Each workshop supplies 1 additional production per turn.|每座工坊每回合额外提供 1 点产能。
+Electrical Engineering|电气工程
+Each workshop generates 2 additional science per turn.|每座工坊每回合额外提供 2 点科研。
+Land Registry|土地登记
+Each city earns 1 additional gold per turn.|每座城市每回合额外获得 1 金币。
+Public Libraries|公共图书馆
+Each monument generates 2 additional culture per turn.|每座纪念碑每回合额外提供 2 点文化。
+Regional Planning|区域规划
+Cities with at least 5 residents gain 1 production and 1 culture per turn.|人口达到 5 的城市每回合额外获得 1 点产能和 1 点文化。
+`);
+section(`
 Estimated completion|预计完成
 Immediately|立即完成
 Production remaining|剩余所需生产力
@@ -83,6 +95,9 @@ The chart counts only capitals visible to your side.|仅统计己方视野内已
 Pending|未完成
 Launch city|发射城市
 Paused project|暂停的发射项目
+Plan Rocketry|规划火箭技术路线
+Follow Steam Power with Industrial Metallurgy and Electrical Engineering to unlock Radio Networks. The other branch of Rocketry runs through District Railways and Motorization.|研究蒸汽动力后，依次研究工业冶金和电气工程，即可解锁无线电网络。通向火箭技术的另一条分支需要先研究地区铁路与机械化。
+Land Registry leads to County Federation, then Teachers Colleges and Public Libraries. Libraries increase the culture produced by monuments. On another branch, Park Conservancies rewards cities with suitable land.|土地登记之后可依次推进郡县联邦、师范学院和公共图书馆。公共图书馆会提高纪念碑的文化产出。也可走公园保护区分支，让拥有林地或丘陵的城市获益。
 Rocketry|火箭技术
 Orbital Survey|轨道勘测计划
 Launch a satellite to survey California from orbit. Completing this city project wins a science victory.|发射卫星，从轨道勘测加州。完成此城市项目即可取得科技胜利。
@@ -337,6 +352,8 @@ All eras|所有时代
 Available research only|仅看可研究的科技
 No discoveries match these filters.|没有符合条件的科技。
 Trains|可训练
+View prerequisites|查看前置路线
+Leads to civics|后续市政
 Leads to|后续科技
 Hydrographic Charts|水道测绘
 Ships and fishing crews gain 1 movement point when their next turn begins.|舰艇和渔船从下一回合起每回合增加 1 点移动力。

@@ -1,5 +1,11 @@
 # Campaign updates
 
+## Plan deeper research and civic paths
+
+New campaigns have 19 technologies and 15 civics. Within each era, some projects open a choice of branches and others bring those branches together. Each later stage costs more. Industrial science can proceed from Steam Power (60 science) through Industrial Metallurgy (98) to Electrical Engineering (124). The industrial civic route from County Federation (39 culture) to Teachers Colleges (55) and Public Libraries (77) lets monuments contribute more culture. Reaching an era by one council still leaves the other council’s prerequisites to complete.
+
+Open either council and select a goal to see every outstanding prerequisite and the points still needed after applying your reserve. Shared prerequisites count once. You can start an available step directly. **Victory progress → Plan Rocketry** opens the corresponding science route. An existing save or room retains the costs and prerequisites of its original campaign.
+
 ## Bring troops to port sieges and review orders on the map
 
 When a Normal or Hard governor has a gunship in range of an observed enemy city, it can commission a ground formation and advance it along explored land and bridge crossings. A capture-capable survivor can take the city after the ship fires. The combat forecast shows when a garrison will absorb a hit and when a city needs ground troops to finish the capture.

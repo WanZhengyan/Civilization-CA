@@ -7,7 +7,7 @@ export const ERAS = {
   modern: {id: 'modern', name: 'Modern', rank: 2}
 };
 
-export const TECHS = {
+const originalTechs = {
   agronomy: {name: 'Agronomy', era: 'frontier', requires: [], cost: 9,
     description: 'Each city produces 2 more food per turn.'},
   industry: {name: 'Workshop Engineering', era: 'frontier', requires: [], cost: 10,
@@ -39,7 +39,7 @@ export function eraFor(known = [], adopted = []) {
 
 import {REGIONAL_CIVICS} from './civic-agenda.js';
 
-export const CIVICS = {
+const originalCivics = {
   ...REGIONAL_CIVICS,
   charter: {name: 'Municipal Charter', era: 'frontier', requires: [], cost: 7,
     description: 'Each city generates 1 extra culture per turn.'},
@@ -54,6 +54,59 @@ export const CIVICS = {
   mobilization: {name: 'Civil Mobilization', era: 'modern', requires: ['publicWorks', 'federation'], cost: 12,
     description: 'New military units enter service with 20 extra maximum health.'}
 };
+
+// Saved expeditions retain the catalog and prices present when they began.
+function stagedTree(definitions,requirements,prices) {
+  const tree={};
+  function define(id) {
+    if(tree[id])return tree[id];
+    const project=definitions[id];
+    const requires=requirements[id] ?? project.requires;
+    const parents=requires.map(define);
+    const tier=1+Math.max(0,...parents.filter(parent=>parent.era===project.era).map(parent=>parent.tier));
+    const cost=project.cost+prices[project.era][tier-1];
+    tree[id]={...project,requires,tier,cost};
+    return tree[id];
+  }
+  for(const id of Object.keys(definitions))define(id);
+  return tree;
+}
+
+export const TECHS=stagedTree({
+  ...originalTechs,
+  mechanics:{name:'Applied Mechanics',era:'frontier',requires:['industry'],cost:12,
+    description:'Each workshop supplies 1 additional production per turn.'},
+  electricity:{name:'Electrical Engineering',era:'industrial',requires:['metallurgy'],cost:16,
+    description:'Each workshop generates 2 additional science per turn.'},
+},{
+  navigation:['civics'],steam:['mechanics'],ballistics:['tactics','mechanics'],
+  metallurgy:['steam'],hydrography:['navigation','cartography'],
+  fieldMedicine:['agriculturalScience','tactics'],radio:['electricity'],
+  motorization:['railways','ballistics'],
+},{
+  frontier:[0,16],industrial:[50,80,108],modern:[145,196,270]
+});
+
+export const CIVICS=stagedTree({
+  ...originalCivics,
+  landRegistry:{name:'Land Registry',era:'frontier',requires:['charter'],cost:9,
+    description:'Each city earns 1 additional gold per turn.'},
+  publicLibraries:{name:'Public Libraries',era:'industrial',requires:['normalSchools'],cost:12,
+    description:'Each monument generates 2 additional culture per turn.'},
+  regionalPlanning:{name:'Regional Planning',era:'modern',requires:['housingTrust','exposition'],cost:16,
+    description:'Cities with at least 5 residents gain 1 production and 1 culture per turn.'},
+},{
+  federation:['landRegistry'],conservation:['irrigationDistricts'],normalSchools:['federation'],
+  harborCommission:['publicWorks','federation'],publicRadio:['publicLibraries'],
+  mobilization:['housingTrust','mutualAid'],exposition:['publicRadio','conservation'],
+},{
+  frontier:[0,10],industrial:[28,45,65],modern:[82,115,150]
+});
+
+export function councilTree(state,focus) {
+  if(focus==='research')return state.researchPace===2 ? TECHS : originalTechs;
+  return state.researchPace===2 ? CIVICS : originalCivics;
+}
 
 export const ERA_UNITS = {
   cavalry: {name:'Mounted Scouts', era:'frontier', role:'Recon unit', tech:'agronomy', captures:true,

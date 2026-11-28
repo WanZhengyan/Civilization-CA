@@ -30,6 +30,12 @@ The visitor footer counts anonymous browser profiles on each site from the day t
 
 On a touch map, tap a highlighted destination to compare the route cost and remaining movement, then confirm or cancel. Open **Battle reports → Attacks on me** to replay incoming fights and see the recorded health of both sides when visible. While attacking a port, fire on the garrison first. Warships can reduce the city to 1 HP. A surviving capture-capable ground unit, such as Militia, can then occupy it.
 
+## Plan research and civics
+
+Choose a goal in the science or civic council to see its stages, outstanding prerequisites and remaining cost. A shared prerequisite appears once. Your current reserve applies to the route, and switching projects keeps banked points. To work toward spaceflight, open **Victory progress → Plan Rocketry** and choose an available step.
+
+Industrial Metallurgy requires Steam Power. Completing Metallurgy then unlocks Electrical Engineering, which makes each workshop generate 2 additional science a turn. The three projects cost 60, 98 and 124 science respectively. In the civic council, County Federation (39 culture) precedes Teachers Colleges (55) and Public Libraries (77). Each monument then produces 2 additional culture a turn. The route shown in a resumed campaign uses that campaign’s original rules.
+
 ## Rivers, delegations and the campaign soundtrack
 
 Explore the lake and river drawn for your region and seed. A port on fresh water can launch a cutter or a fishing crew. Trace connected blue hexes to sail under marked bridges. Crews can load a catch at a surveyed shoal or their own fishery. Land it at an owned harbor for 3 city food and 1 stored fish.
@@ -81,6 +87,10 @@ Open **Change map** to choose a different region. In **Create room**, pick two t
 Each team shares sight and explored terrain. In a new team room both allies can give orders to their own pieces during the same turn. Mark ready when finished. The next team starts once all surviving teammates are ready. Teammates keep separate treasuries and production queues. Teammates can defend each other’s cities and win together. The host sets the victory mode. Each human can choose a free civilization or draw one at random, and the host sets the computer players’ choices. Configured rooms draw the opening team and then a member of that team. Assign the same team to friends you want on your side. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
 
 ## 中文快速开始
+
+从左侧打开科技或市政议会，选择想完成的项目。路线会列出仍需完成的前置项目，合流处的共同前置只计算一次，并扣除已有储备。可以在路线中直接开始一个已解锁的项目，或从「胜利进度 → 规划火箭技术路线」查看科技胜利路线。
+
+例如，新战役中的工业科技可依次研究蒸汽动力（60 科研点）、工业冶金（98）和电气工程（124）。电气工程让每座工坊每回合多产 2 科研点。工业市政可依次推进郡县联邦（39 文化点）、师范学院（55）和公共图书馆（77），让每座纪念碑每回合多产 2 文化点。旧战役继续使用原来的路线和费用。
 
 在触屏地图上，先点目的地查看路线、移动消耗和剩余移动力，再确认或取消。点「战报 → 我方遇袭」可找到敌方攻击、查看目击时双方的生命变化，并在地图上回放。攻打港城时，驻军会先承受攻击。舰炮可把城市削弱至 1 点生命，最后用民兵等可占城的地面部队完成占领。
 

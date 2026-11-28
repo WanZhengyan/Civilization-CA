@@ -24,7 +24,7 @@ function filterCards(container) {
   toolbar.querySelector('[role=status]').hidden=Boolean(matches);
 }
 
-export function syncResearchLens(track, container) {
+export function syncResearchLens(track, container, planning=false) {
   if (!toolbar && track==='research') {
     toolbar=document.createElement('div');
     toolbar.className='research-filters';
@@ -33,6 +33,6 @@ export function syncResearchLens(track, container) {
     container.before(toolbar);
   }
   if (!toolbar) return;
-  toolbar.hidden=track!=='research';
+  toolbar.hidden=planning || track!=='research';
   if (track==='research') filterCards(container);
 }

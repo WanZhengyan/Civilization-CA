@@ -38,11 +38,14 @@ test('science-only victory progress follows a real launch, respects fog, and tra
   const view=seat=>victoryPanel(campaignView(state,seat),seat,encodeURIComponent);
   assert.match(view(0),new RegExp('0 / '+SCIENCE_PROJECT.required));
   assert.doesNotMatch(view(0),/capitals confirmed|round 30|civic target/);
+  assert.match(view(0),/data-act="plan-rocketry"/);
+  assert.equal(translate('Plan Rocketry','zh-CN'),'规划火箭技术路线');
   state=applyAction(state,0,{type:'found',unit:state.units[0].id});
   const city=state.cities[0].id;
   state.players[0].technologies.push('industry','tactics','steam','ballistics','radio','motorization');
   state.players[0].science=getResearchOptions(state,0).find(o=>o.item==='rocketry').cost;
   state=applyAction(state,0,{type:'research',item:'rocketry'});
+  assert.doesNotMatch(view(0),/data-act="plan-rocketry"/);
   const launch=getProductionOptions(state,city,{replace:true}).find(o=>o.item===SCIENCE_PROJECT.id);
   const buttons=orderButtons(launch,true);
   assert.match(buttons,/data-produce="orbitalSurvey"/);
