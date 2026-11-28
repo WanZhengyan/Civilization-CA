@@ -60,3 +60,17 @@
   .solo-options:not(.solo-rivals) label{grid-template-columns:1rem minmax(0,1fr) auto}
   .solo-options:not(.solo-rivals) small{grid-column:auto}
 }
+
+.room-size{border:0;padding:0;margin:0;min-width:0}
+.room-size legend{padding:0 0 .4rem;color:#e8dfcc;font-weight:600}
+.room-size>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.4rem}
+.room-size label{position:relative;display:block;cursor:pointer}
+.room-size input{position:absolute;width:1px;height:1px;opacity:0}
+.room-size span{display:grid;place-items:center;min-height:44px;border:1px solid #5e6664;border-radius:4px;background:#1e252b;color:#d8d9d1}
+.room-size input:checked+span{color:#f5ddb1;border-color:#c8a56d;background:#3b3931}
+.room-size input:focus-visible+span{outline:2px solid #9cdfea;outline-offset:2px}
+.room-size input:disabled+span{opacity:.65}
+
+.size-options{container-type:inline-size}
+.size-options>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+@container (max-width:23rem){.size-options>div{grid-template-columns:1fr}}

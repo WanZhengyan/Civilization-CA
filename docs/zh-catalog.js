@@ -1,6 +1,57 @@
 // The English UI copy is the catalog key. The rules and network protocol keep
 // their canonical IDs in both languages.
+import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
+section(serviceTranslations);
+section(`
+Border expansion|领土扩张
+Locate next district|在地图上查看候选地
+Explore or clear neutral land within three steps.|探索或清除三步内无主土地上的障碍。
+Next district|下一块土地
+Border progress|扩地进度
+Frontier blocked|暂无可扩展土地
+Points per turn|每回合扩地点数
+Grow city borders|扩大城市领土
+Each resident adds one border point at the end of your turn. A city starts at eight points per district. Each new district raises the next cost by two, up to sixteen. Only visible, unclaimed land within three connected land steps qualifies. If the frontier is blocked, explore or secure a clear route. Progress pauses until a parcel opens.|每回合结束时，每名居民提供一点扩地进度。首块土地需要八点，每次扩地后增加两点，最高十六点。候选地必须是当前可见的无主陆地，从城市沿己方陆地最多走三步可达。若边界无法扩展，派人探索或打通通路。出现候选地后，扩地进度会继续累积。
+The city incorporated a district.|城市将一块土地纳入领土。
+Production changed. Review the current city order.|生产项目已变化，请重新查看城市的当前指令。
+This city has no project to switch.|该城市没有可更换的生产项目。
+University wonders require city production.|大学奇观必须使用城市生产力建造。
+This project is ready for completion.|项目已准备完成。
+Not enough gold.|金币不足。
+Choose a purchasable project.|请选择可用金币购买的项目。
+The purchase price changed. Review the new quote.|购买价格已经变化，请查看新报价。
+No deployment tile is available. Move a unit before buying.|没有可部署的地块，请先移走一个单位再购买。
+Choose an available construction tile.|请选择可用的建造地块。
+Units deploy from the city.|单位从城市部署。
+This project already has a construction tile.|这个项目已经选定建造地块。
+Project purchased.|项目已用金币购入。
+Buy with gold|金币购买
+Gold cost|金币价格
+Work saved if you switch|更换后保留的生产力
+Stored production|已保留的生产力
+Construction tile|建造地块
+Confirm purchase|确认购买
+Confirm project change|确认更换项目
+Confirm production|确认生产
+Choose a highlighted tile on the map.|请在地图上选择高亮地块。
+Cancel placement|取消选址
+Confirm site|确认选址
+Choose a highlighted construction tile.|请选择高亮的建造地块。
+Select this construction tile.|选择此地块建造。
+Construction site selection|工程选址
+Select a tile|选择地块
+Municipal building|市政建筑
+Construction site|施工地点
+gold|金币
+Specialty terrain|特色地形
+Changing projects saves invested production in this city. A paused university releases its land and refunds the charter fee.|更换项目后，已投入的生产力仍保存在本城。暂停大学建设时会释放其用地并退还特许金。
+Buy with treasury gold to finish immediately. One remaining production costs three gold.|用国库金币购买可立即完成项目。每点剩余生产力需要三枚金币。
+Choose a construction tile|选择建造地块
+Choose a building in City production, then select one of the outlined map tiles and confirm. Municipal buildings can share the city center. Campuses need their own empty parcel. A harbor reserves a shore berth.|在城市生产中选择建筑，再从地图上点选有边线标记的地块并确认。市政建筑可共用市中心，大学校园需要独立空地，港口则使用近岸泊位。
+Change production or buy|更换项目或购买
+You can change the current project. This city keeps its invested production until you resume the same item. Buying an ordinary project uses treasury gold and credits work already done. Universities must use city production.|可以随时更换当前生产项目。本城会保留已投入的生产力，恢复同一项目时继续使用。普通项目可用国库金币购买，已完成的工作抵扣价格。大学奇观必须靠城市生产力建造。
+`);
 section(`
 E|东
 W|西
@@ -571,7 +622,7 @@ Each connected, improved deposit adds one good to your stockpile at the end of y
 Survey for deposits|寻找资源
 Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.|开局时资源尚未显现。选择开拓者的「勘探资源」，消耗一点移动力即可看见视野内的资源。建立首都也会自动开启勘探。单位离开后，已发现的资源仍会标在地图上。
 Read city markers|辨认城市标记
-City markers use the current owner’s color. Zoom in to read names in a crowded area. A crown marks the first city founded by a civilization and stays with that city after capture. Geographic labels also mark places where no city has been founded.|城市标记的颜色表示当前控制方。若多座城市挤在一起，可放大地图查看城名。每个文明建立的第一座城市带有王冠，被其他文明占领后仍保留王冠。地名与地标名称图层也会标出没有建城的地点。
+City markers use the owner’s color. A crown marks the first capital and stays with that city after capture. The green hex beside your city name estimates turns to the next district at its current population. Select the city to see the target and expansion progress. Zoom in when names overlap.|城市标记使用当前城主的颜色。首都被占领后仍保留王冠。己方城名旁的绿色六边形显示按当前人口估算的扩地回合数。选中城市即可查看候选地和扩地进度。城名拥挤时可放大地图。
 Send out your settler|派出开拓者
 Select the Settler on the map or in your roster. Point at a highlighted hex to preview the route. Click a reachable hex to move. You can also tap a highlighted destination on a touch screen.|在地图或名册中选择开拓者。指向高亮地块可预览路线，点击即可移动；触屏上直接轻点目的地。
 Found a city|建立城市
@@ -1157,4 +1208,130 @@ Show on map|在地图上查看
 Start a new campaign to discover natural wonders. This save keeps its original terrain.|开始新战役即可探索自然奇观，这个存档保留了原来的地形。
 Explore to record natural wonders here. Work a district next to a discovered site to gain its local bonus.|探索地图后，发现的自然奇观会记录在这里。让市民在奇观旁的地块工作，即可获得当地加成。
 This save uses the original map. Start a new campaign here to play the regional coastline.|这个存档使用原来的地图。选择「开始新战役」即可体验本地区的新海岸线。
+`);
+
+section(`
+Human seats to invite|需要邀请的真人席位
+Only the host needs to join. Computer seats are filled automatically.|仅房主需入座。电脑席位会自动填满。
+This server cannot create the requested roster. Reload the game and try again.|服务器无法创建所选席位。请刷新游戏后再试。
+`);
+
+section(`
+Your team is playing|己方队伍行动中
+Mark ready|完成我的行动
+Ready for next team|已完成本轮行动
+Waiting for allies…|等待队友…
+`);
+
+section(`
+Spend gold to buy eligible city projects, upgrade units and develop owned land.|金币可用于购买符合条件的城市项目、升级部队和开发己方地块。
+`);
+
+section(`
+Changing an enacted policy costs 3 influence. The first policy is free.|首次采用政策免费，之后每次更换需要 3 点影响力。
+Contest an eligible rival border district for 4 gold and 5 influence, plus 2 influence per district level.|争夺符合条件的敌方边境地块需要 4 金币和 5 点影响力；该地块每升一级，费用再增加 2 点影响力。
+`);
+
+section(`
+Income per turn|每回合收入
+`);
+
+section(`
+Taking orders|可下达指令
+Waiting for team turn|等待本队回合
+Allies act together. Mark ready when you finish. The next team starts once every active ally is ready.|队友可同时行动。完成操作后点击「完成我的行动」。待本队所有行动中的成员完成后，轮到下一队。
+`);
+
+section(`
+Connection interrupted. Your order will be checked on reconnect.|连接中断。重连后将核实你的指令，避免重复执行。
+`);
+
+section(`
+Allies share sight, discoveries and civic victory. Each player commands their own units and treasury.|队友共享视野、地图发现和积分胜利。每位玩家独立指挥自己的单位并管理资金。
+Choose the number of seats, then set a player and team for each.|先选择人数，再为每个席位指定玩家类型和队伍。
+`);
+
+section(`
+The defender changed. Select the target again to review the new forecast.|防守目标已改变。请重新选择目标，查看最新战斗预测。
+`);
+
+section(`
+Classic|经典
+Grand|宏大
+Epic|史诗
+Classic campaign|经典地图战役
+Resume classic map|继续经典地图
+This room server opened a different chart size. Its map size is shown in the lobby.|此房间服务器创建了另一种尺寸的地图，实际尺寸显示在大厅中。
+Westwood Hills|韦斯特伍德山丘
+UCLA Hill|加大洛杉矶分校宿舍山
+UCLA North Campus|加大洛杉矶分校北校区
+UCLA South Campus|加大洛杉矶分校南校区
+Westwood Village|韦斯特伍德村
+Wilshire Corridor|威尔希尔走廊
+Civic Center|市政中心
+Bunker Hill|邦克山
+Little Tokyo|小东京
+Fashion District|时尚区
+Ocean Avenue|海洋大道
+Third Street Promenade|第三街步行街
+Ocean Park|海洋公园区
+Hollywood Bowl|好莱坞露天剧场
+Hollywood Boulevard|好莱坞大道
+Vine Street|藤街
+Sunset Boulevard|日落大道
+Northwest Pasadena|帕萨迪纳西北区
+Old Pasadena|帕萨迪纳老城
+Playhouse Village|剧院村
+South Lake|南湖大道
+Beverly Gardens|比佛利花园
+Rodeo Drive|罗迪欧大道
+City Hall|市政厅
+Beverly Drive|比佛利大道
+Venice Boardwalk|威尼斯海滩步道
+Abbot Kinney Boulevard|阿博特金尼大道
+Venice Canals|威尼斯运河
+Chinatown|唐人街
+Embarcadero|滨海大道
+South of Market|市场街南区
+Spreckels Lake|斯普雷克尔斯湖
+Blue Heron Lake|蓝鹭湖
+Music Concourse|音乐广场
+Conservatory of Flowers|花卉温室
+Jack London Square|杰克伦敦广场
+Old Oakland|奥克兰老城
+Uptown|上城区
+Lake Merritt|梅里特湖
+West Berkeley|伯克利西区
+Downtown Berkeley|伯克利市中心
+UC Berkeley|加州大学伯克利分校
+Northside|伯克利北区
+Baker Beach|贝克海滩
+Fort Point|堡垒角
+Crissy Field|克里西原野
+Main Post|主军营
+Alameda Point|阿拉米达角
+Park Street|公园街
+South Shore|南岸
+San Diego Zoo|圣迭戈动物园
+Spanish Village|西班牙村
+El Prado|普拉多大道
+The Palisades|帕利塞兹园区
+Columbia|哥伦比亚区
+Cortez Hill|科尔特斯山
+Gaslamp Quarter|煤气灯街区
+La Jolla Cove|拉霍亚海湾
+Village of La Jolla|拉霍亚村
+Windansea Beach|温丹西海滩
+Ferry Landing|渡轮码头
+Central Beach|中央海滩
+Presidio Park|普雷西迪奥公园
+San Diego Avenue|圣迭戈大道
+Heritage Park|传统建筑公园
+Bayfront|海湾前沿
+Third Avenue|第三大道
+Otay Ranch|奥泰牧场
+`);
+
+section(`
+The combat target has changed. Review the new forecast.|战斗目标已改变，请重新查看战斗预测。
 `);

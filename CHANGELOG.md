@@ -1,5 +1,13 @@
 # Campaign updates
 
+## Give orders together on a larger California coast
+
+Room setup starts with the number of seats. Set each position to human or computer, assign a team, and pick the difficulty of each computer. Allies share live sight, explored terrain and surveyed resources. New team rooms let each ally give orders at the same time and mark ready independently. A teammate's move can reveal a target for another player on the same turn. Older rooms can finish in their original turn order.
+
+The previous Large map is now the smallest choice for a new game. Grand and Epic subdivide each coast further. Places such as Westwood extend across several named tiles. Older small maps keep their saved geometry.
+
+Cities grow their borders with population and show an expansion forecast beside their name. Owners can change their current project, bank its invested production, place buildings on the main map and spend gold to buy eligible projects. The treasury explains spending and influence costs. Select a unit to compare paid upgrades, technology and location requirements and expected healing.
+
 ## Play team matches with friends and computer governors
 
 Create a room for a duel against a computer, two friends against two computers, or a custom match of up to four civilizations. Set teams and computer difficulty by seat. The server takes computer turns, including the opening move if their team wins the draw. An open human lobby still starts as soon as the host has a second player.

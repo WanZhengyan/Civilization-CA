@@ -117,4 +117,8 @@ function chart(config) {
 export const regionalMaps = {sf:chart(BAY_AREA),sd:chart(SAN_DIEGO)};
 export const CAMPAIGN_MAPS = [LOS_ANGELES, ...Object.values(regionalMaps)];
 export function validMapId(id) { return CAMPAIGN_MAPS.some(map=>map.id===id); }
-export function validMapSize(size) { return size==='standard' || size==='large'; }
+export const MAP_SCALES=Object.freeze({standard:1,large:2,grand:3,epic:4});
+export const CAMPAIGN_SIZES=Object.freeze(['large','grand','epic']);
+export const DEFAULT_MAP_SIZE=CAMPAIGN_SIZES[0];
+export function validMapSize(size) { return Object.hasOwn(MAP_SCALES,size); }
+export function validNewMapSize(size) { return CAMPAIGN_SIZES.includes(size); }

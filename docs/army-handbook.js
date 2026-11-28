@@ -1,5 +1,6 @@
 // The same unit definitions drive recruitment, combat, and this comparison.
 import {UNIT_TYPES, TECHS, CIVICS, ERAS} from './rules.js';
+import {advancementRoutes} from './unit-service.js';
 import {getSightRadius} from './vision.js';
 
 const notes = {
@@ -18,7 +19,8 @@ export function handbookRows(era) {
     if (unit.shipyard || id==='frigate') requirements.push('Shipyard');
     return {
       name:unit.name, moves:unit.moves, sight:getSightRadius(), range:unit.range, cost:unit.required,
-      requirements, note:unit.description || notes[id] || '', upgrade:UNIT_TYPES[unit.upgrade]?.name
+      requirements, note:unit.description || notes[id] || '', upgrade:UNIT_TYPES[unit.upgrade]?.name,
+      routes:advancementRoutes(id,UNIT_TYPES).map(r=>({name:UNIT_TYPES[r.to].name,cost:r.cost}))
     };
   });
 }
@@ -33,7 +35,8 @@ export function armyHandbook(escapeHTML) {
     if (!units.length) return '';
     const rows = units.map(unit=>{
       const description = unit.note ? '<p>'+safe(unit.note)+'</p>' : '';
-      const upgrade = unit.upgrade ? '<p class="manual-unlocks"><b>Upgrades to</b>'+badges([unit.upgrade])+'</p>' : '';
+      const upgrade = unit.routes.length ? '<p class="manual-unlocks"><b>Upgrades to</b>'+unit.routes.map(r=>
+        '<span class="manual-tag"><span>'+safe(r.name)+'</span> · <span>'+safe(r.cost+' capital')+'</span></span>').join('')+'</p>' : '';
       const info = '<details><summary>'+safe(unit.name)+'</summary>'+description+
         '<p class="manual-unlocks"><b>Train with</b>'+badges(unit.requirements.length ? unit.requirements : ['City center'])+'</p>'+upgrade+'</details>';
       return '<tr><th scope="row">'+info+'</th><td>'+unit.moves+'</td><td>'+unit.sight+'</td><td>'+unit.range+'</td><td>'+unit.cost+'</td></tr>';

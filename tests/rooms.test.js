@@ -240,18 +240,18 @@ test("a host chooses the region before inviting players and both seats recover t
 test("host map sizes persist through lobby, territorial orders and reconnection for both seats", async t=>{
   const fixture=roomFixture(t);
   await fixture.call('POST',{op:'create',name:'Host',mapSize:'invalid'},null,400);
-  for(const region of ['la','sf','sd']) {
-    const host=await fixture.call('POST',{op:'create',name:'Host',mapId:region,mapSize:'large'},null,201);
+  for(const [region,size] of [['la','large'],['sf','grand'],['sd','epic']]) {
+    const host=await fixture.call('POST',{op:'create',name:'Host',mapId:region,mapSize:size},null,201);
     const code=host.room.code;
     const guest=await fixture.call('POST',{op:'join',code,name:'访客',mapSize:'standard'});
-    assert.equal(guest.room.mapSize,'large');
+    assert.equal(guest.room.mapSize,size);
     let {room}=await fixture.call('POST',{op:'start',code,revision:guest.room.revision,mapSize:'standard'},host.token);
-    const count=rules.getMap(region,'large').tiles.length;
+    const count=rules.getMap(region,size).tiles.length;
     assert.ok(count>rules.getMap(region).tiles.length);
     assert.equal(Object.keys(room.game.board).length,count);
     for(const [seat,token] of [[0,host.token],[1,guest.token]]) {
       room=(await fixture.call('GET',{code},token)).room;
-      assert.equal(room.game.mapSize,'large');
+      assert.equal(room.game.mapSize,size);
       assert.equal(rules.getMap(room.game).tiles.length,count);
       const founder=room.game.units.find(unit=>unit.seat===seat && unit.type==='settler');
       room=(await fixture.call('POST',{op:'action',code,revision:room.revision,action:{type:'found',unit:founder.id}},token)).room;
@@ -260,7 +260,7 @@ test("host map sizes persist through lobby, territorial orders and reconnection 
     }
     const resumed=(await fixture.call('POST',{op:'join',code,name:'Host',ticket:host.token})).room;
     assert.equal(resumed.game.round,2);
-    assert.equal(resumed.game.mapSize,'large');
+    assert.equal(resumed.game.mapSize,size);
     assert.equal(Object.keys(resumed.game.board).length,count);
   }
 });
@@ -407,8 +407,8 @@ test('room layouts reject invalid teams, host type, capacity and computer levels
 
 test('server computers execute exactly one authoritative order sequence despite duplicate ends and concurrent polls', async t => {
   const f = roomFixture(t);
-  const seats=[{kind:'human',team:0},{kind:'bot',team:0,difficulty:'easy'},
-    {kind:'bot',team:1,difficulty:'hard'},{kind:'bot',team:1}];
+  const seats=[{kind:'human',team:0},{kind:'bot',team:1,difficulty:'easy'},
+    {kind:'bot',team:2,difficulty:'hard'},{kind:'bot',team:3}];
   const host = await f.call('POST',{op:'create',name:'Host',seats},null,201);
   const {code} = host.room;
   const getRow=()=>f.sqlite.prepare('SELECT revision,members,game FROM game_rooms WHERE code=?').get(code);
@@ -496,4 +496,165 @@ test('a configured bot can win initiative and take its opening turn before the g
   await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'end'}},host.token,403);
   room=(await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'end'}},guest.token)).room;
   assert.equal(room.game.turn,0);assert.equal(room.game.round,1);
+});
+
+test('a new fixed allied room opens commands for both authenticated teammates',async t=>{
+  const f=roomFixture(t),seats=[{kind:'human',team:0},{kind:'human',team:0},{kind:'human',team:1}];
+  const host=await f.call('POST',{op:'create',name:'Host',seats},null,201),code=host.room.code;
+  const friend=await f.call('POST',{op:'join',code,name:'Friend'}),other=await f.call('POST',{op:'join',code,name:'Other'});
+  let room=(await f.call('POST',{op:'start',code,revision:other.room.revision},host.token)).room;
+  if(room.game.teamPhase.team===1)room=(await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'end'}},other.token)).room;
+  const view=(await f.call('GET',{code},friend.token)).room;
+  assert.equal(view.game.turn,1);assert.equal(view.game.teamPhase.team,0);
+  const settler=view.game.units.find(u=>u.seat===1);
+  room=(await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'found',unit:settler.id}},friend.token)).room;
+  assert.equal(room.game.cities.find(c=>c.seat===1).originalSeat,1);
+});
+
+test('an allied computer founds and readies even while its human keeps giving orders',async t=>{
+  const f=roomFixture(t),seats=[{kind:'human',team:0},{kind:'bot',team:0},{kind:'human',team:1}];
+  const host=await f.call('POST',{op:'create',name:'Host',seats},null,201),code=host.room.code;
+  const guest=await f.call('POST',{op:'join',code,name:'Visitor'});
+  let room=(await f.call('POST',{op:'start',code,revision:guest.room.revision},host.token)).room;
+  if(room.game.teamPhase.team===1)room=(await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'end'}},guest.token)).room;
+  for(let i=0;i<24 && !room.game.teamPhase.readySeats.includes(1);i++)room=(await f.call('GET',{code},host.token)).room;
+  room=(await f.call('GET',{code},host.token)).room;
+  assert.deepEqual(room.game.teamPhase.activeSeats,[0]);assert.deepEqual(room.game.teamPhase.readySeats,[1]);
+  const raw=JSON.parse(f.sqlite.prepare('SELECT game FROM game_rooms WHERE code=?').get(code).game);
+  assert(raw.cities.some(c=>c.originalSeat===1));
+  assert.equal(room.game.units.find(u=>u.seat===0).type,'settler');
+});
+
+test('simultaneous allies can both commit a same-revision order; a duplicate cannot run twice',async t=>{
+  const f=roomFixture(t),seats=[{kind:'human',team:0},{kind:'human',team:0},{kind:'human',team:1}];
+  const host=await f.call('POST',{op:'create',name:'H',seats},null,201),code=host.room.code;
+  const friend=await f.call('POST',{op:'join',code,name:'F'}),rival=await f.call('POST',{op:'join',code,name:'R'});
+  let room=(await f.call('POST',{op:'start',code,revision:rival.room.revision},host.token)).room;
+  if(room.game.teamPhase.team===1)await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'end'}},rival.token);
+  const actors=[host,friend];
+  const views=await Promise.all(actors.map(a=>f.call('GET',{code},a.token).then(r=>r.room)));
+  assert.equal(views[0].revision,views[1].revision);
+  const payload=views.map((v,i)=>({op:'action',code,revision:v.revision,orderKey:v.game.teamPhase.orderKey,
+    action:{type:'found',unit:v.game.units.find(u=>u.seat===i).id}}));
+  const writes=await Promise.all(actors.map((a,i)=>f.request('POST',payload[i],a.token)));
+  assert.deepEqual(writes.map(r=>r.status),[200,200]);
+  await f.call('POST',payload[0],host.token,409);
+  await f.call('POST',payload[1],rival.token,409);
+  const record=JSON.parse(f.sqlite.prepare('SELECT game FROM game_rooms WHERE code=?').get(code).game);
+  assert.deepEqual(record.cities.map(c=>c.seat).sort(),[0,1]);
+});
+
+test('existing configured matches retain sequential turns even after a server upgrade',async t=>{
+  const f=roomFixture(t),seats=[{kind:'human',team:0},{kind:'human',team:0},{kind:'human',team:1}];
+  const host=await f.call('POST',{op:'create',name:'Host',seats},null,201),code=host.room.code;
+  const ally=await f.call('POST',{op:'join',code,name:'Ally'}),rival=await f.call('POST',{op:'join',code,name:'Rival'});
+  const started=(await f.call('POST',{op:'start',code,revision:rival.room.revision},host.token)).room;
+  const old=rules.createGame([{name:'Host'},{name:'Ally'},{name:'Rival'}],'la',{seed:39,teams:[0,0,1]});
+  f.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(old),code);
+  const resumed=(await f.call('GET',{code},ally.token)).room;
+  assert.equal(resumed.game.teamPhase,undefined);assert.equal(resumed.game.turn,0);
+  const order={op:'action',code,revision:started.revision,action:{type:'end'}};
+  await f.call('POST',order,ally.token,403);
+  assert.equal((await f.call('POST',order,host.token)).room.game.turn,1);
+});
+
+test('a concurrent attack cannot switch a confirmed garrison strike to the newly exposed city',async t=>{
+  const f=roomFixture(t),seats=[{kind:'human',team:0},{kind:'human',team:0},{kind:'human',team:1}];
+  const host=await f.call('POST',{op:'create',name:'H',seats},null,201),code=host.room.code;
+  const ally=await f.call('POST',{op:'join',code,name:'A'}),rival=await f.call('POST',{op:'join',code,name:'R'});
+  const start=(await f.call('POST',{op:'start',code,revision:rival.room.revision},host.token)).room;
+  let s=rules.createGame([{name:'H'},{name:'A'},{name:'R'}],'la',{seed:39,teams:[0,0,1],simultaneousTeams:true});
+  for(const seat of [0,1,2]){
+    s=rules.applyAction(s,seat,{type:'found',unit:s.units.find(u=>u.seat===seat).id});
+    s=rules.applyAction(s,seat,{type:'end'});
+  }
+  const city=s.cities.find(c=>c.seat===2);const near=rules.getMap(s).neighbors(city.tile);
+  const unit=(seat,id,type,tile,hp)=>({seat,id,type,tile,hp,maxHp:100,moves:2,maxMoves:2,charges:0});
+  s.units=[unit(0,'observer-one','ranged',near[0],100),unit(1,'observer-two','ranged',near[1],100),unit(2,'garrison','melee',city.tile,1)];
+  s.barbarians={camps:[],parties:[]};
+  f.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(s),code);
+  const issue=async(seat,token,expected)=>f.call('POST',{op:'action',code,revision:start.revision,
+    orderKey:'2.0.'+seat+'.0',action:{type:'attack',unit:seat===0?'observer-one':'observer-two',tile:city.tile,defenderId:'garrison'}},token,expected);
+  await issue(0,host.token,200);await issue(1,ally.token,409);
+  const observed=(await f.call('GET',{code},ally.token)).room.game;
+  assert.equal(observed.intel.forecasts['observer-two'][city.tile].defenderId,city.id);
+});
+
+test('two simultaneous Ready orders and a lost acknowledgment settle both cities once',async t=>{
+  const f=roomFixture(t),seats=[{kind:'human',team:0},{kind:'human',team:0},{kind:'human',team:1}];
+  const host=await f.call('POST',{op:'create',name:'Host',seats},null,201),code=host.room.code;
+  const ally=await f.call('POST',{op:'join',code,name:'Ally'}),rival=await f.call('POST',{op:'join',code,name:'Rival'});
+  let room=(await f.call('POST',{op:'start',code,revision:rival.room.revision},host.token)).room;
+  if(room.game.teamPhase.team===1)room=(await f.call('POST',{op:'action',code,revision:room.revision,action:{type:'end'}},rival.token)).room;
+  const actors=[host,ally];
+  for(const [seat,actor] of actors.entries()){
+    const own=(await f.call('GET',{code},actor.token)).room;
+    await f.call('POST',{op:'action',code,revision:own.revision,orderKey:own.game.teamPhase.orderKey,
+      action:{type:'found',unit:own.game.units.find(u=>u.seat===seat).id}},actor.token);
+  }
+  const views=await Promise.all(actors.map(a=>f.call('GET',{code},a.token).then(x=>x.room)));
+  const ends=views.map(v=>({op:'action',code,revision:v.revision,orderKey:v.game.teamPhase.orderKey,action:{type:'end'}}));
+  const receipts=await Promise.all(actors.map((a,seat)=>f.request('POST',ends[seat],a.token)));
+  assert.deepEqual(receipts.map(r=>r.status),[200,200]);
+  await f.call('POST',ends[0],host.token,409);
+  for(const [seat,actor] of actors.entries()){
+    const reconnect=(await f.call('POST',{op:'join',code,name:'Returning',ticket:actor.token})).room;
+    assert.equal(reconnect.game.teamPhase.team,1);assert.equal(reconnect.game.teamPhase.orderKey,null);
+    const expected=views[seat].game.players[seat].capital+rules.getStats(views[seat].game,seat).capitalIncome;
+    assert.equal(reconnect.game.players[seat].capital,expected);
+  }
+});
+
+test('room authority persists specialized upgrades and recovery, rejecting foreign and repeat orders',async t=>{
+  const fixture=roomFixture(t), seats=await twoPlayers(fixture);
+  const opening=await seats.start();
+  const state=createClassicGame(['Host','Guest']);
+  const unit=state.units.find(u=>u.seat===0 && u.type==='melee');
+  unit.hp=60;unit.tile=state.cities[0].tile;
+  state.players[0].technologies=['tactics','ballistics'];
+  state.players[0].capital=30;
+  fixture.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(state),seats.code);
+  await seats.act(seats.guest,opening.revision,{type:'upgrade',unit:unit.id,item:'riflemen'},403);
+  await seats.act(seats.host,opening.revision,{type:'upgrade',unit:unit.id,item:'armor'},422);
+  const upgrade=(await seats.act(seats.host,opening.revision,{type:'upgrade',unit:unit.id,item:'riflemen'})).room;
+  const veteran=upgrade.game.units.find(u=>u.id===unit.id);
+  assert.equal(veteran.hp,66);assert.equal(upgrade.game.players[0].capital,20);
+  await seats.act(seats.host,upgrade.revision,{type:'recover',unit:unit.id},422);
+  const guestTurn=(await seats.act(seats.host,upgrade.revision,{type:'end'})).room;
+  const turn=(await seats.act(seats.guest,guestTurn.revision,{type:'end'})).room;
+  const rest=(await seats.act(seats.host,turn.revision,{type:'recover',unit:unit.id})).room;
+  const persisted=(await seats.read(seats.host)).game;
+  assert.equal(persisted.units.find(u=>u.id===unit.id).resting,true);
+  assert.equal(rules.getRecoveryForecast(persisted,unit.id,0).gain,16);
+  await seats.act(seats.host,rest.revision,{type:'recover',unit:unit.id},422);
+  assert.ok((await seats.read(seats.guest)).game.units.every(u=>u.seat===1 || !('resting'in u)));
+});
+
+test('concurrent purchases charge once and a retried city quote stays stale after reconnect', async t => {
+  const fixture = roomFixture(t), seats = await twoPlayers(fixture);
+  let room = await seats.start();
+  const founder = room.game.units.find(unit => unit.seat === room.you && unit.type === 'settler');
+  room = (await seats.act(seats.host, room.revision, {type:'found', unit:founder.id})).room;
+  const stored = JSON.parse(fixture.sqlite.prepare('SELECT game FROM game_rooms WHERE code=?').get(seats.code).game);
+  stored.players[room.you].capital = 100;
+  fixture.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(stored), seats.code);
+  room = await seats.read(seats.host);
+  const city = room.game.cities.find(city => city.seat === room.you);
+  const quote = rules.getProductionOptions(room.game, city.id).find(option => option.item === 'scout');
+  assert.equal(quote.buyEnabled, true);
+  const action = {type:'buyProduction', city:city.id, item:'scout', gold:quote.gold, expected:city.productionRevision || 0};
+  const request = {op:'action', code:seats.code, revision:room.revision, action};
+  const recruits = game => game.units.filter(unit => unit.seat === room.you && unit.type === 'scout').length;
+  const before = recruits(room.game);
+  const writes = await Promise.all([fixture.request('POST', request, seats.host), fixture.request('POST', request, seats.host)]);
+  assert.deepEqual(writes.map(reply => reply.status).sort(), [200, 409]);
+  const host = await seats.read(seats.host), guest = await seats.read(seats.guest);
+  assert.equal(recruits(host.game), before + 1);
+  assert.equal(host.game.players[room.you].capital, 100 - quote.gold);
+  assert.equal(guest.revision, host.revision);
+  assert.equal(guest.game.players[room.you].capital, undefined);
+  await seats.act(seats.host, host.revision, action, 422);
+  const restored = (await fixture.call('POST', {op:'join', code:seats.code, ticket:seats.host, name:'Host again'})).room;
+  assert.equal(restored.revision, host.revision);
+  assert.deepEqual(restored.game, host.game);
 });

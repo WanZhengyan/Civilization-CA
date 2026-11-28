@@ -22,10 +22,10 @@ export function universitiesUnlockedBy(project) {
 export function surveyCampus(state, city, item, map, distance) {
   const campus=WONDERS[item];
   if (!city || !campus) return [];
-  const reserved=new Set(state.cities.flatMap(c=>[c.tile,c.portTile,c.queue?.site]).filter(Boolean));
+  const reserved=new Set(state.cities.flatMap(c=>[c.tile,c.portTile,c.id===city.id ? null : c.queue?.site]).filter(Boolean));
   const sites=[];
   for (const [id,holding] of Object.entries(state.board)) {
-    if (holding.owner!==city.seat || holding.improvement || holding.resource || holding.naturalWonder || holding.wonder || reserved.has(id)) continue;
+    if (holding.owner!==city.seat || holding.improvement || holding.facility || holding.resource || holding.naturalWonder || holding.wonder || reserved.has(id)) continue;
     const tile=map.byId[id], range=distance(city.tile,id);
     if (range>2 || !tile || ['ocean','mountains'].includes(tile.terrain)) continue;
     const favored=campus.terrain.includes(tile.terrain);
@@ -59,8 +59,14 @@ export function settleCampusRace(state, winner, item, record) {
     const refund=project.grant||0;
     state.players[city.seat].capital+=refund;
     city.queue=null;
+    city.productionRevision=(city.productionRevision || 0)+1;
     record(state,city.seat,'wonder-refund','A competing campus opened first. The charter fee was returned.',city.tile,
       {item,city:city.id,refund});
+  }
+  // A parked project loses the same global race as one still in the queue.
+  for (const city of state.cities) if (city.parkedProduction?.[item]) {
+    const remaining={...city.parkedProduction};
+    delete remaining[item];city.parkedProduction=remaining;
   }
   state.wonderRegistry={...state.wonderRegistry,[item]:'complete'};
 }

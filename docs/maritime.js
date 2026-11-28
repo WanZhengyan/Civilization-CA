@@ -34,6 +34,14 @@ export function findPortSite(state, city, byId, neighbors, visible, prospective=
   return null;
 }
 
+export function harborSites(state,city,byId,neighbors,visible) {
+  if (city.portTile) return [city.portTile];
+  if (city.queue?.item==='harbor' && city.queue.portTile) return [city.queue.portTile];
+  const ids=new Set();
+  findPortSite(state,city,byId,neighbors,visible,false,id=>{ids.add(id);return false;});
+  return [...ids];
+}
+
 export const VESSELS = {
   workboat: {name: 'Fishing crew', role: 'Maritime engineering unit', domain: 'sea', era: 'frontier', required: 7, maxHp: 60, moves: 3, range: 0, strength: 0, charges: 2, description: 'Builds two offshore fisheries within two water hexes of a friendly port.'},
   cutter: {name: 'Revenue cutter', role: 'Naval patrol unit', domain: 'sea', era: 'frontier', required: 9, maxHp: 85, moves: 3, range: 1, strength: 36, description: 'A fast sailing vessel for fighting nearby ships and bombarding the shoreline.'},

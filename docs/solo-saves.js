@@ -1,10 +1,12 @@
+import {DEFAULT_MAP_SIZE,validMapSize} from './maps.js';
 import {createGame, migrateGame, TARGET_SCORE} from './rules.js';
 
 export const SOLO_KEY = 'angel-basin.solo.v1';
 
 export function soloSlotKey(region, size = 'standard') {
   // Standard uses the original region slot, including saves from before map sizes.
-  return SOLO_KEY + '.' + region + (size === 'large' ? '.large' : '');
+  if(!validMapSize(size))throw new RangeError('Choose a valid map size.');
+  return SOLO_KEY+'.'+region+(size==='standard'?'':'.'+size);
 }
 
 export function restoreSolo(state) {
@@ -16,7 +18,7 @@ export function restoreSolo(state) {
   try { return migrateGame(state); } catch { return null; }
 }
 
-export function newSolo(region, mapSize, rivals = 3, scoreTarget = TARGET_SCORE, difficulty = 'normal') {
+export function newSolo(region, mapSize=DEFAULT_MAP_SIZE, rivals = 3, scoreTarget = TARGET_SCORE, difficulty = 'normal') {
   if (!Number.isInteger(rivals) || rivals < 0 || rivals > 3) throw new RangeError('Choose zero to three computer opponents.');
   const players = [{name:'You'}, ...Array.from({length:rivals}, ()=>({bot:true}))];
   return createGame(players, region, {mapSize, scoreTarget, difficulty:rivals ? difficulty : 'normal', practice:rivals === 0});

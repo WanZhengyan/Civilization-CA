@@ -4,7 +4,7 @@ import {newSolo,restoreSolo,soloSlotKey,SOLO_KEY} from '../docs/solo-saves.js';
 import {createGame,getScoreTarget} from '../docs/rules.js';
 
 test('all solo setups keep their chosen opponents, practice mode and civic target after reload',()=>{
-  for (const region of ['la','sf','sd']) for (const size of ['standard','large']) {
+  for (const region of ['la','sf','sd']) for (const size of ['standard','large','grand','epic']) {
     for (const rivals of [0,1,2,3]) for (const goal of [100,125,150]) {
       const game = newSolo(region,size,rivals,goal);
       const loaded = restoreSolo(JSON.parse(JSON.stringify(game)));
@@ -64,7 +64,7 @@ async function openPage(address,storage) {
 test('an occupied slot resumes its original campaign, confirms only a replacement, and preserves other slots',async()=>{
   const base='https://example.test/Civilization-CA/game.html';
   const storage=new Map();
-  const old=createGame([{name:'You'},{bot:true},{bot:true}],'la',{seed:417005,scoreTarget:100});
+  const old=createGame([{name:'You'},{bot:true},{bot:true}],'la',{seed:417005,scoreTarget:100,mapSize:'large'});
   old.round=7;
   storage.set(SOLO_KEY,JSON.stringify(old));
   const otherKey=soloSlotKey('sf');
@@ -114,10 +114,10 @@ test('an occupied slot resumes its original campaign, confirms only a replacemen
   assert.match(reopened.dialog.innerHTML,/name="rivals" value="0" checked/);
   assert.match(reopened.dialog.innerHTML,/name="scoreTarget" value="150" checked/);
   reopened.select('mapId','sf');
-  reopened.click('load-region');
+  reopened.click('load-classic');
   assert.equal(saved().seed,17);
   assert.equal(getScoreTarget(saved()),125);
-  assert.equal(JSON.parse(storage.get(soloSlotKey('la'))).seed,practiceSeed);
+  assert.equal(JSON.parse(storage.get(soloSlotKey('la','large'))).seed,practiceSeed);
 
   reopened.Game.open('campaign-atlas');
   reopened.select('mapSize','large');

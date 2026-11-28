@@ -22,7 +22,7 @@ function militiaNear(state,seat,tile,id) {
   return id;
 }
 
-test('team assignments are validated, public, and independent of private vision, units, projects and holdings',()=>{
+test('team assignments are validated, public, and share visible land while keeping orders, projects and the treasury private',()=>{
   const options={seed:417005,teams:[2,2,0],difficulty:'hard'};
   let state=createGame(['Host','Ally','Rival'],'sf',options);
   options.teams[0]=0;
@@ -37,9 +37,10 @@ test('team assignments are validated, public, and independent of private vision,
   assert.deepEqual(view.teams,[2,2,0]);assert.equal(view.difficulty,'hard');
   assert.equal(view.players[1].capital,undefined);assert.equal(view.players[1].research,undefined);
   assert.equal(view.players[1].score,undefined);
-  assert.ok(!view.intel.visible.includes(ally.tile));
-  assert.ok(!view.cities.some(c=>c.id===ally.id));
-  assert.equal(view.board[ally.tile].owner,null);
+  assert.ok(view.intel.visible.includes(ally.tile));
+  assert.ok(view.cities.some(c=>c.id===ally.id));
+  assert.equal(view.board[ally.tile].owner,1);
+  assert.equal(view.cities.find(c=>c.id===ally.id).queue,undefined);
   view.teams[0]=3;
   assert.equal(getTeamId(state,0),2);
   assert.deepEqual(migrateGame(JSON.parse(JSON.stringify(state))).teams,[2,2,0]);

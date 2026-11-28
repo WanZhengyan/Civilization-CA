@@ -70,3 +70,26 @@ test('a charted deposit in an old scout’s fourth ring stays on the map without
   }
   assert.equal(view.units.length,1);
 });
+
+test('an old team chart contributes explored land without exposing current occupants',()=>{
+  const s={...field(),mapId:'sf',players:[{}, {}, {}],teams:[0,0,1],round:2,turn:0,log:[],
+    exploration:[{}, {'11,6':'timber'}, {'1,1':'citrus'}]};
+  s.units=[];s.board['11,6']={owner:2,level:3,resource:'iron'};
+  const v=projectForSeat(s,0);
+  assert.deepEqual(v.intel.explored,['11,6']);
+  assert.equal(v.board['11,6'].resource,'timber');
+  assert.equal(v.board['11,6'].owner,null);
+  assert.equal(v.intel.visible.length,0);
+});
+
+test('the first team survey unlocks deposits within shared sight for people and computers',()=>{
+  const s={...field(),mapId:'sf',players:[{surveyEnabled:false},{surveyEnabled:false},{surveyEnabled:false}],
+    teams:[0,0,1],round:1,turn:0,log:[]};
+  s.board['8,6'].resource='timber';
+  assert.equal(projectForSeat(s,1).board['8,6'].resource,undefined);
+  s.players[0].surveyEnabled=true;
+  const v=projectForSeat(rememberVision(s),1);
+  assert.equal(v.board['8,6'].resource,'timber');
+  assert.equal(v.intel.teamSurveyed,true);
+  assert.equal(projectForSeat(s,2).board['8,6'].resource,undefined);
+});

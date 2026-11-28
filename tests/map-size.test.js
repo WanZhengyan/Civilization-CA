@@ -106,3 +106,23 @@ test('old masked and rectangular saves keep their geometry and standard seeds ke
   }
   assert.throws(()=>createGame(undefined,'la',{seed:90,mapSize:'unknown'}),/valid map size/i);
 });
+
+
+test('new-size surveys retain every regional center, connect land and sea, and resolve localities',()=>{
+  for(const region of regions) for(const size of ['large','grand','epic']){
+    const map=getMap(region,size), original=getMap(region,'standard');
+    const scale={large:2,grand:3,epic:4}[size];
+    assert.equal(map.columns,17*scale);
+    assert.equal(map.rowsCount,13*scale);
+    assert.equal(chartPerimeter(map.tiles).length,1);
+    for(const tile of original.tiles)assert.equal(map.byId[map.anchorId(tile.id)].name,tile.name);
+    reachable(map,land,true);reachable(map,sea,false);
+    const district={la:'Westwood',sf:'Berkeley',sd:'Balboa Park'}[region];
+    const places=map.tiles.filter(t=>t.district===district && t.localityLabel);
+    assert.ok(places.length>=2,region+' '+size);
+    assert.equal(new Set(places.map(t=>t.locality)).size,places.length);
+    const state=createGame(undefined,region,{mapSize:size,seed:842});
+    assert.equal(getMap(campaignView(state,0)),map);
+    assert.equal(getMap(migrateGame(JSON.parse(JSON.stringify(state)))),map);
+  }
+});

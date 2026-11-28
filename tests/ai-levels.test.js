@@ -155,3 +155,17 @@ test('during a public university race the exact site in a private city queue can
     assert.doesNotThrow(()=>applyAction(state,0,action));
   }
 });
+
+test('computer allies see the same shared chart as the human and ignore enemies outside it',()=>{
+  const state=createGame([{bot:true},'Partner','Rival'],'la',{seed:701,mapSize:'large',teams:[0,0,1]});
+  const chart=projectForSeat(state,0);
+  assert.deepEqual(new Set(chart.intel.visible),new Set(campaignView(state,1).intel.visible));
+  const unseen=Object.keys(state.board).filter(id=>!chart.intel.visible.includes(id));
+  assert.ok(unseen.length>2);
+  const variant=structuredClone(state);
+  variant.units.find(u=>u.seat===2).tile=unseen[0];
+  variant.board[unseen[1]].resource='timber';
+  for(const level of AI_LEVELS) {
+    assert.deepEqual(chooseBotAction(variant,level),chooseBotActionFromView(chart,level));
+  }
+});

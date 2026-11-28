@@ -119,3 +119,12 @@ test('a soldier arriving from the far side of the Bay Bridge can be identified w
   assert.equal(journal(next,0)[0].attacker.tile,a);
   assert.deepEqual(journal(next,2),[]);
 });
+
+test('teammates witness a remote fight from the same lookout while an uninvolved team learns nothing',()=>{
+  const state=battlefield();state.teams=[0,1,1,2];
+  state.units=[piece('gun',0,'ranged','9,6'),piece('defender',1,'melee','10,6')];
+  const result=attack(state,'gun','10,6');
+  assert.deepEqual(journal(result,2),journal(result,1));
+  assert.equal(journal(result,2)[0].attacker.type,'ranged');
+  assert.equal(journal(result,3).length,0);
+});

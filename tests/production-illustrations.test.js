@@ -42,3 +42,10 @@ test('the supply ledger pairs each balance and both of its dispatch buttons with
     assert.ok(rows[i].includes('data-act="cargo-'+id+'-city"'));
   }
 });
+
+test('the treasury explains the current balance, actual signed income and both influence prices',()=>{
+ const state={cities:[],players:[{capital:22,influence:8}],turn:0,round:2,phase:'playing'};
+ const accounts=Object.fromEntries(Object.keys(RESOURCES).map(id=>[id,{stock:0,income:0}]));
+ const html=ledgerBody(state,0,accounts,null,false,String,{capitalIncome:-2,influenceIncome:4});
+ for(const token of ['Treasury</span> · 22','Influence</span> · 8','Income per turn</span> -2','Income per turn</span> +4','3 influence','4 gold and 5 influence'])assert.ok(html.includes(token),token);
+});
