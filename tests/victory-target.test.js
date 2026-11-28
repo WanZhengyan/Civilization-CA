@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {applyAction,campaignView,createGame,getMap,getScoreTarget,getStats,migrateGame,MAX_ROUNDS,SCORE_TARGETS,TARGET_SCORE} from '../docs/rules.js';
+import {applyAction,campaignView,createGame as createCampaign,getMap,getScoreTarget,getStats,migrateGame,MAX_ROUNDS,SCORE_TARGETS,TARGET_SCORE} from '../docs/rules.js';
 import {translate} from '../docs/i18n.js';
+
+// These fixtures exercise historical score and practice saves.
+const createGame=(players,region,options)=>createCampaign(players,region,{...options,legacyVictory:true});
 
 // Open with settlers and neutral land, then stage a precise civic score
 // using ordinary owned districts and at most one level of development.

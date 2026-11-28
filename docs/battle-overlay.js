@@ -1,4 +1,6 @@
 import {pos} from './hex-survey.js';
+import {witnessedMode} from './attack-mode.js';
+import {UNIT_TYPES} from './rules.js';
 import {drawUnitArt} from './unit-art.js';
 
 // Replay only coordinates explicitly included in this seat's report, even if
@@ -25,6 +27,7 @@ export function paintBattleReport(g,replay,scale,now) {
   const {report,to,from,still,color}=replay,[tx,ty]=to;
   const screen=Math.max(.72,Math.min(1.85,1/scale));
   g.save();g.lineCap='round';g.lineJoin='round';
+  const ranged=witnessedMode(report,UNIT_TYPES)==='ranged';
   const impact=still?1:Math.min(1,Math.max(0,(f-(from?0.36:0))/.26));
   if(from){
     const [sx,sy]=from, dx=tx-sx,dy=ty-sy, length=Math.hypot(dx,dy);
@@ -36,9 +39,13 @@ export function paintBattleReport(g,replay,scale,now) {
       const tip=still?1:Math.min(1,Math.max(0,(f-.08)/.33));
       const x=a[0]+(b[0]-a[0])*tip,y=a[1]+(b[1]-a[1])*tip,arrow=6*screen;
       path(g,[[x-ux*arrow+side[0]*arrow*.62,y-uy*arrow+side[1]*arrow*.62],[x,y],[x-ux*arrow-side[0]*arrow*.62,y-uy*arrow-side[1]*arrow*.62]],'#ffe9b2',2.4*screen);
+      if (ranged && !still && tip<1) {
+        g.beginPath();g.arc(x,y,3.4*screen,0,2*Math.PI);
+        g.fillStyle='#fff2b6';g.fill();
+      }
       ring(g,sx,sy,15,'#2c2424',3.8*screen);ring(g,sx,sy,15,color,1.8*screen);
       if(!still && report.attacker.kind==='unit' && f<.55){
-        const lunge=Math.sin(Math.PI*Math.min(1,f/.55)),distance=Math.min(17,length*.23)*lunge;
+        const lunge=Math.sin(Math.PI*Math.min(1,f/.55)),distance=ranged?0:Math.min(17,length*.23)*lunge;
         drawUnitArt(g,report.attacker.type,sx+ux*distance,sy+uy*distance+3,{color,scale:.83,facing:dx<0?-1:1,strike:lunge});
       }
     }
@@ -58,6 +65,12 @@ export function paintBattleReport(g,replay,scale,now) {
     const width=g.measureText(damage).width+12*screen;
     g.fillStyle='#412a2c';g.fillRect(tx-width/2,y-9*screen,width,18*screen);
     g.fillStyle='#ffe2bb';g.fillText(damage,tx,y);
+    if (from && report.retaliation!=null && (ranged || report.retaliation>0)) {
+      const label=report.retaliation ? '−'+report.retaliation : '0';
+      const xx=from[0], yy=from[1]-27*screen, width=g.measureText(label).width+10*screen;
+      g.fillStyle=ranged?'#233e37':'#412a2c';g.fillRect(xx-width/2,yy-8*screen,width,16*screen);
+      g.fillStyle=ranged?'#c5f2d6':'#ffe2bb';g.fillText(label,xx,yy);
+    }
   }
   g.restore();return !still;
 }

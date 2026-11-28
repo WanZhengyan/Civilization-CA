@@ -18,8 +18,8 @@ export function restoreSolo(state) {
   try { return migrateGame(state); } catch { return null; }
 }
 
-export function newSolo(region, mapSize=DEFAULT_MAP_SIZE, rivals = 3, scoreTarget = TARGET_SCORE, difficulty = 'normal') {
+export function newSolo(region, mapSize=DEFAULT_MAP_SIZE, rivals = 3, scoreTarget = TARGET_SCORE, difficulty = 'normal', {victoryMode='standard',civilization='random'}={}) {
   if (!Number.isInteger(rivals) || rivals < 0 || rivals > 3) throw new RangeError('Choose zero to three computer opponents.');
-  const players = [{name:'You'}, ...Array.from({length:rivals}, ()=>({bot:true}))];
-  return createGame(players, region, {mapSize, scoreTarget, difficulty:rivals ? difficulty : 'normal', practice:rivals === 0});
+  const players = [{name:'You',civilization}, ...Array.from({length:rivals}, ()=>({bot:true}))];
+  return createGame(players, region, {mapSize, scoreTarget, victoryMode, difficulty:rivals ? difficulty : 'normal', practice:rivals === 0});
 }

@@ -459,6 +459,7 @@ test('an eliminated human watching a saved computer turn can finish the campaign
   const start=(await f.call('POST',{op:'start',code,revision:host.room.revision},host.token)).room;
   const row=f.sqlite.prepare('SELECT game,members FROM game_rooms WHERE code=?').get(code);
   const game=JSON.parse(row.game),members=JSON.parse(row.members);
+  delete game.victoryMode; // This saved campaign uses the historical round-limit rules.
   game.round=rules.MAX_ROUNDS;game.turn=1;game.players[0].eliminated=true;
   game.units=game.units.filter(unit=>unit.seat!==0);
   members[0].botTurn={round:game.round,seat:1,orders:192};
@@ -657,4 +658,134 @@ test('concurrent purchases charge once and a retried city quote stays stale afte
   const restored = (await fixture.call('POST', {op:'join', code:seats.code, ticket:seats.host, name:'Host again'})).room;
   assert.equal(restored.revision, host.revision);
   assert.deepEqual(restored.game, host.game);
+});
+
+test('open rooms reserve civilizations atomically at join and preserve a confirmed choice on reconnect', async t => {
+  const f=roomFixture(t);
+  const host=await f.call('POST',{op:'create',name:'Host',victoryMode:'science',civilization:'republic'},null,201);
+  const code=host.room.code;
+  assert.equal(host.room.victoryMode,'science');
+  assert.equal(host.room.players[0].civilization,'republic');
+  const claims=await Promise.all(['Alpha','Bravo'].map(name=>f.request('POST',{op:'join',code,name,civilization:'valley'})));
+  assert.deepEqual(claims.map(x=>x.status).sort(),[200,409]);
+  const guest=claims.find(x=>x.status===200).value;
+  const initial=guest.room;
+  assert.deepEqual(initial.players.map(p=>p.civilization),['republic','valley']);
+  const change=(revision,civilization,seat)=>({op:'civilization',code,revision,civilization,...(seat===undefined?{}:{seat})});
+  await f.call('POST',change(initial.revision,'pacific',guest.room.you),host.token,403);
+  await f.call('POST',change(initial.revision,'republic'),guest.token,409);
+  const writes=await Promise.all([host,guest].map(actor=>f.request('POST',change(initial.revision,'arroyo'),actor.token)));
+  assert.deepEqual(writes.map(x=>x.status).sort(),[200,409]);
+  const room=(await f.call('GET',{code},guest.token)).room;
+  assert.equal(room.revision,initial.revision+1);
+  assert.equal(room.players.filter(p=>p.civilization==='arroyo').length,1);
+  const previous=room.players[room.you].civilization;
+  const rejoin=await f.call('POST',{op:'join',code,name:'Returning guest',ticket:guest.token,civilization:'random'});
+  assert.equal(rejoin.room.players[room.you].civilization,previous);
+  assert.equal(rejoin.room.revision,room.revision);
+  const rejected=await f.call('POST',{op:'civilization',code,revision:room.revision,civilization:0},guest.token,400);
+  assert.ok(rejected.error);
+  const started=(await f.call('POST',{op:'start',code,revision:room.revision},host.token)).room;
+  assert.equal(started.victoryMode,'science');assert.equal(started.game.victoryMode,'science');
+  assert.equal(started.game.civilizationTraits,1);
+  assert.deepEqual(started.players.map(p=>p.civilization),room.players.map(p=>p.civilization));
+  await f.call('POST',{op:'civilization',code,revision:started.revision,civilization:'pacific'},guest.token,409);
+});
+
+test('a host can choose a bot civilization, while open and occupied human seats stay under their owners’ control',async t=>{
+  const f=roomFixture(t), seats=[{kind:'human',team:0,civilization:'republic'},{kind:'bot',team:0,civilization:'pacific'},{kind:'human',team:1}];
+  await f.call('POST',{op:'create',name:'Host',seats,victoryMode:'invalid'},null,400);
+  await f.call('POST',{op:'create',name:'Host',seats:[...seats.slice(0,2),{...seats[2],civilization:'valley'}]},null,400);
+  await f.call('POST',{op:'create',name:'Host',seats:[seats[0],{...seats[1],civilization:'republic'},seats[2]]},null,409);
+  const host=await f.call('POST',{op:'create',name:'Host',seats},null,201);
+  assert.equal(host.room.victoryMode,'standard');
+  const {code,revision}=host.room;
+  await f.call('POST',{op:'civilization',code,revision,seat:2,civilization:'valley'},host.token,403);
+  await f.call('POST',{op:'join',code,name:'Guest',civilization:'pacific'},null,409);
+  assert((await f.call('GET',{code},host.token)).room.players[2].open);
+  const changed=(await f.call('POST',{op:'civilization',code,revision,seat:1,civilization:'arroyo'},host.token)).room;
+  const guest=await f.call('POST',{op:'join',code,name:'Guest',civilization:'pacific'});
+  assert.equal(guest.room.revision,changed.revision+1);assert.equal(guest.room.you,2);
+  await f.call('POST',{op:'civilization',code,revision:guest.room.revision,seat:1,civilization:'random'},guest.token,403);
+  const reset=(await f.call('POST',{op:'civilization',code,revision:guest.room.revision,civilization:'random'},guest.token)).room;
+  assert.equal(reset.players[2].civilization,'random');
+  const started=(await f.call('POST',{op:'start',code,revision:reset.revision},host.token)).room;
+  assert.deepEqual(started.players.slice(0,2).map(p=>p.civilization),['republic','arroyo']);
+  assert(['valley','pacific'].includes(started.players[2].civilization));
+  assert.equal(new Set(started.game.players.map(p=>p.faction)).size,3);
+  assert.deepEqual((await f.call('GET',{code},guest.token)).room.players,started.players);
+});
+
+test('an old unstarted lobby and a resumed historical campaign keep their original score and civilization rules', async t=>{
+  const f=roomFixture(t), s=await twoPlayers(f);
+  const row=f.sqlite.prepare('SELECT members FROM game_rooms WHERE code=?').get(s.code);
+  const members=JSON.parse(row.members).map(({victoryMode,civilization,...original})=>original);
+  f.sqlite.prepare('UPDATE game_rooms SET members=? WHERE code=?').run(JSON.stringify(members),s.code);
+  const before=await s.read(s.guest);
+  assert.equal(before.victoryMode,null);assert(before.players.every(p=>p.civilization==='random'));
+  const started=await s.start();
+  assert.equal(started.victoryMode,null);assert.equal(started.game.victoryMode,undefined);
+  assert.equal(started.game.civilizationTraits,undefined);
+  assert(started.players.every(p=>p.civilization!=='random'));
+  const original=started.game.players.map(p=>p.faction);
+  const resumed=(await f.call('POST',{op:'join',code:s.code,name:'Guest',ticket:s.guest,civilization:'valley'})).room;
+  assert.deepEqual(resumed.game.players.map(p=>p.faction),original);
+  assert.equal(resumed.victoryMode,null);
+});
+
+test('room authority awards the selected science or conquest victory to both members of an alliance',async t=>{
+  for(const victoryMode of ['science','conquest']) {
+    const f=roomFixture(t), seats=[0,0,1].map(team=>({kind:'human',team}));
+    const host=await f.call('POST',{op:'create',name:'Host',seats,victoryMode,civilization:'republic'},null,201);
+    const {code}=host.room;
+    const ally=await f.call('POST',{op:'join',name:'Ally',code,civilization:'arroyo'});
+    const rival=await f.call('POST',{op:'join',name:'Rival',code,civilization:'pacific'});
+    const tokens=[host.token,ally.token,rival.token];
+    const read=async seat=>(await f.call('GET',{code},tokens[seat])).room;
+    const order=async (room,action)=>(await f.call('POST',{op:'action',code,revision:room.revision,orderKey:room.game.teamPhase.orderKey,action},tokens[room.you])).room;
+    let room=(await f.call('POST',{op:'start',code,revision:rival.room.revision},host.token)).room;
+    // Found all three original capitals through normal seat orders before staging the final turn.
+    while(room.game.cities.length<3) {
+      const row=f.sqlite.prepare('SELECT game FROM game_rooms WHERE code=?').get(code);
+      if(JSON.parse(row.game).cities.length===3)break;
+      const active=room.game.teamPhase.activeSeats;
+      for(const seat of active) {
+        room=await read(seat);
+        const settler=room.game.units.find(u=>u.seat===seat && u.type==='settler');
+        if(settler) room=await order(room,{type:'found',unit:settler.id});
+        room=await order(room,{type:'end'});
+      }
+    }
+    if(room.game.teamPhase.team===1)room=await order(await read(2),{type:'end'});
+    const retrieve=()=>JSON.parse(f.sqlite.prepare('SELECT game FROM game_rooms WHERE code=?').get(code).game);
+    const write=state=>f.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(state),code);
+    let state=retrieve();
+    if(victoryMode==='science') {
+      const city=state.cities.find(c=>c.seat===1);
+      state.players[1].technologies=Object.keys(rules.TECHS);
+      write(state);
+      await order(await read(1),{type:'produce',city:city.id,item:'orbitalSurvey'});
+      state=retrieve();
+      const q=state.cities.find(c=>c.id===city.id).queue;
+      q.progress=q.required-1;write(state);
+      room=await order(await read(1),{type:'end'});
+    } else {
+      const target=state.cities.find(c=>c.originalSeat===2);
+      const map=rules.getMap(state);
+      const from=map.neighbors(target.tile).find(id=>!['ocean','mountains'].includes(map.byId[id].terrain) &&
+        !state.units.some(u=>u.tile===id) && !state.cities.some(c=>c.tile===id));
+      assert.ok(from);
+      target.hp=1;
+      state.units.push({id:'siege',seat:1,tile:from,type:'melee',hp:100,maxHp:100,moves:2,maxMoves:2});
+      write(state);
+      const front=await read(1);
+      const targetId=front.game.intel.forecasts.siege[target.tile].defenderId;
+      room=await order(front,{type:'attack',unit:'siege',tile:target.tile,defenderId:targetId});
+    }
+    assert.equal(room.phase,'finished');assert.equal(room.victoryMode,victoryMode);
+    assert.equal(room.game.victoryReason,victoryMode==='science'?'science':'domination');
+    const guestView=await read(2);
+    assert.deepEqual(room.game.winners,[0,1]);assert.deepEqual(guestView.game.winners,[0,1]);
+    assert.equal(guestView.phase,'finished');
+  }
 });

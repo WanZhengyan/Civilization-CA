@@ -138,3 +138,24 @@ All 18 standard campaign cases reproduced their own result twice. Nine retained 
 In a 1000 × 620 native canvas harness, the 95th percentile of 30 focused-seat redraws on Epic was 5.2 ms in Los Angeles, 5.1 ms in San Francisco and 4.9 ms in San Diego after scenery caching and viewport clipping. The corresponding references were 98.9, 34.6 and 73.4 ms. Cold full-board renders still took 1.03–1.50 seconds in this harness. A slow phone and an Internet connection can add costs outside this measurement.
 
 For the next experiment, record the round of first visual contact relative to the civic victory round on matched Large and Epic openings. Keep the seed, team size, AI levels, unit speed and civic target fixed, and include human scouting decisions.
+
+## Choose a victory path and a civilization
+
+The public reference was af11dbb. Sixteen of its 18 fixed campaigns ended on civic points and two on conquest. On the reference, a Ranger could fire at a unit, city or camp from an adjacent tile without losing health. The report did not identify the attack as ranged. We tested whether a player could tell the two combat types apart, reserve a distinct civilization and win by the selected route using ordinary game orders.
+
+On the three coasts, 72 adjacent engagements covered Rangers, Militia, armed ships, units, cities and neutral camps or parties. Ranged attackers lost zero HP. In the fixed Ranger case, 35 damage left the firing unit at its original 80 HP. The militia controls lost 25, 15 and 12 HP respectively against a unit, city and camp. The preview and the resulting report now identify these outcomes. Visible historical reports can recover a known attacker's mode, and an unseen attacker stays unidentified.
+
+A seeded allocation test covered all 780 combinations of one to four seats and the four explicit choices or Random, including duplicate rejection. Choosing a civilization did not move the settlers, alter their sight or give them extra starting gold. The founding-capital bonuses apply to the credited economy. The tests check loss, recapture and historical saves. Two independent HTTP members attempting the same civilization got one reservation and one conflict. Historical turn-five saves from six maps and sizes retained their point finish, and finished saves retained their recorded results. All 18 simulated historical campaigns retained their original victory type. Sixteen retained the same winner and sixteen ended on the same round. The unified close-combat rule changes the damage a scout can receive at a neutral camp during ongoing play.
+
+We varied only the cost of the Orbital Survey while keeping the Rocketry prerequisites, player decisions and maps reproducible. Each cost played the same 18 Standard games twice.
+
+| Required production | Science wins | Conquest wins | Median finish round |
+| ---: | ---: | ---: | ---: |
+| 40 | 18 | 0 | 17 |
+| 60 | 16 | 2 | 18 |
+| 90 | 16 | 2 | 19 |
+| 130 | 16 | 2 | 20 |
+
+We kept 60, the smallest tested cost at which both routes won. At two additional seed sets, 60 yielded nine conquest wins in 36 games, versus eight at 40. The rates describe these computer players and map samples. In Science games starting with an ordinary settler, a player-directed California Republic strategy won against Normal on Large Los Angeles, San Francisco and San Diego, in rounds 13, 13 and 12. In a new team room one city must finish the entire project for its side to win. Research and production stay with their owner.
+
+Pure Conquest plays differently on a defended map. In three Normal two-player Large openings, Los Angeles and San Diego saw their first rival battles in rounds 7 and 9. Los Angeles finished in round 15 and San Diego in round 28. In San Francisco the first battle came in round 22. After 75 complete rounds and 203 rival strikes neither side had captured a city. A separate player-directed conquest in San Francisco succeeded on round 10. The next experiment should measure whether a Normal computer with a visible enemy capital brings a capture-capable unit within reach on the bay's crossings.

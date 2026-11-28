@@ -29,12 +29,12 @@ test('room presets reserve the first human for the host and every custom seat re
 
 test('fixed rosters show uneven teams, editable difficulty, and bilingual strategy explanations',()=>{
   let config=roomPreset('coop');
-  assert.match(roomSetupFields(config),/Team civic target<\/strong> · 250/);
-  assert.match(roomSetupFields(roomPreset('duel')), /Team civic target<\/strong> · 125/);
+  assert.match(roomSetupFields(config),/Compare civilization traits/);
+  assert.match(roomSetupFields(roomPreset('duel')), /seat-civilization-1/);
   assert.doesNotMatch(roomSetupFields(config),/Teams are uneven/);
   config=changeRoomSetup(config,'seat-team-2','1');
   assert.match(roomSetupFields(config),/Teams are uneven/);
-  assert.match(roomSetupFields(config),/Team civic target<\/strong> · 375/);
+  assert.doesNotMatch(roomSetupFields(config),/Team civic target|name="seat-civilization-2"/);
   const original=roomSetupFields(config);
   assert.match(original,/name="seat-difficulty-3"/);
   assert.doesNotMatch(original,/name="seat-difficulty-0"/);

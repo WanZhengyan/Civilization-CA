@@ -1,6 +1,6 @@
 # Civilization CA
 
-A bilingual, turn-based strategy game for one to four players. Each California campaign begins with one settler, a randomly drawn civilization and a new starting location. Choose Los Angeles, San Francisco Bay or San Diego, and a Large, Grand or Epic map. Practice on your own, face computer rivals or invite friends to a team match.
+A bilingual, turn-based strategy game for one to four players. Each California campaign begins with one settler, a chosen or randomly drawn civilization and a new starting location. Choose Los Angeles, San Francisco Bay or San Diego, and a Large, Grand or Epic map. Practice on your own, face computer rivals or invite friends to a team match.
 
 [Official website](https://wanzhengyan.github.io/Civilization-CA/) · [Play solo](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Create a room](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host) · [Watch a campaign](https://wanzhengyan.github.io/Civilization-CA/#film) · [Campaign updates](./CHANGELOG.md)
 
@@ -12,7 +12,7 @@ A bilingual, turn-based strategy game for one to four players. Each California c
 
 ## Enter a campaign
 
-Choose **Play solo** to set the number of computer opponents and a civic point target of 100, 125 or 150. With zero opponents, you can explore and build toward the target by round 30. Neutral camps still roam the map. In competitive games, reaching the target triggers scoring at the end of the round. A civilization can also win by taking every original capital.
+Choose **Play solo** to set your civilization, the number of computer opponents and how the campaign can be won. **Conquest** rewards control of every original capital or the elimination of the last rival team. **Science** requires researching Rocketry and completing the Orbital Survey in a city. **Standard** allows either victory. In zero-opponent practice, the science route gives you an objective to pursue at your own pace. Neutral camps still roam the map. Older saves keep their original victory rules.
 
 Large, the smallest new map, has 598–689 playable hexes. Grand has 1,346–1,545 and Epic has 2,391–2,747. Westwood spans five hexes on a Large Los Angeles map and sixteen on Epic. You can resume an earlier compact map from its saved slot. Each region and size has its own solo save. Resuming keeps the original opponents and goal. Starting a new campaign in an occupied slot requires confirmation. **Create room** lets the host set the region and size for everyone. **Join room** accepts a room code or invitation. Switch between English and 简体中文 on the website or during play.
 
@@ -24,9 +24,20 @@ Select owned land and open **District development** in Field Command. Compare th
 
 ![Westwood's original capital on the Los Angeles map, with its district upgrade and observed returns](./media/city-development.webp)
 
-The city production menu shows the units, buildings and universities your civilization has unlocked. The science and civic trees show what you can unlock next. Open **Battle reports** to see who attacked, how much damage each side took and where the fight happened. **Replay on map** returns to that district. When the attacker fired from beyond your sight, the report identifies the impact location and keeps the source hidden.
+The city production menu shows the units, buildings and projects your civilization has unlocked. After researching Radio Networks and Motorization you can study Rocketry, then commit 60 city production to the Orbital Survey in a Standard or Science game. The survey must be built. The science and civic trees show what you can unlock next. Open **Battle reports** to see who attacked, how much damage each side took and where the fight happened. Ranged strikes cause zero retaliation damage to the attacker, even when the target is adjacent. A later enemy attack is a separate event. **Replay on map** returns to that district. When the attacker fired from beyond your sight, the report identifies the impact location and keeps the source hidden.
 
 The visitor footer counts anonymous browser profiles on each site from the day the counter launched. Refreshing or opening a second tab on the same site does not add another visitor. The public totals are shared between the two hosts. Day and month follow Los Angeles time.
+
+## Choose a civilization
+
+Each trait works in the original capital while its founder controls it. All four start with a single settler, the same treasury and the same sight.
+
+| Civilization | Capital bonus per turn |
+| --- | --- |
+| California Republic | +1 production |
+| Pacific Union | +2 gold |
+| Valley Coalition | +2 food |
+| Arroyo League | +1 science |
 
 ## City and unit orders
 
@@ -57,13 +68,15 @@ A favored site adds one unit of the university’s specialty yield. Existing imp
 
 Open **Change map** to choose a different region. In **Create room**, pick two to four seats, then choose a human or computer controller for each seat. You can start as the only human with computer opponents, invite a friend to join your team, or put a computer on each side. Set each computer to Easy, Normal or Hard. Easy develops home districts and patrols nearby. Normal scouts and compares targets. Hard compares attacks across units and looks for an explored site for its next city. Each starts with the same economy, sight and unit rules as a human. Reserved human seats must be filled before the host starts.
 
-Each team shares sight and explored terrain. In a new team room both allies can give orders to their own pieces during the same turn. Mark ready when finished. The next team starts once all surviving teammates are ready. Teammates keep separate treasuries and production queues. Teammates can defend each other’s cities and win together by holding every original capital. At a civic finish, each team's surviving members pool their points. A duel uses a 125-point target. In two-versus-two play the target is 250. Configured rooms draw the opening team and then a member of that team. Assign the same team to friends you want on your side. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
+Each team shares sight and explored terrain. In a new team room both allies can give orders to their own pieces during the same turn. Mark ready when finished. The next team starts once all surviving teammates are ready. Teammates keep separate treasuries and production queues. Teammates can defend each other’s cities and win together. The host sets the victory mode. Each human can choose a free civilization or draw one at random, and the host sets the computer players’ choices. Configured rooms draw the opening team and then a member of that team. Assign the same team to friends you want on your side. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
 
 ## 中文快速开始
 
-点击「开始单人战役」可选 0–3 个电脑对手，以及 100、125 或 150 分的市政目标。选 0 可练习建城、探索和发展，地图上仍有野蛮人营地。每个地区和尺寸分别存档。新地图可选大型、宏大或史诗，历史标准地图可从原存档继续。继续旧档会沿用原对手和目标，确认重开后才会替换该存档。联机地图由房主选择。建房时先选 2–4 个席位，再逐席选择真人或电脑、所属队伍和电脑难度。想和朋友合作，可以把两名真人分在同一队，给另一队安排电脑。预留的真人到齐后即可开局；房主也可以独自与电脑开战。
+点击「开始单人战役」可选文明、0–3 个电脑对手和胜利方式。征服胜利要求控制各方初始首都，或淘汰所有敌队。科技胜利要求研究无线电网络和机械化，再研究火箭技术，在一座城市投入 60 产能完成轨道勘测计划。标准模式允许两条路线。零对手练习可以按自己的节奏挑战科技胜利，地图上仍有野蛮人营地。每个地区和尺寸分别存档。新地图可选大型、宏大或史诗，历史标准地图可从原存档继续。继续旧档会沿用原对手和目标，确认重开后才会替换该存档。联机地图由房主选择。建房时先选 2–4 个席位，再逐席选择真人或电脑、所属队伍和电脑难度。想和朋友合作，可以把两名真人分在同一队，给另一队安排电脑。预留的真人到齐后即可开局；房主也可以独自与电脑开战。
 
-同队可协防城市，共同控制全部初始首府即可获胜。按市政积分结算时，队内仍在场的成员合计得分。单挑目标为 125 分，二对二是 250 分。配置房间先抽先手队伍，再从队内抽出先手玩家。简单电脑倾向开发家门口的地块；一般电脑会侦察并挑选交战目标；困难电脑会比较多支部队的进攻顺序，为下一座城寻找已探明的选址。三个难度均沿用相同的视野、资源和单位规则。队友共享当前视野、已探索地形和已勘探资源。新建的组队房允许双方同时指挥各自单位。队内所有在场成员都点准备后，才会轮到对方。
+建房时可选标准、征服或科技胜利。真人在大厅选择自己的文明，房主为电脑选文明，也可保留随机。队友可以协防城市，按本局选定的条件共同获胜。配置房间先抽先手队伍，再从队内抽出先手玩家。简单电脑倾向开发家门口的地块；一般电脑会侦察并挑选交战目标；困难电脑会比较多支部队的进攻顺序，为下一座城寻找已探明的选址。三个难度均沿用相同的视野、资源和单位规则。队友共享当前视野、已探索地形和已勘探资源。新建的组队房允许双方同时指挥各自单位。队内所有在场成员都点准备后，才会轮到对方。
+
+文明特性在原建国者持有的初始首都生效。加州共和国每回合多 1 产能，太平洋联盟多 2 金币，山谷联盟多 2 粮食，阿罗约同盟多 1 科研。
 
 首页可以开始或继续单人战役、创建房间，也可以用房间码或邀请链接加入多人游戏。地图上的双线为可玩边缘，界外有斜纹，地块格线可以在图层中单独开关。开局只有一名开拓者。所有单位的基础视野都是两格，侦察兵移动更快，研究地形测绘后进入丘陵只需一点移动力。你可以就地建都，也可以先移动或勘探。建城后训练侦察兵拓展视野，再派建造者到城市控制范围内开发资源。城市人口需要粮食与住房。遇到野蛮人斥候时，可以选择拦截、驻军或清除营地。大学奇观需要相应的科技或市政，在符合条件的领地自由选址。四所大学在每局游戏中都只能各建成一次。
 
@@ -71,7 +84,7 @@ Each team shares sight and explored terrain. In a new team room both allies can 
 
 选中己方陆地，在战场指挥中打开「地区开发」，就能比较升级前后的每回合资金、每回合影响力和市政积分。升到 1、2、3 级分别花费 5、8、11 资金，每次消耗一次地区指令。上图的韦斯特伍德升到 2 级后，每回合资金从 8 增至 9，影响力收入维持 4，市政积分从 21 增至 22。开采资源要另派建造者修建对应设施。
 
-科技与市政位于地图左侧，战场指挥位于右侧。在城市生产里可以查看当前已解锁的选项，后续解锁条件可在科技树和市政树中查看。打开「战报」可回放敌袭、查看伤害和反击。新战役中每个地区有两处自然奇观，市民在相邻地块工作会获得加成。在「游戏指南 → 奇观」中可以定位自己发现的地点。
+科技与市政位于地图左侧，战场指挥位于右侧。在城市生产里可以查看当前已解锁的选项，后续解锁条件可在科技树和市政树中查看。远程攻击即使贴身射击也不会让攻击者受到反击伤害。打开「战报」可回放敌袭，查看双方实际损失。新战役中每个地区有两处自然奇观，市民在相邻地块工作会获得加成。在「游戏指南 → 奇观」中可以定位自己发现的地点。
 
 城市名牌旁的绿色六边形显示预计还需几回合扩地。人口每回合贡献等量扩地进度，第一块地需要 8 点。点开城市可以定位预计获得的地块。己方回合内可切换生产项目，已投入的产能留在该城。建造建筑时，在主地图的高亮格上确认位置。符合条件的单位和建筑可以花金币购买。
 

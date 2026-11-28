@@ -94,6 +94,7 @@ function awardScore(state,seat,points) {
 test('civic victory compares team totals only at round end, and resolves ties between teams',()=>{
   for(const rivalTotal of [248,252]) {
     let state=fresh([0,1,0,1]);
+    delete state.victoryMode; // Historical score-based team save.
     for(const [seat,points] of [126,120,126,rivalTotal-120].entries()) awardScore(state,seat,points);
     for(let seat=0;seat<3;seat++) {state=end(state);assert.equal(state.phase,'playing');}
     state=end(state);

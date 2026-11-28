@@ -8,7 +8,10 @@ import {armyHandbook} from './army-handbook.js';
 import {ledgerBody} from './resource-ledger.js';
 import {getResourceLedger} from './rules.js';
 import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
-import {mapPicker, sizePicker, sizeName, rivalPicker, victoryPicker, installMapStyles} from './regions-ui.js';
+import {SCIENCE_PROJECT} from './victory-rules.js';
+import {victoryPanel} from './victory-panel.js';
+import {modeLabels,modePicker,civilizationPicker,civilizationName,compareCivilizations,validCivilization} from './campaign-choices.js';
+import {mapPicker, sizePicker, sizeName, rivalPicker, installMapStyles} from './regions-ui.js';
 import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
 import {changeRoomSetup,difficultyField,difficultyLabel,newRoomSetup,roomSetupFields,teamLabel,validRoomTeams} from './room-setup.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
@@ -53,14 +56,16 @@ function selectCampaignSettings(state) {
   selectedMap = getMap(state).id;
   selectedSize=validNewMapSize(state?.mapSize)?state.mapSize:DEFAULT_MAP_SIZE;
   selectedRivals = state?.players ? state.players.length - 1 : 3;
-  selectedGoal = getScoreTarget(state);
+  selectedMode = 'standard';
+  selectedCivilization = 'random';
   selectedDifficulty = state?.difficulty || 'normal';
 }
 
 let renderView, locateDistrict, toast, dialog, solo, room = null, token = null;
 let mode = 'home', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
-let selectedSize = DEFAULT_MAP_SIZE, selectedRivals = 3, selectedGoal = TARGET_SCORE, selectedDifficulty = 'normal';
+let selectedSize = DEFAULT_MAP_SIZE, selectedRivals = 3, selectedDifficulty = 'normal';
+let selectedMode='standard', selectedCivilization='random', roomVictoryMode='standard', joinCivilization='random';
 let roomSetup=newRoomSetup();
 let supplyCity='';
 let pending = false, errorMessage = '', playingBots = false;
@@ -174,7 +179,7 @@ async function runBots() {
   }
 }
 
-async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId, mapSize, seats, orderKey }) {
+async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId, mapSize, seats, orderKey, victoryMode, civilization, seat }) {
   const isGet = !op;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
@@ -188,7 +193,7 @@ async function requestRoom({ op, code, name, revision, action, auth, ticket, map
         ...(!isGet && { 'Content-Type': 'application/json' }),
         ...(auth && { Authorization: 'Bearer ' + auth })
       },
-      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId, mapSize, seats, orderKey })
+      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId, mapSize, seats, orderKey, victoryMode, civilization, seat })
     });
     if (response.status === 204 && isGet && revision !== undefined) return { unchanged: true };
     let data;
@@ -382,14 +387,14 @@ async function seatRequest(form) {
       }
     }
     const intent = [roomTab, roomTab === 'join' ? code : selectedMap, name].join('|') +
-      (roomTab==='create'?'|'+selectedSize:'')+(seats ? '|'+JSON.stringify(seats) : '');
+      (roomTab==='create'?'|'+selectedSize+'|'+roomVictoryMode:'|'+joinCivilization)+(seats ? '|'+JSON.stringify(seats) : '');
     let ticket = read(TICKET_KEY, null);
     if (ticket?.intent !== intent) {
       const bytes = crypto.getRandomValues(new Uint8Array(24));
       ticket = {intent, token:Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')};
       save(TICKET_KEY, ticket);
     }
-    const data = await requestRoom({ op: roomTab, name, ticket:ticket.token, ...(roomTab === 'join' ? {code} : {mapId:selectedMap,mapSize:selectedSize,seats}) });
+    const data = await requestRoom({ op: roomTab, name, ticket:ticket.token, ...(roomTab === 'join' ? {code,civilization:joinCivilization} : {mapId:selectedMap,mapSize:selectedSize,seats,victoryMode:roomVictoryMode,civilization:seats?.[0].civilization || 'random'}) });
     if (seats && !data.room.configured) {
       save(TICKET_KEY,null);
       throw new Error('This server cannot create the requested roster. Reload the game and try again.');
@@ -409,7 +414,7 @@ async function seatRequest(form) {
 async function mutate(op, action, retry=null) {
   if (pending || !room || !token || (unconfirmedOrder && !retry)) return;
   const epoch = roomEpoch;
-  const request = retry || (op==='action' ? captureRoomOrder(room,action) : {op,code:room.code,revision:room.revision});
+  const request = retry || (op==='action' ? captureRoomOrder(room,action) : {op,code:room.code,revision:room.revision,...(op==='civilization'?action:{})});
   if(request.orderKey) rememberOrder(request);
   pending = true;
   errorMessage = '';
@@ -505,8 +510,8 @@ const button = (action, label, kind = 'secondary', disabled = false) =>
   `<button type="button" class="modal-${kind}" data-act="${action}"${disabled ? ' disabled' : ''}>${label}</button>`;
 const muted = text => `<p class="modal-muted">${text}</p>`;
 const desc = text => `<p class="modal-copy">${text}</p>`;
-const row = (title, subtitle, value = '') =>
-  `<li class="modal-row"><div><strong>${title}</strong>${subtitle ? `<small>${subtitle}</small>` : ''}</div>${value ? `<span class="modal-number">${value}</span>` : ''}</li>`;
+const row = (title, subtitle, value = '', body='') =>
+  `<li class="modal-row"><div><strong>${title}</strong>${subtitle ? `<small>${subtitle}</small>` : ''}${body}</div>${value ? `<span class="modal-number">${value}</span>` : ''}</li>`;
 const list = items => `<ul class="modal-list">${items.join('')}</ul>`;
 const actions = (...items) => `<div class="modal-actions">${items.join('')}</div>`;
 const seatFaction = seat => getState()?.players[seat]?.faction ?? seat;
@@ -589,8 +594,11 @@ function multiplayerContent() {
     const roster = room.players.map(p => {
       const name=p.open ? '<span>Waiting for player</span>' : p.bot ? '<span>Computer</span> '+(p.id+1) : '<span translate="no">'+escapeHTML(p.name)+'</span>';
       const attributes=[room.configured && 'Seat '+(p.id+1),room.configured && teamLabel(p.team),p.bot && difficultyLabel(p.difficulty || 'normal'),!lobby && FACTION_NAMES[seatFaction(p.id)]].filter(Boolean);
+      const canChoose=lobby && room.victoryMode && (p.id===room.you || (host && p.bot));
+      if(lobby && room.victoryMode && !p.open && !canChoose) attributes.push(civilizationName(p.civilization));
+      const pick=canChoose?civilizationPicker('lobby-civilization-'+p.id,p.civilization,room.players.map(other=>other.civilization),pending):'';
       return row((lobby ? '' : factionMark(p.id))+name,attributes.map(word=>'<span>'+escapeHTML(word)+'</span>').join(' · ') || 'Civilization drawn at start',
-        [p.id===room.host && 'Host',p.id===room.you && 'You',teamMemberStatus(room.game,p.id),room.configured && !lobby && !room.game?.teamPhase && p.id===room.game?.firstSeat && 'Drew first turn'].filter(Boolean).map(word=>'<span>'+word+'</span>').join(' · '));
+        [p.id===room.host && 'Host',p.id===room.you && 'You',teamMemberStatus(room.game,p.id),room.configured && !lobby && !room.game?.teamPhase && p.id===room.game?.firstSeat && 'Drew first turn'].filter(Boolean).map(word=>'<span>'+word+'</span>').join(' · '),pick);
     });
     const sharing = `<div class="modal-room"><span class="modal-muted">Room code</span><strong class="modal-code" translate="no">${escapeHTML(room.code)}</strong></div>` +
       actions(button('copy', 'Copy invite link'), button('show-link', inviteOpen ? 'Hide link' : 'Show link')) +
@@ -602,10 +610,10 @@ function multiplayerContent() {
       : room.phase === 'finished' ? 'This campaign has ended.' : 'Campaign in progress.';
     const footer = lobby && host ? button('start', pending ? 'Starting…' : 'Start campaign', 'primary', pending || !ready)
       : (lobby ? '' : button('back', 'Return to map', 'primary'));
-    const target=room.configured ? muted('<span>Team civic target</span> · '+getScoreTarget(room.game || {teams:room.players.map(p=>p.team)})) : '';
+    const target=room.victoryMode ? muted('<span>Victory conditions</span> · <strong>'+modeLabels[room.victoryMode]+'</strong>') : room.configured ? muted('<span>Legacy civic rules</span> · '+'<span>Team civic target</span> · '+getScoreTarget(room.game || {teams:room.players.map(p=>p.team)})) : '';
     const teamHelp=room.game?.teamPhase && room.phase==='playing' ? muted('Allies act together. Mark ready when you finish. The next team starts once every active ally is ready.') : '';
     return { title: lobby ? 'Room lobby' : 'Your room', kicker: 'Multiplayer', body:
-      sharing + muted(campaignSummary(room.game ? getMap(room.game) : getMap(room.mapId,room.mapSize),room.mapSize)) +target+ list(roster) + teamHelp + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
+      sharing + muted(campaignSummary(room.game ? getMap(room.game) : getMap(room.mapId,room.mapSize),room.mapSize)) +target+ list(roster) + (lobby && room.victoryMode?compareCivilizations():'') + teamHelp + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
   }
   const joining = roomTab === 'join';
   const disabled = pending ? ' disabled' : '';
@@ -615,7 +623,7 @@ function multiplayerContent() {
   const playerField = `<label class="modal-field">Player name<input class="modal-input" type="text" name="name" placeholder="Your name" maxlength="24" autocomplete="nickname" value="${escapeHTML(formName)}" required${disabled}></label>`;
   return { kicker: 'Multiplayer', title: joining ? 'Join room' : 'Create room', body: tabs +
     desc(joining ? 'Enter a room code or invitation link. New players take the first open human seat. This device remembers your seat.' : 'Choose the number of seats, then set a player and team for each.') +
-    `<form class="modal-form" data-room-form>${joining ? playerField+codeField : roomSetupFields(roomSetup,pending)+playerField+campaignPicker(pending)}<button class="modal-primary" type="submit"${disabled || (!joining && !validRoomTeams(roomSetup) ? ' disabled' : '')}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
+    `<form class="modal-form" data-room-form>${joining ? playerField+codeField+civilizationPicker('joinCivilization',joinCivilization,[],pending)+compareCivilizations() : roomSetupFields(roomSetup,pending)+modePicker('roomVictoryMode',roomVictoryMode,false,pending)+playerField+campaignPicker(pending)}<button class="modal-primary" type="submit"${disabled || (!joining && !validRoomTeams(roomSetup) ? ' disabled' : '')}>${pending ? 'Connecting…' : joining ? 'Join room' : 'Create room'}</button></form>` };
 }
 
 function campaignPicker(disabled=false) {
@@ -626,14 +634,14 @@ function campaignSummary(map,size) {
   return `<span>${escapeHTML(map.name)}</span> · <span>${sizeName(size)}</span> · ${map.tiles.length} <span>playable hexes</span>`;
 }
 
-function soloSettingsSummary(rivals,scoreTarget,difficulty) {
-  return `<span>Computer opponents</span> ${rivals}${rivals ? ' · <span>'+difficultyLabel(difficulty)+'</span>' : ''} · <span>Victory target</span> ${scoreTarget}`;
+function soloSettingsSummary(rivals,victory,difficulty,legacyTarget) {
+  return `<span>Computer opponents</span> ${rivals}${rivals ? ' · <span>'+difficultyLabel(difficulty)+'</span>' : ''} · ${victory?'<span>'+modeLabels[victory]+'</span>':'<span>Legacy civic rules</span> · '+legacyTarget+' <span>civic points</span>'}`;
 }
 
 function savedCampaignCard(saved,resumable) {
   if (!saved) return '';
   const locality = campaignSummary(getMap(saved),saved.mapSize);
-  const settings = soloSettingsSummary(saved.players.length-1,getScoreTarget(saved),saved.difficulty);
+  const settings = soloSettingsSummary(saved.players.length-1,saved.victoryMode,saved.difficulty,getScoreTarget(saved));
   const oldCoastline = saved.mapShape !== 'regional' ? muted('This save uses the original map. Start a new campaign here to play the regional coastline.') : '';
   return '<section class="solo-save-card"><div class="solo-save-heading"><h3>Saved campaign</h3>'+
     (resumable ? button('load-region','Resume campaign') : '')+'</div>'+muted(locality)+
@@ -647,7 +655,7 @@ const guideSections = {
     ['Read city markers', 'City markers use the owner’s color. A crown marks the first capital and stays with that city after capture. The green hex beside your city name estimates turns to the next district at its current population. Select the city to see the target and expansion progress. Zoom in when names overlap.'],
     ['Explore the fog', 'Each unit sees two hexes in every direction. Dark tiles are uncharted. Shaded tiles keep the terrain you explored, but enemies there are hidden.'],
     ['Survey for deposits', 'Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.'],
-    ['Choose your map', 'Choose a region and map size. Each combination has its own solo save. Set the civic victory target and choose practice or up to three computer opponents. Online, the host sets the map for everyone.'],
+    ['Choose your map', 'Each region and size has its own solo save. Choose a victory condition, a civilization and up to three opponents. In multiplayer the host sets the map and the victory condition.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
     ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
     ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.'],
@@ -674,7 +682,7 @@ const guideSections = {
     ['Support an assault', 'Siege Engineers can capture a walled city after its garrison falls. Keep a Signal Corps one hex from a friendly attacker to add 8 damage against rival civilizations. Check the forecast to see the active bonuses.'],
     ['Read the terrain', 'Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.'],
     ['Preview an attack', 'Select a military unit and click a highlighted enemy. The combat forecast shows the damage and possible losses. Choose Confirm attack to commit, or return to the map to reconsider. An attack spends the unit’s remaining movement.'],
-    ['Take a city', 'Melee units strike adjacent targets and can take counterdamage. Rangers can strike from two hexes away without a counterattack. Defeat the garrison first. A ranged attack can reduce a city to one health point. A surviving melee attacker can capture it.'],
+    ['Take a city', 'Rangers, ranged infantry, artillery and armed ships deal damage without losing HP to retaliation, even against an adjacent target. Every attack spends the remaining movement. Melee attackers can take counterdamage. Defeat the garrison first. Shooting can reduce cities and camps to 1 HP. Send a surviving capture-capable land unit to take them.'],
     advancementGuide,
     ['Repel a raid', 'A lookout near an established city may return to its camp. Intercept it before it reports, or attack the camp before the party leaves two rounds later. A military defender within one hex of the city, or city walls, repels the raid. Raiders leave civilian units alone.'],
     ['Clear a camp', 'Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.'],
@@ -756,9 +764,17 @@ function content() {
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
+    let entries=guideSections[guideTab].entries;
+    if(guideTab==='research' && (!state || state.victoryMode)){
+      entries=entries.filter(([title])=>!['Win by domination','Win on civic points'].includes(title));
+      if(!state || (!state.practice && state.victoryMode!=='science')) entries.push(['Conquest victory','Your side wins by controlling every original capital or by being the last side with a surviving civilization.']);
+      if(!state || state.victoryMode!=='conquest') entries.push(['Science victory',
+        '<span>Research Radio Networks and Motorization, then Rocketry. In City production, choose Orbital Survey. Finish it in one city to win for your entire side.</span> <strong>Production required</strong> · '+SCIENCE_PROJECT.required]);
+    }
     return {kicker:'Field guide', title:'How to play', body:tabs +
+      (guideTab==='start' && (!state || state.civilizationTraits===1) ? compareCivilizations() : '') +
       (guideTab === 'universities' ? wonderJournal(state) : '') +
-      (guideTab === 'formations' ? armyHandbook(escapeHTML) : list(guideSections[guideTab].entries.map(([title, text]) => row(title, typeof text === 'function' ? text(state) : text)))) + actions(button('back', 'Return to map', 'primary'))};
+      (guideTab === 'formations' ? armyHandbook(escapeHTML) : list(entries.map(([title, text]) => row(title, typeof text === 'function' ? text(state) : text)))) + actions(button('back', 'Return to map', 'primary'))};
   }
   if (modal === 'log') return {
     kicker: 'Campaign records', title: 'Event log',
@@ -766,6 +782,8 @@ function content() {
       'Round ' + escapeHTML(entry.round), Number.isInteger(entry.seat) && FACTIONS[entry.seat] ? factionMark(entry.seat) : ''))) : muted('No events yet.'))
   };
   if (modal === 'standings') {
+    if(state.victoryMode) return {kicker:'Campaign records',title:state.phase==='finished'?'Campaign complete':'Victory progress',
+      body:victoryPanel(state,currentSeat(),escapeHTML)+actions(button('back','Return to map','primary'))};
     if(state.teams) return teamStandings(state);
     if (state.practice) {
       const finished = state.phase === 'finished';
@@ -794,18 +812,18 @@ function content() {
       muted(campaignSummary(getMap(archived),'standard'))+actions(button('load-classic','Resume classic map'))+'</section>':'';
     return {kicker:'California campaigns', title:'Solo game setup',
       body:savedCampaignCard(saved,true)+classic+'<section class="solo-new-setup"><h3>New campaign settings</h3>'+
-        rivalPicker(selectedRivals)+(selectedRivals ? difficultyField(selectedDifficulty) : '')+victoryPicker(selectedGoal)+sizePicker(selectedMap,selectedSize)+
+        rivalPicker(selectedRivals)+(selectedRivals ? difficultyField(selectedDifficulty) : '')+modePicker('soloVictoryMode',selectedMode,selectedRivals===0)+civilizationPicker('soloCivilization',selectedCivilization)+compareCivilizations()+sizePicker(selectedMap,selectedSize)+
         mapPicker(selectedMap,false,selectedSize)+actions(button('start-configured',saved?'Start new campaign':'Start campaign','primary'))+
         '</section>'};
   }
   if (modal === 'restart') return {kicker:'Solo campaign', title:'Replace saved campaign?',
     body:savedCampaignCard(campaignSave(selectedMap,selectedSize),false)+
       '<section class="solo-new-setup"><h3>New campaign settings</h3>'+muted(campaignSummary(getMap(selectedMap,selectedSize),selectedSize))+
-      muted(soloSettingsSummary(selectedRivals,selectedGoal,selectedDifficulty))+'</section>'+
+      muted(soloSettingsSummary(selectedRivals,selectedMode,selectedDifficulty)+' · <span>'+civilizationName(selectedCivilization)+'</span>')+'</section>'+
       desc('Starting over replaces the solo save for this region and size.')+
       actions(button('campaign-atlas','Edit settings'),button('restart','Replace and start','primary'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
-    button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings','Faction standings'),button('log','Event log'),
+    button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings',state?.victoryMode?'Victory progress':'Faction standings'),button('log','Event log'),
     button('help','Field guide'), button('supplies','Supply ledger'), button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
 }
 
@@ -887,7 +905,7 @@ function modalAction(act) {
   } else if ((act === 'start-configured' && modal === 'campaign-atlas') || (act === 'restart' && modal === 'restart')) {
     if (act === 'start-configured' && campaignSave(selectedMap,selectedSize)) open('restart');
     else {
-      enterSoloCampaign(newSolo(selectedMap,selectedSize,selectedRivals,selectedGoal,selectedDifficulty));
+      enterSoloCampaign(newSolo(selectedMap,selectedSize,selectedRivals,TARGET_SCORE,selectedDifficulty,{victoryMode:selectedMode,civilization:selectedCivilization}));
       toast?.('New campaign started.');
     }
   } else if (['menu','multiplayer','standings','log','help'].includes(act)) open(act);
@@ -928,7 +946,10 @@ async function init({ render, locate, toast: showToast }) {
   dialog.addEventListener('change', e => {
     const {name,value} = e.target;
     if (name==='rivals' || name==='soloDifficulty') {
-      if(name==='rivals') selectedRivals=Number(value);
+      if(name==='rivals') {
+        selectedRivals=Number(value);
+        if (!selectedRivals && selectedMode==='conquest') selectedMode='standard';
+      }
       else selectedDifficulty=value;
       drawDialog();
       dialog.querySelector(name==='rivals'?'input[name="rivals"]:checked':'select[name="soloDifficulty"]')?.focus({preventScroll:true});
@@ -942,7 +963,21 @@ async function init({ render, locate, toast: showToast }) {
         return;
       }
     }
-    if (name === 'scoreTarget') { selectedGoal = Number(value); return; }
+    if (['soloVictoryMode','roomVictoryMode','soloCivilization','joinCivilization'].includes(name)) {
+      keepForm();
+      if(name==='soloVictoryMode' && Object.hasOwn(modeLabels,value) && (selectedRivals || value!=='conquest')) selectedMode=value;
+      if(name==='roomVictoryMode' && Object.hasOwn(modeLabels,value)) roomVictoryMode=value;
+      if(name==='soloCivilization' && validCivilization(value)) selectedCivilization=value;
+      if(name==='joinCivilization' && validCivilization(value)) joinCivilization=value;
+      drawDialog();
+      dialog.querySelector('[name="'+name+'"]'+(name.endsWith('Mode')?':checked':''))?.focus({preventScroll:true});
+      return;
+    }
+    const pick=/^lobby-civilization-([0-3])$/.exec(name || '');
+    if (pick && validCivilization(value) && room?.phase==='lobby') {
+      mutate('civilization',{civilization:value,seat:Number(pick[1])});
+      return;
+    }
     if (name !== 'mapId' && name !== 'mapSize') return;
     keepForm();
     if (name === 'mapId') selectedMap=value;

@@ -30,7 +30,7 @@ test('solo setup identifies the practice board and total civilization count for 
     for(const {value,text} of options.slice(1)) assert.equal(text[1],(value+1)+' civilizations total');
     const descriptionId=markup.match(/value="0"[^>]*aria-describedby="([^"]+)"/)[1];
     const note=markup.match(new RegExp('<p id="'+descriptionId+'">([^<]+)</p>'))[1];
-    assert.ok(note.includes('neutral camps') && note.includes('earn civic points'));
+    assert.ok(note.includes('neutral camps') && note.includes('Orbital Survey'));
     assert.notEqual(translate(note,'zh-CN'),note);
   }
 });

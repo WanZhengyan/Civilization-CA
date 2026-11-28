@@ -1,3 +1,4 @@
+import {attackMode} from './attack-mode.js';
 import {prepareBattle} from './battle-reports.js';
 import {sameTeam} from './teams.js';
 
@@ -47,16 +48,17 @@ export function seedCamps(state,map,neighbors,distance) {
   }
 }
 export function wildForecast(unit,definition,target) {
-  const land=definition.domain!=='sea' && definition.captures===true;
+  const mode=attackMode(definition);
+  const occupies=mode==='melee' && definition.captures===true;
   const hit=Math.max(1,Math.round(definition.strength*(.75+.25*unit.hp/unit.maxHp)));
-  const retaliation=land ? Math.min(unit.hp,WILDS[target.type].strength) : 0;
+  const retaliation=mode==='melee' ? Math.min(unit.hp,WILDS[target.type].strength) : 0;
   // Only a surviving close-combat unit can take a camp and collect its spoils.
   const camp=target.type==='camp';
-  const canClear=land && unit.hp>retaliation;
+  const canClear=occupies && unit.hp>retaliation;
   const damage=Math.max(0,Math.min(hit,target.hp-(camp&&!canClear ? 1 : 0)));
   const after=target.hp-damage;
-  return {defenderType:'wild', defenderId:target.id, damage, retaliation, capture:false,
-    defeated:after===0, advances:land&&after===0&&unit.hp>retaliation, attackerDefeated:unit.hp===retaliation,
+  return {attackMode:mode,defenderType:'wild', defenderId:target.id, damage, retaliation, capture:false,
+    defeated:after===0, advances:occupies&&after===0&&unit.hp>retaliation, attackerDefeated:unit.hp===retaliation,
     attackerHpBefore:unit.hp,attackerHpAfter:unit.hp-retaliation,
     defenderHpBefore:target.hp,defenderHpAfterHit:after,defenderHpAfter:after};
 }

@@ -1,5 +1,13 @@
 # Campaign updates
 
+## Choose your civilization and race for conquest or science
+
+Choose a victory mode when starting solo or hosting a room. In Standard, your team can win by conquest or by researching Rocketry and committing 60 production in one city to the Orbital Survey. Science and Conquest each offer a single objective. Earlier campaigns and rooms keep the victory rules they started with.
+
+Choose the California Republic, Pacific Union, Valley Coalition or Arroyo League, or leave the choice to a random draw. Each civilization has a different economic bonus in its original capital. Humans may choose their own civilization before the game starts, and the host can choose for computers.
+
+Combat forecasts and new battle reports distinguish ranged strikes from close combat. A ranged attacker takes zero return damage even when firing at point-blank range.
+
 ## Give orders together on a larger California coast
 
 Room setup starts with the number of seats. Set each position to human or computer, assign a team, and pick the difficulty of each computer. Allies share live sight, explored terrain and surveyed resources. New team rooms let each ally give orders at the same time and mark ready independently. A teammate's move can reveal a target for another player on the same turn. Older rooms can finish in their original turn order.

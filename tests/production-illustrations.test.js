@@ -4,13 +4,14 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {illustration, illustrationPath} from '../docs/illustrations.js';
 import {BUILDINGS, IMPROVEMENTS, UNIT_TYPES} from '../docs/rules.js';
+import {SCIENCE_PROJECT} from '../docs/victory-rules.js';
 import {RESOURCES} from '../docs/resources.js';
 import {ledgerBody} from '../docs/resource-ledger.js';
 import {translate} from '../docs/i18n.js';
 
-test('each unit, building, improvement and resource has a distinct WebP and a localized name',()=>{
+test('each unit, building, science project, improvement and resource has a distinct WebP and a localized name',()=>{
   const hashes=new Set();
-  for(const [id,entry] of Object.entries({...UNIT_TYPES,...BUILDINGS,...IMPROVEMENTS,...RESOURCES})){
+  for(const [id,entry] of Object.entries({...UNIT_TYPES,...BUILDINGS,...IMPROVEMENTS,...RESOURCES,[SCIENCE_PROJECT.id]:SCIENCE_PROJECT})){
     const path=illustrationPath(id);
     const url=new URL('../docs/'+path,import.meta.url);
     const data=readFileSync(url);

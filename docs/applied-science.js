@@ -1,3 +1,4 @@
+import {allowsScience} from './victory-rules.js';
 // Technology IDs are persisted with each civilization. The branch catalog also
 // supplies English labels and effects to the research council.
 export const appliedScience = {
@@ -48,6 +49,7 @@ export function nextTechnology(state, seat, threatened, tree) {
   const opening=['industry','agronomy','tactics','civics'][state.players[seat].faction];
   const priorities=[
     threatened && 'tactics',
+    ...(state.victoryMode==='science' ? ['industry','steam','radio','tactics','ballistics','motorization','rocketry'] : []),
     !known.size && opening,
     ...(fleet ? ['navigation','hydrography'] : []),
     ...(hurt && threatened ? ['agronomy','tactics','fieldMedicine','ballistics'] : []),
@@ -57,7 +59,7 @@ export function nextTechnology(state, seat, threatened, tree) {
     'industry','steam','tactics','ballistics',
     ...(fleet ? ['radio','radar'] : []),
     ...(cities.length>1 ? ['civics','cartography','railways'] : []),
-    'motorization','radio',...Object.keys(tree)
+    'motorization','radio',allowsScience(state) && 'rocketry',...Object.keys(tree)
   ];
-  return priorities.find(id=>id && !known.has(id) && tree[id].requires.every(key=>known.has(key)));
+  return priorities.find(id=>id && (id!=='rocketry' || allowsScience(state)) && !known.has(id) && tree[id].requires.every(key=>known.has(key)));
 }

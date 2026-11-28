@@ -36,7 +36,7 @@ test('every seat is editable before the summary and computers expose their own d
   setup=changeRoomSetup(setup,'seat-kind-3','bot');
   setup=changeRoomSetup(setup,'seat-difficulty-3','hard');
   const html=roomSetupFields(setup);
-  assert.ok(html.indexOf('name="seat-team-3"')<html.indexOf('Team civic target'));
+  assert.ok(html.indexOf('name="seat-team-3"')<html.indexOf('The starting team is drawn at random.'));
   assert.match(html,/name="seat-difficulty-1"/);
   assert.match(html,/name="seat-difficulty-3"/);
   assert.doesNotMatch(html,/name="seat-difficulty-[02]"/);
@@ -110,7 +110,7 @@ test('an interrupted order is retried only in its original room with the same li
 test('the room builder describes shared team charts in both languages',()=>{
   const html=roomSetupFields(newRoomSetup());
   assert.doesNotMatch(html,/own units, treasury and vision/);
-  const phrase='Allies share sight, discoveries and civic victory. Each player commands their own units and treasury.';
+  const phrase='Allies share sight, discoveries and victory. Each player commands their own units and treasury.';
   assert.ok(html.includes(phrase));
   assert.match(translate(phrase,'zh-CN'),/共享视野/);
 });
