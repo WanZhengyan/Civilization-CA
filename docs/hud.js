@@ -1,3 +1,4 @@
+import {unchartedFrom,scoutingRoutes,openScoutingRoutes} from './scout-routes.js';
 import {notebookReport,notebookPanel} from './regional-atlas.js';
 import {FIELD_STATIONS,fieldStationReport,nearestKnownStation,stationInstruction} from './field-stations.js';
 import {hexDistance} from './rules.js';
@@ -243,6 +244,7 @@ function updateHint(id){
       const route=getRouteDetail(view.state,u.id,id);
       const left=u.moves-route.cost;
       hint+=" · Move costs "+route.cost+(route.cost===1?" point":" points")+" · "+left+(left===1?" point left":" points left");
+      if(u.type==="scout" && view.state.intel)hint+=" · Newly charted hexes · "+unchartedFrom(view.state,id,explored).length;
       if(route.crossings.length)hint+=" · "+route.crossings.join(", ");
     }
   }
@@ -359,6 +361,7 @@ function inspect(){
     if(own){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
+      if(u.type==='scout' && state.intel && o.moves.length)actions+=actionButton('scout-routes','Scouting routes','Compare new ground','',disabled);
       if(u.type==="settler"){
         actions+=actionButton("found",foundingLabel(state,view.seat),o.canFound?"Settle here":"Unavailable","gold",disabled||!o.canFound);
         const assessment=survey.get(u.tile);
@@ -506,7 +509,9 @@ function paintMove(){
   text("move-place",tile.name);
   text("move-coord",tile.q+" / "+tile.r);
   text("move-cost",moveDraft.cost);
-  text("move-left",moveDraft.left+" / "+getUnit().maxMoves);
+  text("move-left",moveDraft.left+" / "+voyageAllowance(getUnit()));
+  el('move-frontier').hidden=!moveDraft.frontier;
+  if(moveDraft.frontier)text('move-new',moveDraft.frontier.length);
 }
 function currentFreightCourse(){
   const unit=getUnit();
@@ -531,7 +536,7 @@ function updateMap(){
       if(freightBar._markup!==html){freightBar.innerHTML=html;freightBar._markup=html;}
     }
   }
-  atlas.update({reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  atlas.update({frontierHexes:moveDraft?.frontier,reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -878,6 +883,18 @@ function chooseOrder(key){
   if(key==="fortify"){order="";Game.doAction({type:"fortify",unit:u.id});return}
   if(["provisionVoyage","loadFreight","landFreight","returnFreight","landCatch","haulFish"].includes(key)){order="";Game.doAction({type:key,unit:u.id});return}
   if(key==="recover"){order="";Game.doAction({type:"recover",unit:u.id});return}
+  if(key==='scout-routes'){
+    const origin=matchKey,unitId=u.id,round=view.state.round;
+    openScoutingRoutes(scoutingRoutes(view.state,u,selectedOptions.moves),mapRegion,esc,target=>{
+      const unit=getUnit();
+      if(!mayOrder() || matchKey!==origin || view.state.round!==round || unit?.id!==unitId || unit.seat!==view.seat)return;
+      const draft=previewMove(view.state,unit,target);
+      if(!draft){toast('The route has changed. Choose a destination again.');return}
+      moveDraft=draft;order="";openMapOnMobile();updateMap();atlas.focus(target);
+      moveBar.querySelector('[data-move-confirm]').focus({preventScroll:true});
+    });
+    return;
+  }
   if(key==="move"){
     order="";redraw();openMapOnMobile();return;
   }
@@ -946,7 +963,8 @@ function mount(){
   moveBar.className="move-review";moveBar.hidden=true;moveBar.setAttribute("aria-label","Movement preview");
   moveBar.innerHTML=`<div class="move-place"><strong id="move-place"></strong> <small id="move-coord"></small></div>
     <div class="move-budget" aria-live="polite"><span>Move cost</span> <b id="move-cost"></b>
-    <span>Remaining movement</span> <b id="move-left"></b></div>
+    <span>Remaining movement</span> <b id="move-left"></b>
+    <span id="move-frontier" hidden><span>Newly charted hexes</span> <b id="move-new"></b></span></div>
     <div class="move-controls"><button data-move-cancel type="button">Cancel</button>
     <button data-move-confirm type="button">Confirm move</button></div>`;
   document.querySelector(".map-messages").prepend(moveBar);

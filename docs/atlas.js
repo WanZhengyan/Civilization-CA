@@ -809,6 +809,13 @@ import {drawBarbarians} from "./barbarian-art.js";
 
 function paintHexFocus(g,model,scale) {
   const {selectedId,hoverId,byId:lookup}=model;
+  if(model.frontierHexes?.length){
+    g.save();g.strokeStyle='#9bcac3';g.lineWidth=1.4/scale;g.setLineDash([2/scale,3/scale]);
+    for(const id of model.frontierHexes){
+      const tile=lookup.get(id);if(tile)g.stroke(hexPath(tile.q,tile.r));
+    }
+    g.restore();
+  }
   for(const [id,hover] of [[model.targetId||hoverId,true],[selectedId,false]]){
     const t=lookup.get(id);if(!t || (hover && id===selectedId))continue;
     const p=hexPath(t.q,t.r);g.save();
@@ -1288,6 +1295,7 @@ export function createAtlas(host, options = {}) {
         const sites=o.settlementSurvey||[];
         model.settlementSites={now:sites.filter(s=>s.timing==='now').map(s=>s.tile),nextTurn:sites.filter(s=>s.timing==='next'||s.timing==='next-turn').map(s=>s.tile)};
       }
+      if(Object.hasOwn(o,'frontierHexes'))model.frontierHexes=o.frontierHexes;
       if(Object.hasOwn(o,'reviewPath'))model.reviewPath=o.reviewPath;
       if(Object.hasOwn(o,'previewPath'))model.previewPath=o.previewPath||[];
       if(Object.hasOwn(o,'workSites')){model.workSites=o.workSites;model.workSelection=o.workSelection;}

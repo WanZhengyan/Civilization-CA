@@ -7,6 +7,14 @@ import {positionTranslations} from './field-position.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
+section(`
+Scouting routes|侦察路线
+Compare new ground|比较探图范围
+Newly charted hexes|新增已探索地块
+new hex|格新地块
+new hexes|格新地块
+Select a destination to preview it on the map. Each dotted hex will be added to your chart when the scout arrives.|选择目的地可在地图上预览。侦察兵抵达后，虚线标出的地块将加入你的已探索地图。
+`);
 section(positionTranslations);
 import {stationCopy} from './field-stations.js';
 section(stationCopy);
