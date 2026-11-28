@@ -729,7 +729,7 @@ const guideSections = {
     ['Choose your map', 'Each region and size has its own solo save. Choose a victory condition, a civilization and up to three opponents. In multiplayer the host sets the map and the victory condition.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
     ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
-    ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.'],
+    ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Select Full tree to see which civics unlock future policies and universities.'],
     ['Plan your turn', 'Start with two district orders per turn to claim neutral land or contest a rival border. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
   ]},
   influence: {label:'Influence', entries:[]},

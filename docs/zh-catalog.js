@@ -256,7 +256,7 @@ Unlocks policy|解锁方针
 Unlocks unit|解锁单位
 Unlocks building|解锁建筑
 Fund a government program|推行施政方针
-In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.|在市政面板中打开施政方针。市政宪章解锁公众讲堂，公共工程解锁公共建设合同。比较各城市得到和付出的产出，再表决推行。打开完整市政树可查看后续方针和大学奇观。
+In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Select Full tree to see which civics unlock future policies and universities.|在市政面板中打开施政方针。市政宪章解锁公众讲堂，公共工程解锁公共建设合同。比较各城市得到和付出的产出，再表决推行。选择「完整树」可查看各项施政方针和大学奇观所需的市政。
 Government policy|施政方针
 Balanced budget|平衡预算
 Standard city yields with no program funded.|维持城市的标准产出。
