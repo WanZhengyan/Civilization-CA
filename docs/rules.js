@@ -25,7 +25,7 @@ import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
 import {councilAgenda,proposePolicy} from './assembly-plan.js';
 import {ratifyPolicy} from "./policy.js";
 import {extraHousing} from "./civic-agenda.js";
-import { foodForecast, feedCity } from "./population.js";
+import { foodForecast, feedCity, settlerPopulationReason, SETTLER_RESIDENT_COST } from "./population.js";
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom} from './opening.js';
 import {CIVILIZATIONS, allocateCivilizations, capitalBonus} from './civilizations.js';
@@ -984,9 +984,11 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
     (hasCoast || !(Object.hasOwn(PORT_BUILDINGS,item) || def.domain==='sea')));
   return available.map(([item,def])=>{
     const kind=item===SCIENCE_PROJECT.id ? 'project' : Object.hasOwn(UNIT_TYPES,item) ? 'unit':'building';
+    const populationReason=settlerPopulationReason(city,item);
     let reason='';
     if (state.phase!=='playing') reason='The campaign has ended.';
     else if (!seatMayOrder(state,city.seat)) reason='Wait for the city owner’s turn.';
+    else if (populationReason) reason=populationReason;
     else if (city.queue && (!replace || city.queue.item===item)) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
     else if (def.building && !city.buildings.includes(def.building)) reason='Build a workshop in this city first.';

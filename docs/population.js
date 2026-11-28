@@ -1,3 +1,11 @@
+export const SETTLER_MIN_POPULATION = 3;
+export const SETTLER_RESIDENT_COST = 1;
+
+export function settlerPopulationReason(city, item = city?.queue?.item) {
+  return item === 'settler' && city.population < SETTLER_MIN_POPULATION
+    ? 'Settlers need ' + SETTLER_MIN_POPULATION + ' residents in this city.' : '';
+}
+
 // A stored unit of food can cover a later lean turn. A city can gain or lose
 // at most one citizen per harvest and its founding household always remains.
 export function housingCapacity(city) {
