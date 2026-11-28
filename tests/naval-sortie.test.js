@@ -54,18 +54,25 @@ test('a governor brings a charted sortie back into sight and lands its first hit
   assert.deepEqual(planned,{station:'18,19',target:target.tile});
   assert.ok(!campaignView(state,1).units.some(u=>u.voyagePlan));
   state=JSON.parse(JSON.stringify(state));
-  let sightLost=false,hit=false;
+  let sailedFromMemory=false,hit=false;
   for(let n=0;n<100 && !hit && state.round<=18;n++){
     const active=observed(state);
     const move=state.turn===0?chooseBotActionFromView(active):{type:'end'};
-    if(state.turn===0 && !active.intel.visible.includes(target.tile))sightLost=true;
+    if(move.unit===ship.id && move.type==='move' && !active.intel.visible.includes(target.tile)){
+      const changed=structuredClone(state);
+      changed.cities.find(city=>city.tile===target.tile).hp=1;
+      const hidden=observed(changed);
+      assert.deepEqual(hidden,active);
+      assert.deepEqual(chooseBotActionFromView(hidden),move);
+      sailedFromMemory=true;
+    }
     if(move.unit===ship.id && move.type==='attack' && move.tile===target.tile){
       assert.equal(state.round,18);
       assert.ok(active.intel.visible.includes(target.tile));hit=true;
     }
     state=applyAction(state,state.turn,move);
   }
-  assert.ok(sightLost);assert.ok(hit);
+  assert.ok(sailedFromMemory);assert.ok(hit);
   assert.equal(state.battleReports[0].at(-1).damage,36);
   assert.equal(state.battleReports[0].at(-1).retaliation,0);
   while(state.turn!==0 || state.round<19)state=applyAction(state,state.turn,{type:'end'});
