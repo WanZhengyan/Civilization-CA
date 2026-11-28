@@ -15,3 +15,9 @@ test('city profiles use municipal counts and permit moving between regions',()=>
   assert.match(gazetteerContent(view,'en').body,/440,646/);
   assert.match(gazetteerContent(view,'en').body,/Incorporated city boundary/);
 });
+test('comparison ranks cities and counties separately and a row opens its underlying profile',()=>{
+  const v=newGazetteer();gazetteerAction(v,'section-compare');let body=gazetteerContent(v,'en').body;
+  assert.ok(body.indexOf('3,898,747')<body.indexOf('1,386,932'));assert.ok(!body.includes('10,014,009'));
+  gazetteerAction(v,'counties');body=gazetteerContent(v,'en').body;assert.match(body,/10,014,009/);
+  gazetteerAction(v,'place-sd-county');assert.equal(v.section,'profile');assert.equal(v.region,'sd');
+});

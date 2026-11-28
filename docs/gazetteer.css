@@ -10,3 +10,4 @@
 .gaz-facts dt {font-size:.87rem;color:#c2cec7}.gaz-facts dd {color:#f6deb0;margin:0;font-size:1.2rem;font-variant-numeric:tabular-nums}
 .gaz a {color:#a9d7d8;text-decoration:underline;text-underline-offset:.15rem}
 .gaz-places{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.75rem}.gaz-places .gaz-choice{border-radius:1.3rem;padding-inline:.85rem}
+.gaz-table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}.gaz-table caption{text-align:start;color:#c0ceca;margin:.35rem 0}.gaz-table th{text-align:start}.gaz-table td,.gaz-table th{padding:.3rem .1rem;border-bottom:1px solid #485556}.gaz-table td,.gaz-table thead th:last-child{text-align:end}.gaz-table tbody .gaz-choice{background:transparent;border:0;padding-inline:.25rem;text-decoration:underline;text-underline-offset:.16rem}
