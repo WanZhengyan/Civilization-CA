@@ -21,3 +21,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.11 | Direct builders to reachable surveyed deposits with a quantified charge and stock return |
 | 7.0.12 | Compare real housing projects where food is being held at a city's population cap |
 | 7.0.13 | Calculate the local construction payback of legal industrial investments |
+| 7.0.14 | Show the live treasury cost per turn saved for each affordable rush delivery |

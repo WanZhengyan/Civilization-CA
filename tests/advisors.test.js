@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {applyAction,createGame,campaignView,getCitizenWorkforce} from '../docs/rules.js';
+import {applyAction,createGame,campaignView,getProductionOptions,getCitizenWorkforce} from '../docs/rules.js';
 import {advisorReport} from '../docs/advisors.js';
 
 const start=()=>createGame([{name:'Planner',civilization:'arroyo'}],'la',{seed:624101,practice:true});
@@ -52,4 +52,12 @@ test('the industrial desk waits for the correct research and quotes the paid wor
   const s=capital();assert.ok(!read(s).some(r=>r.desk==='industry'));
   s.players[0].technologies=['industry'];
   const card=read(s).find(r=>r.desk==='industry');assert.equal(card.link.item,'workshop');assert.match(card.detail,/after 7 producing turns/);
+});
+
+test('rush advice uses only affordable current quotes and preserves the purchase decision',()=>{
+  let s=capital();const city=s.cities[0];
+  s=applyAction(s,0,{type:'produce',item:'scout',city:city.id});s.players[0].capital=100;
+  const card=read(s).find(r=>r.desk==='treasury');assert.equal(card.link.buy,true);
+  const paid=applyAction(s,0,{type:'buyProduction',item:'scout',city:city.id,expected:s.cities[0].productionRevision||1,gold:getProductionOptions(s,city.id).find(p=>p.item==='scout').gold});assert.ok(card.detail.includes('leaves '+paid.players[0].capital));
+  s.players[0].capital=0;assert.ok(!read(s).some(r=>r.desk==='treasury'));
 });

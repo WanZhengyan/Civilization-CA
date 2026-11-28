@@ -113,7 +113,20 @@ function industryDesk({state,cities,L,t,name,options,add}){
   }
 }
 
-const desks=[industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function treasuryDesk({state,seat,cities,L,t,name,options,add}){
+  const balance=state.players[seat].capital;
+  for(const city of cities.filter(c=>c.queue)){
+    const offer=options(city).find(p=>p.item===city.queue.item && p.buyEnabled && p.turns>0);
+    if(!offer)continue;
+    const efficiency=offer.gold/offer.turns;
+    add('treasury',L('Price an early delivery at ','评估提前交付 · ')+name(city),
+      L('Finish '+t(offer.label)+' now for '+offer.gold+' gold or wait '+offer.turns+' production turns. That is '+efficiency.toFixed(1)+' gold per turn saved and leaves '+(balance-offer.gold)+' in the treasury.',
+        '立即完成'+t(offer.label)+'需 '+offer.gold+' 金币，正常生产还需 '+offer.turns+' 回合。每提前一回合约花 '+efficiency.toFixed(1)+' 金币，支付后余额 '+(balance-offer.gold)+'。'),
+      40+Math.min(10,offer.turns),{kind:'production',city:city.id,item:offer.item,buy:true});
+  }
+}
+
+const desks=[treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;
