@@ -31,3 +31,13 @@ test('scout proposals report real sight gains and stop advising a skipped unit',
   assert.ok(choice.detail.includes('chart '+(campaignView(after,0).intel.explored.length-before)+' new'));
   u.skippedRound=s.round;assert.ok(!read(s).some(r=>r.desk==='explore'));
 });
+
+test('the works advisor follows the authority’s visible connected deposit and charge quote',()=>{
+  const s=capital(),c=s.cities[0],u={...start().units[0],id:'builder-test',type:'builder',charges:2,moves:2,maxMoves:2,tile:c.tile};
+  s.units.push(u);
+  const view=campaignView(s,0),site=Object.keys(view.intel.workSites[u.id]||{}).find(id=>id!==c.tile);
+  assert.ok(site);
+  s.board[site].resource='grain';
+  const card=read(s).find(r=>r.desk==='improve');assert.ok(card);assert.match(card.detail,/one of 2 charges/);
+  const fog=campaignView(s,0);fog.intel.visible=[];assert.ok(!advisorReport(fog,0).some(r=>r.desk==='improve'));
+});

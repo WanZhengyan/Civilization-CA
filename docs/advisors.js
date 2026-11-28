@@ -1,6 +1,6 @@
 import {scoutingRoutes} from "./scout-routes.js";
 // Advisors read only the seat's projected chart. They never issue orders.
-import {getMap,getPopulationReport,getCitizenWorkforce,getSettlementAssessment,getUnitOptions} from './rules.js';
+import {getMap,getPopulationReport,getCitizenWorkforce,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
 import {roomSeatTurn} from './room-turn.js';
 import {translate} from './i18n.js';
 
@@ -59,7 +59,24 @@ function explorationDesk({state,units,map,L,t,add,active}){
   }
 }
 
-const desks=[explorationDesk,settlementDesk,foodDesk];
+function improvementsDesk({state,units,map,L,t,add,active}){
+  if(!active)return;
+  for(const unit of units.filter(u=>u.charges && u.moves>0 && u.skippedRound!==state.round)){
+    const sites=Object.entries(state.intel.workSites?.[unit.id]||{}).flatMap(([tile,work])=>{
+      const resource=RESOURCES[state.board[tile]?.resource];
+      if(!resource || resource.improvement!==work || !state.intel.visible.includes(tile))return [];
+      const cost=tile===unit.tile?0:getRouteDetail(state,unit.id,tile)?.cost;
+      return cost==null?[]:[{tile,work,resource,cost}];
+    }).sort((a,b)=>a.cost-b.cost || a.tile.localeCompare(b.tile));
+    const s=sites[0];if(!s)continue;
+    add('improve',L('Connect ','接入资源 · ')+t(s.resource.name),
+      L(t(IMPROVEMENTS[s.work].name)+' at '+t(map.byId[s.tile].name)+' ('+s.tile+') costs one of '+unit.charges+' charges and adds one stock unit per harvest while connected. Travel costs '+s.cost+' movement.',
+        '在'+t(map.byId[s.tile].name)+'（'+s.tile+'）修建'+t(IMPROVEMENTS[s.work].name)+'，消耗剩余 '+unit.charges+' 次建造次数中的一次。接入后每次收获增加 1 份库存。前往需 '+s.cost+' 移动力。'),
+      69,{kind:s.cost?'move':'unit',unit:unit.id,tile:s.tile});
+  }
+}
+
+const desks=[improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;

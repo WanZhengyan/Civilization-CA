@@ -18,3 +18,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.8 | Advise cities on harvest risk and the real cost of reassigning workers |
 | 7.0.9 | Compare reachable town sites by founding timing and charted neighboring terrain |
 | 7.0.10 | Weigh new chart coverage against the scout movement left after arrival |
+| 7.0.11 | Direct builders to reachable surveyed deposits with a quantified charge and stock return |
