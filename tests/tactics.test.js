@@ -75,6 +75,8 @@ test("city spending accumulates across rounds, completes a building, then trains
   let state=game();
   const city=state.cities.find(c=>c.seat===0);
   assert.ok(rules.getCityYield(state,city.id).production>0);
+  state=order(state,{type:"research",item:"industry"});
+  while (!state.players[0].technologies.includes("industry")) state=nextRound(state);
   const build=rules.getProductionOptions(state,city.id).find(p=>p.item==="workshop");
   assert.ok(build?.enabled);
   state=order(state,{type:"produce",city:city.id,item:build.item});

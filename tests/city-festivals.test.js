@@ -7,9 +7,7 @@ function ready() {
   let s=createGame([{name:'West',civilization:'arroyo'}],'la',{seed:624101,mapSize:'large',practice:true});
   s.campaignVariety=1;
   s=applyAction(s,0,{type:'found',unit:s.units[0].id});
-  const c=s.cities[0];
   s=applyAction(s,0,{type:'civic',item:'charter'});
-  s=applyAction(s,0,{type:'produce',city:c.id,item:'workshop'});
   while(!s.players[0].civics.includes('charter') || s.cities[0].food<4 || s.cities[0].population<2) {
     s=applyAction(s,0,{type:'end'});assert.ok(s.round<15);
   }

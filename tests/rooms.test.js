@@ -117,7 +117,9 @@ test("each seat issues unit and city orders through the server and observes the 
     }
     room=(await seats.act(token,room.revision,{type:"found",unit:unit.id})).room;
     const city=room.game.cities.find(c=>c.seat===seat);
-    room=(await seats.act(token,room.revision,{type:"produce",city:city.id,item:"workshop"})).room;
+    await seats.act(token,room.revision,{type:"produce",city:city.id,item:"workshop"},422);
+    assert.equal((await seats.read(token)).revision,room.revision);
+    room=(await seats.act(token,room.revision,{type:"produce",city:city.id,item:"granary"})).room;
     const other=await seats.read(observer);
     assert.equal(other.revision,room.revision);
     assert.ok(other.game.cities.every(c=>c.seat!==seat || !c.queue));
@@ -125,7 +127,7 @@ test("each seat issues unit and city orders through the server and observes the 
     room=(await seats.act(token,room.revision,{type:"end"})).room;
   }
   assert.equal(room.game.round,2);
-  assert.ok(room.game.cities.every(c=>c.queue?.item==="workshop" && c.queue.progress>0));
+  assert.ok(room.game.cities.every(c=>c.queue?.item==="granary" && c.queue.progress>0));
   assert.deepEqual((await seats.read(seats.guest)).game,room.game);
 });
 
@@ -197,8 +199,8 @@ test("a saved tactical room keeps units, damage and production when receiving th
   room=await seats.read(seats.host);
   const city=room.game.cities.find(c=>c.seat===0);
   const unit=room.game.units.find(u=>u.seat===0 && u.type==="melee");
-  room=(await seats.act(seats.host,room.revision,{type:"produce",city:city.id,item:"workshop"})).room;
   const v2=JSON.parse(fixture.sqlite.prepare("SELECT game FROM game_rooms WHERE code=?").get(seats.code).game);
+  v2.cities.find(c=>c.id===city.id).queue={item:"workshop",required:13,progress:4};
   v2.rulesVersion=2;
   v2.units.find(u=>u.id===unit.id).hp=65;
   for(const p of v2.players) {

@@ -8,7 +8,7 @@ test('citizen focus previews agree with a committed harvest without issuing a ci
   const act=action=>{state=applyAction(state,state.turn,action);};
   act({type:'found',unit:state.units[0].id});
   const id=state.cities[0].id;
-  act({type:'produce',city:id,item:'workshop'});
+  act({type:'produce',city:id,item:'granary'});
   act({type:'end'});
   act({type:'found',unit:state.units.find(u=>u.seat===1).id});
   act({type:'end'});

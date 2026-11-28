@@ -8,6 +8,15 @@ function capital(building) {
   state.campaignVariety=1;
   state=applyAction(state,0,{type:'found',unit:state.units[0].id});
   const city=state.cities[0].id;
+  if (building==='workshop') {
+    state=applyAction(state,0,{type:'research',item:'industry'});
+    while (!state.players[0].technologies.includes('industry')) {
+      state=applyAction(state,0,{type:'end'});
+      if (!state.cities.some(c=>c.seat===1)) state=applyAction(state,1,{type:'found',unit:state.units.find(u=>u.seat===1).id});
+      state=applyAction(state,1,{type:'end'});
+      assert.ok(state.round<20);
+    }
+  }
   state=applyAction(state,0,{type:'produce',city,item:building});
   while (state.cities[0].population<2 || !state.cities[0].buildings.includes(building) || state.players[0].capital<18) {
     state=applyAction(state,0,{type:'end'});
