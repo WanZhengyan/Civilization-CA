@@ -1,3 +1,7 @@
+import {getMap,getUnitOptions} from './rules.js';
+import {scoutingRoutes} from './scout-routes.js';
+import {translate} from './i18n.js';
+
 // The practice campaign uses the regular councils, city queues and unit orders.
 const stages = ['found','research','civic','produce','influence','turn','explore'];
 const copy = {
@@ -81,7 +85,14 @@ export function tutorialLesson(view) {
   if (step==='found' && !settler) step='restart';
   else if (step==='found' && !settler.moves) step='restFounder';
   if (step==='explore' && !fieldUnit) step='wait';
-  return {step, index:index<0?stages.length:index+1, total:stages.length, city,
+  let route=null;
+  if(step==='explore' && fieldUnit?.type==='scout' && state.intel?.seat===seat) {
+    const visible=new Set(state.intel.visible);
+    const destinations=getUnitOptions(state,fieldUnit.id).moves.filter(tile=>visible.has(tile));
+    const best=scoutingRoutes(state,fieldUnit,destinations)[0];
+    if(best?.newHexes>0)route={...best,name:getMap(state).byId[best.tile].name};
+  }
+  return {step, index:index<0?stages.length:index+1, total:stages.length, city,route,
     unit:step==='found'?settler:fieldUnit};
 }
 
@@ -124,9 +135,20 @@ export function mountTutorialCoach({getView,getLanguage,locate,saveProgress}) {
     field('progress').max=lesson.total;
     field('progress').value=lesson.step==='complete'?lesson.total:lesson.index-1;
     field('progress').setAttribute('aria-label',language('Tutorial progress','教学进度'));
-    write(field('h2'),title[zh]);write(field('p'),detail[zh]);write(go,action[zh]);
-    alt.hidden=lesson.step!=='influence' && lesson.step!=='wait';
-    if(!alt.hidden)write(alt,lesson.step==='influence'?language('Save my influence','暂时保留影响力'):language('Finish lesson','结束教学'));
+    write(field('h2'),title[zh]);
+    const route=lesson.route;
+    if (route) {
+      const place=translate(route.name,getLanguage())+' ('+route.tile.replace(',',' / ')+')';
+      write(field('p'),language(
+        `From ${place}, your scout can chart ${route.newHexes} new hex${route.newHexes===1?'':'es'}. The trip costs ${route.cost} movement, leaving ${route.left}. Preview the dotted frontier before confirming.`,
+        `到达「${place}」可以探明 ${route.newHexes} 个新地块。移动消耗 ${route.cost} 点，还剩 ${route.left} 点。先预览地图上的虚线范围，再决定是否出发。`));
+      write(go,language('Preview this route','预览这条路线'));
+    } else {
+      write(field('p'),detail[zh]);write(go,action[zh]);
+    }
+    alt.hidden=!route && lesson.step!=='influence' && lesson.step!=='wait';
+    if(route)write(alt,language('Choose my own move','自己决定行动'));
+    else if(!alt.hidden)write(alt,lesson.step==='influence'?language('Save my influence','暂时保留影响力'):language('Finish lesson','结束教学'));
     highlight(document.querySelector(({
       found:'[data-order="found"]:not(:disabled)',research:'#research-card',civic:'#civics-card',
       produce:'[data-order="choose-production"]:not(:disabled)',influence:'#influence-open',
@@ -142,6 +164,7 @@ export function mountTutorialCoach({getView,getLanguage,locate,saveProgress}) {
   };
   alt.onclick=()=>{
     const lesson=tutorialLesson(getView());
+    if(lesson?.route){locate({...lesson,route:null});return;}
     if(lesson?.step==='influence'){saveProgress({seenInfluence:true});go.focus({preventScroll:true});}
     if(lesson?.step==='wait'){
       saveProgress({completed:true});

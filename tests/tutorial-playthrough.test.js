@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  applyAction, campaignView, getBorderCharter, getPendingTurnTasks, getUnitOptions
+  applyAction, campaignView, getBorderCharter, getPendingTurnTasks, getMap
 } from '../docs/rules.js';
 import {newTutorial, restoreTutorial, tutorialProgressAfter} from '../docs/tutorial-save.js';
 import {tutorialLesson} from '../docs/tutorial-coach.js';
-import {scoutingRoutes} from '../docs/scout-routes.js';
+import {previewMove,reviewPointerMove} from '../docs/move-review.js';
 
 function campaign() {
   let slot=newTutorial();
@@ -58,11 +58,22 @@ test('the guided Pasadena opening buys the quoted district and trains and moves 
   const scout=lesson().unit;
   assert.equal(scout.type,'scout');
   const observation=view();
-  const [route]=scoutingRoutes(observation,scout,getUnitOptions(observation,scout.id).moves);
-  assert.ok(route.newHexes>0,'the opening scout can immediately reach unexplored land');
+  const route=lesson().route;
+  assert.ok(route.newHexes>0 && observation.intel.visible.includes(route.tile));
+  const draft=previewMove(observation,scout,route.tile);
+  assert.equal(draft.frontier.length,route.newHexes);
+  assert.equal(draft.cost,route.cost);
+  assert.equal(view().units.find(u=>u.id===scout.id).tile,scout.tile,'a route preview leaves the scout in place');
+  for (const input of ['mouse','keyboard','touch'])assert.ok(reviewPointerMove(input,false,true));
+  const surveyed={...observation,intel:{...observation.intel,explored:getMap(observation).tiles.map(t=>t.id)}};
+  const known=tutorialLesson({tutorial:true,seat:0,state:surveyed,tutorialProgress:{
+    founded:true,choseResearch:true,choseCivic:true,choseProduction:true,expanded:true,endedTurn:true
+  }});
+  assert.equal(known.route,null,'fully charted destinations do not promise a discovery');
   play({type:'move',unit:scout.id,tile:route.tile});
   reload();
   assert.equal(view().units.find(unit=>unit.id===scout.id).tile,route.tile);
+  assert.equal(view().units.find(unit=>unit.id===scout.id).moves,route.left);
   assert.equal(view().intel.explored.length-observation.intel.explored.length,route.newHexes);
   assert.equal(lesson().step,'complete');
   remember({completed:true});
@@ -98,6 +109,7 @@ test('an alternate build, saving influence, and skip orders survive reload witho
   }
   assert.equal(lesson().step,'explore');
   assert.equal(lesson().unit.type,'builder');
+  assert.equal(lesson().route,null);
   play({type:'skipUnit',unit:lesson().unit.id});
   reload();
   assert.equal(lesson().step,'complete');
