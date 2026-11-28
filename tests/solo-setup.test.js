@@ -32,8 +32,21 @@ test('all solo setups keep their chosen opponents, civilization and victory cond
 async function openPage(address,storage) {
   const document = new EventTarget();
   const body = {scrollTop:0};
+  const guideNodes=new Map(), guideSelectors={
+    '#guide-query':'id="guide-query"', '#guide-results':'id="guide-results"',
+    '[data-guide-chapter]':'data-guide-chapter', '[data-clear-search]':'data-clear-search',
+    '.guide-result-count':'class="guide-result-count"'
+  };
   const dialog = Object.assign(new EventTarget(),{
-    innerHTML:'', querySelector:selector=>selector === '.modal-body' ? body : null,
+    innerHTML:'', querySelector(selector) {
+      if(selector==='.modal-body')return body;
+      const token=guideSelectors[selector] || (selector.startsWith('[data-guide-target=') && selector.slice(1,-1));
+      if(!token || !this.innerHTML.includes(token))return null;
+      if(!guideNodes.has(selector))guideNodes.set(selector,Object.assign(new EventTarget(),{
+        value:'',replaceChildren(){this.innerHTML='';},focus(){this.focused=true;},scrollIntoView(){this.scrolled=true;}
+      }));
+      return guideNodes.get(selector);
+    },
     setAttribute(){}, showModal(){this.open=true;}, close(){this.open=false;}
   });
   const title = Object.assign(new EventTarget(),{querySelectorAll:()=>[]});
@@ -150,6 +163,21 @@ test('an occupied slot resumes its original campaign, confirms only a replacemen
   assert.equal(saved().players.length,3);
   assert.equal(saved().victoryMode,'conquest');
   assert.equal(JSON.parse(storage.get(otherKey)).seed,17);
+});
+
+test('a player can search from the title, open the matched topic, and return to the title',async()=>{
+  const page=await openPage('https://example.test/Civilization-CA/game.html',new Map());
+  page.titleClick('help');
+  const input=page.dialog.querySelector('#guide-query'),results=page.dialog.querySelector('#guide-results');
+  input.value='影响力';
+  input.dispatchEvent(new Event('input'));
+  assert.match(results.innerHTML,/Use your first 6 influence/);
+  results.onclick({target:{closest:()=>({dataset:{match:'0'}})}});
+  assert.match(page.dialog.innerHTML,/aria-selected="true" data-act="guide-influence"/);
+  assert.equal(page.dialog.querySelector('[data-guide-target="topic-0"]').scrolled,true);
+  page.click('back');
+  assert.equal(page.dialog.open,false);
+  assert.equal(page.location.hash,'');
 });
 
 test('the guide and standings use the chosen target and a practice finish reports the score earned',async()=>{
