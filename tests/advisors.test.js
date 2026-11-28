@@ -96,3 +96,10 @@ test('recovery advice compares the two real health forecasts before consuming mo
   assert.match(card.detail,/42\/100/);assert.match(card.detail,/46\/100/);assert.equal(card.link.rest,true);
   u.resting=true;assert.ok(!read(s).some(r=>r.desk==='recovery'));
 });
+
+test('the launch office compares construction sites only in campaigns that permit a science victory',()=>{
+  const s=capital(),c=s.cities[0];s.victoryMode='science';s.players[0].technologies=['rocketry'];
+  const choice=read(s).find(r=>r.desk==='launch');assert.equal(choice.link.city,c.id);assert.match(choice.detail,/0\/60/);
+  c.queue={item:'orbitalSurvey',progress:38,required:60};assert.match(read(s).find(r=>r.desk==='launch').detail,/38\/60/);
+  s.victoryMode='conquest';assert.ok(!read(s).some(r=>r.desk==='launch'));
+});

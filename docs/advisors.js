@@ -1,3 +1,4 @@
+import {SCIENCE_PROJECT,allowsScience} from "./victory-rules.js";
 import {getRecoveryForecast,UNIT_TYPES} from "./rules.js";
 import {getFreightManifest} from "./rules.js";
 import {freightCourse} from "./freight-course.js";
@@ -250,7 +251,26 @@ function recoveryDesk({state,seat,units,map,L,t,add,active}){
   }
 }
 
-const desks=[recoveryDesk,coastDesk,supplyDesk,influenceDesk,civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function launchDesk({state,seat,cities,L,name,options,add}){
+  if(!allowsScience(state) || !state.players[seat].technologies?.includes('rocketry') || !cities.length)return;
+  const launches=cities.flatMap(city=>{
+    const p=options(city).find(p=>p.item===SCIENCE_PROJECT.id);
+    const running=city.queue?.item===SCIENCE_PROJECT.id;
+    if(!p || !running && !p.enabled || p.turns==null)return [];
+    return [{city,p,running,work:running?city.queue.progress:(p.saved||0)}];
+  }).sort((a,b)=>a.p.turns-b.p.turns || Number(b.running)-Number(a.running) || b.work-a.work);
+  const leader=launches[0];if(!leader)return;
+  const {city,p,running,work}=leader,next=launches[1];
+  const comparison=next?L(' The next location, '+name(next.city)+', needs '+next.p.turns+' turns.',
+    ' 备选城市'+name(next.city)+'需 '+next.p.turns+' 回合。'):'';
+  const queue=city.queue && !running?L(' This would pause the current city project.',' 开工将暂停该城现有项目。'):'';
+  add('launch',L(running?'Track the leading launch at ':'Start the fastest orbital survey at ',running?'查看领先的发射进度 · ':'开启最快的轨道测绘 · ')+name(city),
+    L(work+'/'+p.required+' production already invested. The fastest eligible city can finish in '+p.turns+' turns at present output. Completion wins a science victory.',
+      '已投入 '+work+'/'+p.required+' 生产力。按当前产出，最快的可用城市预计 '+p.turns+' 回合完成，完工将取得科技胜利。')+comparison+queue,
+    91,{kind:'production',city:city.id,item:p.item});
+}
+
+const desks=[launchDesk,recoveryDesk,coastDesk,supplyDesk,influenceDesk,civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;

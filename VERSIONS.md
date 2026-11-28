@@ -28,3 +28,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.18 | Match one-per-turn storehouse shipments with city shortages and the cash alternative |
 | 7.0.19 | Rank charted freight voyages by cargo delivery time and tariff |
 | 7.0.20 | Compare resting and natural recovery with movement costs and nearby service stations |
+| 7.0.21 | Rank eligible space-project cities by remaining work and actual time to victory |
