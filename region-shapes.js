@@ -32,7 +32,7 @@ export function neighborCoordinates(q, r) {
   ];
 }
 
-function crossingIndex(crossings) {
+export function crossingIndex(crossings) {
   const byTile = Object.create(null);
   for (const crossing of crossings) {
     (byTile[crossing.a] ||= []).push({...crossing, to:crossing.b});

@@ -1,3 +1,5 @@
+import {installSoundtrack,soundtrackControls} from './music-controls.js';
+import {fishingGuide,inlandGuide} from './maritime-guide.js';
 import {captureRoomOrder,isComputerActing,mayResumeOrder,roomSeatTurn,teamMemberStatus} from './room-turn.js';
 import {DEFAULT_MAP_SIZE,validNewMapSize} from './maps.js';
 import {advancementGuide,recoveryGuide} from './unit-service-copy.js';
@@ -16,7 +18,7 @@ import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
 import {changeRoomSetup,difficultyField,difficultyLabel,newRoomSetup,roomSetupFields,teamLabel,validRoomTeams} from './room-setup.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
 
-import {getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
+import {getEra, getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
 
 const SEATS_KEY = 'angel-basin.room-seats.v1';
 const LAST_ROOM_KEY = 'angel-basin.active-room.v1';
@@ -61,6 +63,7 @@ function selectCampaignSettings(state) {
   selectedDifficulty = state?.difficulty || 'normal';
 }
 
+let soundtrack;
 let renderView, locateDistrict, toast, dialog, solo, room = null, token = null;
 let mode = 'home', modal = '', roomTab = 'create', joinCode = '', formName = '';
 let selectedMap = 'la';
@@ -93,7 +96,7 @@ function updateRoomShortcut() {
 }
 
 function showTitle(visible) {
-  if (visible) updateRoomShortcut();
+  if (visible) { updateRoomShortcut(); soundtrack?.music.setScene(null); }
   const screen = document.getElementById('title-screen');
   const leavingTitle = !visible && !screen.hidden;
   screen.hidden = !visible;
@@ -108,6 +111,7 @@ function emit() {
   if (mode === 'home' || (mode === 'online' && !room?.game)) return;
   if (modal==='supplies' && dialog?.open) drawDialog();
   const state = getState();
+  soundtrack?.music.setScene(state ? getEra(state,currentSeat()).id : null);
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
   renderView?.({
     state, seat: currentSeat(), room, session: mode==='solo' ? solo.seed : room?.code,
@@ -696,7 +700,8 @@ const guideSections = {
   ]},
   coast: {label:'At sea', entries:[
     ['Choose a harbor site', 'Found on the shore or connect a city to your own coast within two hexes. Choose Harbor in city production. The harbor reserves an adjacent water hex and earns capital.'],
-    ['Put a crew to work', 'Train a Fishing crew at a harbor. Sail to open water within two water hexes of a friendly harbor and build a Fishery. Each crew has two charges.'],
+    fishingGuide,
+    inlandGuide,
     ['Choose a warship', 'An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.'],
     ['Launch a fleet', 'A harbor trains Revenue cutters. Research Steam Power to unlock the Shipyard, then build one to train Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.']
   ]},
@@ -831,7 +836,8 @@ function drawDialog() {
   if (!modal || !dialog) return;
   const scrolled = dialog.querySelector('.modal-body')?.scrollTop || 0;
   const { kicker, title, body } = content();
-  dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl() : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl()+soundtrackControls(soundtrack?.music) : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  if (modal==='menu') soundtrack?.refresh();
   dialog.setAttribute('aria-labelledby','game-dialog-title');
   dialog.querySelector('.modal-body').scrollTop = scrolled;
 }
@@ -943,6 +949,7 @@ async function init({ render, locate, toast: showToast }) {
   installMapStyles();
   installLanguage();
   dialog = document.getElementById('modal');
+  soundtrack=installSoundtrack(dialog);
   dialog.addEventListener('change', e => {
     const {name,value} = e.target;
     if (name==='rivals' || name==='soloDifficulty') {

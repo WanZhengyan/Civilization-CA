@@ -245,3 +245,9 @@ html[lang="zh-CN"] :is(.section-label,.eyebrow,.modal-kicker,.resource-label,.en
 
 .border-summary .border-locate{display:flex;justify-content:space-between;align-items:center;gap:.55rem;width:100%;padding:.4rem .45rem;margin-top:.25rem;color:#d8ebd8;border:1px solid #668672;border-radius:4px;background:#26372f;text-align:left;cursor:pointer}
 .border-locate b{overflow-wrap:anywhere}.border-locate:focus-visible{outline:2px solid #f2d69b;outline-offset:2px}
+
+.menu-music{display:grid;gap:.65rem;margin-top:1rem;padding:1rem;border:1px solid #4b5e5d;border-radius:.45rem;background:#1b292c;color:#efe6d2}
+.music-heading,.music-volume{display:flex;align-items:center;gap:.75rem;justify-content:space-between}
+.music-heading strong,.music-heading small{display:block}.menu-music small{color:#b5c7c3;font-size:.85rem}
+.music-heading button{background:#2c393a;border:1px solid #788b85;border-radius:.35rem;padding:.45rem .85rem;color:inherit;font:inherit;cursor:pointer}
+.music-volume{font-size:.9rem}.music-volume input{flex:1;min-width:2rem;accent-color:#d9b16f}.music-volume output{width:3ch;font-variant-numeric:tabular-nums}
