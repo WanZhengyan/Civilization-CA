@@ -1,6 +1,7 @@
+import {housingCapacity} from "./population.js";
 import {scoutingRoutes} from "./scout-routes.js";
 // Advisors read only the seat's projected chart. They never issue orders.
-import {getMap,getPopulationReport,getCitizenWorkforce,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
+import {getMap,getPopulationReport,getCitizenWorkforce,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
 import {roomSeatTurn} from './room-turn.js';
 import {translate} from './i18n.js';
 
@@ -76,7 +77,21 @@ function improvementsDesk({state,units,map,L,t,add,active}){
   }
 }
 
-const desks=[improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function housingDesk({state,cities,L,t,name,add,options}){
+  for(const city of cities){
+    const food=getPopulationReport(state,city.id);
+    if(!food.housingLimited || food.surplus<=0)continue;
+    for(const project of options(city).filter(p=>p.enabled && ['granary','neighborhood'].includes(p.item))){
+      const capacity=food.housing+housingCapacity({...city,buildings:[...city.buildings,project.item]})-housingCapacity(city);
+      add('housing',L('Open housing in ','增加住房 · ')+name(city),
+        L(t(project.label)+' raises capacity from '+food.housing+' to '+capacity+'. This city banks '+food.food+' food and has a '+food.surplus+' surplus each harvest. Build in '+project.turns+' turns.',
+          t(project.label)+'使住房从 '+food.housing+' 增至 '+capacity+'。本城储粮 '+food.food+'，每回合结余 '+food.surplus+'，预计建造 '+project.turns+' 回合。'),
+        67-Math.min(7,project.turns),{kind:'production',city:city.id,item:project.item});
+    }
+  }
+}
+
+const desks=[housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;
@@ -85,7 +100,12 @@ export function advisorReport(state,seat,language='en'){
   const name=city=>city.name===map.byId[city.tile]?.name?t(city.name):city.name;
   const rows=[];
   const add=(desk,title,detail,priority,link)=>rows.push({desk,title,detail,priority,link});
-  const ctx={state,seat,cities,units,map,L,t,name,add,active:roomSeatTurn(state,seat)==='active'};
+  const byCity=new Map();
+  function options(city){
+    if(!byCity.has(city.id))byCity.set(city.id,getProductionOptions(state,city.id,{replace:true}));
+    return byCity.get(city.id);
+  }
+  const ctx={options,state,seat,cities,units,map,L,t,name,add,active:roomSeatTurn(state,seat)==='active'};
   for(const advise of desks)advise(ctx);
   return rows.sort((a,b)=>b.priority-a.priority || a.desk.localeCompare(b.desk) || a.title.localeCompare(b.title));
 }

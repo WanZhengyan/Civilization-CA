@@ -843,6 +843,11 @@ function reviewAdvice(link){
   const city=ownCities().find(c=>c.id===link.city);
   if(!city)return;
   select(city.tile,null,true);atlas.focus(city.tile);redraw();
+  if(link.kind==='production'){
+    openProduction();
+    const method=link.buy?'buy':'produce';
+    el('production-options').querySelector('[data-'+method+'="'+link.item+'"]')?.focus();
+  }
   if(link.kind==='citizens')chooseOrder('citizens');
 }
 

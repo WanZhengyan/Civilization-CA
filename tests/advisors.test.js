@@ -41,3 +41,9 @@ test('the works advisor follows the authority’s visible connected deposit and 
   const card=read(s).find(r=>r.desk==='improve');assert.ok(card);assert.match(card.detail,/one of 2 charges/);
   const fog=campaignView(s,0);fog.intel.visible=[];assert.ok(!advisorReport(fog,0).some(r=>r.desk==='improve'));
 });
+
+test('the housing advisor prices a legal city project only when housing caps a positive harvest',()=>{
+  const s=capital(),c=s.cities[0];c.population=3;c.focus='food';
+  const card=read(s).find(r=>r.desk==='housing' && r.link.item==='granary');assert.ok(card);assert.match(card.detail,/from 3 to 5/);
+  c.buildings.push('granary');assert.ok(!read(s).some(r=>r.desk==='housing'));
+});
