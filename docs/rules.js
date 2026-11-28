@@ -25,7 +25,7 @@ import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
 import {councilAgenda,proposePolicy} from './assembly-plan.js';
 import {ratifyPolicy} from "./policy.js";
 import {extraHousing} from "./civic-agenda.js";
-import { foodForecast, feedCity, settlerPopulationReason, SETTLER_RESIDENT_COST } from "./population.js";
+import { foodForecast, feedCity, settlerPopulationReason, SETTLER_RESIDENT_COST, SETTLER_MIN_POPULATION } from "./population.js";
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom} from './opening.js';
 import {CIVILIZATIONS, allocateCivilizations, capitalBonus} from './civilizations.js';
@@ -1742,7 +1742,7 @@ function botProject(state,city,difficulty) {
       state.barbarians?.parties.some(p=>p.type==='raider' && hexDistance(p.tile,city.tile)<=3);
     if(near && !count('melee'))choices.push('melee');
     if(near && !count('ranged'))choices.push('ranged');
-    if(cities.length<2 && !count('settler') && (count('melee') || count('ranged'))) {
+    if(city.population>=SETTLER_MIN_POPULATION && cities.length<2 && !count('settler') && (count('melee') || count('ranged'))) {
       const map=getMap(state),charted=new Set(state.intel.explored);
       const site=state.intel.visible.some(id=>hexDistance(city.tile,id)<=5 && canSettle(state,city.seat,id) &&
         !rivals.some(unit=>UNIT_TYPES[unit.type].strength && hexDistance(unit.tile,id)<=2) &&
@@ -2176,7 +2176,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   for (const city of state.cities) if (city.seat===seat && city.focusRound!==state.round) {
     const food=getPopulationReport(state,city.id);
     const focusResearch=player.research && pursuingOrbitalResearch(state,seat);
-    const focus=food.surplus<0 ? 'food' : food.housingLimited && !focusResearch ? 'industry' :
+    const formingSettler=city.queue?.item==='settler' && city.population<=SETTLER_MIN_POPULATION;
+    const focus=food.surplus<0 || formingSettler ? 'food' : food.housingLimited && !focusResearch ? 'industry' :
       (city.population>=3 && player.research ? 'science' : 'balanced');
     if ((city.focus || 'balanced')!==focus) return {type:'focus',city:city.id,item:focus};
   }

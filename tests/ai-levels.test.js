@@ -128,14 +128,16 @@ test('a city will not commission a harbor on bare-looking water shared with an u
   }
 });
 
-test('hard commissions an expansion settler only after its escort reveals a usable site',()=>{
+test('hard commissions an expansion settler only after reaching three residents and scouting a usable site',()=>{
   const state=createClassicGame(['A','B']);
-  Object.assign(state.players[0],{research:'industry',civic:'charter',policyRound:state.round});
-  Object.assign(state.cities[0],{queue:null,focusRound:state.round});
+  Object.assign(state.players[0],{research:'agronomy',technologies:['industry'],civic:'charter',policyRound:state.round});
+  Object.assign(state.cities[0],{population:3,queue:null,focusRound:state.round});
   state.units=[{...unit('guard',0,'melee','11,7'),moves:0}];
   assert.equal(chooseBotAction(state,'hard').item,'workshop');
   state.units[0].tile='13,7';
   assert.equal(chooseBotAction(state,'hard').item,'settler');
+  state.cities[0].population=2;
+  for(const level of AI_LEVELS) assert.notEqual(chooseBotAction(state,level).item,'settler');
 });
 
 for(const item of ['stanford','neighborhood'])test('a governor considers every plausible private '+item+' site equally',()=>{
