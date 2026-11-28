@@ -392,7 +392,7 @@ function drawOpeningSeat(seed,teams,count) {
   const pick=options=>options[Math.floor(random()*options.length)];
   return pick(pick([...members.values()]));
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2, campaignVariety=!legacyVictory && researchPace===2, fieldCommandRevision=campaignVariety ? 1 : 0} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2, campaignVariety=!legacyVictory && researchPace===2, fieldCommandRevision=campaignVariety ? 1 : 0, influencePlanning=fieldCommandRevision===1} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!validVictoryMode(victoryMode)) throw new Error('Choose a valid victory mode.');
   if (!legacyVictory && practice && victoryMode==='conquest') throw new Error('Conquest requires a rival civilization.');
@@ -419,7 +419,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const waterPlan=waterways ? planWaterways(base,seed) : null;
   const map=waterwayChart(base,waterPlan);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, ...(campaignVariety ? {campaignVariety:1} : {}), ...(campaignVariety && fieldCommandRevision===1 ? {fieldCommandRevision} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
+  const next = {seed, mapId, ...(influencePlanning && campaignVariety ? {influencePlanning:1} : {}), ...(campaignVariety ? {campaignVariety:1} : {}), ...(campaignVariety && fieldCommandRevision===1 ? {fieldCommandRevision} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
     ...(teams ? {teams:[...teams]} : {}), ...(difficulty!=='normal' ? {difficulty} : {}),
     ...(drawInitiative===true ? {firstSeat} : {}), ...(!legacyVictory || scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:firstSeat,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
@@ -1896,6 +1896,25 @@ function botMovement(state,unit,options,difficulty) {
   }
   return best===unit.tile ? null : {type:'move',unit:unit.id,tile:best};
 }
+// Buy an early parcel only when residents will actually work it. Natural border
+// growth is free, so preserve a reserve for diplomacy and skip imminent growth.
+function botBorderCharter(state,difficulty) {
+  const seat=state.turn;
+  if (state.influencePlanning!==1 || difficulty==='easy' || state.players[seat].influence<BORDER_CHARTER_COST+9) return null;
+  const expansions=getCityExpansions(state,seat);
+  for (const [city,report] of expansions) {
+    if (!report.tile || report.turns<3) continue;
+    const offer=getBorderCharter(state,seat,city,expansions);
+    if (!offer.enabled) continue;
+    const tile=offer.tile;
+    const after={...state,board:{...state.board,[tile]:{...state.board[tile],owner:seat}}};
+    const beforeYields=getCitizenWorkforce(state,city).yields;
+    const afterYields=getCitizenWorkforce(after,city).yields;
+    const gains=Object.keys(beforeYields).map(resource=>afterYields[resource]-beforeYields[resource]);
+    if (gains.every(gain=>gain>=0) && gains.some(gain=>gain>0)) return {type:'charterBorder',city,tile};
+  }
+  return null;
+}
 function botDistrict(state,difficulty) {
   const map=getMap(state);
   if (!state.actionsLeft) return null;
@@ -1949,7 +1968,7 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   const observedBerths=Array.isArray(view.intel.visibleBerths) ? {visibleBerths:view.intel.visibleBerths.filter(id=>visible.includes(id))} : {};
   const friendlyHarbors=view.campaignVariety===1 ? {alliedFreightPorts:(view.intel.alliedFreightPorts || []).filter(port=>
     visible.includes(port.portTile) && sameTeam(view,seat,port.seat))} : {};
-  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,...observedBerths,...friendlyHarbors}};
+  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,borderCharters:view.influencePlanning===1,...observedBerths,...friendlyHarbors}};
   const player = state.players[seat];
   if (!state.cities.some(c=>c.seat===seat)) {
     const pioneer=state.units.find(u=>u.type==='settler' && u.seat===seat && u.moves>0);
@@ -2082,5 +2101,5 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   }
   const envoy=proposeDelegation(view.intel.diplomacy || [],state.round,player.influence,difficulty);
   if (envoy) return envoy;
-  return botDistrict(state,difficulty) || {type:'end'};
+  return botDistrict(state,difficulty) || botBorderCharter(state,difficulty) || {type:'end'};
 }

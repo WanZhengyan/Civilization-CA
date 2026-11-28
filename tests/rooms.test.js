@@ -945,12 +945,13 @@ test('a reconnecting seat receives only its own order receipts and a duplicate c
 
 test('the lobby creation date sets campaign rules for both seats even if the game starts after release', async t => {
   const fixture = roomFixture(t);
-  for (const generation of [0,1,2]) {
+  for (const generation of [0,1,2,3]) {
     const seats = await twoPlayers(fixture);
-    if (generation<2) {
+    if (generation<3) {
       const record = fixture.sqlite.prepare('SELECT members FROM game_rooms WHERE code=?').get(seats.code);
       const members = JSON.parse(record.members);
-      delete members[0].fieldCommandRevision;
+      delete members[0].influencePlanning;
+      if (generation<2) delete members[0].fieldCommandRevision;
       if (!generation) delete members[0].campaignVariety;
       fixture.sqlite.prepare('UPDATE game_rooms SET members=? WHERE code=?').run(JSON.stringify(members), seats.code);
     }
@@ -958,7 +959,8 @@ test('the lobby creation date sets campaign rules for both seats even if the gam
     const guest = await seats.read(seats.guest);
     for (const room of [host,guest]) {
       assert.equal(room.game.campaignVariety, generation ? 1 : undefined);
-      assert.equal(room.game.fieldCommandRevision, generation===2 ? 1 : undefined);
+      assert.equal(room.game.fieldCommandRevision, generation>=2 ? 1 : undefined);
+      assert.equal(room.game.influencePlanning, generation===3 ? 1 : undefined);
       assert.equal(room.game.researchPace, 2);
       assert.equal(room.game.units.filter(unit => unit.seat===room.you && unit.type==='settler').length, 1);
     }
