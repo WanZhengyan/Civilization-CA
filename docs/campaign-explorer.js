@@ -1,10 +1,17 @@
-import {getMap,TERRAIN_NAMES} from './rules.js';
+import {RESOURCES} from './resources.js';
+import {WONDERS} from './wonders.js';
+import {IMPROVEMENTS,getMap,TERRAIN_NAMES} from './rules.js';
 import {getLanguage,translate} from './i18n.js';
 
 const L=(en,zh)=>getLanguage()==='zh-CN'?zh:en;
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tr=value=>translate(value,getLanguage());
-const modes={places:['Charted places','已探明地点']};
+const modes={
+  places:['Charted places','已探明地点'],
+  deposits:['Surveyed deposits','已勘测资源'],
+};
+
+function describe(row,info){return {...row,info,search:row.search+' '+info};}
 
 export function explorerRows(view,mode='places'){
   if(!view?.state?.intel || view.seat!==view.state.intel.seat)return [];
@@ -16,6 +23,14 @@ export function explorerRows(view,mode='places'){
     return {id,name:title,terrain:tile.terrain,visible:observed,
       search:[id,title,tr(title),tile.name,tr(tile.name),TERRAIN_NAMES[tile.terrain],tr(TERRAIN_NAMES[tile.terrain])].join(' '),
       info:tr(TERRAIN_NAMES[tile.terrain])+' · '+(observed?L('In sight','当前可见'):L('Last charted','已探明，当前不可见'))};
+  });
+  if(mode==='deposits')return rows.flatMap(row=>{
+    const cell=state.board[row.id], deposit=RESOURCES[cell?.resource];
+    if(!deposit)return [];
+    const improvement=tr(IMPROVEMENTS[deposit.improvement].name);
+    const condition=!row.visible?L('Last survey','上次勘测'):cell.pillaged?L('Damaged','已受损'):
+      cell.improvement===deposit.improvement?L('Improved','已改良'):L('Needs','需要');
+    return [describe(row,tr(deposit.name)+' · '+condition+(row.visible?' · '+improvement:''))];
   });
   return rows;
 }

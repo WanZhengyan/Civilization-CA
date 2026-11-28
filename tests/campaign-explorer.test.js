@@ -11,3 +11,12 @@ test('the place index contains only personally charted tiles and rejects an unpr
  assert.equal(explorerRows({state:s,seat:0}).length,0);
  assert.equal(explorerRows({state:v.state,seat:1}).length,0);
 });
+
+test('resource inventory pairs charted deposits with their proper works and omits unsurveyed ground',()=>{
+ const v=view(capital()),id=v.state.intel.visible[0];
+ v.state.board[id].resource='iron';
+ const row=explorerRows(v,'deposits').find(r=>r.id===id);
+ assert.match(row.info,/Iron ore.*Mine/i);
+ v.state.board[id].resource=undefined;
+ assert.ok(!explorerRows(v,'deposits').some(r=>r.id===id));
+});

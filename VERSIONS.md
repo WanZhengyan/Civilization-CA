@@ -9,3 +9,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | Version | Feature |
 | --- | --- |
 | 7.0.1 | Search the campaign's charted places and jump to a named hex from the map |
+| 7.0.2 | Find surveyed resource deposits and the exact works needed to use them |
