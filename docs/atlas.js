@@ -1094,7 +1094,12 @@ export function createAtlas(host, options = {}) {
   function draw(){
     request=0;if(disposed||boxW<2||boxH<2)return;ensureBackground();
     const dpi=canvas.width/boxW,s=base*zoom,sy=s*pitch();
-    ctx.setTransform(dpi,0,0,dpi,0,0);paintChartMargin(ctx,boxW,boxH);
+    ctx.setTransform(dpi,0,0,dpi,0,0);
+    if(reliefView){
+      const surround=ctx.createLinearGradient(0,0,0,boxH);
+      surround.addColorStop(0,'#182c36');surround.addColorStop(1,'#0d202a');
+      ctx.fillStyle=surround;ctx.fillRect(0,0,boxW,boxH);
+    }else paintChartMargin(ctx,boxW,boxH);
     const project=(x,y)=>cameraProject(camera(),x,y);
     const unitBoxes=overlayUnitBoxes(model,s);
     ctx.font=cityFont(s);
@@ -1119,7 +1124,12 @@ export function createAtlas(host, options = {}) {
       const left=cx-boxW/(2*s),top=cy-boxH/(2*sy),ww=boxW/s,hh=boxH/sy;
       // A uniform blind layer contains no information about terrain. The
       // chart frame clips the margins and the explored window paints over it.
-      ctx.fillStyle='#263843';ctx.fillRect(left,top,ww,hh);
+      if(reliefView){
+        const mist=ctx.createLinearGradient(left,top,left,top+hh);
+        mist.addColorStop(0,'#2b414b');mist.addColorStop(.5,'#233b47');mist.addColorStop(1,'#1b303d');
+        ctx.fillStyle=mist;
+      }else ctx.fillStyle='#263843';
+      ctx.fillRect(left,top,ww,hh);
       ctx.fillStyle='#64757a';ctx.beginPath();
       const firstRow=Math.max(0,Math.floor((top-H/2)/ROW));
       const lastRow=Math.min((model.region?.rowsCount||13)-1,Math.ceil((top+hh-H/2)/ROW));
@@ -1147,7 +1157,14 @@ export function createAtlas(host, options = {}) {
     if(grid){ctx.save();if(reliefView)ctx.globalAlpha=.48;inkHexGrid(ctx,mesh,s);ctx.restore();}
     if(model.fog){ctx.save();ctx.clip(model.fog.window);}
     renderOverlay(ctx,model.fog ? model.fog.knownTiles : tiles,model,s,labels,territories,unitBoxes,cityBoxes);
-    if(model.fog){ctx.fillStyle='#24333c9c';ctx.fill(model.fog.memory);}
+    if(model.fog){
+      // Previously explored land stays readable, while live figures still
+      // depend on sight. A narrow rim separates the survey from unknown mist.
+      ctx.fillStyle=reliefView?'#19324480':'#24333c9c';ctx.fill(model.fog.memory);
+      if(reliefView){
+        ctx.save();ctx.strokeStyle='#b4c4bd3b';ctx.lineWidth=1.2/s;ctx.stroke(model.fog.window);ctx.restore();
+      }
+    }
     if(paintUnits(ctx,model,s,performance.now()))schedule();
     if(model.fog)ctx.restore();
     paintHexFocus(ctx,model,s);
@@ -1164,7 +1181,7 @@ export function createAtlas(host, options = {}) {
     ctx.restore();
     // A very light vignette holds together all the terrain colours at the edge of the atlas.
     const shadow=ctx.createRadialGradient(boxW*.49,boxH*.45,Math.min(boxW,boxH)*.34,boxW*.5,boxH*.49,Math.hypot(boxW,boxH)*.57);
-    shadow.addColorStop(0,'#13212700');shadow.addColorStop(1,'#15283236');ctx.fillStyle=shadow;ctx.fillRect(0,0,boxW,boxH);
+    shadow.addColorStop(0,'#13212700');shadow.addColorStop(1,reliefView?'#15283222':'#15283236');ctx.fillStyle=shadow;ctx.fillRect(0,0,boxW,boxH);
   }
   function schedule(){if(!request&&!disposed)request=requestAnimationFrame(draw);}
   document.addEventListener('civitas-language',schedule,{signal:input.signal});
