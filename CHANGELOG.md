@@ -1,5 +1,14 @@
 # Campaign updates
 
+## Explore inland, specialize cities and trade along the coast
+
+- Train a scout to visit trading posts, field archives and trail lodges. Each offers two exchanges. Each civilization can visit the same station once. A scout can also record three different terrains at least three hexes apart. Publishing the notebook at home pays 8 gold and 6 influence, and gives its city 1 influence per harvest.
+- Open City hall in a city of at least two residents. Grant one permanent charter backed by a granary, workshop or monument. Municipal Charter also unlocks three festivals. Each costs 8 gold and 4 stored food, lasts three harvests and has its own payouts.
+- Load 4 food onto a fishing crew at an owned harbor. Sail a charted water route and deliver it at a different friendly berth for food and freight revenue. A ship can separately buy voyage stores at its own berth. Spend 6 gold and the rest of this turn’s movement for two extra movement points on its next sailing turn.
+- Fortify an armed land unit to reduce incoming damage. The extra protection depends on the terrain. A military unit that survives damaging engagements can earn a permanent assault or guard drill at 3 XP. The combat forecast includes both terrain protection and training.
+- Select a council goal to compare available city investments. The forecast includes construction time, scheduled festival expiry, the local university or monument bonus, and the remaining time to the goal. Review the site and price before placing the order.
+- Open the city overview to compare production, food and housing, then jump to the right city's production or citizens. These planning tools also work on earlier campaigns. Existing saves and existing rooms keep their original gameplay rules.
+
 ## Plan deeper research and civic paths
 
 New campaigns have 19 technologies and 15 civics. Within each era, some projects open a choice of branches and others bring those branches together. Each later stage costs more. Industrial science can proceed from Steam Power (60 science) through Industrial Metallurgy (98) to Electrical Engineering (124). The industrial civic route from County Federation (39 culture) to Teachers Colleges (55) and Public Libraries (77) lets monuments contribute more culture. Reaching an era by one council still leaves the other council’s prerequisites to complete.

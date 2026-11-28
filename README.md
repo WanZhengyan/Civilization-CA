@@ -10,6 +10,8 @@ A bilingual, turn-based strategy game for one to four players. Each California c
 
 [中文实机画面](./media/board-zh.webp)
 
+In new campaigns, train a scout to visit field stations and bring home a regional atlas. Give cities individual charters or host a festival for a short burst of production, culture or income. Carry food by sea to another friendly harbor. A veteran can hold a ridge or spend a turn on a permanent combat drill. Open the city overview to compare cities or select a council goal to find a building that can shorten its research time.
+
 ## Enter a campaign
 
 Choose **Play solo** to set your civilization, the number of computer opponents and how the campaign can be won. **Conquest** rewards control of every original capital or the elimination of the last rival team. **Science** requires researching Rocketry and completing the Orbital Survey in a city. **Standard** allows either victory. In zero-opponent practice, the science route gives you an objective to pursue at your own pace. Neutral camps still roam the map. Older saves keep their original victory rules.
