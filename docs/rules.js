@@ -1006,6 +1006,48 @@ function councilOptions(state, seat, track) {
 export function getResearchOptions(state, seat) { return councilOptions(state,seat,SCIENCE); }
 export function getCivicOptions(state, seat) { return councilOptions(state,seat,CULTURE); }
 
+function availableUnit(state, seat, unit) {
+  return !!unit && unit.seat === seat && unit.hp > 0 && unit.moves > 0
+    && !unit.fortified && unit.skippedRound !== state.round
+    && !state.players[seat]?.eliminated && seatMayOrder(state, seat);
+}
+
+export function canSkipUnit(state, seat, unitId) {
+  return (!state.intel || state.intel.turnReadiness === true)
+    && availableUnit(state, seat, unitOrNull(state, unitId));
+}
+
+export function unitNeedsOrders(state, seat, unit) {
+  if (!availableUnit(state, seat, unit)) return false;
+  const choices = getUnitOptions(state, unit.id);
+  return choices.moves.length > 0 || choices.attacks.length > 0
+    || choices.canFound || choices.improvements.length > 0;
+}
+
+// Review the same visible choices on the map and on the room authority.
+export function getPendingTurnTasks(state, seat) {
+  if (!state?.players[seat] || state.players[seat].eliminated || !seatMayOrder(state, seat)) return [];
+  const view = state.intel ? state : campaignView(state, seat);
+  const player = view.players[seat];
+  const cities = view.cities.filter(city => city.seat === seat);
+  const tasks = [];
+  if (cities.length && !player.research && getResearchOptions(view, seat).some(option => option.enabled))
+    tasks.push({kind:'research'});
+  if (cities.length && !player.civic && getCivicOptions(view, seat).some(option => option.enabled))
+    tasks.push({kind:'civics'});
+
+  for (const city of cities) {
+    if (city.queue) continue;
+    const canProduce = getProductionOptions(view, city.id).some(option =>
+      option.enabled && (option.kind !== 'building' || getProjectSites(view, city.id, option.item).length));
+    if (canProduce) tasks.push({kind:'production', id:city.id, tile:city.tile});
+  }
+  for (const unit of view.units) {
+    if (unitNeedsOrders(view, seat, unit)) tasks.push({kind:'unit', id:unit.id, tile:unit.tile});
+  }
+  return tasks;
+}
+
 function finishProject(state, seat, track) {
   const player = state.players[seat], item = player[track.focus];
   if (!item) return;
@@ -1274,7 +1316,7 @@ export function campaignView(state, seat) {
       }
     }
   }
-  return {...view,intel:{...view.intel,borderCharters:true,forecasts,unavailableSites,portSites,harborSites:harborChoices,workSites,districtChoices}};
+  return {...view,intel:{...view.intel,turnReadiness:true,borderCharters:true,forecasts,unavailableSites,portSites,harborSites:harborChoices,workSites,districtChoices}};
 }
 
 export function combatPreview(state, unitId, target) {
@@ -1496,6 +1538,11 @@ function unitOrder(state,seat,action) {
 }
 export function applyAction(source,seat,action) {
   const current=migrateGame(source);
+  if (action?.type === 'skipUnit') {
+    const unit = unitOrNull(current, action.unit);
+    if (unit && unit.seat === seat && unit.skippedRound === current.round && seatMayOrder(current, seat))
+      return current;
+  }
   if (!current.teamPhase) return rememberVision(resolveOrder(current,seat,action),current);
   if (!seatMayOrder(current,seat)) throw new Error('Wait for your turn.');
   const phase=current.teamPhase;
@@ -1515,7 +1562,17 @@ function resolveOrder(source,seat,action) {
   if (!Number.isInteger(seat) || seat!==state.turn) throw new Error('Wait for your turn.');
   if (!action || typeof action!=='object') throw new Error('Choose an action.');
   const next=cloneGame(state);
-  if (action.type==='end') {endTurn(next,seat);return next;}
+  if (action.type==='end') {
+    if (action.requireReady === true && getPendingTurnTasks(state, seat).length)
+      throw new Error('Review your remaining turn decisions.');
+    endTurn(next,seat);
+    return next;
+  }
+  if (action.type==='skipUnit') {
+    if (!canSkipUnit(state, seat, action.unit)) throw new Error('Choose a ready unit you control.');
+    unitOrNull(next, action.unit).skippedRound = next.round;
+    return next;
+  }
   if (action.type==='recordTransect' || action.type==='fileTransect') {
     const entry=runAtlasOrder(next,seat,action,getMap(next),hexDistance);
     record(next,seat,action.type,entry.text,entry.tile,{unit:action.unit});

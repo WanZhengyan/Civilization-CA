@@ -8,6 +8,8 @@ import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
 section(`
+Review your remaining turn decisions.|请先处理本回合待办事项。
+Choose a ready unit you control.|请选择仍可行动的己方单位。
 This room does not support border charters.|当前房间版本暂不支持使用影响力扩地。
 This city already expanded by charter this round.|本轮这座城市已用影响力扩过一次领土。
 No visible neutral district is available.|当前视野内没有可供扩张的中立地块。
