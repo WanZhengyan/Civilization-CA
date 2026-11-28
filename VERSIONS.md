@@ -107,3 +107,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.97 | Publish a permanent city collection with a science or culture specialization |
 | 7.0.98 | Plan persistent, seat-private field itineraries with ordered map stops and cumulative hex distances |
 | 7.0.99 | Dock city production and parcel selection on the left with a clear map and a route back to projects |
+| 7.0.100 | Resolve civilization sieges against city defenses before occupying garrisons |

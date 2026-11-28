@@ -574,7 +574,7 @@ test('existing configured matches retain sequential turns even after a server up
   assert.equal((await f.call('POST',order,host.token)).room.game.turn,1);
 });
 
-test('a concurrent attack cannot switch a confirmed garrison strike to the newly exposed city',async t=>{
+test('a concurrent city strike requires a fresh damage and capture forecast even with the same defender ID',async t=>{
   const f=roomFixture(t),seats=[{kind:'human',team:0},{kind:'human',team:0},{kind:'human',team:1}];
   const host=await f.call('POST',{op:'create',name:'H',seats},null,201),code=host.room.code;
   const ally=await f.call('POST',{op:'join',code,name:'A'}),rival=await f.call('POST',{op:'join',code,name:'R'});
@@ -589,11 +589,19 @@ test('a concurrent attack cannot switch a confirmed garrison strike to the newly
   s.units=[unit(0,'observer-one','ranged',near[0],100),unit(1,'observer-two','ranged',near[1],100),unit(2,'garrison','melee',city.tile,1)];
   s.barbarians={camps:[],parties:[]};
   f.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(s),code);
-  const issue=async(seat,token,expected)=>f.call('POST',{op:'action',code,revision:start.revision,
-    orderKey:'2.0.'+seat+'.0',action:{type:'attack',unit:seat===0?'observer-one':'observer-two',tile:city.tile,defenderId:'garrison'}},token,expected);
-  await issue(0,host.token,200);await issue(1,ally.token,409);
-  const observed=(await f.call('GET',{code},ally.token)).room.game;
-  assert.equal(observed.intel.forecasts['observer-two'][city.tile].defenderId,city.id);
+  const {captureRoomOrder}=await import('../docs/room-turn.js');
+  const requests=await Promise.all([host,ally].map(async(member,i)=>{
+    const room=(await f.call('GET',{code},member.token)).room;
+    return captureRoomOrder(room,{type:'attack',unit:i?'observer-two':'observer-one',tile:city.tile});
+  }));
+  assert.equal(requests[1].action.defenderId,city.id);
+  await f.call('POST',requests[0],host.token,200);
+  await f.call('POST',requests[1],ally.token,409);
+  const observed=(await f.call('GET',{code},ally.token)).room;
+  assert.equal(observed.game.intel.forecasts['observer-two'][city.tile].defenderId,city.id);
+  const review=captureRoomOrder(observed,{type:'attack',unit:'observer-two',tile:city.tile});
+  assert.notEqual(review.action.siegeQuote,requests[1].action.siegeQuote);
+  await f.call('POST',review,ally.token,200);
 });
 
 test('two simultaneous Ready orders and a lost acknowledgment settle both cities once',async t=>{

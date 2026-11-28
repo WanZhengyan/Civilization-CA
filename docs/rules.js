@@ -898,9 +898,11 @@ function attackTargets(state,unit) {
   // A land melee unit can contest a defended end of a bridge with a full crossing order.
   const sight=(state.intel || state.opening==='settlers' || state.enforceSight) && getVisibleTiles(state,unit.seat);
   const inRange=tile=>(!sight||sight.has(tile)) && (hexDistance(unit.tile,tile)<=range || (UNIT_TYPES[unit.type].captures && unit.moves>=2 && Boolean(bridgeTo(state,unit.tile,tile))));
-  const occupied=state.units.filter(u=>!sameTeam(state,u.seat,unit.seat) && inRange(u.tile)).map(u=>u.tile);
-  const cities=state.cities.filter(c=>!sameTeam(state,c.seat,unit.seat) && inRange(c.tile) && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
-  const wilds=[...(state.barbarians?.camps||[]),...(state.barbarians?.parties||[])].filter(t=>inRange(t.tile) && (t.type!=="camp" || unit.type!=="scout" && (t.hp>1 || UNIT_TYPES[unit.type].captures)));
+  const hostileTowns=state.cities.filter(c=>!sameTeam(state,c.seat,unit.seat));
+  const cityTiles=new Set(hostileTowns.map(c=>c.tile));
+  const occupied=state.units.filter(u=>!cityTiles.has(u.tile) && !sameTeam(state,u.seat,unit.seat) && inRange(u.tile)).map(u=>u.tile);
+  const cities=hostileTowns.filter(c=>inRange(c.tile) && (UNIT_TYPES[unit.type].captures || c.hp>1)).map(c=>c.tile);
+  const wilds=[...(state.barbarians?.camps||[]),...(state.barbarians?.parties||[])].filter(t=>!cityTiles.has(t.tile) && inRange(t.tile) && (t.type!=="camp" || unit.type!=="scout" && (t.hp>1 || UNIT_TYPES[unit.type].captures)));
   return [...new Set([...occupied,...(unit.type==='scout'?[]:cities),...wilds.map(p=>p.tile)])];
 }
 export function getUpgradePlans(state,unitId,seat) {
@@ -1364,12 +1366,12 @@ function calculateCombatPreview(state,unitId,target) {
   const unit = unitOrNull(state, unitId);
   if (!active(state, unit) || !attackTargets(state, unit).includes(target)) return null;
 
-  const wild=wildAt(state,target);
+  const town = state.cities.find(city => city.tile === target && !sameTeam(state,city.seat,unit.seat));
+  const wild=!town && wildAt(state,target);
   if (wild) return wildForecast(unit,UNIT_TYPES[unit.type],wild,state);
 
-  // A garrison absorbs the hit before the city can be damaged.
-  const defender = state.units.find(other => other.tile === target && !sameTeam(state,other.seat,unit.seat));
-  const town = state.cities.find(city => city.tile === target && !sameTeam(state,city.seat,unit.seat));
+  const occupants=state.units.filter(other=>other.tile===target && !sameTeam(state,other.seat,unit.seat));
+  const defender = town ? null : occupants[0];
   const opponent = defender || town;
   const canCapture = UNIT_TYPES[unit.type].captures === true;
   const mode=attackMode(UNIT_TYPES[unit.type]);
@@ -1411,6 +1413,7 @@ function calculateCombatPreview(state,unitId,target) {
   const advances = melee && movementCost(state,unit,target)>0 && attackerHpAfter > 0 && (capture || (defeated && !town));
   return {
     attackMode:mode, defenderType: defender ? 'unit' : 'city', defenderId: opponent.id, roleNotes:role.notes,
+    ...(town && {cityGarrison:occupants.map(g=>({id:g.id,seat:g.seat,type:g.type}))}),
     damage, retaliation, capture, defeated, advances, attackerDefeated: attackerHpAfter === 0,
     attackerHpBefore: unit.hp, defenderHpBefore: opponent.hp, attackerHpAfter, defenderHpAfterHit,
     defenderHpAfter: capture ? Math.ceil(town.maxHp / 2) : defenderHpAfterHit
@@ -1427,11 +1430,12 @@ function resolveAttack(state, unit, target) {
   const from = unit.tile;
   const isUnit = result.defenderType === 'unit';
   const defender = isUnit ? unitOrNull(state, result.defenderId) : cityOrNull(state, result.defenderId);
-  const garrison = isUnit && state.cities.find(c => c.tile === target && sameTeam(state,c.seat,defender.seat));
-  const recordResult = prepareBattle(state, unit, defender, result, {garrison:garrison?.name});
+  const recordResult = prepareBattle(state, unit, defender, result);
   const name = isUnit ? UNIT_TYPES[defender.type].name+' in '+getMap(state).byId[target].name : defender.name;
   defender.hp = result.defenderHpAfter;
   if (result.capture) {
+    const defeatedGarrison=new Set(result.cityGarrison.map(g=>g.id));
+    state.units=state.units.filter(other=>!defeatedGarrison.has(other.id));
     defender.seat = unit.seat;
     defender.borderProgress = 0;
     delete defender.festival;
@@ -2151,9 +2155,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
         let value=Number(result.capture)*500+Number(result.defeated)*80+result.damage-result.retaliation
           -Number(result.attackerDefeated)*40-result.defenderHpAfterHit*.1;
         if(difficulty==='hard') {
-          // Clear a garrison with a ranged formation before committing infantry.
           if(result.attackerDefeated && !result.defeated && !result.capture)continue;
-          if(result.defeated && state.cities.some(c=>c.tile===tile))value+=60;
+          if(result.capture && result.cityGarrison?.length)value+=60;
           if(result.defenderType==='city' && !UNIT_TYPES[unit.type].captures && !result.damage)continue;
           if(UNIT_TYPES[unit.type].range>1 && result.damage>0)value+=10;
         }

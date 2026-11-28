@@ -51,7 +51,7 @@ import {roomSeatTurn,teamTurnLabels} from './room-turn.js';
 import {sameTeam,teamLabel} from './teams.js';
 import {cityKind,foundingLabel} from './district-command.js';
 import {WONDERS, campusStatus} from './wonders.js';
-import {captureOrderHint,cityAttackHint,forecastCounterLabel} from './attack-mode.js';
+import {captureOrderHint,cityAttackHint,forecastCounterLabel,siegeQuote} from './attack-mode.js';
 import {militaryTraining,trainingPanel} from './combat-training.js';
 import {fieldPosition,fieldPositionPanel} from './field-position.js';
 import {advancementPanel,recoveryPanel} from './unit-service-ui.js';
@@ -199,16 +199,18 @@ function onMapSelect(tileId,unitId,cityPlate=false,pointer="keyboard"){
   }
   if (!explored.has(tileId) && moveDraft) {moveDraft=null;updateMap();}
   if(!explored.has(tileId)) {toast("Uncharted territory. Move closer to explore.");return}
+  const unit=getUnit(), targetUnit=view.state.units.find(u=>sameId(u.id,unitId));
+  const available=unit && unit.seat===view.seat && mayOrder() && order!=="inspect";
+  const options=available && getUnitOptions(view.state,unit.id);
+  if(options && options.attacks.includes(tileId)){
+    moveDraft=null;openCombat(unit.id,tileId);return;
+  }
   if(cityPlate && cityAt(tileId)){
     const inspecting=order==="inspect";
     select(tileId,null,true);if(inspecting)order="inspect";
     redraw();inspectMapOnMobile();return;
   }
-  const unit=getUnit(), targetUnit=view.state.units.find(u=>sameId(u.id,unitId));
-  const available=unit && unit.seat===view.seat && mayOrder() && order!=="inspect";
-  if(available && targetUnit?.seat!==view.seat){
-    const options=getUnitOptions(view.state,unit.id);
-    if(options.attacks.includes(tileId)){moveDraft=null;openCombat(unit.id,tileId);return}
+  if(options && targetUnit?.seat!==view.seat){
     if(options.moves.includes(tileId) && order!=="attack"){
       if(freightTarget || reviewPointerMove(pointer,compactMap(),view.tutorial && !view.tutorialProgress?.completed)){
         moveDraft=previewMove(view.state,unit,tileId);
@@ -579,7 +581,7 @@ function updateMap(){
     }
   }
   const campaignLens=updateCampaignLens?.(view.state,view.seat,selectedTile,matchKey);
-  atlas.update({campaignLens,frontierHexes:moveDraft?.frontier,reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  atlas.update({campaignLens,frontierHexes:moveDraft?.frontier,reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder,settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -777,10 +779,12 @@ function drawCombat(){
   if(!battle)return false;
   const u=view.state.units.find(u=>sameId(u.id,battle.unit)), forecast=u&&combatPreview(view.state,u.id,battle.tile);
   if(!mayOrder()||!forecast){closeCombat();return false}
-  if(battle.defenderId!=null && battle.defenderId!==forecast.defenderId){
-    closeCombat();toast('The defender changed. Select the target again to review the new forecast.');return false;
+  const quote=siegeQuote(forecast);
+  if(battle.defenderId!=null && (battle.defenderId!==forecast.defenderId || battle.siegeQuote!==quote)){
+    closeCombat();toast('The combat forecast changed. Select the target again to review it.');return false;
   }
   battle.defenderId=forecast.defenderId;
+  battle.siegeQuote=quote;
   const defender=forecast.defenderType==="wild"?wildAt(view.state,battle.tile):forecast.defenderType==="city"?view.state.cities.find(c=>sameId(c.id,forecast.defenderId)):view.state.units.find(u=>sameId(u.id,forecast.defenderId));
   if(!defender){closeCombat();return false}
   text("combat-where",mapRegion.byId[battle.tile].name);

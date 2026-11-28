@@ -39,7 +39,7 @@ test('pike and cavalry forecasts show their asymmetric modifiers and match the a
   }
 });
 
-test('engineers exploit walls after the garrison falls and friendly signal coverage does not stack',()=>{
+test('engineers exploit walls even when a garrison is present and friendly signal coverage does not stack',()=>{
   const s=game(), town=s.cities[1];
   town.tile='11,8';
   town.buildings=['walls'];
@@ -52,10 +52,12 @@ test('engineers exploit walls after the garrison falls and friendly signal cover
   assert.equal(covered.roleNotes.length,2);
   s.units.push(piece('g','melee',1,town.tile));
   const garrison=combatPreview(s,'a',town.tile);
-  assert.equal(garrison.roleNotes.length,1);
-  assert.equal(garrison.damage,40-7+8);
+  assert.equal(garrison.roleNotes.length,2);
+  assert.equal(garrison.damage,covered.damage);
+  assert.equal(garrison.defenderId,town.id);
   const next=applyAction(s,0,{type:'attack',unit:'a',tile:town.tile});
-  assert.equal(next.units.find(u=>u.id==='g').hp,garrison.defenderHpAfter);
+  assert.equal(next.units.find(u=>u.id==='g').hp,s.units.find(u=>u.id==='g').hp);
+  assert.equal(next.cities[1].hp,garrison.defenderHpAfter);
 });
 
 test('specialist shipyards, coastal bombardment and fleet damage use the same rules in orders and forecasts',()=>{

@@ -77,11 +77,17 @@ test('allies cannot fight, contest, order or occupy each other’s assets, and c
   state=end(state);
   const enemy=militiaNear(state,2,city.tile,'enemy');
   const hit=combatPreview(state,enemy,city.tile);
-  assert.equal(hit.defenderId,guard);assert.equal(hit.capture,false);
+  assert.equal(hit.defenderId,city.id);assert.equal(hit.capture,false);
+  assert.deepEqual(hit.cityGarrison.map(g=>[g.id,g.seat]),[[guard,0]]);
   const attacked=applyAction(state,2,{type:'attack',unit:enemy,tile:city.tile});
-  assert.equal(attacked.cities.find(c=>c.id===city.id).hp,100);
+  assert.equal(attacked.cities.find(c=>c.id===city.id).hp,hit.defenderHpAfter);
+  assert.equal(attacked.units.find(u=>u.id===guard).hp,state.units.find(u=>u.id===guard).hp);
   assert.equal(attacked.cities.find(c=>c.id===city.id).seat,1);
   assert.equal(attacked.phase,'playing');
+  const doomed=structuredClone(state);doomed.cities.find(c=>c.id===city.id).hp=1;
+  const captured=applyAction(doomed,2,{type:'attack',unit:enemy,tile:city.tile});
+  assert.deepEqual(captured.units.filter(u=>u.tile===city.tile).map(u=>u.id),[enemy]);
+  assert.deepEqual(campaignView(captured,0).intel.battles.at(-1).garrisonLost,[{seat:0,type:'melee'}]);
 });
 
 function awardScore(state,seat,points) {

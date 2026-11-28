@@ -2,7 +2,15 @@
 
 ## v7.0 atlas series
 
-The [version ledger](./VERSIONS.md) records the player-facing change in every playable build. Each version is available from the main branch history.
+The series contains 100 separately playable revisions. The version ledger identifies the change in each one and shows how to find that build in Git. [Playable version ledger](./VERSIONS.md)
+
+- **Find a place.** Open the California gazetteer from the Field guide or in-game menu. Browse Census counts for nine cities and three counties, inspect six historic and natural sites, or follow a three-stop regional field trip. Search works in English and Chinese. A discovered district links back to its real-world profile.
+- **Make a map decision.** Map explorer finds legal settlements, builder jobs, harbor berths and university sites. Map lenses show what workers actually harvest, where a scout can travel this turn and which districts natural borders may reach. The Advisors menu ranks current choices and gives the expected cost or return.
+- **Run a city network.** City view projects food and housing across five harvests. The Supply ledger can send food, lumber, citrus or scholars on charted roads between friendly cities. Expeditions give scouts assignments to observe regional features and file or exhibit their findings.
+- **Recruit and place.** The normal city production picker shows the Settler’s three-resident requirement and the local growth outlook. One resident departs when the unit deploys. Site-based construction uses a left-side placement review so you can keep the map in view while choosing a highlighted parcel.
+- **Read a siege.** Attacks on an occupied enemy city reduce city health first. The garrison stays in place during bombardment and leaves play when a surviving capture-capable ground unit takes the city.
+
+Andrej Karpathy’s USACiv inspired the use of public geography as an explorable strategy map. This game’s gazetteer identifies the public agency behind each measurement. [USACiv](https://karpathy.ai/usaciv/) · [Atlas data and validation](./DEVELOPMENT.md#california-atlas-series)
 
 ## v6.7.0 — Grow a city before sending settlers
 

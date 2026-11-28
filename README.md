@@ -4,9 +4,9 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 **[Play the Pasadena tutorial](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Start a solo campaign](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Play with friends](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.0.99 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
+[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.0.100 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
 
-[Playable atlas versions](./VERSIONS.md)
+[100 playable atlas versions and their changes](./VERSIONS.md)
 
 ![Civilization CA running in English on the Los Angeles campaign map](./docs/art/campaign-guide-en.webp)
 
@@ -16,13 +16,26 @@ The tutorial opens on the Los Angeles map with a settler at Pasadena and no riva
 
 Three decisions will get you through the opening.
 
-1. **What does the city need?** Start with a Scout to explore. A city can train or buy its next Settler once it has 3 residents. One resident leaves when the unit deploys, so a city of 3 goes back to 2. Choose Agronomy for food or Workshop Engineering to unlock the Workshop and speed up construction.
+1. **What does the city need?** Start with a Scout to explore. Open **City production** to see the Settler card, your current population and the requirement of 3 residents to train or buy one. One resident leaves when the unit deploys, so a city of 3 goes back to 2. Choose Agronomy for food or Workshop Engineering to unlock the Workshop and speed up construction.
 2. **Do you need the next hex now?** Open **Influence** to see which parcel your city will gain from natural growth. You can wait, or spend 6 influence to take that parcel immediately. The panel shows the location, time saved and balance after purchase.
 3. **Who still needs orders?** The button at the lower right opens the next unfinished decision. It will take you to an idle city or a unit with movement left. **Skip this turn** keeps the unit in place and preserves its remaining movement if you change your mind. With all decisions resolved, the button becomes **End turn**.
 
 For income, research Land Surveying to unlock the Shop. For science, follow that branch to Topographic Mapping and build an Academy. Each city can build its own Academy. The four university wonders are unique across the map.
 
-The next turn’s recap shows which projects finished. Use the field guide in the game for details about resources, buildings, units and wonders.
+When a building asks for a site, select a highlighted parcel on the map and review the placement controls on the left before confirming. In a siege, attacks on an occupied enemy city hit the city first. A surviving capture-capable ground unit takes the city, and the defeated garrison leaves play.
+
+## Explore California
+
+Open **Field guide → California gazetteer** from the title screen, or **Menu → California gazetteer** during play. Look up Oakland in either language to compare its 2010 and 2020 population. Switch to **Field tools → Field trips** to follow the bay entrance from Fort Point to the Golden Gate Bridge and onward to Oakland. Once a corresponding district is charted, open its field notes from the district inspector or locate it on the map from its profile.
+
+The gazetteer covers **3 counties, 9 cities and 6 field sites or coastal works**. The sources give each figure its date, unit and geographic boundary. The game models yields and movement separately for its approximate hexes. The approach of exploring public geography through a strategy map was inspired by [Andrej Karpathy’s USACiv](https://karpathy.ai/usaciv/). [Census QuickFacts](https://www.census.gov/quickfacts/) · [Fort Point historical profile](https://www.nps.gov/places/fort-point.htm)
+
+| When you want to… | Open… |
+| --- | --- |
+| Find a surveyed deposit or decide where to settle | **Map explorer** for legal choices, then **Map lens** to inspect the surrounding land and its current use. |
+| Understand a town’s food or construction problem | **Compare cities → City view** for harvest forecasts and returns from investments. **Menu → Advisors** compares available actions. |
+| Send supplies to another city | **Supply ledger** to compare charted land routes, check the cargo and cost, and dispatch a wagon. |
+| Give a scout a longer assignment | Select your scout and open **Field expeditions** to commission a study, record observations and file the finished report. |
 
 ## Set up a campaign
 

@@ -18,7 +18,7 @@ export function prepareBattle(state, attacker, target, result, details = {}) {
   const witnesses = [];
   for (let seat = 0; seat < state.players.length; seat++) {
     const visible = getVisibleTiles(state, seat);
-    if (seat === source.seat || seat === victim.seat || visible.has(victim.tile)) {
+    if (seat === source.seat || seat === victim.seat || result.cityGarrison?.some(g=>g.seat===seat) || visible.has(victim.tile)) {
       witnesses.push({seat, sawOrigin:seat === source.seat || visible.has(source.tile)});
     }
   }
@@ -39,6 +39,7 @@ export function prepareBattle(state, attacker, target, result, details = {}) {
         attackerLost:sawOrigin && Boolean(result.attackerDefeated), targetLost:Boolean(result.defeated)
       };
       if (sawOrigin && result.attackMode) report.attackMode=result.attackMode;
+      if (result.capture && result.cityGarrison?.length) report.garrisonLost = result.cityGarrison.map(({seat,type})=>({seat,type}));
       if (details.garrison) report.garrison = details.garrison;
       if (details.loot != null && seat === victim.seat) report.loot = details.loot;
       // Gaps in a shared sequence would disclose battles elsewhere on the map.

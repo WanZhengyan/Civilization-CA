@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {applyAction,campaignView,chooseBotAction,createGame,getMap,UNIT_TYPES} from '../docs/rules.js';
 import {getVisibleTiles,projectForSeat} from '../docs/vision.js';
+import {describeBattle} from '../docs/battle-history.js';
 import {createClassicGame} from './classic-game.js';
 
 function piece(id,seat,type,tile,hp=UNIT_TYPES[type].maxHp) {
@@ -44,23 +45,40 @@ test('a lethal shot preserves last-unit sight, hides its unobserved origin and e
   assert.deepEqual(campaignView(game,1).intel.battles,[]);
 });
 
-test('garrisons take the hit first, saved reports keep their original owner, and capturing is distinct from combat casualties',()=>{
+test('city sieges preserve the garrison until occupation, including its original owner in the journal',()=>{
   const game=battlefield();
-  const city={...createClassicGame(['A','B']).cities[1],id:'harbor',name:'Sunset Harbor',seat:1,tile:'10,6',hp:1};
-  game.cities=[city];game.units=[piece('one',0,'melee','9,6'),piece('two',0,'melee','10,7'),piece('guard',1,'melee',city.tile,2)];
+  const city={...createClassicGame(['A','B']).cities[1],id:'harbor',name:'Sunset Harbor',seat:1,tile:'10,6',hp:24};
+  game.cities=[city];game.units=[piece('one',0,'ranged','9,6'),piece('two',0,'melee','10,7'),piece('guard',1,'melee',city.tile,2)];
+  const forecast=campaignView(game,0).intel.forecasts.one[city.tile];
+  assert.equal(forecast.defenderId,city.id);assert.equal(forecast.retaliation,0);
+  assert.equal(forecast.defenderHpAfter,1);assert.equal(forecast.capture,false);
   let state=attack(game,'one',city.tile);
-  const guard=journal(state,1)[0];
-  assert.equal(guard.garrison,city.name);assert.equal(guard.target.type,'melee');assert.equal(guard.targetLost,true);
-  assert.equal(guard.retaliation,guard.attacker.hpBefore-guard.attacker.hpAfter);
-  assert.equal(state.cities[0].hp,1);
+  const first=journal(state,1)[0];
+  assert.equal(first.target.kind,'city');assert.equal(first.target.hpAfter,1);assert.equal(first.garrisonLost,undefined);
+  assert.equal(state.units.find(u=>u.id==='guard').hp,2);
   state=attack(JSON.parse(JSON.stringify(state)),'two',city.tile);
-  const [first,second]=journal(state,1);
-  assert.deepEqual(first,guard);assert.equal(second.id,first.id+1);
-  assert.equal(second.outcome,'captured');assert.equal(second.targetLost,false);
+  const [saved,second]=journal(state,1);
+  assert.deepEqual(saved,first);assert.equal(second.id,first.id+1);
+  assert.equal(second.outcome,'captured');assert.equal(second.targetLost,false);assert.deepEqual(second.garrisonLost,[{seat:1,type:'melee'}]);
+  assert.match(describeBattle(second,state.players,getMap(state),1,'en').details,/Garrison lost on capture/);
+  assert.match(describeBattle(second,state.players,getMap(state),1,'zh-CN').details,/城陷时损失的驻军/);
   assert.equal(second.attacker.tile,'10,7');assert.equal(second.target.seat,1);
   assert.equal(second.target.kind,'city');assert.equal(second.target.name,'Sunset Harbor');
   assert.equal(second.target.hpAfter,0);assert.equal(state.cities[0].seat,0);
+  assert.deepEqual(state.units.filter(u=>u.tile===city.tile).map(u=>u.id),['two']);
   assert.deepEqual(journal(state,2),[]);
+});
+
+test('a garrison cannot let scouts or ranged units bypass city targeting restrictions',()=>{
+  const game=battlefield(),city={...createClassicGame(['A','B']).cities[1],seat:1,tile:'10,6',hp:55};
+  game.cities=[city];game.units=[piece('scout',0,'scout','9,6'),piece('shot',0,'ranged','10,7'),piece('guard',1,'melee',city.tile)];
+  assert.throws(()=>attack(game,'scout',city.tile),/range/);
+  city.hp=1;
+  assert.throws(()=>attack(game,'shot',city.tile),/range/);
+  game.units[0]=piece('wounded',0,'melee','9,6',1);
+  const failed=attack(game,'wounded',city.tile);
+  assert.equal(failed.cities[0].seat,1);assert.equal(failed.cities[0].hp,1);
+  assert.ok(failed.units.some(u=>u.id==='guard'));assert.ok(!failed.units.some(u=>u.id==='wounded'));
 });
 
 test('battle journals bound the history and continue numbering across a saved campaign',()=>{

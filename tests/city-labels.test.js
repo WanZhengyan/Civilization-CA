@@ -89,6 +89,8 @@ test('the whole painted name selects its city after pan or zoom, and legal order
       assert.equal(cityLabelAt(marks,x,y,'8,6',model),c.tile);
       assert.equal(cityLabelAt(marks,x,y,move,model),null);
       assert.equal(cityLabelAt(marks,x,y,attack,model),null);
+      assert.equal(cityLabelAt(marks,x,y,move,{...model,attackTiles:[c.tile]}),c.tile,'the hostile city name opens its siege');
+      assert.equal(cityLabelAt(marks,x,y,attack,{...model,attackTiles:[attack,c.tile]}),c.tile);
       assert.equal(cityLabelAt(marks,x,y,'8,6',{...model,cityLabelPicking:false}),null);
       assert.equal(cityLabelAt(marks,x,y,'8,6',{...model,fog:{visible:new Set()}}),null);
     }

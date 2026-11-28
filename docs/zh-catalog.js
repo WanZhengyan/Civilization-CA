@@ -676,11 +676,12 @@ Attacker|进攻方
 Defender|防守方
 No retaliation|无反击伤害
 Finish the capture with a ground unit such as Militia.|用民兵等可占城的地面部队完成占领。
-The garrison takes this attack. City HP stays the same.|此次攻击由驻军承受，城市生命值保持不变。
+On capture, the city garrison is defeated and removed.|城市陷落时，城内驻军将被击败并移除。
+City defenses take the damage. The garrison keeps its current HP.|伤害由城市承受，驻军保留当前生命值。
 This unit can weaken a city down to 1 HP.|此单位最多可将城市削弱至 1 点生命。
 Ranged strike|远程攻击
 Melee strike|近战攻击
-Rangers, ranged infantry, artillery and armed ships deal damage without losing HP to retaliation, even against an adjacent target. Every attack spends the remaining movement. Melee attackers can take counterdamage. Defeat the garrison first. Shooting can reduce cities and camps to 1 HP. Send a surviving capture-capable land unit to take them.|游骑兵、远程步兵、火炮与武装舰船发动攻击时不会因反击损失生命，即便目标位于相邻地块。每次攻击都会用完剩余移动力。近战单位可能受到反击。先击败守军；射击可将城市或营地削弱至 1 点生命，再派有占领能力的陆军单位将其攻占。
+Against a rival city, attacks hit the city first. Ranged attacks draw no retaliation and leave at least 1 HP. A surviving capture-capable land unit can take the city and defeat its garrison. Every attack spends the remaining movement. Neutral raids use their own defenses.|进攻其他文明的城市时，攻击先扣城市生命值。远程攻击不会受到反击，城市至少保留 1 点生命。可占城的陆军若在反击后存活，即可夺城并消灭城内驻军。每次攻击都会耗尽剩余移动力。中立劫掠按其单独的防御规则结算。
 Your militia will capture this city.|你的民兵将占领这座城市。
 Both units will fall.|双方单位均会阵亡。
 Your unit will fall in this attack.|你的单位会在这次进攻中阵亡。
@@ -890,7 +891,6 @@ Each unit starts its turn with two movement points. Coast, lowland and urban til
 Preview an attack|预览一次攻击
 Select a military unit and click a highlighted enemy. The combat forecast shows the damage and possible losses. Choose Confirm attack to commit, or return to the map to reconsider. An attack spends the unit’s remaining movement.|选中军事单位，再点击高亮敌人。战斗预测会显示伤害和可能的损失。选择「确认攻击」执行进攻，或返回地图重新部署。攻击会消耗该单位的全部剩余移动力。
 Take a city|占领城市
-Melee units strike adjacent targets and can take counterdamage. Rangers can strike from two hexes away without a counterattack. Defeat the garrison first. A ranged attack can reduce a city to one health point. A surviving melee attacker can capture it.|近战单位攻击相邻目标，可能受到反击；游骑兵可以从两格外射击且不受反击。先击败驻军。远程攻击最多使城市剩一点生命值，存活的近战进攻单位才能占领城市。
 Recover|恢复战力
 Units regain movement at the start of their faction’s turn. A unit in a friendly city heals up to 12 health. Each friendly city recovers up to 6.|每当己方回合开始，单位恢复移动力。驻扎在己方城市的单位最多恢复 12 点生命值，每座己方城市最多恢复 6 点。
 Research & victory|科技与胜利
@@ -1382,7 +1382,7 @@ Siege Engineers|攻城工兵
 Signal Corps|通信队
 Siege infantry unit|攻城步兵
 Communications unit|通信部队
-Assault engineers deal 18 extra damage to an ungarrisoned walled city and can capture it.|攻击没有驻军的城墙时，攻城工兵额外造成 18 点伤害，并可占领城市。
+Siege Engineers deal 18 extra damage to a walled city and can capture it.|攻城工兵对有城墙的城市额外造成 18 点伤害，并可占领该城。
 Supports adjacent friendly formations. They deal 8 more damage against rival civilizations. Multiple signal units do not stack.|支援相邻友军。其攻击其他文明时多造成 8 点伤害，多支通信队的效果不会叠加。
 Siege engineers at the walls · +18 damage|工兵攻城 · 伤害 +18
 Adjacent signal corps · +8 damage|邻近通信队 · 伤害 +8
@@ -1393,7 +1393,7 @@ Harbor Ironclad|港防铁甲舰
 Escort Destroyer|护航驱逐舰
 Coastal siege unit|近岸攻城舰
 Fleet escort unit|舰队护航单位
-A slow armored ship that deals 14 extra damage to cities and their garrisons. Requires a shipyard.|低速装甲舰，对城市和城内驻军额外造成 14 点伤害。需要船厂。
+A slow armored ship that deals 14 extra damage to cities. Requires a shipyard.|低速装甲舰，对城市额外造成 14 点伤害。需要船厂。
 A fast escort with four movement points. It deals 18 extra damage to armed ships. Requires a shipyard.|高速护航舰，拥有四点移动力，对武装舰船额外造成 18 点伤害。需要船厂。
 Coastal bombardment · +14 damage|近岸炮击 · 伤害 +14
 Escort against a warship · +18 damage|护航舰对敌舰 · 伤害 +18
@@ -1403,7 +1403,7 @@ section(`
 Choose a frontier formation|挑选边疆兵种
 Trail skirmishers cross woods and hills for one movement point. Pike Guards make poor targets for cavalry and gain a bonus when attacking mounted scouts.|山径散兵穿过林地和丘陵只需一点移动力。长枪卫队能抵御骑兵冲锋，攻击骑马侦察兵时也有加成。
 Support an assault|支援进攻
-Siege Engineers can capture a walled city after its garrison falls. Keep a Signal Corps one hex from a friendly attacker to add 8 damage against rival civilizations. Check the forecast to see the active bonuses.|击败驻军后，攻城工兵可以夺取有城墙的城市。让通信队站在友军旁边一格，友军攻击其他文明时可多造成 8 点伤害。战斗预估会列出当前加成。
+Siege Engineers attack city walls directly, including in garrisoned cities. An adjacent friendly Signal Corps adds 8 damage against rival civilizations.|攻城工兵直接攻击城墙，即使城里有驻军也能生效。邻格的友方通信兵可在与其他文明交战时增加 8 点伤害。
 Choose a warship|选择作战舰船
 An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.|港防铁甲舰速度较慢，耐久性高，擅长近岸攻城。护航驱逐舰可移动四格，攻击武装舰船时有额外伤害。两种船都需要船厂。
 Unit handbook|兵种手册
@@ -1490,7 +1490,7 @@ Choose the number of seats, then set a player and team for each.|先选择人数
 `);
 
 section(`
-The defender changed. Select the target again to review the new forecast.|防守目标已改变。请重新选择目标，查看最新战斗预测。
+The combat forecast changed. Select the target again to review it.|战斗预测已改变。请重新选择目标，查看最新预测。
 `);
 
 section(`
@@ -1571,7 +1571,7 @@ Otay Ranch|奥泰牧场
 `);
 
 section(`
-The combat target has changed. Review the new forecast.|战斗目标已改变，请重新查看战斗预测。
+The combat forecast changed. Review the target again.|战斗预测已改变，请重新查看目标。
 `);
 
 section(`

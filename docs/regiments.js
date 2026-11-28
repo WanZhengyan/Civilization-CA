@@ -6,7 +6,7 @@ export const REGIMENTS = {
   ironclad: {
     name:'Harbor Ironclad', role:'Coastal siege unit', domain:'sea', era:'industrial', tech:'metallurgy',
     shipyard:true, moves:2, range:2, maxHp:125, strength:40, required:19, captures:false,
-    description:'A slow armored ship that deals 14 extra damage to cities and their garrisons. Requires a shipyard.'
+    description:'A slow armored ship that deals 14 extra damage to cities. Requires a shipyard.'
   },
   destroyer: {
     name:'Escort Destroyer', role:'Fleet escort unit', domain:'sea', era:'modern', tech:'radar',
@@ -16,7 +16,7 @@ export const REGIMENTS = {
   sappers: {
     name:'Siege Engineers', role:'Siege infantry unit', era:'industrial', tech:'steam',
     moves:2, range:1, maxHp:90, strength:40, required:16, captures:true,
-    description:'Assault engineers deal 18 extra damage to an ungarrisoned walled city and can capture it.'
+    description:'Siege Engineers deal 18 extra damage to a walled city and can capture it.'
   },
   signals: {
     name:'Signal Corps', role:'Communications unit', era:'modern', tech:'radio',

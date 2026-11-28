@@ -1,3 +1,37 @@
+# Development notes
+
+## California atlas series
+
+The 100 revisions are individually runnable. In the version ledger, choose a feature, find its commit, and create a separate worktree at that hash. Inside it, run `npm run dev` and open the local homepage. The version ledger distinguishes each release; this section documents the recurring checks. [Version ledger](./VERSIONS.md)
+
+### Public geography and game state
+
+The gazetteer bundles dates, units, reporting boundaries, source links and bilingual names in a small local module. The twelve Census records cover Los Angeles, San Francisco and San Diego counties plus nine incorporated cities. San Francisco's city and county cover the same territory. Oakland and Berkeley are separate cities outside San Francisco County. Population change uses the original 2010 count as its denominator. Density divides the 2020 population by 2020 land area in the selected units. County income, employment, commutes and retail sales each retain their own reporting period. [Source module](./docs/gazetteer-data.js) · [US Census Bureau QuickFacts](https://www.census.gov/quickfacts/)
+
+| Campaign | Other field records and primary sources |
+| --- | --- |
+| Los Angeles | [Topanga State Park trail inventory](https://parks.ca.gov/AccessibleFeatures/Details/629) and the [Santa Monica Municipal Pier construction history](https://www.santamonica.gov/media/Housing-Element-Update-2021-to-2029/Housing%20Element%20EIR%20FINAL%20%28Reduced%29.pdf) |
+| San Francisco Bay | [Fort Point construction history](https://www.nps.gov/places/fort-point.htm) and [Golden Gate Bridge opening dates](https://www.goldengate.org/bridge/history-research/statistics-data/faqs/) |
+| San Diego | [Old Point Loma Lighthouse service history](https://www.nps.gov/articles/cabrillo.htm) and [San Diego–Coronado Bridge history](https://www.sandiego.gov/digitalarchives/new-discoveries/bridging-the-Gap) |
+
+Public records remain readable before a game starts. To locate an entry in a campaign, the client checks the current seat’s explored district IDs on the current map. The scout planner quotes movement using the shared rules. Simulation food, production and movement come from the game state. Census figures retain the boundaries of the real city or county. [Gazetteer and map integration](./docs/gazetteer.js)
+
+### Reproduce the atlas checks
+
+```sh
+node --test tests/gazetteer.test.js tests/campaign-explorer.test.js tests/campaign-lenses.test.js
+node --test tests/advisors.test.js tests/city-profile.test.js tests/land-commerce.test.js tests/field-expeditions.test.js
+npm test
+npm run playtest
+```
+
+Manual paths cover the points where players enter or leave the map.
+
+1. From the title Field guide, search for **奥克兰**, open Oakland and save the city to the notebook. Start a game and reopen the gazetteer from the menu. Its source and notebook entry should still be available.
+2. On a matching campaign, inspect a charted district with a field record. Open the dossier and return to the district. Repeat on another region and with a different seat to check which map destinations are available.
+3. Open production in a one-resident capital and read the Settler requirement. Grow to three, recruit and verify that one resident departs on deployment. Choose a building with a site, inspect a highlighted parcel, cancel once and then confirm a different legal site.
+4. Bombard an occupied enemy city, then capture it with a ground unit that can take cities. Compare the forecast, city health, ownership and garrison before and after capture.
+
 ## v6.7.0 city production review
 
 The reference was v6.6.0. In Los Angeles with seed 323, a one-resident capital could commission a Settler for 14 production or buy it immediately for 42 gold without losing a resident. In 50 matched openings all 50 starting capitals could also commission Workshops and walls, and all 50 could spend a district order on their own city tile.
