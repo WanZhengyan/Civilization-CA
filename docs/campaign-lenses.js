@@ -1,3 +1,4 @@
+import {getCitizenWorkforce} from './rules.js';
 import {assignWorkforce} from './workforce.js';
 import {neighboringWonders} from './natural-wonders.js';
 // Every thematic layer is built from a seat projection. Unknown parcels never enter the layer.
@@ -32,6 +33,21 @@ const lenses=[
       rows.set(id,reading(tied?3:job.output.indexOf(peak),
         'One worker · '+food+' food, '+production+' production, '+science+' science.',
         '每名居民 · '+food+' 粮食、'+production+' 生产力、'+science+' 科研。',food+production+science));
+    }
+    return rows;
+  }),
+  definition('jobs','Citizen assignments','市民分布','See which districts supply a city today and which eligible jobs have no worker.','查看城市实际工作的地块及其仍可分配的空缺岗位。',[
+    ['City center','市中心'],['Vacant job','空缺岗位'],['Worked district','正在工作']
+  ],({state,own})=>{
+    const rows=new Map();
+    for(const city of own){
+      const work=getCitizenWorkforce(state,city.id),staff=new Set(work.workedTiles.filter(j=>!j.specialist).map(j=>j.id));
+      const specialists=work.workedTiles.filter(j=>j.specialist).reduce((sum,j)=>sum+j.workers,0);
+      rows.set(city.tile,reading(0,city.name+' · '+staff.size+' field workers, '+specialists+' specialists.',
+        translate(city.name,'zh-CN')+' · 地块上有 '+staff.size+' 名居民，城内有 '+specialists+' 名专员。',city.population));
+      for(const job of work.eligibleTiles)rows.set(job.id,reading(staff.has(job.id)?2:1,
+        (staff.has(job.id)?'Worked by ':'Eligible for ')+city.name+'. Output per worker · '+job.output.join(' / ')+' (food / production / science).',
+        (staff.has(job.id)?'居民来自':'可供分配给')+translate(city.name,'zh-CN')+'。每人粮食／生产力／科研 · '+job.output.join(' / ')+'。',staff.has(job.id)?2:1));
     }
     return rows;
   }),

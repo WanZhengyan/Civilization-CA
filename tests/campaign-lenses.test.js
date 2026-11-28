@@ -23,3 +23,10 @@ test('potential quotes the food, production and science of a real eligible job',
   assert.ok(work.eligibleTiles.length);
   for(const job of work.eligibleTiles)assert.equal(rows.get(job.id).rank,job.output.reduce((a,b)=>a+b,0));
 });
+
+test('work assignments agree with current city workforce and do not list rival cities',async()=>{
+  const {getCitizenWorkforce}=await import('../docs/rules.js'),s=campaignView(capital(),0),c=s.cities[0];
+  const rows=surveyLayer(s,0,'jobs'),work=getCitizenWorkforce(s,c.id);
+  assert.equal(rows.get(c.tile).band,0);
+  assert.deepEqual([...rows].filter(([,r])=>r.band===2).map(([id])=>id).sort(),work.workedTiles.filter(j=>!j.specialist).map(j=>j.id).sort());
+});

@@ -31,3 +31,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.21 | Rank eligible space-project cities by remaining work and actual time to victory |
 | 7.0.22 | Read live sight and remembered terrain through a bilingual map lens |
 | 7.0.23 | Compare workable terrain and nearby natural bonuses on the land-potential map |
+| 7.0.24 | Trace each worked hex to its home city and distinguish unfilled jobs |
