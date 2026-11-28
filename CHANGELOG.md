@@ -1,5 +1,14 @@
 # Campaign updates
 
+## v7.1.0 — City defenses, army budgets and rival openings
+
+- **Set the opposition.** Each Easy, Normal and Hard computer starts with 1, 3 and 5 one-resident cities respectively. Each has one original capital. Online rooms apply the setting separately to each computer seat. The Pasadena tutorial has no rival. When an archived compact map cannot fit a newly requested roster at legal spacing, the new campaign uses Large. Existing saves retain their map.
+- **Find the right city.** Production opens on the left, identifies its city and centers it in the remaining map area. Walls go directly into the city center. Old wall construction keeps its progress and completed defenses keep their health.
+- **Defend the center.** Existing walls and Motorization unlock Modern fortifications. Their battery fires once per round at a visible enemy field formation within two hexes, for up to 32 damage. A siege damages the city first and each garrison unit takes 25% of the actual city damage. Capture removes every surviving enemy occupant.
+- **Budget for the army.** The treasury itemizes gross income, unit maintenance, arrears and net income. Recruitment shows the recurring charge. Paid units may retire. Unpaid maintenance postpones paid recruitment and upgrades that raise maintenance.
+- **Review an upgrade.** The field service panel compares combat strength, maximum health, range, movement, capture ability and recurring cost. Armored columns preserve cavalry mobility. Escort destroyers gain hull strength and firepower over frigates. Skirmishers can advance to artillery, and siege engineers can advance to armor.
+- **See what the councils deliver.** Land Surveying grants one extra point of natural border growth per city each turn. County Federation adds two more. Manual claims and contests share two border orders per turn.
+
 ## v7.0 atlas series
 
 The series contains 100 separately playable revisions. The version ledger identifies the change in each one and shows how to find that build in Git. [Playable version ledger](./VERSIONS.md)

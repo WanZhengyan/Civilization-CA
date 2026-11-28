@@ -4,7 +4,7 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 **[Play the Pasadena tutorial](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Start a solo campaign](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Play with friends](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.0.100 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
+[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.1.0 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
 
 [100 playable atlas versions and their changes](./VERSIONS.md)
 
@@ -22,7 +22,15 @@ Three decisions will get you through the opening.
 
 For income, research Land Surveying to unlock the Shop. For science, follow that branch to Topographic Mapping and build an Academy. Each city can build its own Academy. The four university wonders are unique across the map.
 
-When a building asks for a site, select a highlighted parcel on the map and review the placement controls on the left before confirming. In a siege, attacks on an occupied enemy city hit the city first. A surviving capture-capable ground unit takes the city, and the defeated garrison leaves play.
+The left production drawer names the city and centers it on the exposed map. Pick a highlighted parcel for buildings such as the Academy. Walls always use the city center. After Motorization, a city with walls can build Modern fortifications and fire once per round at a visible enemy field formation within two hexes.
+
+## Armies and rivals
+
+Each computer starts a new campaign with one city on Easy, three on Normal and five on Hard. Each city starts with one resident. Human players choose where to settle with their original Settler.
+
+Open the treasury to see gross income, unit maintenance and net income. A Militia costs 1 gold per harvest, Field Artillery costs 4 and an Armored Column costs 6. The production and upgrade panels quote recurring costs before confirmation. When gold runs short, the treasury carries the balance forward. You can retire a unit or raise income to recover.
+
+In a siege, the city is the primary target. Each garrison unit takes 25% of the city's actual HP loss, rounded to the nearest point. Bombarding a city from 24 HP to 1 deals 6 damage to each garrison unit. A surviving capture-capable ground unit can take the city and remove its remaining defenders.
 
 ## Explore California
 
