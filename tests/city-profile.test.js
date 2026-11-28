@@ -78,3 +78,12 @@ test('landmark employment separates unrealized income and stacks actual adjacent
   assert.equal(a.worked,true);assert.equal(b.worked,false);
   assert.deepEqual(workforce.yields,{food:3,production:1,science:3});
 });
+import {getCityExpansion} from '../docs/rules.js';
+test('charter comparison locates the same parcel that an approved influence purchase actually claims',()=>{
+  const state=capital(),c=state.cities[0];state.players[0].influence=10;c.borderProgress=2;
+  const parcel=getCityExpansion(state,c.id).tile,html=cityProfilePage(campaignView(state,0),0,c.id,'land');
+  assert.ok(html.includes('data-study-value="'+parcel+'"'));
+  assert.match(html,/Border charter<\/th><td>Now<\/td><td>4/);
+  const next=applyAction(state,0,{type:'charterBorder',city:c.id,tile:parcel});
+  assert.equal(next.board[parcel].owner,0);assert.equal(next.cities[0].borderProgress,0);
+});
