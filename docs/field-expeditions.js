@@ -18,6 +18,13 @@ function watershedSample({tile,map,state,unit,notes,distance}) {
 }
 
 export const studies = {
+  fieldTrial:{name:['Farm comparison trial','农田对照试验'],fee:3,reward:{food:7,science:3},
+    steps:[['Visit a working farm or orchard you control.','前往己方尚在生产的农田或果园。'],['Compare an unimproved land hex no more than two hexes from that farm.','到与该农场相距不超过两格的未改良陆地进行对照。']],
+    sample:({state,unit,tile,notes,distance})=>{
+      const land=state.board[tile.id];
+      if(!notes.length)return land?.owner===unit.seat && !land.pillaged && ['farm','orchard'].includes(land.improvement);
+      return tile.id!==notes[0].tile && distance(tile.id,notes[0].tile)<=2 && !land?.improvement && !state.cities.some(c=>c.tile===tile.id);
+    }},
   watershed:{name:['Freshwater catchment','淡水水系踏查'],fee:3,reward:{science:8,influence:2},
     steps:[['Sample land beside a charted river or lake.','在已探明的河道或湖泊旁采样。'],['Follow the same charted freshwater network to a bank at least two hexes away.','沿同一已探明淡水水系，在至少两格外的岸边再采样。']],
     sample:watershedSample},
@@ -81,7 +88,10 @@ export function fieldOrder(state,seat,action,map,distance) {
     return 'Field observation recorded.';
   }
   if(action.item==='file' && r.complete && base) {
-    for(const [stat,amount] of Object.entries(spec.reward))player[stat]=(player[stat]||0)+amount;
+    for(const [stat,amount] of Object.entries(spec.reward)){
+      if(stat==='food')base.food=(base.food||0)+amount;
+      else player[stat]=(player[stat]||0)+amount;
+    }
     player.fieldReports={...r.filed,[mission.key]:{...mission,filed:state.round,city:base.id}};
     storeCrew(player,unit.id,null);
     unit.moves--;

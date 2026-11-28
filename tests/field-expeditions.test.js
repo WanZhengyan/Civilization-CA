@@ -45,3 +45,11 @@ test('a catchment joins observations through charted fresh water and rejects sep
   assert.ok(probe('b',Object.keys(graph)));assert.ok(!probe('c',Object.keys(graph)));
   assert.ok(!probe('b',Object.keys(graph).filter(id=>id!=='r2')));
 });
+
+test('an agricultural trial compares a friendly working site, credits the receiving city and rejects a pillaged site',()=>{
+  let s=start();const city=s.cities[0],a=city.tile,b=getMap(s).neighbors(a).find(id=>getMap(s).byId[id].terrain!=='ocean');
+  s=order(s,'start','fieldTrial');s.board[a]={...s.board[a],owner:0,improvement:'farm',pillaged:true};
+  assert.throws(()=>order(s,'sample','fieldTrial'));s.board[a].pillaged=false;
+  s=order(s,'sample','fieldTrial');s=order(travel(s,b),'sample','fieldTrial');const food=s.cities[0].food;
+  s=order(travel(s,a),'file','fieldTrial');assert.equal(s.cities[0].food,food+7);assert.equal(s.players[0].food,undefined);
+});

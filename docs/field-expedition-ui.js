@@ -5,7 +5,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const lang=()=>getLanguage()==='zh-CN'?1:0;
 const local=(en,zh)=>lang()?zh:en;
 const label=(value)=>esc(value[lang()]);
-const currencies={capital:['gold','金币'],science:['science','科研'],culture:['culture','文化'],influence:['influence','影响力']};
+const currencies={food:['city food','交付城市的粮食'],capital:['gold','金币'],science:['science','科研'],culture:['culture','文化'],influence:['influence','影响力']};
 const rewardText=reward=>Object.entries(reward).map(([key,n])=>'+'+n+' '+label(currencies[key])).join(' · ');
 const button=(cmd,text,enabled)=>'<button type="button" class="btn" data-do="'+cmd+'"'+(enabled?'':' disabled')+'>'+text+'</button>';
 

@@ -89,3 +89,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.79 | Commission a landscape expedition, survey contrasting land and file a private report |
 | 7.0.80 | Commission a different basin, working bay or headland field program in each region |
 | 7.0.81 | Trace two riverbanks through the same charted freshwater network |
+| 7.0.82 | Run crop-control trials and return new food stores to the receiving city |
