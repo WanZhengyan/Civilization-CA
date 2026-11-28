@@ -48,6 +48,10 @@ export function openFieldDesk(read,act,preview) {
       }
       else html+=button('sample',local('Record observation','记录观察'),ready && r.canSample);
     }
+    if(r.lost.length)html+='<h3>'+local('Missing field notebooks','遗失的考察笔记')+'</h3><p>'+local('Take an unassigned scout to the last observation site and spend 2 gold to resume a lost expedition with its notes intact.','将空闲侦察兵派往最后一个观察点，花费 2 金币，找回记录并继续考察。')+'</p>'+r.lost.map(([id,job])=>{
+      const site=job.notes.at(-1).tile;
+      return button('salvage',label(studies[job.key].name)+' · '+esc(site)+' · '+job.notes.length+'/'+studies[job.key].steps.length,ready && unit.tile===site && r.player.capital>=2,id);
+    }).join('');
     if(active && ready){
       const routes=fieldRoutes(r,ctx.targets,ctx.routeTo);
       if(routes.length)html+='<details><summary>'+local('Preview field destinations','预览考察路线')+'</summary><p>'+local('Visible sites reachable this turn, ordered by travel cost. Arrive with spare movement to work immediately.','按移动消耗排序，仅列出本回合可抵达的可见地点。到达后若还有移动力，可立即执行考察。')+'</p>'+routes.slice(0,6).map(({id,cost,left})=>button('preview',esc(translate(map.byId[id].name))+' ('+esc(id)+') · '+cost+' '+local('move','移动')+' · '+left+' '+local('left','剩余'),true,id)).join('')+'</details>';

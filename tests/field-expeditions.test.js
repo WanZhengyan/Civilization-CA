@@ -131,3 +131,14 @@ test('the scout route menu ranks visible reachable sampling sites and never prev
   assert.deepEqual(rows.map(x=>x.id),[neighbors[1],neighbors[0]]);assert.deepEqual(rows.map(x=>x.left),[1,0]);
   assert.ok(!touched.includes('fogged'));assert.equal(fieldRoutes(null,targets,()=>null).length,0);
 });
+
+test('a replacement scout can salvage a lost crew’s notebook only at its last observation',()=>{
+  let s=start();s=order(s,'start');s=order(s,'sample');const lost=scout(s),home=lost.tile;
+  const replacement={...lost,id:'replacement',moves:2};s.units.push(replacement);
+  const recover=state=>applyAction(state,0,{type:'fieldStudy',unit:'replacement',item:'salvage',target:lost.id});
+  assert.throws(()=>recover(s));s.units=s.units.filter(u=>u.id!==lost.id);
+  replacement.tile=getMap(s).neighbors(home)[0];assert.throws(()=>recover(s));replacement.tile=home;
+  s.players[0].capital=1;assert.throws(()=>recover(s));s.players[0].capital=2;
+  const next=recover(s);assert.equal(next.players[0].capital,0);assert.equal(next.players[0].fieldCrews.replacement.notes[0].tile,home);
+  assert.equal(next.players[0].fieldCrews[lost.id],undefined);assert.throws(()=>recover(next));
+});

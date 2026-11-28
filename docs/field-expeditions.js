@@ -98,13 +98,15 @@ export function fieldReport(state,unit,map,distance) {
   const open=catalog.filter(([key])=>!filed[key] && !activeKeys.has(key));
   const relay=mission && mission.relayRound!==state.round ? state.units.filter(u=>u.id!==unit.id && u.seat===unit.seat && u.type==='scout' &&
     u.moves>0 && distance(u.tile,unit.tile)<=1 && !player.fieldCrews?.[u.id]) : [];
+  const lost=mission ? [] : Object.entries(player.fieldCrews || {}).filter(([id,job])=>job.notes.length && !filed[job.key] &&
+    !activeKeys.has(job.key) && !state.units.some(u=>u.id===id && u.seat===unit.seat));
   const spec=studies[mission?.key];
   const complete=Boolean(spec && notes.length===spec.steps.length);
   const canSample=Boolean(spec && !complete && unit.moves>0 && spec.sample(context));
   const sponsor=mission && state.cities.find(c=>c.id===mission.sponsor && c.seat===unit.seat);
   const archive=state.board[unit.tile]?.fieldStation==='archive';
   const canMail=Boolean(archive && sponsor && complete && !spec.reward.food && player.influence>=2);
-  return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,relay,open,spec,complete,canSample,context};
+  return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,relay,lost,open,spec,complete,canSample,context};
 }
 
 // Only recommend currently visible endpoints. Dynamic plot conditions and archive
@@ -144,6 +146,15 @@ export function fieldOrder(state,seat,action,map,distance) {
     player.fieldCamp={tile:unit.tile,round:state.round};
     unit.moves=0;
     return 'Field camp established.';
+  }
+  if(action.item==='salvage'){
+    const record=r.lost.find(([id,job])=>id===String(action.target) && job.notes.at(-1).tile===unit.tile);
+    if(!record || player.capital<2)throw new Error('This field order is unavailable here.');
+    player.capital-=2;
+    storeCrew(player,record[0],null);
+    storeCrew(player,unit.id,record[1]);
+    unit.moves--;
+    return 'Recovered a lost field notebook.';
   }
   if(action.item==='start') {
     const entry=r.open.find(([key])=>key===action.study);

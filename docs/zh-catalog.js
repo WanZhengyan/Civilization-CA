@@ -11,6 +11,7 @@ section(`
 Field expedition commissioned.|已委托野外考察。
 Field observation recorded.|已记录野外观察。
 Field notes handed to another scout.|已将考察笔记移交给另一名侦察兵。
+Recovered a lost field notebook.|已找回遗失的考察笔记。
 Field camp established.|已设立野外营地。
 Field report deposited.|已交付考察报告。
 Choose your scout with movement remaining.|请选择仍有移动力的己方侦察兵。
