@@ -38,6 +38,7 @@ import {campaignChart, largeCampaignChart, neighborCoordinates, REGIONAL_SHAPE} 
 import {LOS_ANGELES, regionalMaps, MAP_SCALES, validMapId, validMapSize} from './maps.js';
 export {CAMPAIGN_MAPS, validMapId, validMapSize} from './maps.js';
 import {prepareBattle} from './battle-reports.js';
+import {TRAINING_XP,chooseDrill,drillAttack,drillDefense,recordExperience,attackTrainingNote,defenseTrainingNote,counterTrainingNote} from './combat-training.js';
 import {fieldPosition,holdGround} from './field-position.js';
 import {attackMode} from './attack-mode.js';
 import {barbarianRound,seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
@@ -1239,7 +1240,7 @@ function calculateCombatPreview(state,unitId,target) {
   if (!active(state, unit) || !attackTargets(state, unit).includes(target)) return null;
 
   const wild=wildAt(state,target);
-  if (wild) return wildForecast(unit,UNIT_TYPES[unit.type],wild);
+  if (wild) return wildForecast(unit,UNIT_TYPES[unit.type],wild,state);
 
   // A garrison absorbs the hit before the city can be damaged.
   const defender = state.units.find(other => other.tile === target && !sameTeam(state,other.seat,unit.seat));
@@ -1257,7 +1258,10 @@ function calculateCombatPreview(state,unitId,target) {
   const role=matchup(unit,defender,town,state,hexDistance,UNIT_TYPES);
   const position=defender?.fortified && fieldPosition(state,defender,UNIT_TYPES[defender.type],terrain);
   if (position) role.notes.push(position.benefit);
-  let damage = Math.min(opponent.hp, Math.max(1, strength + role.damage + attackBonus - terrainDefense - (position?.guard || 0) - (walls ? 7 : 0)));
+  const assault=drillAttack(state,unit), guard=drillDefense(state,defender);
+  if (assault) role.notes.push(attackTrainingNote);
+  if (guard) role.notes.push(defenseTrainingNote);
+  let damage = Math.min(opponent.hp, Math.max(1, strength + role.damage + attackBonus + assault - guard - terrainDefense - (position?.guard || 0) - (walls ? 7 : 0)));
   let retaliation = 0;
   if (melee) {
     if (defender) {
@@ -1267,6 +1271,11 @@ function calculateCombatPreview(state,unitId,target) {
     } else {
       retaliation = walls ? 24 : 15;
     }
+  }
+  const counterGuard=drillDefense(state,unit);
+  if (counterGuard && retaliation) {
+    role.notes.push(counterTrainingNote);
+    retaliation=Math.max(0,retaliation-counterGuard);
   }
   retaliation = Math.min(retaliation, unit.hp);
   const attackerHpAfter = unit.hp - retaliation;
@@ -1285,7 +1294,11 @@ function calculateCombatPreview(state,unitId,target) {
 function resolveAttack(state, unit, target) {
   const result = combatPreview(state, unit.id, target);
   if (!result) throw new Error('Choose an enemy unit or city within range.');
-  if (result.defenderType==="wild") return resolveWildAttack(state,unit,wildAt(state,target),result,record);
+  if (result.defenderType==="wild") {
+    resolveWildAttack(state,unit,wildAt(state,target),result,record);
+    if (result.damage>0 || result.retaliation>0) recordExperience(state,unit,UNIT_TYPES[unit.type],result.defeated);
+    return;
+  }
   const from = unit.tile;
   const isUnit = result.defenderType === 'unit';
   const defender = isUnit ? unitOrNull(state, result.defenderId) : cityOrNull(state, result.defenderId);
@@ -1316,6 +1329,10 @@ function resolveAttack(state, unit, target) {
   }
   unit.hp = result.attackerHpAfter;
   unit.moves = 0;
+  if (result.damage>0 || result.retaliation>0) {
+    recordExperience(state,unit,UNIT_TYPES[unit.type],result.defeated || result.capture);
+    if (isUnit) recordExperience(state,defender,UNIT_TYPES[defender.type],result.attackerDefeated);
+  }
   if (result.advances) unit.tile = target;
   if (result.attackerDefeated || result.defeated) state.units = state.units.filter(other => other.hp > 0);
   const text = UNIT_TYPES[unit.type].name+(result.capture ? ' captured ' : ' attacked ')+name+' for '+result.damage+' damage.';
@@ -1351,7 +1368,10 @@ function unitOrder(state,seat,action) {
   if (!unit.moves) throw new Error('This unit has spent its movement for the turn.');
   const id=unit.tile, label=UNIT_TYPES[unit.type].name;
   if (unit.fortified && action.type!=='fortify') delete unit.fortified;
-  if (action.type==='fortify') {
+  if (action.type==='train') {
+    chooseDrill(state,unit,UNIT_TYPES[unit.type],action.item);
+    record(state,seat,'train',action.item==='assault'?'The unit completed assault training.':'The unit completed guard training.',id,{unit:unit.id,item:action.item});
+  } else if (action.type==='fortify') {
     holdGround(state,unit,UNIT_TYPES[unit.type],getMap(state).byId[id].terrain);
     record(state,seat,'fortify','The unit prepared a defensive position.',id,{unit:unit.id});
   } else if (action.type==='move') {
@@ -1490,7 +1510,7 @@ function resolveOrder(source,seat,action) {
       advanceProduction(city);
       record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
     }
-  } else if (action.type==='fortify') {
+  } else if (action.type==='fortify' || action.type==='train') {
     unitOrder(next,seat,action);
   } else if (['move','attack','found','improve','upgrade','survey','recover','haulFish','landCatch'].includes(action.type)) {
     unitOrder(next,seat,action);
@@ -1903,6 +1923,14 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
         if(value>bestValue){bestValue=value;combinedAttack={type:'attack',unit:unit.id,tile};}
       }
       if(difficulty!=='hard' && combinedAttack)return combinedAttack;
+    }
+  }
+  if (state.campaignVariety===1) {
+    const ready=available.find(unit=>!unit.drill && unit.combatXP>=TRAINING_XP && UNIT_TYPES[unit.type].strength);
+    // A finishing blow takes priority over spending the formation's turn on training.
+    if (ready && bestValue<80) {
+      const defending=state.cities.some(city=>city.seat===seat && city.tile===ready.tile);
+      return {type:'train',unit:ready.id,item:defending || ready.hp*2<ready.maxHp?'guard':'assault'};
     }
   }
   if(combinedAttack)return combinedAttack;

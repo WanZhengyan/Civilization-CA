@@ -29,6 +29,7 @@ import {sameTeam,teamLabel} from './teams.js';
 import {cityKind,developmentPanel,developmentReceipt,foundingLabel} from './district-command.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
 import {captureOrderHint,cityAttackHint,forecastCounterLabel} from './attack-mode.js';
+import {militaryTraining,trainingPanel} from './combat-training.js';
 import {fieldPosition,fieldPositionPanel} from './field-position.js';
 import {advancementPanel,recoveryPanel} from './unit-service-ui.js';
 import {getUpgradePlans,getRecoveryForecast} from './rules.js';
@@ -344,6 +345,8 @@ function inspect(){
     info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+(["builder","workboat"].includes(u.type)?stat("Charges",u.charges):(UNIT_TYPES[u.type].range?stat("Range",UNIT_TYPES[u.type].range):stat("Terrain",surface)))+'</div>'+healthBar(u.hp,u.maxHp);
     const position=fieldPosition(state,u,UNIT_TYPES[u.type],tile.terrain);
     info+=fieldPositionPanel(position,u,false,disabled);
+    const training=militaryTraining(state,u,UNIT_TYPES[u.type]);
+    if (training?.drill) info+=trainingPanel(training,own,disabled);
     const radius=getSightRadius();
     info+='<div class="unit-sight"><span>'+icon("inspect")+' <span>Sight radius</span></span><strong>'+radius+' <small>'+(radius===1?'hex':'hexes')+'</small></strong></div>';
     if(own){
@@ -383,6 +386,7 @@ function inspect(){
       }
       if(canSurvey(state,u)) actions+=actionButton('survey','Survey resources','1 movement','gold',disabled);
       const plans=getUpgradePlans(state,u.id,view.seat);
+      if (!training?.drill) actions+=trainingPanel(training,true,disabled || !u.moves);
       if (!u.fortified) actions+=fieldPositionPanel(position,u,true,disabled);
       const previous=el("entity-commands").querySelector("[data-service-plans]");
       actions+=recoveryPanel(u,getRecoveryForecast(state,u.id,view.seat),disabled);
@@ -828,6 +832,7 @@ function chooseOrder(key){
   }
   if(!mayOrder())return;
   if(key==="landCatch" || key==="haulFish"){order="";Game.doAction({type:key,unit:u.id});return}
+  if(key.startsWith("train:")){order="";Game.doAction({type:"train",unit:u.id,item:key.slice(6)});return}
   if(key==="fortify"){order="";Game.doAction({type:"fortify",unit:u.id});return}
   if(key==="recover"){order="";Game.doAction({type:"recover",unit:u.id});return}
   if(key==="move"){

@@ -2,6 +2,7 @@ import {maritimeCopy} from './maritime-guide.js';
 // The English UI copy is the catalog key. The rules and network protocol keep
 // their canonical IDs in both languages.
 import {CIVILIZATIONS} from './civilizations.js';
+import {trainingTranslations} from './combat-training.js';
 import {positionTranslations} from './field-position.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
@@ -52,6 +53,7 @@ The charter requires 18 gold.|颁发特许状需要 18 金币。
 Choose a charter for one of your cities.|请选择己方城市的特许状。
 Municipal charter granted.|城市特许状已颁发。
 `);
+section(trainingTranslations);
 section(`
 Applied Mechanics|应用力学
 Each workshop supplies 1 additional production per turn.|每座工坊每回合额外提供 1 点产能。
