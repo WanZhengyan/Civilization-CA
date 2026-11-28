@@ -1,4 +1,4 @@
-import {SETTLER_RESIDENT_COST} from './population.js';
+import {SETTLER_MIN_POPULATION, SETTLER_RESIDENT_COST} from './population.js';
 import {illustration} from './illustrations.js';
 import {WONDERS} from './wonders.js';
 import {revisionOf} from './works.js';
@@ -8,15 +8,31 @@ export function draftOrder(city,option,buy) {
   return {type:buy?'buyProduction':city.queue?'switchProduction':'produce',city:city.id,item:option.item,
     expected:revisionOf(city),...(buy ? {gold:option.gold} : {})};
 }
-export function orderButtons(option,allowed) {
-  const make=(key,label,n,blocked)=>{
-    const reason=blocked || (!allowed ? 'Wait for your turn.' : '');
-    return '<button type="button" data-'+key+'="'+escape(option.item)+'" '+(reason?'disabled':'')+'><span>'+label+'</span>'+n+'</button>'+
-      (reason?'<small class="works-reason">'+escape(reason)+'</small>':'');
+function settlerGrowth(report) {
+  if (!report || report.population>=SETTLER_MIN_POPULATION) return '';
+  const timed=report.starvationTurns || report.growthTurns;
+  const outlook=report.starvationTurns ? 'Population loss' : report.growthTurns ? 'Next citizen' : 'Food balance';
+  const amount=timed ? timed+(timed===1?' turn':' turns') : String(report.surplus);
+  return '<dl class="work-growth"><div><dt>Current residents</dt><dd>'+report.population+' / '+SETTLER_MIN_POPULATION+
+    '</dd></div><div><dt>'+outlook+'</dt><dd>'+escape(amount)+'</dd></div></dl>';
+}
+export function orderButtons(option,allowed,growth) {
+  const canBuy=option.kind!=='project' && !Object.hasOwn(WONDERS,option.item);
+  const wait=allowed ? '' : 'Wait for your turn.';
+  const production=option.reason || wait, purchase=option.buyReason || wait;
+  const shared=canBuy && production && production===purchase;
+  const reasonId='work-reason-'+escape(option.item);
+  const make=(key,label,price,reason)=>{
+    const id=shared ? reasonId : reasonId+'-'+key;
+    return '<div><button type="button" data-'+key+'="'+escape(option.item)+'" '+
+      (reason?'disabled aria-describedby="'+id+'"':'')+'><span>'+label+'</span>'+price+'</button>'+
+      (reason && !shared?'<small class="works-reason" id="'+id+'">'+escape(reason)+'</small>':'')+'</div>';
   };
-  if(option.kind==='project' || Object.hasOwn(WONDERS,option.item)) return '<div class="work-choices"><div>'+make('produce','City production','',option.reason)+'</div></div>';
-  return '<div class="work-choices"><div>'+make('produce','City production','',option.reason)+'</div><div>'+
-    make('buy','Buy with gold',' <b>'+option.gold+'</b>',option.buyReason)+'</div></div>';
+  const controls=make('produce','City production','',production)+
+    (canBuy?make('buy','Buy with gold',' <b>'+option.gold+'</b>',purchase):'');
+  const forecast=option.item==='settler' ? settlerGrowth(growth) : '';
+  return '<div class="work-choices">'+controls+
+    (shared?'<div class="work-shared-reason" id="'+reasonId+'"><small class="works-reason">'+escape(production)+'</small>'+forecast+'</div>':forecast)+'</div>';
 }
 function workQuote(draft,city,option) {
   const purchase=draft.type==='buyProduction';

@@ -135,3 +135,32 @@ test('city production reports distinguish a population hold from unavailable dep
     assert.equal(option(state).turns,null);
   }
 });
+
+test('the locked card gives both actions one shared reason, the local population and the next harvest forecast',async()=>{
+  const {orderButtons}=await import('../docs/work-orders.js');
+  const {getPopulationReport}=await import('../docs/rules.js');
+  const {translate}=await import('../docs/i18n.js');
+  const state=capital(),city=state.cities[0];
+  const render=()=>orderButtons(option(state),true,getPopulationReport(state,city.id));
+  let markup=render();
+  assert.equal(markup.split('Settlers need 3 residents in this city.').length-1,1);
+  assert.equal(markup.split('disabled aria-describedby="work-reason-settler"').length-1,2);
+  assert.match(markup,/Current residents<\/dt><dd>1 \/ 3/);
+  assert.match(markup,/Next citizen<\/dt><dd>2 turns/);
+  assert.equal(translate('Current residents','zh-CN'),'本城当前人口');
+  assert.equal(translate('2 turns','zh-CN'),'2 回合');
+  city.population=2;
+  city.food=10;
+  markup=render();
+  assert.match(markup,/2 \/ 3/);
+  assert.match(markup,/Next citizen<\/dt><dd>1 turn/);
+  city.population=3;
+  assert.doesNotMatch(render(),/work-growth|work-shared-reason/);
+  city.queue={item:'settler',progress:4,required:14};
+  state.players[0].capital=0;
+  markup=render();
+  assert.match(markup,/aria-describedby="work-reason-settler-produce"/);
+  assert.match(markup,/This city already has a project in progress/);
+  assert.match(markup,/aria-describedby="work-reason-settler-buy"/);
+  assert.match(markup,/Not enough gold/);
+});
