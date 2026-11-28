@@ -1,4 +1,4 @@
-import {getLandRoutes} from './rules.js';
+import {getLandRoutes,getTradeDiversions} from './rules.js';
 import {CARGO,freightOffer} from './land-commerce.js';
 import {RESOURCES} from './resources.js';
 import {seatMayOrder} from './team-turns.js';
@@ -44,7 +44,9 @@ export function commerceLedger(state,seat,city,busy,esc) {
   }).join('');
   const active=(player.caravans || []).map(w=>'<p>'+cargoText(w.item)+' · '+cityText(state,w.destination,esc)+' · '+
     (w.returning?L('Returning cargo','原货返程')+' · ':'')+(w.remaining?w.remaining+L(' harvests left',' 次收获后抵达'):L('Awaiting a friendly destination','等待己方收货城市'))+
-    (!w.returning && state.cities.some(c=>c.id===w.origin && c.seat===seat)?'<button type="button" class="cargo-order" data-caravan-order="recallWagon" data-wagon="'+esc(w.id)+'"'+(!enabled?' disabled':'')+'>'+L('Recall cargo','召回原货')+'</button>':'')+'</p>').join('');
+    (!w.returning && state.cities.some(c=>c.id===w.origin && c.seat===seat)?'<button type="button" class="cargo-order" data-caravan-order="recallWagon" data-wagon="'+esc(w.id)+'"'+(!enabled?' disabled':'')+'>'+L('Recall cargo','召回原货')+'</button>':'')+
+    getTradeDiversions(state,seat,w.id).map(route=>'<button type="button" class="cargo-order" data-caravan-order="divertWagon" data-wagon="'+esc(w.id)+'" data-destination="'+esc(route.destination)+'"'+
+      (!enabled || player.capital<2 || w.diverted===state.round?' disabled':'')+'>'+L('Divert to ','改送')+cityText(state,route.destination,esc)+' · 2 '+L('gold','金币')+' · '+route.turns+L(' harvests',' 次收获')+'</button>').join('')+'</p>').join('');
   const receipt=player.tradeReceipt;
   return '<section class="commerce-ledger" translate="no"><h3>'+L('Overland trade','陆路贸易')+'</h3><p>'+
     L('Wagon routes from ','商队起点：')+cityText(state,city.id,esc)+ '</p>'+(city.freightTimber?'<p>'+L('Lumber yard reserve','木料库存产能')+' · '+city.freightTimber+'</p>':'')+active+

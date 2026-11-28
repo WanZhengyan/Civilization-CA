@@ -87,3 +87,15 @@ test('recalling cargo retraces the traveled corridor and returns stock without p
   next=applyAction(next,0,{type:'end'});
   assert.equal(next.players[0].stockpile.citrus,2);assert.equal(next.players[0].tradeReceipt.paid,0);
 });
+test('a lost destination holds payment until the owner diverts the stranded cargo to a friendly alternate',()=>{
+  const {state,home,dest}=market();let next=applyAction(state,0,{type:'dispatchCaravan',origin:home,destination:dest,item:'provisions'});
+  const route=next.players[0].caravans[0],alternate={...structuredClone(next.cities[0]),id:'rescue',tile:route.path[1],originalSeat:null};
+  next.cities=next.cities.filter(c=>c.id!==dest).concat(alternate);
+  for(let i=0;i<route.turns;i++)next=applyAction(next,0,{type:'end'});
+  assert.equal(next.players[0].caravans[0].remaining,0);assert.equal(next.players[0].tradeReceipt,undefined);
+  const before=next.players[0].capital;
+  next=applyAction(next,0,{type:'divertWagon',wagon:route.id,destination:'rescue'});
+  assert.equal(next.players[0].capital,before-2);
+  while(next.players[0].caravans.length)next=applyAction(next,0,{type:'end'});
+  assert.equal(next.players[0].tradeReceipt.destination,'rescue');
+});

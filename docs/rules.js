@@ -1,4 +1,4 @@
-import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon} from './land-commerce.js';
+import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon} from './land-commerce.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
@@ -38,6 +38,10 @@ import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.j
 import {nextTechnology} from './applied-science.js';
 import {TECHS, CIVICS, ERAS, ERA_UNITS, eraFor, councilTree} from './progression.js';
 export {TECHS, CIVICS, ERAS, councilTree} from './progression.js';
+export function getTradeDiversions(state,seat,id) {
+  if(!state?.players[seat] || state.intel && state.intel.seat!==seat)return [];
+  return diversionRoads(state,seat,id,getMap(state),getVision(state,seat).explored);
+}
 export function getLandRoutes(state,seat,origin) {
   if (!state?.players[seat] || state.intel && state.intel.seat!==seat) return [];
   return tradeCorridors(state,seat,origin,getMap(state),getVision(state,seat).explored);
@@ -1620,6 +1624,8 @@ function resolveOrder(source,seat,action) {
   } else if (action.type==='delegation') {
     sendDelegation(next,seat,action.target,getVisibleTiles(next,seat));
     record(next,seat,'delegation','Diplomatic delegation dispatched.',null,{target:action.target});
+  } else if (action.type==='divertWagon') {
+    divertWagon(next,seat,action,getTradeDiversions(next,seat,action.wagon));
   } else if (action.type==='recallWagon') {
     recallWagon(next,seat,action.wagon);
   } else if (action.type==='dispatchCaravan') {

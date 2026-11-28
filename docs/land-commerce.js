@@ -4,7 +4,10 @@ export function tradeCorridors(state,seat,originId,map,explored) {
   const cities=state.cities.filter(c=>c.seat===seat);
   const origin=cities.find(c=>c.id===originId);
   if (!origin || cities.length<2) return [];
-  const parents=new Map([[origin.tile,null]]), queue=[origin.tile];
+  return roadsFrom(origin.tile,origin.id,cities,map,explored);
+}
+function roadsFrom(start,originId,cities,map,explored) {
+  const parents=new Map([[start,null]]), queue=[start];
   for (let i=0;i<queue.length;i++) {
     for (const id of map.neighbors(queue[i])) {
       if (parents.has(id) || !explored.has(id)) continue;
@@ -18,7 +21,7 @@ export function tradeCorridors(state,seat,originId,map,explored) {
     for (let id=city.tile;id!=null;id=parents.get(id)) path.push(id);
     path.reverse();
     const steps=path.length-1;
-    return {origin:origin.id,destination:city.id,path,steps,turns:Math.max(1,Math.ceil(steps/3))};
+    return {origin:originId,destination:city.id,path,steps,turns:Math.max(1,Math.ceil(steps/3))};
   }).sort((a,b)=>a.turns-b.turns || a.steps-b.steps || a.destination.localeCompare(b.destination));
 }
 
@@ -64,7 +67,7 @@ export function harvestCaravans(state,seat) {
   for(const wagon of player.caravans){
     const remaining=Math.max(0,wagon.remaining-1);
     const city=state.cities.find(c=>c.id===wagon.destination && c.seat===seat);
-    const cursor=Math.min(wagon.path.length-1,wagon.cursor+wagon.speed);
+    const cursor=wagon.path?Math.min(wagon.path.length-1,(wagon.cursor || 0)+(wagon.speed || 3)):0;
     if(remaining || !city){pending.push({...wagon,remaining,cursor});continue;}
     const cargo=CARGO[wagon.item];
     if(wagon.returning){
@@ -94,7 +97,25 @@ export function recallWagon(state,seat,id) {
   const wagon=fleet.find(w=>w.id===id);
   if(!wagon || wagon.returning || !state.cities.some(c=>c.id===wagon.origin && c.seat===seat))
     throw new Error('Choose an outgoing wagon with a friendly home city.');
-  const path=wagon.path.slice(0,wagon.cursor+1).reverse();
-  const turns=Math.max(1,Math.ceil((path.length-1)/wagon.speed));
+  const path=wagon.path?[...(wagon.returnPath || []),...wagon.path.slice(0,wagon.cursor+1)].reverse():[state.cities.find(c=>c.id===wagon.origin).tile];
+  const turns=Math.max(1,Math.ceil((path.length-1)/(wagon.speed || 3)));
   player.caravans=fleet.map(w=>w!==wagon?w:{...w,path,cursor:0,returning:true,destination:w.origin,remaining:turns});
+}
+
+export function diversionRoads(state,seat,id,map,explored) {
+  const wagon=state.players[seat]?.caravans?.find(w=>w.id===id);
+  const current=wagon?.path?.[wagon.cursor];
+  if(!current || wagon.returning)return [];
+  const cargo=CARGO[wagon.item];
+  const towns=state.cities.filter(c=>c.seat===seat && c.id!==wagon.destination &&
+    (!cargo.atDestination || c.buildings.includes(cargo.atDestination)));
+  return roadsFrom(current,wagon.origin,towns,map,explored).map(route=>({...route,turns:Math.max(1,Math.ceil(route.steps/wagon.speed))}));
+}
+export function divertWagon(state,seat,order,routes) {
+  const player=state.players[seat],wagon=player.caravans?.find(w=>w.id===order.wagon);
+  const route=routes.find(r=>r.destination===order.destination);
+  if(!wagon || !route || wagon.diverted===state.round || player.capital<2)throw new Error('Review the alternate destination and its two-gold diversion fee.');
+  player.capital-=2;
+  player.caravans=player.caravans.map(w=>w!==wagon ? w : {...w,destination:route.destination,
+    path:route.path,cursor:0,remaining:route.turns,diverted:state.round,returnPath:[...(w.returnPath || []),...w.path.slice(0,w.cursor)]});
 }
