@@ -61,3 +61,9 @@ test('rush advice uses only affordable current quotes and preserves the purchase
   const paid=applyAction(s,0,{type:'buyProduction',item:'scout',city:city.id,expected:s.cities[0].productionRevision||1,gold:getProductionOptions(s,city.id).find(p=>p.item==='scout').gold});assert.ok(card.detail.includes('leaves '+paid.players[0].capital));
   s.players[0].capital=0;assert.ok(!read(s).some(r=>r.desk==='treasury'));
 });
+
+test('technology planning prices the complete route to an unbuilt facility after savings',()=>{
+  const s=capital();s.players[0].science=2;
+  const advice=read(s).find(r=>r.desk==='science');assert.ok(advice);assert.match(advice.detail,/after savings/);
+  s.players[0].research=advice.link.item;assert.ok(!read(s).some(r=>r.desk==='science'));
+});

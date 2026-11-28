@@ -833,6 +833,7 @@ function reviewScoutDestination(unit,target){
 }
 let tutorialCoach,paintAdvisors;
 function reviewAdvice(link){
+  if(link.kind==='research' || link.kind==='civics'){showAvailableCouncil(link.kind);showCouncilGoal(link.item);return;}
   if(link.unit){
     const unit=ownUnits().find(u=>u.id===link.unit);
     if(!unit)return;

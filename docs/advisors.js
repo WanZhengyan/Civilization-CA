@@ -1,7 +1,8 @@
+import {councilCourse} from "./council-path.js";
 import {housingCapacity} from "./population.js";
 import {scoutingRoutes} from "./scout-routes.js";
 // Advisors read only the seat's projected chart. They never issue orders.
-import {getMap,getPopulationReport,getCitizenWorkforce,getCityYield,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
+import {getResearchOptions,BUILDINGS,getMap,getPopulationReport,getCitizenWorkforce,getCityYield,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
 import {roomSeatTurn} from './room-turn.js';
 import {translate} from './i18n.js';
 
@@ -126,7 +127,25 @@ function treasuryDesk({state,seat,cities,L,t,name,options,add}){
   }
 }
 
-const desks=[treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function scienceDesk({state,seat,cities,L,t,add}){
+  if(!cities.length || state.players[seat].research)return;
+  const player=state.players[seat],choices=getResearchOptions(state,seat);
+  const projects=['workshop','shop','academy'].map(item=>{
+    const plan=councilCourse(choices,BUILDINGS[item].tech,player.science||0);
+    const next=plan?.steps.find(s=>!s.completed);
+    if(!next?.enabled)return null;
+    const missing=cities.filter(c=>!c.buildings.includes(item)).length;
+    return missing?{item,plan,next,missing}:null;
+  }).filter(Boolean).sort((a,b)=>a.plan.remaining/a.missing-b.plan.remaining/b.missing);
+  const best=projects[0];if(!best)return;
+  const {item,plan,next,missing}=best,building=t(BUILDINGS[item].name),project=t(next.label);
+  add('science',L('Research a route to ','研究设施前置 · ')+building,
+    L('Begin with '+project+' ('+next.cost+' science). This route needs '+plan.remaining+' more science after savings. It opens '+building+' for '+missing+' cities, each costing '+BUILDINGS[item].required+' production to construct.',
+      '从'+project+'开始（'+next.cost+' 科研点）。扣除已储备点数，整条路线还需 '+plan.remaining+' 科研点。完成后有 '+missing+' 座城市可建造'+building+'，每座需 '+BUILDINGS[item].required+' 生产力。'),
+    79,{kind:'research',item:BUILDINGS[item].tech});
+}
+
+const desks=[scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;
