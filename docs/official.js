@@ -1,6 +1,6 @@
 const languageKey = 'civitas.language';
 const records = [];
-for (const [dataAttribute, attribute] of [['zh', null], ['zhAlt', 'alt'], ['zhLabel', 'aria-label']]) {
+for (const [dataAttribute, attribute] of [['zh', null], ['zhAlt', 'alt'], ['zhLabel', 'aria-label'], ['zhSrc', 'src'], ['zhHref', 'href']]) {
   const selector = '[data-' + dataAttribute.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase()) + ']';
   for (const node of document.querySelectorAll(selector)) {
     records.push({ node, attribute, en: attribute ? node.getAttribute(attribute) : node.textContent, zh: node.dataset[dataAttribute] });

@@ -39,7 +39,7 @@
       <nav aria-label="Main menu" data-zh-label="主导航">
         <a href="#first-turns" data-zh="怎么玩">How to play</a>
         <a href="#regions" data-zh="选地图">Maps</a>
-        <a class="version-link" href="https://github.com/WanZhengyan/Civilization-CA/blob/main/CHANGELOG.md" aria-label="Release notes for v6.5.0" data-zh-label="查看 v6.5.0 版本更新">v6.5.0</a>
+        <a class="version-link" href="https://github.com/WanZhengyan/Civilization-CA/blob/main/CHANGELOG.md" aria-label="Release notes for v6.6.0" data-zh-label="查看 v6.6.0 版本更新">v6.6.0</a>
       </nav>
       <div class="language" role="group" aria-label="Language" data-zh-label="语言">
         <button type="button" data-language="en" lang="en" aria-pressed="true">EN</button>
@@ -54,20 +54,13 @@
       <div class="hero-content">
         <p class="kicker"><span class="line"></span><span data-zh="加州回合制策略游戏">Turn-based strategy in California</span></p>
         <h1 id="hero-title"><span data-zh="你的第一座城，">Where will you</span><br><em data-zh="建在哪里？">found your capital?</em></h1>
-        <p class="intro" data-zh="带领一名开拓者来到加州。在山谷里建城，训练侦察兵探路，再决定是修建港口、扩张边境，还是投资下一项发现。">Lead a settler into California. Build a city in the foothills, send a scout beyond the ridge, then decide whether to build a port, expand your border or invest in your next discovery.</p>
-        <div class="hero-actions">
-          <a class="button primary" href="./game.html?setup=tutorial" data-zh="进入新手教程">Play the tutorial</a>
-          <a class="button glass" href="./game.html?setup=solo" data-zh="单人战役">Play solo</a>
-        </div>
-        <p class="play-note" data-zh="第一次玩？跟着地图上的提示，亲自完成开局决策。">New here? Make your first decisions on the map with the guided campaign.</p>
-      </div>
-    </section>
-
-    <section class="friends-strip" aria-label="Multiplayer" data-zh-label="多人联机">
-      <div class="page-width">
-        <h2 data-zh="和朋友一起玩">Play with friends</h2>
-        <p data-zh="最多四人，可组队。">Up to four players, with optional teams.</p>
-        <div><a href="./game.html?setup=host" data-zh="创建房间">Create a room</a><span aria-hidden="true">/</span><a href="./game.html?setup=join" data-zh="输入房间码">Enter a room code</a></div>
+        <p class="intro" data-zh="在加州海岸建城，派侦察兵翻过山岭，扩张边境，与对手争先进军下个时代。">Found a city on the California coast. Send a scout beyond the hills, expand your borders and race your rivals into the next era.</p>
+        <nav class="hero-actions" aria-label="Play options" data-zh-label="游戏模式">
+          <a class="button primary" href="./game.html?setup=tutorial" data-zh="新手教程">Play the tutorial</a>
+          <a class="button glass" href="./game.html?setup=solo" data-zh="单人游戏">Play solo</a>
+          <a class="button glass host-choice" href="./game.html?setup=host"><span data-zh="多人游戏">Multiplayer</span><small data-zh="创建房间">Create a room</small></a>
+        </nav>
+        <p class="join-shortcut"><span data-zh="已有房间码？">Have a room code?</span> <a href="./game.html?setup=join" data-zh="加入房间">Join a room</a></p>
       </div>
     </section>
 
@@ -78,10 +71,10 @@
       </div>
       <div class="lesson-layout">
         <figure class="game-figure">
-          <a href="./art/relief-gameplay.webp" aria-label="Open the full-size game screenshot" data-zh-label="查看实机画面大图">
-            <img src="./art/relief-gameplay.webp" width="1363" height="936" loading="lazy" alt="A scout near Calabasas on the Los Angeles relief map, with research on the left and unit orders on the right" data-zh-alt="洛杉矶实机画面：侦察兵在卡拉巴萨斯附近的立体地图上，左侧是研究进度，右侧是单位指令">
+          <a href="./art/campaign-guide-en.webp" data-zh-href="./art/relief-gameplay.webp" aria-label="Open the full-size game screenshot" data-zh-label="查看实机画面大图">
+            <img src="./art/campaign-guide-en.webp" data-zh-src="./art/relief-gameplay.webp" width="1363" height="936" loading="lazy" alt="The first Pasadena tutorial turn in English, with a settler and the Found capital order highlighted" data-zh-alt="洛杉矶实机画面：侦察兵在卡拉巴萨斯附近的立体地图上，左侧是研究进度，右侧是单位指令">
           </a>
-          <figcaption><span data-zh="立体地形 · 实机画面">Relief terrain · In-game view</span><a href="./art/relief-gameplay.webp" data-zh="查看大图">View full size</a></figcaption>
+          <figcaption><span data-zh="立体地形 · 实机画面">Relief terrain · In-game view</span><a href="./art/campaign-guide-en.webp" data-zh-href="./art/relief-gameplay.webp" data-zh="查看大图">View full size</a></figcaption>
         </figure>
         <ol class="turn-guide">
           <li><h3 data-zh="选址建都">Found your capital</h3><p data-zh="点选开拓者，比较能建城的地块。建都后，城市每回合都有收入，也能开始生产。">Select your settler and compare the sites where it can found a city. Your capital earns income and can start production as soon as you settle.</p></li>
