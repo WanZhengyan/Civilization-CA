@@ -98,3 +98,12 @@ test('market days compare their opening fee against income and never deduct it a
   assert.equal(next.players[0].capital,12);assert.equal(active.food,0);
   const after=applyAction(next,0,{type:'end'});assert.equal(festivalBudget(after,after.cities[0])[0].gold,10);
 });
+test('charters plan prerequisite buildings before signing and show only the permanent return once signed',()=>{
+  const state=capital(),c=state.cities[0];c.population=2;state.players[0].capital=40;
+  assert.match(cityProfilePage(state,0,c.id,'civic'),/Plan Granary/i);
+  c.buildings.push('monument');
+  assert.match(cityProfilePage(state,0,c.id,'civic'),/data-study-command="charter" data-study-value="merchants"/);
+  const next=applyAction(state,0,{type:'cityCharter',city:c.id,item:'merchants'});
+  const result=cityProfilePage(next,0,c.id,'civic');
+  assert.match(result,/In force/);assert.doesNotMatch(result,/Machinists/);assert.equal(next.players[0].capital,22);
+});
