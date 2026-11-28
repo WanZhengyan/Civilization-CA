@@ -64,7 +64,7 @@ Each trait works in the original capital while its founder controls it. All four
 - The green hex by an owned city name forecasts its next border expansion at its current population. Open the city to locate the proposed district. Each resident contributes one border point when its owner ends their turn. The first district takes eight points.
 - On your turn, open city production to change projects. Work already invested in an item stays with that city. For a building, choose a highlighted site on the board and confirm. Eligible buildings and units can also be bought with gold. The purchase quote deducts work already invested.
 - Select a unit to inspect its upgrade paths, prerequisites, service location, gold price and outcome. A wounded unit shows its expected recovery. Rest spends its remaining movement for additional healing. Ships return to a friendly service location for repairs.
-- Open the treasury or influence counter to see current holdings, income and uses. The first policy is free and changing it costs 3 influence. A border contest costs 4 gold and 5 influence, plus 2 influence per district level.
+- Click **Influence** after founding a city. Spend 6 to claim the city’s next eligible neutral district immediately, or keep the influence and wait the displayed number of turns for natural growth. You can also send a delegation for 6, switch an enacted policy for 3, or contest an eligible rival district for 4 gold and 5 influence plus 2 per development level.
 
 ## Your first expedition
 
@@ -118,7 +118,7 @@ Each team shares sight and explored terrain. In a new team room both allies can 
 
 城市名牌旁的绿色六边形显示预计还需几回合扩地。人口每回合贡献等量扩地进度，第一块地需要 8 点。点开城市可以定位预计获得的地块。己方回合内可切换生产项目，已投入的产能留在该城。建造建筑时，在主地图的高亮格上确认位置。符合条件的单位和建筑可以花金币购买。
 
-点开单位可查看各条升级路线、解锁条件、地点、费用和升级结果。受伤单位也会显示下次预计恢复的生命值。点金库或影响力，可以查到余额、收入和用途。
+点开单位可查看各条升级路线、解锁条件、地点、费用和升级结果。受伤单位也会显示下次预计恢复的生命值。建都后点顶部「影响力」，可以花 6 点立即取得预览中的中立地块，也可以按界面显示的回合数等待自然扩张。派遣使团花 6 点，更改已实施的政策花 3 点。争夺符合条件的敌方边境需 4 金币和 5 点影响力，地块每升一级再加 2 点。
 
 ## Run locally
 

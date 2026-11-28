@@ -1,5 +1,11 @@
 # Campaign updates
 
+## Spend influence from the campaign map
+
+Open **Influence / 影响力** to see your balance, where your next turn’s income comes from, and the orders available to your civilization. After founding a city, compare the natural expansion forecast with paying 6 influence for the same visible neutral parcel now. A paid expansion uses the city's accumulated border progress and starts the next claim at zero. Each city can use this order once per round.
+
+Other uses include sending a three-round delegation to a contacted rival, changing a policy, and contesting a rival’s eligible border district. The bilingual field guide explains the costs through a first-turn example.
+
 ## Relief terrain and a tilted campaign table
 
 The map now opens in a fixed, tilted relief view. Rocky ridges, rolling foothills, regional forests, clustered houses and shoreline banks have directional light and cast shadows. Rivers retain their navigable courses, and bridges have raised decks. All terrain and miniature artwork is original and generated locally.
