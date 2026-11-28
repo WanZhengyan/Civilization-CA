@@ -85,6 +85,12 @@ export function fieldReport(state,unit,map,distance) {
   const player=state.players[unit.seat], mission=player.fieldCrews?.[unit.id];
   const filed=player.fieldReports || {};
   const base=state.cities.find(c=>c.seat===unit.seat && distance(c.tile,unit.tile)<=1);
+  const ownCities=state.cities.filter(c=>c.seat===unit.seat);
+  const nearest=ownCities.reduce((best,c)=>!best || distance(c.tile,unit.tile)<distance(best.tile,unit.tile)?c:best,null);
+  const friendlyGround=state.board[unit.tile]?.owner==null || state.board[unit.tile].owner===unit.seat;
+  const atCamp=player.fieldCamp?.tile===unit.tile && friendlyGround;
+  const canCamp=Boolean(nearest && !base && !atCamp && friendlyGround && player.capital>=7 && !state.cities.some(c=>c.tile===unit.tile));
+  const office=base || (atCamp && nearest);
   const tile=map.byId[unit.tile], notes=mission?.notes || [];
   const context={state,unit,map,distance,tile,notes};
   const catalog=Object.entries(studies).filter(([,study])=>!study.region || study.region===map.id);
@@ -96,7 +102,7 @@ export function fieldReport(state,unit,map,distance) {
   const sponsor=mission && state.cities.find(c=>c.id===mission.sponsor && c.seat===unit.seat);
   const archive=state.board[unit.tile]?.fieldStation==='archive';
   const canMail=Boolean(archive && sponsor && complete && !spec.reward.food && player.influence>=2);
-  return {player,mission,filed,base,sponsor,archive,canMail,open,spec,complete,canSample,context};
+  return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,open,spec,complete,canSample,context};
 }
 
 function storeCrew(player,id,mission) {
@@ -111,11 +117,17 @@ export function fieldOrder(state,seat,action,map,distance) {
   const r=fieldReport(state,unit,map,distance);
   if(!r || !unit.moves)throw new Error('Choose your scout with movement remaining.');
   const {player,mission,base,spec,context}=r;
+  if(action.item==='camp' && r.canCamp) {
+    player.capital-=7;
+    player.fieldCamp={tile:unit.tile,round:state.round};
+    unit.moves=0;
+    return 'Field camp established.';
+  }
   if(action.item==='start') {
     const entry=r.open.find(([key])=>key===action.study);
-    if(!entry || mission || !base || player.capital<entry[1].fee)throw new Error('Commission a new field study near your city with enough gold.');
+    if(!entry || mission || !r.office || player.capital<entry[1].fee)throw new Error('Commission a new field study near your city with enough gold.');
     player.capital-=entry[1].fee;
-    storeCrew(player,unit.id,{key:entry[0],sponsor:base.id,started:state.round,notes:[]});
+    storeCrew(player,unit.id,{key:entry[0],sponsor:r.office.id,started:state.round,notes:[]});
     unit.moves--;
     return 'Field expedition commissioned.';
   }

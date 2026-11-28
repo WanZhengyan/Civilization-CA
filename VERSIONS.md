@@ -95,3 +95,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.85 | Designate a habitat corridor whose cultural dividend depends on conserving both plots |
 | 7.0.86 | Send finished written reports home by field-archive courier at a quoted fee |
 | 7.0.87 | Assemble a natural-wonder collection from two independently reached viewpoints |
+| 7.0.88 | Equip remote scouts with a relocatable field camp and city-sponsored commissions |

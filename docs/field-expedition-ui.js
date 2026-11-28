@@ -33,8 +33,8 @@ export function openFieldDesk(read,act) {
       html+='<ol>'+spec.steps.map((step,i)=>'<li>'+((active?.notes.length||0)>i?'✓ ':'')+label(step)+(active?.notes[i]?' <small>('+esc(active.notes[i].tile)+' · '+local('Turn ','回合 ')+active.notes[i].round+')</small>':'')+'</li>').join('')+'</ol>';
       const photographed=active?.notes[0]?.wonder;
       if(photographed)html+='<p>'+local('Subject','记录对象')+' · '+esc(translate(NATURAL_WONDERS[photographed].name))+' ('+esc(active.notes[0].wonderTile)+')</p>';
-      html+='<p>'+local('Commission and file within one hex of your city. Each order costs one movement point.','在己方城市一格内领取和交付课题。每次指令消耗 1 移动力。')+'</p>';
-      if(!active)html+=button('start',local('Commission study','委托考察'),ready && r.base && r.player.capital>=spec.fee);
+      html+='<p>'+local('Commission at a field camp or within one hex of your city. File at a city. Study orders cost one movement.','可在营地或己方城市一格内领取课题，在城市一格内交付。课题指令消耗 1 移动力。')+'</p>';
+      if(!active)html+=button('start',local('Commission study','委托考察'),ready && r.office && r.player.capital>=spec.fee);
       else if(r.complete){
         html+=button('file',local('File the report','交付报告')+' · '+rewardText(spec.reward),ready && r.base);
         if(!r.base && !spec.reward.food){
@@ -48,6 +48,9 @@ export function openFieldDesk(read,act) {
       }
       else html+=button('sample',local('Record observation','记录观察'),ready && r.canSample);
     }
+    html+='<details><summary>'+local('Field camp','野外营地')+'</summary><p>'+local('Spend 7 gold and all remaining movement to establish your field office here. It replaces your previous camp. Choose neutral or friendly ground at least two hexes from your cities.','花费 7 金币和全部剩余移动力，就地设立营地以领取课题。新营地取代旧营地，须位于距己方城市至少两格的中立或己方领土。')+'</p>';
+    if(r.player.fieldCamp)html+='<p>'+local('Current camp','现有营地')+' · '+esc(r.player.fieldCamp.tile)+'</p>';
+    html+=button('camp',local('Pitch camp here','在此扎营'),ready && r.canCamp)+'</details>';
     if(Object.keys(r.filed).length)html+='<h3>'+local('Filed reports','已交付报告')+'</h3><ul>'+Object.entries(r.filed).map(([id,f])=>'<li>'+label(studies[id].name)+' · '+local('Turn ','回合 ')+f.filed+'</li>').join('')+'</ul>';
     if(r.filed.corridor)html+='<p>'+local('Habitat dividend this harvest','本次收获的栖息地收益')+' · '+corridorIncome(state,unit.seat)+' '+local('culture','文化')+'</p>';
     body.innerHTML=html;

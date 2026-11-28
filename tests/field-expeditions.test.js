@@ -103,3 +103,11 @@ test('a two-angle wonder study must frame the same discovered landmark from diff
   assert.equal(read(s).mission.notes[0].wonderTile,site);assert.throws(()=>order(s,'sample','perspectives'));
   s=order(travel(s,b),'sample','perspectives');assert.ok(read(s).complete);
 });
+
+test('a paid remote camp uses the rest of the turn and commissions for a real home sponsor',()=>{
+  let s=start();const home=s.cities[0],map=getMap(s),tile=map.tiles.find(t=>!['ocean','mountains'].includes(t.terrain) && hexDistance(t.id,home.tile)>=3).id;
+  assert.throws(()=>order(s,'camp'));s=travel(s,tile);s.board[tile].owner=1;assert.throws(()=>order(s,'camp'));s.board[tile].owner=null;
+  s=order(s,'camp');assert.equal(scout(s).moves,0);assert.equal(s.players[0].capital,33);
+  s=travel(s,tile);assert.throws(()=>order(s,'camp'));s=order(s,'start');assert.equal(read(s).mission.sponsor,home.id);
+  assert.equal(campaignView(s,1).players[0].fieldCamp,undefined);
+});
