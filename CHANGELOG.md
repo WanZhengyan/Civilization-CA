@@ -4,6 +4,8 @@
 
 Start the guided campaign from the homepage or the game title screen. Found a capital on the Los Angeles relief map, choose a technology and a civic, set up production, weigh the cost of expanding early, and send a unit into the field. Open the usual game controls for each choice. You can keep your influence, choose a different unit, collapse the tips, and continue to play after the last lesson. The tutorial resumes from its own save slot.
 
+When your next turn starts, the planning panel lists research, civics and city projects that actually finished on your last turn. Expand it to see the city or unit involved and open the next available choice.
+
 The bilingual homepage and GitHub README now link directly to the playable tutorial and show the current map. The title screen links back to the homepage. Run the Pages release check to confirm that the branch serving the website matches the source on main.
 
 ## Resolve orders from the turn button

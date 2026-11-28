@@ -1,6 +1,7 @@
 # Civilization CA
 
-**v6.5.0 · California Campaigns / 加州战役**  
+**v6.5.0 · California Campaigns / 加州战役**
+
 A bilingual turn-based strategy game set in Los Angeles, San Francisco Bay and San Diego. Found a capital, send scouts into the hills, and decide how to spend your city's production and influence.
 
 **[Play the guided first campaign / 开始新手教程](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Official homepage / 游戏主页](https://wanzhengyan.github.io/Civilization-CA/) · [Solo setup](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Create a room](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host) · [What's new](./CHANGELOG.md)
