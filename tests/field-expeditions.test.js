@@ -24,3 +24,15 @@ test('a scout commissions, observes contrasting terrain, returns and collects a 
   const science=next.players[0].science;next=order(travel(next,city.tile),'file');assert.equal(next.players[0].science,science+6);
   assert.throws(()=>order(next,'start'));assert.equal(campaignView(next,1).players[0].fieldReports,undefined);
 });
+
+test('each regional commission uses its own landscape, field brief and actual payout',()=>{
+  for(const [mapId,key,first,second] of [['la','basin','hills','urban'],['sf','bay','coast','urban'],['sd','headland','coast','forest']]){
+    let s=start(mapId);const home=s.cities[0].tile,map=getMap(s);
+    assert.ok(read(s).open.some(([id])=>id===key));assert.throws(()=>order(s,'start',key==='bay'?'basin':'bay'));
+    s=order(s,'start',key);
+    for(const type of [first,second])s=order(travel(s,map.tiles.find(t=>t.terrain===type).id),'sample',key);
+    const old=s.players[0],reward=read(s).spec.reward;
+    s=order(travel(s,home),'file',key);
+    for(const [stat,value] of Object.entries(reward))assert.equal(s.players[0][stat],old[stat]+value);
+  }
+});

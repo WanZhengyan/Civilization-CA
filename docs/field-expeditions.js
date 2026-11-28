@@ -1,5 +1,18 @@
 // Field studies are fictional contracts played on the campaign's own terrain.
+// Each board funds a different regional question. Only the current region offers its brief.
+function terrainPair(first,second) {
+  return ({tile,notes})=>!notes.length ? first.includes(tile.terrain) : second.includes(tile.terrain) && tile.id!==notes[0].tile;
+}
 export const studies = {
+  basin:{region:'la',name:['Basin to boulevard','盆地与城区'],fee:4,reward:{culture:8},
+    steps:[['Survey a foothill or woodland.','踏查一处丘陵或林地。'],['Interview a different urban district.','前往另一块城市地块走访。']],
+    sample:terrainPair(['hills','forest'],['urban'])},
+  bay:{region:'sf',name:['Working bay shoreline','海湾岸线调查'],fee:4,reward:{capital:9,influence:2},
+    steps:[['Log a coastal district.','记录一处沿海地块。'],['Trace its link to a lowland or urban district.','前往另一块低地或城市地块追踪岸线腹地。']],
+    sample:terrainPair(['coast'],['plains','urban'])},
+  headland:{region:'sd',name:['Headlands and bluffs','岬角与海崖'],fee:4,reward:{science:8},
+    steps:[['Record the coastal terrain.','记录海岸地形。'],['Survey an inland foothill or woodland.','考察内陆的一处丘陵或林地。']],
+    sample:terrainPair(['coast'],['hills','forest'])},
   transect: {
     name:['Landscape transect','地貌剖面考察'], fee:3, reward:{science:6},
     steps:[['Record any land hex.','记录一块陆地。'],['Record a different terrain at least two hexes away.','到至少两格外的另一种地形记录。']],
