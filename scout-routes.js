@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {sightFrom} from './vision.js';
 import {getRouteDetail} from './rules.js';
 
@@ -7,7 +8,7 @@ export function unchartedFrom(state,tile,explored) {
 }
 
 export function scoutingRoutes(state,unit,targets) {
-  if(unit?.type!=='scout' || state.intel?.seat!==unit.seat)return [];
+  if(!trainedAs(unit,'scout') || state.intel?.seat!==unit.seat)return [];
   const explored=new Set(state.intel.explored);
   const routes=[];
   for(const tile of targets) {

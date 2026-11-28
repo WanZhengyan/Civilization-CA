@@ -83,7 +83,7 @@ body:not(.on-title) dialog#production-modal::backdrop {background:transparent;ba
 .work-sitebar .work-bar-actions {margin:0;display:grid;grid-template-columns:1fr 1fr}
 .work-sitebar .site-terrain {color:#e8d29d}
 @media(max-width:680px),(max-height:510px) {
-  body:not(.on-title) dialog#production-modal {width:min(22rem,76vw);max-height:75dvh}
+  body:not(.on-title) dialog#production-modal {width:min(22rem,59vw);max-height:75dvh}
   #production-modal .modal-shell {max-height:75dvh}
   .map-workspace>.work-sitebar:not([hidden]) {
     top:calc(var(--top) + 48px);width:clamp(124px,36vw,198px);max-height:calc(100dvh - var(--top) - 115px);
@@ -91,4 +91,15 @@ body:not(.on-title) dialog#production-modal::backdrop {background:transparent;ba
   }
   .work-sitebar .work-bar-actions {grid-template-columns:1fr}
   .work-sitebar .work-quote {display:grid}
+}
+
+#production-modal #production-coordinates {display:block;margin-top:.2rem;color:#c5cfc8;font-variant-numeric:tabular-nums}
+#production-modal #production-city {overflow-wrap:anywhere}
+@media(max-width:510px) {
+  #production-modal .modal-head {padding:.7rem .65rem}
+  #production-modal .modal-body {padding:.45rem}
+  #production-modal .work-card {grid-template-columns:1fr;padding:.45rem}
+  #production-modal .work-card>.item-illustration {width:3rem;height:3rem}
+  #production-modal .work-choices {grid-template-columns:1fr}
+  #production-modal .work-subject {grid-template-columns:1fr}
 }

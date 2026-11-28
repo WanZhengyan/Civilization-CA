@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {seededRandom,shuffled} from './opening.js';
 
 const exchanges={
@@ -18,7 +19,9 @@ const siteSpacing=3;
 
 export function placeFieldStations(state,map,distance) {
   if(state.campaignVariety!==1)return;
-  const homes=state.units.filter(u=>u.type==='settler').map(u=>u.tile);
+  const homes=state.units.filter(u=>u.type==='settler').map(u=>u.tile)
+    .concat(state.cities.filter(city=>city.originalSeat!=null).map(city=>city.tile));
+  const citySites=new Set(state.cities.map(city=>city.tile));
   const blocked=new Set([...(state.barbarians?.parties || []),...(state.barbarians?.camps || [])].map(piece=>piece.tile));
   const reachable=new Set(homes);
   for(const tile of reachable){
@@ -28,7 +31,7 @@ export function placeFieldStations(state,map,distance) {
     }
   }
   const random=seededRandom(state.seed,map.id+'/field-stations');
-  const order=shuffled([...reachable].filter(tile=>!blocked.has(tile) && !state.board[tile].naturalWonder &&
+  const order=shuffled([...reachable].filter(tile=>!blocked.has(tile) && !citySites.has(tile) && !state.board[tile].naturalWonder &&
     !state.board[tile].resource && !map.byId[tile].landmark && homes.every(home=>distance(home,tile)>=2)),random);
   const types=shuffled(Object.keys(FIELD_STATIONS),random);
   const stations=[];
@@ -51,7 +54,7 @@ export function placeFieldStations(state,map,distance) {
 }
 
 export function fieldStationReport(state,unit) {
-  if(state.campaignVariety!==1 || !unit || unit.type!=='scout')return null;
+  if(state.campaignVariety!==1 || !unit || !trainedAs(unit,'scout'))return null;
   const station=FIELD_STATIONS[state.board[unit.tile]?.fieldStation];
   if(!station)return null;
   const visited=Boolean(state.players[unit.seat].stationVisits?.includes(unit.tile));
@@ -74,7 +77,7 @@ export function visitFieldStation(state,seat,action){
 }
 
 export function nearestKnownStation(state,unit,tiles,distance){
-  if(state.campaignVariety!==1 || unit.type!=='scout')return null;
+  if(state.campaignVariety!==1 || !trainedAs(unit,'scout'))return null;
   const visited=new Set(state.players[unit.seat].stationVisits);
   let nearest=null;
   for(const tile of tiles)if(state.board[tile]?.fieldStation && !visited.has(tile) &&

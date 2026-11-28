@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {allowsScience} from './victory-rules.js';
 // Technology IDs are persisted with each civilization. The branch catalog also
 // supplies English labels and effects to the research council.
@@ -59,7 +60,7 @@ export function nextTechnology(state, seat, threatened, tree) {
   const minerals=holdings.some(tile=>(tile.improvement==='mine' && tile.resource==='iron')
     || (tile.improvement==='quarry' && tile.resource==='stone'));
   const hurt=units.some(unit=>unit.hp < unit.maxHp*0.7);
-  const surveyors=units.some(unit=>unit.type==='scout' || unit.type==='cavalry');
+  const surveyors=units.some(unit=>trainedAs(unit,'scout') || unit.type==='cavalry');
   const unmapped=state.intel.explored.length < Object.keys(state.board).length*0.7;
   const opening=['industry','agronomy','tactics','civics'][state.players[seat].faction];
   const priorities=[

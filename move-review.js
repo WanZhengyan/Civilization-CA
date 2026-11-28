@@ -1,10 +1,11 @@
+import {trainedAs} from './unit-service.js';
 import {unchartedFrom} from './scout-routes.js';
 import {getRouteDetail} from './rules.js';
 
 export function previewMove(state,unit,target) {
   const route=unit && getRouteDetail(state,unit.id,target);
   if (!route) return null;
-  const frontier=unit.type==='scout' && state.intel?.seat===unit.seat
+  const frontier=trainedAs(unit,'scout') && state.intel?.seat===unit.seat
     ? unchartedFrom(state,target,new Set(state.intel.explored)) : undefined;
   return {frontier,unit:unit.id,round:state.round,tile:target,path:route.path,cost:route.cost,left:unit.moves-route.cost};
 }

@@ -69,7 +69,7 @@ const phraseRules = [
   [/^(\d+ \/ \d+) complete$/,v=>'已完成 '+v],
   [/^(\d+) turns? left$/,n=>'还需 '+n+' 回合'],
   [/^([+-]?\d+(?: \/ \d+)?) (turns?|rounds?|hex(?:es)?|targets?|charges?|movement|production|science|culture|capital|influence|discover(?:y|ies)|cit(?:y|ies)|units?|districts?|pts?)$/i,(v,k)=>count(v,k.toLowerCase())],
-  [/^(\d+) district orders remain this turn\.$/,n=>'本回合还可下达 '+n+' 次地区指令。'],
+  [/^(\d+) border orders remain this turn\.$/,n=>'本回合还可下达 '+n+' 次边境指令。'],
   [/^You need (\d+) (capital|influence)\.$/,(n,k)=>'需要 '+n+' '+zh(k)+'。'],
   [/^Producing (.+)$/,n=>'正在生产'+zh(n)],
   [/^(\d+) (incoming damage|retaliation damage)$/,(n,k)=>(k==='incoming damage'?'受到伤害 ':'反击伤害 ')+n],

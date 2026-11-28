@@ -45,7 +45,7 @@ export function dossierMarkup(view,row,stats,lang) {
   let html='<header class="delegate-identity"><div class="delegate-portrait delegate-hero delegate-'+civ.id+'" aria-hidden="true"></div><div><p class="delegate-relation">'+esc(relation(row,lang))+'</p><h2 id="delegate-name">'+esc(label)+'</h2>'+leader+'</div>'+
     '<button type="button" class="delegate-close" data-dossier-close aria-label="'+close+'" title="'+close+'">×</button></header>';
   if(own && stats){
-    const income=n=>L('+'+n+' / turn','每回合 +'+n);
+    const income=n=>L((n>=0?'+':'')+n+' / turn','每回合 '+(n>=0?'+':'')+n);
     const era=translate(getEra(view.state,view.seat).name,lang);
     html+=group(L('Civilization record','文明概况'),'<dl class="delegate-stats">'+
       stat(L('Era','时代'),era)+stat(L('Cities','城市'),stats.cities)+stat(L('Population','人口'),stats.population)+

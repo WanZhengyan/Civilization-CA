@@ -15,7 +15,7 @@ const originalTechs = {
   tactics: {name: 'Field Tactics', era: 'frontier', requires: [], cost: 9,
     description: 'Military units deal 7 more attack damage and 3 more retaliation damage.'},
   civics: {name: 'Land Surveying', era: 'frontier', requires: [], cost: 9,
-    description: 'Each city earns 2 more capital and 1 more influence per turn.'},
+    description: 'Each city earns 2 more gold, 1 influence and 1 point toward natural border growth per turn.'},
   navigation: {name: 'Coastal Navigation', era: 'frontier', requires: [], cost: 7,
     description: 'Coastal cities earn 2 extra capital per turn.'},
   steam: {name: 'Steam Power', era: 'industrial', requires: ['industry'], cost: 10,
@@ -48,7 +48,7 @@ const originalCivics = {
   conservation: {name: 'Park Conservancies', era: 'industrial', requires: ['charter'], cost: 10,
     description: 'Cities near an owned woodland or foothill gain 1 food and 1 culture per turn.'},
   federation: {name: 'County Federation', era: 'industrial', requires: ['charter'], cost: 11,
-    description: 'Gain a third district order at the start of each turn.'},
+    description: 'Each city adds 2 points per turn toward its next natural border expansion.'},
   publicRadio: {name: 'Public Broadcasting', era: 'modern', requires: ['conservation'], cost: 13,
     description: 'Each city generates 2 more science per turn.'},
   mobilization: {name: 'Civil Mobilization', era: 'modern', requires: ['publicWorks', 'federation'], cost: 12,
@@ -117,8 +117,8 @@ export const ERA_UNITS = {
     maxHp:110, moves:2, range:1, strength:55, required:15, upgrade:'armor', upgradeCost:16},
   artillery: {name:'Field Artillery', era:'industrial', role:'Siege unit', tech:'steam', captures:false,
     description:'Guns bombard targets up to three hexes away. A ground unit must occupy the city.',
-    maxHp:75, moves:2, range:3, strength:46, required:17},
+    maxHp:90, moves:3, range:3, strength:46, required:17},
   armor: {name:'Armored Column', era:'modern', role:'Armored unit', tech:'motorization', captures:true,
-    description:'Armored columns move three hexes, break defended positions and occupy cities.',
-    maxHp:130, moves:3, range:1, strength:68, required:21}
+    description:'Armored columns move four hexes, break defended positions and occupy cities.',
+    maxHp:130, moves:4, range:1, strength:68, required:21}
 };

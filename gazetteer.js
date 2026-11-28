@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {counties,cities,places,regions,sourceOf,census2010,landArea,landmarks,coastalWorks,regionalEconomy,fieldTrips} from './gazetteer-data.js';
 
 import {getMap,hexDistance,getRouteDetail} from './rules.js';
@@ -68,7 +69,7 @@ export function scoutApproaches(place,campaign) {
   const target=knownAnchor(place,campaign);
   if(!target)return [];
   const charted=new Set(campaign.intel.explored);
-  return (campaign.units||[]).filter(u=>u.seat===campaign.intel.seat && u.type==='scout' && charted.has(u.tile)).map(u=>{
+  return (campaign.units||[]).filter(u=>u.seat===campaign.intel.seat && trainedAs(u,'scout') && charted.has(u.tile)).map(u=>{
     const distance=hexDistance(u.tile,target);
     const route=distance?getRouteDetail(campaign,u.id,target):null;
     const cost=route?.path.every(id=>charted.has(id))?route.cost:null;

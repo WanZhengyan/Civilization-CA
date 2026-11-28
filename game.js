@@ -1,3 +1,4 @@
+import {unitUpkeep} from './unit-upkeep.js';
 import {newGazetteer,gazetteerContent,gazetteerAction,bindGazetteer,districtProfiles} from './gazetteer.js';
 import {fieldGuideOrders} from './campaign-field-guide.js';
 import {installSoundtrack,soundtrackControls} from './music-controls.js';
@@ -106,7 +107,7 @@ let selectedMap = 'la';
 let selectedSize = DEFAULT_MAP_SIZE, selectedRivals = 3, selectedDifficulty = 'normal';
 let selectedMode='standard', selectedCivilization='random', roomVictoryMode='standard', joinCivilization='random';
 let roomSetup=newRoomSetup();
-let supplyCity='';
+let supplyCity='', retirement=null;
 let gazetteer = newGazetteer();
 let pending = false, errorMessage = '', playingBots = false;
 let unconfirmedOrder=null;
@@ -723,7 +724,7 @@ function savedCampaignCard(saved,resumable) {
 
 const guideSections = {
   start: {label:'First turn', entries:[
-    ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
+    ['Choose your first city site', 'You begin with a settler. Found your capital here or explore first. Each computer starts with 1 city on Easy, 3 on Normal or 5 on Hard. All cities use the same growth and production rules.'],
     ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
     ['Train your next settler', 'Your starting settler is free. Use a scout to explore while your capital grows. A city can train or buy another settler at 3 residents. One resident leaves on deployment. If the city falls below 3, it keeps its work until it grows again.'],
     ['Read city markers', 'City markers use the owner’s color. A crown marks the first capital and stays with that city after capture. The green hex beside your city name estimates turns to the next district at its current population. Select the city to see the target and expansion progress. Zoom in when names overlap.'],
@@ -733,12 +734,12 @@ const guideSections = {
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
     ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
     ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Select Full tree to see which civics unlock future policies and universities.'],
-    ['Plan your turn', 'Start with two district orders per turn to claim neutral land or contest a rival border. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
+    ['Plan your turn', 'Each turn you have two border orders. Select a visible tile next to your land to claim neutral ground or contest an unguarded rival tile. Cities also expand naturally at the end of your turn.']
   ]},
   influence: {label:'Influence', entries:[]},
   city: {label:'City growth', entries:[
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
-    ['Grow city borders', 'Each resident adds one border point at the end of your turn. A city starts at eight points per district. Each new district raises the next cost by two, up to sixteen. Only visible, unclaimed land within three connected land steps qualifies. If the frontier is blocked, explore or secure a clear route. Progress pauses until a parcel opens.'],
+    ['Grow city borders', 'Each resident adds one border point per turn. Land Surveying adds 1 and County Federation adds 2 in each city. The first parcel costs 8 points. Each new parcel raises the next cost by 2, up to 16. Progress pauses if no visible neutral land is reachable within three land steps.'],
     ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
     ['Use stored goods', 'Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.'],
     ['Plan housing', 'A new city has room for three citizens. A granary adds two places. Public Works unlocks residential quarters, which add three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.'],
@@ -752,10 +753,11 @@ const guideSections = {
   battle: {label:'Field tactics', entries:[
     ['Train a scout', 'Train a Scout after founding a city. It has three movement points to a Militia unit’s two. Move again after revealing new ground. Topographic Mapping makes foothills cost only one point for scouts and mounted scouts.'],
     ['Choose a frontier formation', 'Trail skirmishers cross woods and hills for one movement point. Pike Guards make poor targets for cavalry and gain a bonus when attacking mounted scouts.'],
+    ['Fire a city battery', 'Build City walls in the city center. After Motorization, upgrade to Modern fortifications. Select the city, choose Fire city battery, then click a highlighted field force to review the shot. A city can fire once per round.'],
     ['Support an assault', 'Siege Engineers attack city walls directly, including in garrisoned cities. An adjacent friendly Signal Corps adds 8 damage against rival civilizations.'],
     ['Read the terrain', 'Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.'],
     ['Preview an attack', 'Select a military unit and click a highlighted enemy. The combat forecast shows the damage and possible losses. Choose Confirm attack to commit, or return to the map to reconsider. An attack spends the unit’s remaining movement.'],
-    ['Take a city', 'Against a rival city, attacks hit the city first. Ranged attacks draw no retaliation and leave at least 1 HP. A surviving capture-capable land unit can take the city and defeat its garrison. Every attack spends the remaining movement. Neutral raids use their own defenses.'],
+    ['Take a city', 'Attacks hit the city first. Each garrison unit takes 25% of the city’s actual HP loss, rounded to the nearest whole point. Ranged attacks draw no retaliation and leave the city at 1 HP or more. A surviving capture-capable land unit takes the city and defeats every remaining garrison unit. Attacking spends all remaining movement.'],
     advancementGuide,
     ['Repel a raid', 'A lookout near an established city may return to its camp. Intercept it before it reports, or attack the camp before the party leaves two rounds later. A military defender within one hex of the city, or city walls, repels the raid. Raiders leave civilian units alone.'],
     ['Clear a camp', 'Watch for tan tents with a red pennant. A lookout marks an active camp nearby. Select a military unit and preview the attack. Ranged units weaken a camp; a surviving close-combat unit can clear it and earn 12 capital.'],
@@ -773,7 +775,7 @@ const guideSections = {
     freightGuide,
     voyageGuide,
     inlandGuide,
-    ['Choose a warship', 'An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.'],
+    ['Choose a warship', 'An ironclad moves three hexes and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.'],
     ['Launch a fleet', 'A harbor trains Revenue cutters. Research Steam Power to unlock the Shipyard, then build one to train Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.']
   ]},
   research: {label:'Research & victory', entries:[
@@ -782,8 +784,8 @@ const guideSections = {
       : 'Workshop Engineering opens Steam Power and then Radio Networks. Field Tactics leads to Ballistics. Learn both Steam Power and Ballistics to unlock Motorization and train an Armored Column.'],
     ['Build up science', 'Cities, population and discoveries contribute science. Culture funds a separate civic project at the same time. Switch projects without losing saved points. Surplus science and culture carry over.'],
     ['Choose a civic path', state=>!state || state.researchPace===2
-      ? 'Land Registry leads to County Federation, then Teachers Colleges and Public Libraries. Libraries increase the culture produced by monuments. On another branch, Park Conservancies rewards cities with suitable land.'
-      : 'Municipal Charter leads to County Federation for another district order, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
+      ? 'Land Registry leads to County Federation, which gives each city 2 more border points per turn. Teachers Colleges and Public Libraries follow. A different branch leads to Park Conservancies.'
+      : 'Municipal Charter leads to County Federation for faster natural border growth, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
     ['Win by domination', state=>state?.teams ? 'A team wins immediately when its members collectively hold every original capital.' : 'In a campaign with rivals, control every participating civilization’s original capital to win immediately.'],
     ['Win on civic points', state=>{
       if(state?.teams)return '<span>Living teammates combine their civic points. Compare team totals at the end of the round when a team reaches the target, or after round 30. Tied teams share victory.</span> <strong>Team civic target</strong> · '+getScoreTarget(state);
@@ -815,7 +817,7 @@ function guideTopics(chapter, language, state) {
     const tree=councilTree(state || {researchPace:2},'research');
     const name=value=>translate(value,language);
     for(const [item,building] of Object.entries(BUILDINGS)) {
-      if(!building.tech || !tree[building.tech] || !(building.yields || item==='workshop' || item==='walls'))continue;
+      if(!building.tech || !tree[building.tech] || !(building.yields || item==='workshop' || item==='walls' || item==='modernWalls'))continue;
       const tech=name(tree[building.tech].name);
       const facility=building.building ? name(BUILDINGS[building.building].name) : '';
       const cost=building.required;
@@ -879,6 +881,18 @@ function teamStandings(state){
 function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
+  if (modal==='retirement') {
+    const zh=getLanguage()==='zh-CN';
+    const u=state.units.find(u=>u.seat===currentSeat() && u.id===retirement?.id && u.type===retirement.type);
+    const allowed=u && roomSeatTurn(state,currentSeat())==='active' && !pending && !playingBots && !(mode==='online' && (offline || unconfirmedOrder));
+    const name=u?translate(UNIT_TYPES[u.type].name):'';
+    return {kicker:zh?'金库':'Treasury',title:zh?'确认单位退役':'Review unit retirement',
+      body:(u?desc(escapeHTML(name+' · '+u.tile))+
+        muted(zh?'退役会移除该单位和它携带的物资，且不退还金币。每回合可节约 '+unitUpkeep(u.type)+' 金币。':
+          'Retirement removes this unit and its cargo with no refund. Future harvests save '+unitUpkeep(u.type)+' gold each.'):
+        muted(zh?'该单位现已不可用。':'This unit is no longer available.'))+
+        actions(button('supplies',zh?'返回金库':'Back to treasury'),allowed?button('confirm-retirement',zh?'确认退役':'Retire this unit','primary'):'')};
+  }
   if (modal === 'trade-market') return {kicker:getLanguage()==='zh-CN'?'经济':'Economy',title:getLanguage()==='zh-CN'?'城际货运市场':'Intercity freight exchange',body:freightExchange(state,currentSeat(),pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML)};
   if(modal==='gazetteer')return gazetteerContent(gazetteer,getLanguage(),mode==='home'?null:state);
   if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML,getStats(state,currentSeat()))};
@@ -955,8 +969,17 @@ function content() {
 function drawDialog() {
   if (!modal || !dialog) return;
   const scrolled = dialog.querySelector('.modal-body')?.scrollTop || 0;
+  const previousPayroll=modal==='supplies' ? dialog.querySelector('.payroll') : null;
+  const rosterChoice=previousPayroll?.querySelector('select')?.value;
+  const showRoster=previousPayroll?.querySelector('details')?.open;
   const { kicker, title, body } = content();
   dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl()+soundtrackControls(soundtrack?.music) : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  if(previousPayroll){
+    const roster=dialog.querySelector('.payroll select');
+    if(roster && Array.from(roster.options).some(option=>option.value===rosterChoice)) roster.value=rosterChoice;
+    const detail=dialog.querySelector('.payroll details');
+    if(detail)detail.open=Boolean(showRoster);
+  }
   if(modal==='gazetteer')bindGazetteer(dialog,gazetteer,getLanguage());
   if(modal==='help'){
     const state=mode==='home'?null:getState();
@@ -1030,6 +1053,16 @@ function modalAction(act) {
   if(act==='restart-tutorial' && mode==='solo' && tutorial){open('restart-tutorial');return}
   if(act==='confirm-tutorial' && modal==='restart-tutorial' && tutorial){enterTutorial(true);return}
   if(act==='trade-market'){open('trade-market');return}
+  if(act==='review-retirement' && modal==='supplies'){
+    const id=dialog.querySelector('[name="payroll-unit"]')?.value;
+    const u=getState().units.find(u=>u.id===id && u.seat===currentSeat() && unitUpkeep(u.type)>0);
+    if(u){retirement={id:u.id,type:u.type};open('retirement');}
+    return;
+  }
+  if(act==='confirm-retirement' && modal==='retirement' && retirement){
+    const {id,type}=retirement;retirement=null;open('supplies');
+    doAction({type:'retireUnit',unit:id,expectedType:type});return;
+  }
   if(act==='supplies'){open('supplies');return}
   if(act.startsWith('cargo-')){
     const [,resource,market]=act.split('-');

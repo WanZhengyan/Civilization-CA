@@ -19,12 +19,17 @@ export function forecastCounterLabel(result) {
   return result.retaliation ? loss : 'No retaliation';
 }
 
+export function garrisonImpact(unit,cityDamage,captured) {
+  const hpAfter=captured ? 0 : Math.max(0,unit.hp-Math.round(cityDamage/4));
+  return {id:unit.id,seat:unit.seat,type:unit.type,hpBefore:unit.hp,hpAfter,maxHp:unit.maxHp};
+}
+
 export const captureOrderHint='Finish the capture with a ground unit such as Militia.';
 
 export function cityAttackHint(forecast,definition,city) {
   if(!city)return '';
   if(forecast.defenderType==='city' && forecast.cityGarrison?.length)
-    return forecast.capture?'On capture, the city garrison is defeated and removed.':'City defenses take the damage. The garrison keeps its current HP.';
+    return forecast.capture?'On capture, the city garrison is defeated and removed.':'Each garrison unit loses 25% of the HP lost by the city, rounded to the nearest whole point.';
   if(forecast.defenderType==='city' && !definition.captures)return 'This unit can weaken a city down to 1 HP.';
   return '';
 }
@@ -33,5 +38,5 @@ export function cityAttackHint(forecast,definition,city) {
 export function siegeQuote(forecast) {
   if(!Array.isArray(forecast?.cityGarrison))return undefined;
   return JSON.stringify([forecast.defenderId,forecast.defenderHpBefore,forecast.defenderHpAfterHit,
-    forecast.attackerHpAfter,forecast.capture,forecast.cityGarrison.map(g=>g.id).sort()]);
+    forecast.attackerHpAfter,forecast.capture,forecast.cityGarrison.map(g=>JSON.stringify([g.id,g.seat,g.type,g.hpBefore,g.hpAfter])).sort()]);
 }
