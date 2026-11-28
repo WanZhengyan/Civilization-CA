@@ -49,3 +49,11 @@ test('a prospective granary agrees with the actual food and housing after constr
   assert.equal(getCityYield(control,c.id).food-getCityYield(state,c.id).food,quote.changes.food);
   assert.ok(!buildingReturns(state,c).some(r=>r.item==='academy'));
 });
+test('a partially finished order quotes the remaining gold and credits parked production',()=>{
+  const state=capital(),c=state.cities[0];
+  c.queue={item:'scout',progress:3,required:7};c.parkedProduction={builder:2};state.players[0].capital=100;
+  const markup=cityProfilePage(state,0,c.id,'works');
+  assert.match(markup,/Scout \(current\).*?3 \/ 7.*?<td>12<\/td><td>88/);
+  assert.match(markup,/Builder \(paused\)/);
+  assert.match(markup,/data-study-command="rush-quote"/);
+});
