@@ -636,7 +636,7 @@ function settlementMarkers(g,model,scale){
   draw(sites.nextTurn,false);draw(sites.now,true);
 }
 function projectedRoute(g,model,scale) {
-  const path=model.previewPath;
+  const path=model.reviewPath || model.previewPath;
   if(!path?.length||path.length<2)return;
   const positions=path.map(id=>model.byId.get(id)).filter(Boolean).map(t=>pos(t.q,t.r));
   if(positions.length<2)return;
@@ -1211,7 +1211,7 @@ export function createAtlas(host, options = {}) {
     if(!pointers.has(e.pointerId))return;
     if(!didDrag && allowSelect && pointers.size===1){
       const {id,unit,city}=pointerTarget(...local(e));
-      if(id){model.selectedId=id;schedule();options.onSelect?.(id,unit?.id,city);if(unit)options.onUnitSelect?.(unit.id,id);}
+      if(id){model.selectedId=id;schedule();options.onSelect?.(id,unit?.id,city,e.pointerType);if(unit)options.onUnitSelect?.(unit.id,id);}
     }
     pointers.delete(e.pointerId);
     if(pointers.size===1)gesture={start:[...pointers.values()][0],center:[cx,cy]};else if(!pointers.size){gesture=null;canvas.style.cursor='grab';}
@@ -1286,6 +1286,7 @@ export function createAtlas(host, options = {}) {
         const sites=o.settlementSurvey||[];
         model.settlementSites={now:sites.filter(s=>s.timing==='now').map(s=>s.tile),nextTurn:sites.filter(s=>s.timing==='next'||s.timing==='next-turn').map(s=>s.tile)};
       }
+      if(Object.hasOwn(o,'reviewPath'))model.reviewPath=o.reviewPath;
       if(Object.hasOwn(o,'previewPath'))model.previewPath=o.previewPath||[];
       if(Object.hasOwn(o,'workSites')){model.workSites=o.workSites;model.workSelection=o.workSelection;}
       if(Object.hasOwn(o,'targetId'))model.targetId=o.targetId;

@@ -44,7 +44,7 @@ export function harborSites(state,city,byId,neighbors,visible) {
 }
 
 export const VESSELS = {
-  workboat: {name: 'Fishing crew', role: 'Maritime engineering unit', domain: 'sea', era: 'frontier', required: 7, maxHp: 60, moves: 3, range: 0, strength: 0, charges: 2, description: 'Builds two offshore fisheries within two water hexes of a friendly port.'},
+  workboat: {name: 'Fishing crew', role: 'Maritime engineering unit', domain: 'sea', era: 'frontier', required: 7, maxHp: 60, moves: 3, range: 0, strength: 0, charges: 2, description: 'Builds two fisheries within two connected water steps at sea or three on a charted river or lake. Can bring a catch back to your harbor.'},
   cutter: {name: 'Revenue cutter', role: 'Naval patrol unit', domain: 'sea', era: 'frontier', required: 9, maxHp: 85, moves: 3, range: 1, strength: 36, description: 'A fast sailing vessel for fighting nearby ships and bombarding the shoreline.'},
   frigate: {name: 'Steam frigate', role: 'Naval artillery unit', domain: 'sea', era: 'industrial', tech: 'steam', required: 16, maxHp: 110, moves: 3, range: 2, strength: 48, description: 'A shipyard warship that bombards targets up to two hexes away.'}
 };

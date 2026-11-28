@@ -124,10 +124,11 @@ test('map selection contours draw only visible project sites',()=>{
 });
 import {paintSiteBar} from '../docs/work-orders.js';
 test('map order bar supports a keyboard tile choice, confirmation, cancellation and suited terrain',()=>{
- const s=fresh(),c=city(s),o={item:'ucla',label:'UCLA',enabled:true},sites=[{id:'4,3',name:'City <A>',favored:true}];
+ const s=fresh(),c=city(s),o={item:'ucla',label:'UCLA',enabled:true,kind:'building',turns:4,required:18},sites=[{id:'4,3',name:'City <A>',favored:true}];
  const draft={...draftOrder(c,o,false),site:'4,3',university:true};const bar={dataset:{}};
+ assert.ok(!orderButtons(o,true).includes('data-buy'));
  paintSiteBar(bar,draft,c,o,sites,true);
- for (const label of ['data-site-list','data-site-confirm','data-site-cancel','Specialty terrain','&lt;A&gt;']) assert(bar.innerHTML.includes(label));
+ for (const label of ['data-site-list','data-site-confirm','data-site-cancel','Specialty terrain','&lt;A&gt;','./art/ucla.webp','>4 turns<','>18<','Charter fee','5 <span>gold']) assert(bar.innerHTML.includes(label));
 });
 import {drawCivicBuilding,drawWorkInProgress} from '../docs/construction-art.js';
 test('civic building and construction markers render separately from city flags',()=>{
@@ -156,4 +157,16 @@ test('old partially built city projects can be resumed, rushed and located witho
  s=order(s,'buyProduction','workshop',{expected:0,gold:o.gold});
  assert.equal(city(s).buildingSites.workshop,c.tile);
  assert.equal(s.players[0].capital,96);
+});
+
+test('the final review keeps the chosen illustration and quotes banked work or instant purchase',()=>{
+ const s=fresh(),c=city(s);
+ c.parkedProduction={scout:2};
+ const o=getProductionOptions(s,c.id,{replace:true}).find(x=>x.item==='scout');
+ const review=orderReview(draftOrder(c,o,false),c,o,[],String,'Explore & survey');
+ for(const evidence of ['./art/scout.webp','Explore &amp; survey','Estimated completion','>'+o.turns+' turn','Production remaining</dt><dd>'+(o.required-2),'Stored production</dt><dd>2 / '+o.required])assert.ok(review.includes(evidence),evidence);
+ const purchase=orderReview(draftOrder(c,o,true),c,o,[],String);
+ assert.ok(purchase.includes('Immediately') && purchase.includes('Gold cost</dt><dd>'+o.gold));
+ assert.ok(!purchase.includes('Production remaining'));
+ for(const phrase of ['Estimated completion','Immediately','Production remaining'])assert.match(translate(phrase,'zh-CN'),/\p{Script=Han}/u,phrase);
 });

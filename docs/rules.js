@@ -1468,6 +1468,16 @@ function botProject(state,city,difficulty) {
   if (allowsScience(state) && !cities.some(c=>c.queue?.item===SCIENCE_PROJECT.id)) choices.push(SCIENCE_PROJECT.id);
   const rivals=state.units.filter(unit=>!sameTeam(state,city.seat,unit.seat));
   const hostileCities=state.cities.filter(other=>!sameTeam(state,city.seat,other.seat));
+  // A bombardment needs one healthy ground formation to occupy the city.
+  if (survey && difficulty!=='easy' && allowsConquest(state) &&
+      !units.some(readyToOccupy) && !cities.some(own=>UNIT_TYPES[own.queue?.item]?.captures)) {
+    const [target]=citiesUnderNavalFire(state,city.seat);
+    if (target) {
+      const distance=own=>hexDistance(own.tile,target.tile);
+      const nearest=cities.reduce((best,own)=>distance(own)<distance(best)?own:best);
+      if (city.id===nearest.id) choices.push('armor','cavalry','riflemen','melee');
+    }
+  }
   if(difficulty==='easy') {
     const danger=rivals.some(unit=>UNIT_TYPES[unit.type].strength && hexDistance(unit.tile,city.tile)<=2);
     if(danger && !count('melee'))choices.push('melee');
@@ -1599,6 +1609,69 @@ function observedCoast(state,seat,id) {
 
 function surveyedFishery(state,unit,id) {
   return observedCoast(state,unit.seat,id) && unitImprovement(state,unit,id);
+}
+
+function readyToOccupy(unit) {
+  // Even a walled city's strongest return strike deals 24 damage.
+  return UNIT_TYPES[unit.type].captures && unit.hp>24;
+}
+
+function citiesUnderNavalFire(state,seat) {
+  const ships=state.units.filter(unit=>unit.seat===seat && UNIT_TYPES[unit.type].domain==='sea' && UNIT_TYPES[unit.type].strength>0);
+  return state.cities.filter(city=>!sameTeam(state,seat,city.seat) &&
+    ships.some(ship=>hexDistance(ship.tile,city.tile)<=UNIT_TYPES[ship.type].range))
+    .sort((a,b)=>Number(b.originalSeat!=null)-Number(a.originalSeat!=null));
+}
+
+// Trace a short overland approach backward from the observed city. A river
+// detour can take infantry farther away by hex distance while saving turns.
+function shoreApproach(state,unit,target,moves,charted,occupied) {
+  const map=getMap(state),costs=new Map([[target,0]]),queue=[target];
+  for (let i=0;i<queue.length;i++) {
+    const here=queue[i],bridges=map.bridgesByTile?.[here] || [];
+    const incoming=[...map.neighbors(here),...bridges.map(bridge=>bridge.to)];
+    for (const from of incoming) {
+      if (!charted.has(from) || !movementCost(state,unit,from) || (occupied.has(from) && from!==unit.tile)) continue;
+      const step=routeStepCost(state,unit,from,here),cost=costs.get(here)+step;
+      if (!step || cost>18 || cost>=(costs.get(from)??Infinity)) continue;
+      costs.set(from,cost);
+      queue.push(from);
+    }
+  }
+  const distance=id=>costs.get(id)??Infinity;
+  const next=moves.reduce((best,id)=>distance(id)<distance(best)?id:best,unit.tile);
+  if (next!==unit.tile && costs.has(unit.tile)) return {tile:next,cost:costs.get(unit.tile)};
+}
+
+function shoreAssault(state,plans) {
+  const seat=state.turn;
+  const troops=plans.filter(([unit])=>readyToOccupy(unit));
+  if (!troops.length) return {};
+  const targets=citiesUnderNavalFire(state,seat);
+  if (!targets.length) return {};
+  const charted=new Set(state.intel.explored);
+  const pieces=[...state.units,...state.cities,...(state.barbarians?.camps||[]),...(state.barbarians?.parties||[])];
+  const occupied=new Set(pieces.map(piece=>piece.tile));
+  let advance,bestCost=Infinity;
+  for (const city of targets) {
+    for (const [unit,options] of troops) {
+      if (options.attacks.includes(city.tile)) {
+        if (calculateCombatPreview(state,unit.id,city.tile).capture) return {attack:{type:'attack',unit:unit.id,tile:city.tile}};
+        const battery=plans.find(([ship,orders])=>UNIT_TYPES[ship.type].domain==='sea' && orders.attacks.includes(city.tile));
+        if (battery) return {attack:{type:'attack',unit:battery[0].id,tile:city.tile}};
+        continue;
+      }
+      if (!options.moves.length || hexDistance(unit.tile,city.tile)>12) continue;
+      const garrison=state.cities.some(home=>home.seat===seat && home.tile===unit.tile);
+      if (garrison && state.units.some(enemy=>!sameTeam(state,seat,enemy.seat) && UNIT_TYPES[enemy.type].strength && hexDistance(enemy.tile,unit.tile)<=2)) continue;
+      const approach=shoreApproach(state,unit,city.tile,options.moves,charted,occupied);
+      if (approach && approach.cost<bestCost) {
+        bestCost=approach.cost;
+        advance={type:'move',unit:unit.id,tile:approach.tile};
+      }
+    }
+  }
+  return {advance};
 }
 
 function botMovement(state,unit,options,difficulty) {
@@ -1745,6 +1818,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   }
   const available=state.units.filter(u=>u.seat===seat && u.moves>0);
   const plans=available.map(u=>[u,getUnitOptions(state,u.id)]);
+  const assault=difficulty!=='easy' && state.waterways && allowsConquest(state) ? shoreAssault(state,plans) : {};
+  if(assault.attack)return assault.attack;
   let combinedAttack=null,bestValue=-Infinity;
   for (const [unit,options] of plans) {
     if (options.canFound) return {type:'found',unit:unit.id};
@@ -1773,6 +1848,7 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
     }
   }
   if(combinedAttack)return combinedAttack;
+  if(assault.advance)return assault.advance;
   // A fully trained unit waits in its city when no legal deployment space
   // remains. Bank that work if this government can launch from the same city.
   if (state.researchPace===1 && allowsScience(state) && player.technologies.includes('rocketry')) {

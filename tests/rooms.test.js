@@ -845,3 +845,28 @@ test('allied observation opens an authenticated private delegation, with one deb
   }
   assert.equal(publicRow(await read(ally),2).delegation,null);
 });
+
+test('a reconnecting seat receives only its own order receipts and a duplicate cannot apply twice',async t=>{
+  const f=roomFixture(t),players=await twoPlayers(f);
+  let room=await players.start();
+  const {code,host,guest}=players;
+  const found={op:'action',code,revision:room.revision,actionId:'a'.repeat(32),
+    action:{type:'found',unit:room.game.units.find(u=>u.seat===0).id}};
+  const replies=await Promise.all([f.request('POST',found,host),f.request('POST',found,host)]);
+  assert.deepEqual(replies.map(r=>r.status).sort(),[200,409]);
+  room=await players.read(host);
+  assert.equal(room.revision,found.revision+1);
+  assert.deepEqual(room.orderReceipts,[found.actionId]);
+  assert.equal(room.game.cities.filter(c=>c.seat===0).length,1);
+  assert.deepEqual((await players.read(guest)).orderReceipts,[]);
+  assert(!JSON.stringify(room.players).includes(found.actionId));
+  const end={...found,revision:room.revision,action:{type:'end'}};
+  await f.call('POST',end,host,409);
+  await f.call('POST',{...end,actionId:'malformed'},host,400);
+  const second={...end,actionId:'b'.repeat(32)};
+  await f.call('POST',second,host);
+  await f.call('POST',second,host,409);
+  const reloaded=await players.read(host);
+  assert.equal(reloaded.game.turn,1);
+  assert.deepEqual(reloaded.orderReceipts,[found.actionId,second.actionId]);
+});

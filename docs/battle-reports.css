@@ -19,3 +19,12 @@ button.battle-link:hover,button.battle-dismiss:hover{background:#4b3932}
 .battle-history button:focus-visible,.battle-dispatch button:focus-visible,.battle-entry:focus-visible{outline:2px solid #f4bd85;outline-offset:2px}
 @media(max-width:900px){.battle-dispatch{align-items:flex-start;flex-wrap:wrap;gap:7px}.battle-dispatch-actions{margin-left:auto}}
 @media(max-width:520px){.battle-dispatch{padding:8px 10px}.battle-dispatch-actions{width:100%}.battle-dismiss{margin-left:auto}.battle-history .modal-body{padding-inline:13px}}
+
+.battle-filters {display:flex;gap:6px;margin:0;padding:9px 19px;border-bottom:1px solid #494748;flex:none}
+.battle-filter {min-height:34px;padding:5px 12px;border:1px solid transparent;background:transparent;color:#d1c3b6;border-radius:4px;font:600 13px/1.35 var(--sans,system-ui,sans-serif);cursor:pointer}
+.battle-filter[aria-pressed="true"] {background:#40362f;color:#ffe3ba;border-color:#907257}
+.battle-health {display:flex;flex-wrap:wrap;gap:5px 16px;margin:0;color:#d1c3b6;font-size:12px}
+.battle-health div {display:flex;align-items:baseline;gap:6px}
+.battle-health dd {margin:0;color:#f3e3cc;font-variant-numeric:tabular-nums;font-weight:650}
+.battle-empty {padding:16px 0}
+@media(max-width:520px){.battle-filters{padding:6px 13px}.battle-filter{min-height:40px}}

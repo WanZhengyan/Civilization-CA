@@ -104,3 +104,12 @@ test('reduced-motion replay displays both numeric HP deltas without moving the s
   paintBattleReport(ctx,{report,to:[90,85],from:[30,35],still:true,color:'#dbc',start:0,duration:1000},1,500);
   assert.deepEqual(marks.map(m=>[m.s,m.x]),[['−35',90],['0',30]]);
 });
+
+test('the city order forecast explains naval bombardment, capture-capable troops and the garrison shield',async()=>{
+  const {cityAttackHint}=await import('../docs/attack-mode.js');
+  const city={tile:'20,15'};
+  assert.match(cityAttackHint({defenderType:'city'},{captures:false},city),/1 HP/);
+  assert.match(cityAttackHint({defenderType:'unit'},{captures:false},city),/garrison/);
+  assert.equal(cityAttackHint({defenderType:'city'},{captures:true},city),'');
+  assert.equal(cityAttackHint({defenderType:'unit'},{captures:false},null),'');
+});

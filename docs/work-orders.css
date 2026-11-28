@@ -19,3 +19,20 @@
 .production-item.work-card>.item-illustration{object-fit:cover}.work-choices button:focus-visible,.work-bar-actions button:focus-visible,.site-choice select:focus-visible{outline:2px solid #ffe2a3;outline-offset:2px}
 
 .work-rules{font-size:.81rem;color:#c4c8bd;line-height:1.45;padding:.35rem .25rem;margin:0}
+
+.work-subject {display:grid;grid-template-columns:clamp(76px,18vw,120px) minmax(0,1fr);gap:1rem;align-items:center;margin:.4rem 0}
+.work-subject .item-illustration {width:100%;aspect-ratio:1}
+.work-subject p {margin:.4rem 0 0;color:#c7d1cb;line-height:1.45}
+.work-quote {display:flex;flex-wrap:wrap;align-items:start;gap:.45rem 1.15rem;margin:0}
+.work-quote div {display:grid;gap:.1rem}
+.work-quote dt {font-size:.75rem;color:#c1c9c1}
+.work-quote dd {margin:0;color:#f1d699;font-weight:650;font-variant-numeric:tabular-nums}
+.work-bar-title {display:flex;align-items:center;gap:.42rem}
+.work-bar-title div {display:grid}
+.work-bar-title .item-illustration {width:36px;height:36px}
+.work-sitebar .work-quote {gap:.2rem .65rem}
+@media(max-width:650px) {
+  .work-sitebar .work-quote {flex:1}
+  .work-sitebar .work-quote dt {font-size:.68rem}
+  .work-sitebar .work-bar-title .item-illustration {width:30px;height:30px}
+}

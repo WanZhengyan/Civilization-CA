@@ -11,7 +11,14 @@ import {translate} from '../docs/i18n.js';
 
 test('each unit, building, science project, improvement and resource has a distinct WebP and a localized name',()=>{
   const hashes=new Set();
+  const previews=readFileSync(new URL('../docs/production-art.css',import.meta.url),'utf8');
+  const sheet=Buffer.from(previews.match(/data:image\/webp;base64,([^"]+)/)[1],'base64');
+  assert.equal(sheet.toString('ascii',8,12),'WEBP');
+  const cells=new Set();
   for(const [id,entry] of Object.entries({...UNIT_TYPES,...BUILDINGS,...IMPROVEMENTS,...RESOURCES,[SCIENCE_PROJECT.id]:SCIENCE_PROJECT})){
+    const cell=previews.split('[data-art="'+id+'"] {background-position:')[1]?.split('}')[0];
+    assert.ok(cell && !cells.has(cell),'Missing or reused first-paint art: '+id);
+    cells.add(cell);
     const path=illustrationPath(id);
     const url=new URL('../docs/'+path,import.meta.url);
     const data=readFileSync(url);

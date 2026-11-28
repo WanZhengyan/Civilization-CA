@@ -1,5 +1,17 @@
 # Campaign updates
 
+## Bring troops to port sieges and review orders on the map
+
+When a Normal or Hard governor has a gunship in range of an observed enemy city, it can commission a ground formation and advance it along explored land and bridge crossings. A capture-capable survivor can take the city after the ship fires. The combat forecast shows when a garrison will absorb a hit and when a city needs ground troops to finish the capture.
+
+Tap a highlighted destination on a touch map to review the route, its movement cost and the points the unit will have left. Select another hex to compare or cancel to keep the unit in place. Desktop mouse and keyboard movement retain their direct controls.
+
+Open Battle reports to see historical attacker and defender HP. Choose Attacks on me to find hits on your own cities and units. Opening reports from an incoming alert selects that filter for you. A replay uses what your seat witnessed at the time of the attack.
+
+All 42 catalog illustrations now have a miniature of the same artwork available while the full picture loads or if its download fails. Production keeps the selected project's illustration, its completion estimate and the remaining production or purchase price on the confirmation screen. Construction on the map also keeps the project and cost in view. University placement quotes the actual charter fee. A tall Field Command panel now scrolls above the end-turn controls so its production button can be clicked.
+
+Online orders now carry private receipts in both sequential and shared-team-turn rooms. If a response is interrupted, reopening the room checks whether that order was accepted, safely retries an undelivered order in the original window, or asks you to review the changed board. A duplicate cannot purchase, found or move twice.
+
 ## Sail inland and meet the civilizations beyond your borders
 
 New campaigns in all three regions draw navigable rivers and lakes from the opening seed. A harbor can launch on fresh water. Cutters can sail inland and fire at a city in range. Fishing crews can load at a surveyed shoal or their own fishery and return to an owned berth with 3 food and 1 stored fish. Bridges keep ground crossings open. Explored waterways can be located from the map key.

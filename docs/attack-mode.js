@@ -18,3 +18,12 @@ export function forecastCounterLabel(result) {
   if (result.attackMode==='melee') return 'Melee strike · '+loss;
   return result.retaliation ? loss : 'No retaliation';
 }
+
+export const captureOrderHint='Finish the capture with a ground unit such as Militia.';
+
+export function cityAttackHint(forecast,definition,city) {
+  if(!city)return '';
+  if(forecast.defenderType==='unit')return 'The garrison takes this attack. City HP stays the same.';
+  if(forecast.defenderType==='city' && !definition.captures)return 'This unit can weaken a city down to 1 HP.';
+  return '';
+}

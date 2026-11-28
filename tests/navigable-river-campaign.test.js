@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createGame,applyAction,campaignView,chooseBotAction,getMap,getProjectSites,getUnitOptions,UNIT_TYPES} from '../docs/rules.js';
 import {waterDistances} from '../docs/water-navigation.js';
 
-test('a newly founded coastal city launches a cutter which sails into a generated lake and attacks a river port',()=>{
+function playToFirstLakeStrike() {
  const fresh=()=>createGame([{name:'Fleet'},{name:'Bank'}],'la',{seed:17,mapSize:'large',victoryMode:'conquest'});
  let s=fresh();
  const map=getMap(s),destination=s.units[1].tile;
@@ -32,6 +32,11 @@ test('a newly founded coastal city launches a cutter which sails into a generate
   if(action.type==='attack')report=next.battleReports[seat].at(-1);
   s=next;
  }
+ return {s,fresh,trace,report,passage,map};
+}
+
+test('a newly founded coastal city launches a cutter which sails into a generated lake and attacks a river port',()=>{
+ const {s,fresh,trace,report,passage,map}=playToFirstLakeStrike();
  assert.deepEqual([...passage],['sea','river','lake']);
  assert.equal(report?.damage,36);assert.equal(report.retaliation,0);
  assert.equal(report.attacker.hpAfter,85);assert.equal(report.target.hpAfter,64);
@@ -39,6 +44,37 @@ test('a newly founded coastal city launches a cutter which sails into a generate
  assert.ok(rival.portTile && map.byId[rival.portTile].waterway);
  let replay=fresh();for(const [seat,a] of trace)replay=applyAction(replay,seat,a);
  assert.deepEqual(s,replay);
+});
+
+test('a governor sends a ground force to occupy the capital bombarded by its cutter',()=>{
+ let {s}=playToFirstLakeStrike();
+ const objective=s.cities.find(city=>city.seat===1).tile;
+ const siege=[],train=[],checked=new Set();
+ while(s.phase==='playing' && s.round<=20){
+  const seat=s.turn,action=seat===0 ? chooseBotAction(s) : {type:'end'};
+  const unit=s.units.find(other=>other.id===action.unit);
+  if(action.type==='produce' && UNIT_TYPES[action.item]?.captures)train.push(action.item);
+  if(action.type==='attack' && action.tile===objective)siege.push({round:s.round,type:unit.type,hp:s.cities.find(city=>city.tile===objective).hp});
+
+  const decision=action.type==='produce' && UNIT_TYPES[action.item]?.captures ? 'commission' :
+    action.type==='move' && UNIT_TYPES[unit.type].captures ? 'advance' : null;
+  if(decision && !checked.has(decision)){
+   const view=campaignView(s,seat),explored=new Set(view.intel.explored),map=getMap(s);
+   const tile=map.tiles.find(t=>!explored.has(t.id) && t.terrain==='plains' && !s.units.some(u=>u.tile===t.id));
+   assert.ok(tile);
+   const alt=structuredClone(s);alt.waterways.lake.push(tile.id);
+   alt.units.push({id:'unseen-cutter',seat:1,type:'cutter',tile:tile.id,hp:85,maxHp:85,moves:3,maxMoves:3});
+   assert.deepEqual(campaignView(alt,seat),view);
+   assert.deepEqual(chooseBotAction(alt),action);
+   checked.add(decision);
+  }
+  s=applyAction(s,seat,action);
+ }
+ assert.deepEqual(checked,new Set(['commission','advance']));
+ assert.deepEqual(train,['melee']);
+ assert.equal(siege.at(-2).type,'cutter');
+ assert.deepEqual(siege.at(-1),{round:18,type:'melee',hp:1});
+ assert.deepEqual(s.winners,[0]);assert.equal(s.victoryReason,'domination');
 });
 
 test('a normal fleet order is identical when only an uncharted lake and an unseen rival ship change',()=>{

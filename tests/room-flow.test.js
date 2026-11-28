@@ -123,3 +123,20 @@ test('a team attack retains the defender from the initial visible forecast',()=>
   assert.equal(saved.action.defenderId,'u9');
   assert.equal(action.defenderId,undefined);
 });
+
+import {recoveryMessage} from '../docs/room-turn.js';
+test('sequential recovery distinguishes a confirmed order, an open window and a superseding order',()=>{
+  const base={code:'BASIN2',you:0,revision:3,phase:'playing',orderReceipts:[],
+    game:{phase:'playing',turn:0}};
+  const order=captureRoomOrder(base,{type:'end'});
+  assert.match(order.actionId,/^[a-f0-9]{32}$/);
+  assert.notEqual(order.actionId,captureRoomOrder(base,{type:'end'}).actionId);
+  assert.equal(recoveryMessage(base,order),null);
+  assert.equal(mayResumeOrder({...base,revision:4},order),false);
+  assert.equal(mayResumeOrder({...base,orderReceipts:undefined},order),false);
+  const changed=recoveryMessage({...base,revision:4},order);
+  assert.match(changed,/Review the map/);
+  const confirmed=recoveryMessage({...base,phase:'finished',revision:8,orderReceipts:[order.actionId]},order);
+  assert.match(confirmed,/was confirmed/);
+  for(const text of [confirmed,changed,'Checking order…','Reconnecting…']) assert.notEqual(translate(text,'zh-CN'),text);
+});

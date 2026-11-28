@@ -28,6 +28,8 @@ The city production menu shows the units, buildings and projects your civilizati
 
 The visitor footer counts anonymous browser profiles on each site from the day the counter launched. Refreshing or opening a second tab on the same site does not add another visitor. The public totals are shared between the two hosts. Day and month follow Los Angeles time.
 
+On a touch map, tap a highlighted destination to compare the route cost and remaining movement, then confirm or cancel. Open **Battle reports → Attacks on me** to replay incoming fights and see the recorded health of both sides when visible. While attacking a port, fire on the garrison first. Warships can reduce the city to 1 HP. A surviving capture-capable ground unit, such as Militia, can then occupy it.
+
 ## Rivers, delegations and the campaign soundtrack
 
 Explore the lake and river drawn for your region and seed. A port on fresh water can launch a cutter or a fishing crew. Trace connected blue hexes to sail under marked bridges. Crews can load a catch at a surveyed shoal or their own fishery. Land it at an owned harbor for 3 city food and 1 stored fish.
@@ -79,6 +81,8 @@ Open **Change map** to choose a different region. In **Create room**, pick two t
 Each team shares sight and explored terrain. In a new team room both allies can give orders to their own pieces during the same turn. Mark ready when finished. The next team starts once all surviving teammates are ready. Teammates keep separate treasuries and production queues. Teammates can defend each other’s cities and win together. The host sets the victory mode. Each human can choose a free civilization or draw one at random, and the host sets the computer players’ choices. Configured rooms draw the opening team and then a member of that team. Assign the same team to friends you want on your side. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
 
 ## 中文快速开始
+
+在触屏地图上，先点目的地查看路线、移动消耗和剩余移动力，再确认或取消。点「战报 → 我方遇袭」可找到敌方攻击、查看目击时双方的生命变化，并在地图上回放。攻打港城时，驻军会先承受攻击。舰炮可把城市削弱至 1 点生命，最后用民兵等可占城的地面部队完成占领。
 
 新地图中的河道和湖泊随开局种子变化。发现水域后可从地图图例定位。临水建港即可造巡逻舰或渔船，沿连通的水面穿过桥下。渔船在已勘探的鱼群或己方渔场装货，运回己方港口可获得 3 点城市粮食和 1 份库存鱼。
 

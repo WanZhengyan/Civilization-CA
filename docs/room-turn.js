@@ -20,7 +20,12 @@ export function captureRoomOrder(room,action) {
   const orderKey=room.game?.teamPhase?.orderKey;
   const defender=orderKey && action.type==='attack' ? room.game.intel?.forecasts?.[action.unit]?.[action.tile]?.defenderId : null;
   const order=defender!=null ? {...action,defenderId:defender} : action;
-  return {op:'action',code:room.code,revision:room.revision,action:order,...(orderKey && {orderKey})};
+  // Receipt support is advertised by the server so older hosts stay playable.
+  const actionId=Array.isArray(room.orderReceipts)
+    ? Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('')
+    : null;
+  return {op:'action',code:room.code,revision:room.revision,action:order,
+    ...(actionId && {actionId}),...(orderKey && {orderKey})};
 }
 
 export function teamTurnLabels(state,seat) {
@@ -38,9 +43,18 @@ export function teamMemberStatus(state,seat) {
   return {active:'Taking orders',ready:'Ready',waiting:'Waiting for team turn'}[roomSeatTurn(state,seat)];
 }
 
-// An interrupted request can be submitted again only with the original
-// per-seat key. A new key belongs to a later order, even within the same round.
 export function mayResumeOrder(room,request) {
-  return !!(request?.orderKey && room?.code===request.code && room.phase==='playing' &&
-    room.game?.teamPhase?.orderKey===request.orderKey && roomSeatTurn(room.game,room.you)==='active');
+  if(!request || room?.code!==request.code || room.phase!=='playing' ||
+     roomSeatTurn(room.game,room.you)!=='active') return false;
+  if(request.orderKey) return room.game?.teamPhase?.orderKey===request.orderKey;
+  // Sequential rooms use an exact revision for their exclusive order window.
+  return !!request.actionId && Array.isArray(room.orderReceipts) && room.revision===request.revision;
+}
+
+export function recoveryMessage(room,request) {
+  if(request.actionId && room.orderReceipts?.includes(request.actionId)) {
+    return 'Your previous order was confirmed.';
+  }
+  if(mayResumeOrder(room,request)) return null;
+  return 'The room has moved on. Review the map before giving another order.';
 }

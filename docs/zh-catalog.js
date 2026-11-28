@@ -6,6 +6,11 @@ import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
 section(`
+Estimated completion|预计完成
+Immediately|立即完成
+Production remaining|剩余所需生产力
+`);
+section(`
 Choose a contacted rival.|请选择一个已经接触的对手文明。
 This civilization has been eliminated.|该文明已被淘汰。
 A delegation is already active.|使团仍在任期内。
@@ -14,6 +19,16 @@ Diplomatic delegation dispatched.|外交使团已派出。
 An unmet civilization ended its turn.|一个尚未接触的文明结束了回合。
 `);
 section(`
+The route has changed. Choose a destination again.|路线已改变，请重新选择目的地。
+Cancel|取消
+Movement preview|移动预览
+Move cost|消耗移动力
+Remaining movement|剩余移动力
+Confirm move|确认移动
+Tap a highlighted hex to preview movement.|轻点高亮地块，预览路线与移动力。
+Naval patrol unit|海上巡逻单位
+Naval artillery unit|海上炮击单位
+Maritime engineering unit|海上工程单位
 Campaign soundtrack|战役配乐
 Pacific Light|太平洋晨光
 The Trestle|栈桥
@@ -537,6 +552,9 @@ Discover now|立即研究
 Attacker|进攻方
 Defender|防守方
 No retaliation|无反击伤害
+Finish the capture with a ground unit such as Militia.|用民兵等可占城的地面部队完成占领。
+The garrison takes this attack. City HP stays the same.|此次攻击由驻军承受，城市生命值保持不变。
+This unit can weaken a city down to 1 HP.|此单位最多可将城市削弱至 1 点生命。
 Ranged strike|远程攻击
 Melee strike|近战攻击
 Rangers, ranged infantry, artillery and armed ships deal damage without losing HP to retaliation, even against an adjacent target. Every attack spends the remaining movement. Melee attackers can take counterdamage. Defeat the garrison first. Shooting can reduce cities and camps to 1 HP. Send a surviving capture-capable land unit to take them.|游骑兵、远程步兵、火炮与武装舰船发动攻击时不会因反击损失生命，即便目标位于相邻地块。每次攻击都会用完剩余移动力。近战单位可能受到反击。先击败守军；射击可将城市或营地削弱至 1 点生命，再派有占领能力的陆军单位将其攻占。
@@ -596,6 +614,11 @@ Start a new campaign?|开始新战役？
 This replaces your saved solo campaign on this device.|这会替换本设备上保存的单人战役。
 Start new campaign|开始新战役
 Keep playing|继续当前战役
+Checking order…|正在核对指令…
+Reconnecting…|正在重连…
+Your previous order was confirmed.|已确认上一条指令生效。
+The room has moved on. Review the map before giving another order.|局势已变化，请先查看最新地图再下令。
+The room has already received this order.|房间已收到这条指令。
 Reconnected to the room.|已重新连接房间。
 Connection lost. Reconnecting…|连接中断，正在重连…
 Invite link copied.|已复制邀请链接。
@@ -896,11 +919,11 @@ Warship|战舰
 Fishing crew|渔船队
 Revenue cutter|海岸巡逻舰
 Steam frigate|蒸汽护卫舰
-Fishery|海上渔场
+Fishery|渔场
 Build fishery|建设渔场
 Earns 2 capital per turn. A city may use its own shore or a connected coastal district within two hexes.|港口每回合提供 2 资金。可设于本城海岸，或与城市相连且不超过两格的己方海岸。
 Adds 2 production per turn to this harbor city and equips it for larger vessels.|该港口城市每回合生产力增加 2，并能建造大型舰船。
-Builds two offshore fisheries within two water hexes of a friendly port.|可在距己方港口两格水路内建设两座海上渔场。
+Builds two fisheries within two connected water steps at sea or three on a charted river or lake. Can bring a catch back to your harbor.|可建设两座渔场。海上须在港口两格连通水路内，已探明的河流或湖泊可达三格。也可将渔获运回己方港口。
 A fast sailing vessel for fighting nearby ships and bombarding the shoreline.|快速帆船，适合迎击近处舰船和炮击海岸。
 A shipyard warship that bombards targets up to two hexes away.|由造船厂建造的战舰，可炮击两格内的目标。
 Settle on the shore or claim a shore district connected to this city within two hexes.|沿海建城，或取得与此城相连且距离不超过两格的海岸。

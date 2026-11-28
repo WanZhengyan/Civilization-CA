@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {describeBattle,pendingIncoming,recentIncomingReport} from '../docs/battle-history.js';
+import {describeBattle,witnessedHealth,pendingIncoming,recentIncomingReport} from '../docs/battle-history.js';
 import {battleMarkers,paintBattleReport} from '../docs/battle-overlay.js';
 import {createGame,getMap} from '../docs/rules.js';
 
@@ -50,4 +50,13 @@ test('unseen origins never read a source tile, draw a flight path, or name an at
   assert.ok(!ctxCalls.some(([op])=>op==='lineTo'));
   assert.equal(describeBattle(hidden,game.players,map,0,'en').source,'Unidentified attacker');
   assert.equal(describeBattle(hidden,game.players,map,0,'zh-CN').source,'未辨明的攻击者');
+});
+
+test('journal HP uses both witnessed endpoints and never infers missing health from the live board',()=>{
+  const hit={...report,attacker:{...attacker,hpBefore:57,hpAfter:32},target:{...target,hpBefore:85,hpAfter:41}};
+  assert.deepEqual(witnessedHealth(hit,'en'),[{label:'Defender HP',before:85,after:41},{label:'Attacker HP',before:57,after:32}]);
+  assert.deepEqual(witnessedHealth({...hit,attacker:{kind:'unknown'}},'zh-CN'),[{label:'守方生命',before:85,after:41}]);
+  assert.equal(witnessedHealth({...hit,attacker:{...attacker,hpAfter:32}},'en').length,1);
+  assert.deepEqual(witnessedHealth(report,'en'),[]);
+  assert.equal(witnessedHealth({...hit,target:{...hit.target,hpAfter:0}},'en')[0].after,0);
 });

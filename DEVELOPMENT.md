@@ -26,6 +26,24 @@ Compare the same seat count and opening across revisions. Look at campaign lengt
 
 For each version, keep a short review with the hypothesis, reference and candidate revisions, report files, the manual observations and the decision. Keep the change when the evidence addresses the original question, or revise it and repeat.
 
+## Occupying a port after bombardment
+
+The reference was `cd31a11`. Start the Large LA seed 17 conquest scenario from two settlers. Construct both ports and sail the cutter from the ocean through the river to the lake. After the first shot on round 11, turn the attacking government over to the Normal AI. Keep the defender on end-turn to isolate the occupation decision.
+
+| Governor | Result on the same opening |
+| --- | --- |
+| Reference | No capture by round 69 after 815 subsequent orders |
+| Use an explored ground route to the coast | Captured on round 32 |
+| Also commission a capture unit to support the guns | Captured on round 18 |
+
+A second run let the defending Normal governor issue its own orders after the same handoff. The reference still had no winner at round 140. The release candidate won by conquest on round 75. Two HTTP seats played the closing 56 orders of the passive-defender case and agreed on the winner after reload. Terrain and a foreign ship placed outside the governor’s exploration affected neither its recruitment choice nor its advancing order. The nine independent Large openings remained nine science wins. In eight additional autonomous games the conquest/science split remained 3/5 and changes of city ownership, which include retakes, fell from 11 to 8. The result supports rescuing a specific siege rather than a general increase in conquest wins.
+
+**Player orders and battle history.** On the Chinese 390 × 844 map, a tap used to move a cutter immediately. With route review it was possible to compare a one-point river move leaving 2/3 with a two-point move leaving 1/3, cancel without spending, then commit the second route and see 1/3 remaining at 21,17. Desktop mouse and keyboard orders still executed directly. On Large LA seed 114, 446 legal orders yielded eight reports by round 21. Three were attacks on the player. The old journal required reading all eight and showed 44 damage to the cutter. The updated English and Chinese journals filtered those three, recorded the cutter going from 85 to 41 and the militia from 57 to 32, and replayed the hit at Ballona Creek. The seed 17 combat preview in Chinese showed 85 to 85 for the cutter and 100 to 64 for the city. The confirmed order dealt exactly 36.
+
+**Buying, building and reconnecting.** In a saved Boyle Heights game, selecting the Orbital Survey dropped its illustration, four-turn estimate and 60-production price from the confirmation screen. The revised review keeps them visible beside the order. On a 1,363 × 936 desktop, an overflowing city inspector put the production button underneath the end-turn panel. Constraining the inspector to its own scroll area restored the pointer click. On a 390 × 844 Chinese screen, Caltech placement charged the quoted 8 gold (1,474 to 1,466). All 42 catalog images decoded, but an uncached opening left the first 12 visible card frames temporarily empty. A 6,458-byte embedded contact sheet now supplies an exact miniature of each painting. A deliberately blocked high-resolution catalog still rendered all 30 late-game cards with their labels, and the satellite, settler and scout could be distinguished in the browser. The Fish shoal tile on LA seed 30 loaded its 384-pixel source correctly and showed fish on the 38-pixel field thumbnail. On seed 41 a lost response from a founding order previously left the sequential client unable to distinguish a committed city from an undelivered order. Compare a request dropped before delivery with a response dropped after commit, using separate human seat credentials. Check the city count, active seat, exact revision and the buyer's receipt after reload. A seat keeps its last eight order receipts. Any later unrelated orders beyond that record require checking the current board.
+
+**Next experiment.** In a contested port with an actively defending governor, measure whether protecting the land unit before it reaches the crossing improves the chance of taking the city without leaving the home capital exposed. Reuse the observed city, route and sight before comparing outcomes.
+
 ## Inland water, delegations and late-game timing
 
 The public reference was `99f86df`. We tested whether cities could contest an inland port with a ship, whether influence could buy information without disclosing a rival’s map, and whether the late councils could leave room to use Industrial equipment before a science victory. A new-game marker keeps the original map and council prices in saved games and live rooms created on the reference.

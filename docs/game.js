@@ -1,6 +1,6 @@
 import {installSoundtrack,soundtrackControls} from './music-controls.js';
 import {fishingGuide,inlandGuide} from './maritime-guide.js';
-import {captureRoomOrder,isComputerActing,mayResumeOrder,roomSeatTurn,teamMemberStatus} from './room-turn.js';
+import {captureRoomOrder,isComputerActing,recoveryMessage,roomSeatTurn,teamMemberStatus} from './room-turn.js';
 import {DEFAULT_MAP_SIZE,validNewMapSize} from './maps.js';
 import {advancementGuide,recoveryGuide} from './unit-service-copy.js';
 import {naturalWonderArt} from './natural-wonder-art.js';
@@ -115,7 +115,8 @@ function emit() {
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
   renderView?.({
     state, seat: currentSeat(), room, session: mode==='solo' ? solo.seed : room?.code,
-    mode, busy: pending || (mode==='online' && !!unconfirmedOrder) || (mode === 'solo' && playingBots) || (mode === 'online' && !room?.game)
+    mode, roomStatus:mode==='online' ? (offline?'Reconnecting…':unconfirmedOrder && !pending?'Checking order…':'') : '',
+    busy: pending || (mode==='online' && offline) || (mode==='online' && !!unconfirmedOrder) || (mode === 'solo' && playingBots) || (mode === 'online' && !room?.game)
   });
 }
 function rememberSeat(code, seatToken) {
@@ -183,7 +184,7 @@ async function runBots() {
   }
 }
 
-async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId, mapSize, seats, orderKey, victoryMode, civilization, seat }) {
+async function requestRoom({ op, code, name, revision, action, auth, ticket, mapId, mapSize, seats, orderKey, actionId, victoryMode, civilization, seat }) {
   const isGet = !op;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
@@ -197,7 +198,7 @@ async function requestRoom({ op, code, name, revision, action, auth, ticket, map
         ...(!isGet && { 'Content-Type': 'application/json' }),
         ...(auth && { Authorization: 'Bearer ' + auth })
       },
-      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId, mapSize, seats, orderKey, victoryMode, civilization, seat })
+      body: isGet ? undefined : JSON.stringify({ op, code, name, revision, action, ticket, mapId, mapSize, seats, orderKey, actionId, victoryMode, civilization, seat })
     });
     if (response.status === 204 && isGet && revision !== undefined) return { unchanged: true };
     let data;
@@ -249,12 +250,21 @@ function restoreOrder(incoming) {
   try {
     const key=journalKey(incoming.code,incoming.you);
     const request=JSON.parse(sessionStorage.getItem(key) || 'null');
-    if(request?.op==='action' && mayResumeOrder(incoming,request)) return request;
+    if(request?.op==='action' && request.code===incoming.code && (request.orderKey || request.actionId)) return request;
     sessionStorage.removeItem(key);
   } catch { /* Starting in a fresh tab is safe. */ }
   return null;
 }
 
+function settleOrder() {
+  if(!unconfirmedOrder) return true;
+  const message=recoveryMessage(room,unconfirmedOrder);
+  if(!message) return false;
+  rememberOrder(null);
+  emit();
+  toast?.(message);
+  return true;
+}
 function connect(incoming, auth, showLobby = true) {
   clearTimeout(pollTimer);
   roomEpoch++;
@@ -271,12 +281,13 @@ function connect(incoming, auth, showLobby = true) {
   syncRoom(incoming);
   if (incoming.phase === 'lobby' && showLobby) open('multiplayer');
   else if (modal === 'multiplayer') close();
+  settleOrder();
   schedulePoll();
 }
 
 function schedulePoll() {
   clearTimeout(pollTimer);
-  if (mode !== 'online' || !room || room.phase === 'finished') return;
+  if (mode !== 'online' || !room || (room.phase === 'finished' && !unconfirmedOrder)) return;
   const computerTurn=!offline && isComputerActing(room.game);
   pollTimer = setTimeout(poll, document.hidden ? 7000 : computerTurn ? 450 : 1400);
 }
@@ -288,11 +299,10 @@ async function poll() {
   try {
     const data = await requestRoom({ code: room.code, revision: room.revision, auth: token });
     if (epoch !== roomEpoch) return;
-    if (offline) { offline = false; toast?.('Reconnected to the room.'); }
+    if (offline) { offline = false; emit(); toast?.('Reconnected to the room.'); }
     if (!data.unchanged) syncRoom(data.room);
-    if(unconfirmedOrder && !pending){
-      if(mayResumeOrder(room,unconfirmedOrder)) await mutate('action',unconfirmedOrder.action,unconfirmedOrder);
-      else {rememberOrder(null);emit();}
+    if(unconfirmedOrder && !pending && !settleOrder()) {
+      await mutate('action',unconfirmedOrder.action,unconfirmedOrder);
     }
   } catch (error) {
     if (epoch !== roomEpoch) return;
@@ -304,6 +314,7 @@ async function poll() {
       showError(error.message);
     } else if (!offline) {
       offline = true;
+      emit();
       toast?.('Connection lost. Reconnecting…');
     }
   } finally {
@@ -419,7 +430,8 @@ async function mutate(op, action, retry=null) {
   if (pending || !room || !token || (unconfirmedOrder && !retry)) return;
   const epoch = roomEpoch;
   const request = retry || (op==='action' ? captureRoomOrder(room,action) : {op,code:room.code,revision:room.revision,...(op==='civilization'?action:{})});
-  if(request.orderKey) rememberOrder(request);
+  const journaled=Boolean(request.actionId || request.orderKey);
+  if(journaled) rememberOrder(request);
   pending = true;
   errorMessage = '';
   emit();
@@ -427,30 +439,36 @@ async function mutate(op, action, retry=null) {
   try {
     const result = await requestRoom({...request,auth:token});
     if (epoch === roomEpoch) {
-      if(request.orderKey) rememberOrder(null);
+      if(journaled) rememberOrder(null);
       syncRoom(result.room);
+      if(retry) toast?.('Your previous order was confirmed.');
     }
   } catch (error) {
     if (epoch !== roomEpoch) return;
-    if(request.orderKey && (!error.status || error.status>=500)){
+    if(journaled && (!error.status || error.status>=500)){
       // The server may have committed this action before the connection dropped.
       // Refresh first; polling replays the saved envelope only while its key lives.
       if(!retry) toast?.('Connection interrupted. Your order will be checked on reconnect.');
       return;
     }
-    if(request.orderKey) rememberOrder(null);
     if (error.status === 409 || error.status === 422 || !error.status) {
       try {
         const fresh=await requestRoom({code:room.code,auth:token});
         if(epoch!==roomEpoch) return;
         syncRoom(fresh.room);
-        if(retry && error.status===409 && !mayResumeOrder(room,request)) return;
-      } catch { /* Polling retries after connection errors. */ }
+        if(journaled && error.status===409 && settleOrder()) return;
+      } catch {
+        // A revision conflict can be a duplicate of a committed order. Keep
+        // its journal until a successful poll can check the seat's receipts.
+        if(journaled && error.status===409) return;
+      }
     }
+    if(journaled) rememberOrder(null);
     showError(error.message);
   } finally {
     if (epoch === roomEpoch) {
       pending = false;
+      if(unconfirmedOrder && room?.phase==='finished') schedulePoll();
       if (modal === 'multiplayer') drawDialog();
       emit();
     }
@@ -459,7 +477,7 @@ async function mutate(op, action, retry=null) {
 
 function doAction(type, tile) {
   const state = getState();
-  if (mode === 'home' || pending || (mode==='online' && unconfirmedOrder) || !state || roomSeatTurn(state,currentSeat()) !== 'active') return;
+  if (mode === 'home' || pending || (mode==='online' && (offline || unconfirmedOrder)) || !state || roomSeatTurn(state,currentSeat()) !== 'active') return;
   if (type === 'end') tile = undefined;
   const action = typeof type === 'object' && type ? type : tile === undefined ? {type} : {type, tile};
   if (mode === 'online') {
