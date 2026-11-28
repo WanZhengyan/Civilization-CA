@@ -1024,7 +1024,7 @@ function mount(){
   mountDiplomacy(action=>Game.doAction(action));
   influencePanel=mountInfluencePanel({
     getView:()=>view,issue:action=>Game.doAction(action),closeLedger:()=>Game.close(),
-    showTile:tile=>{select(tile);redraw();openMapOnMobile();atlas.focus(tile,true);}
+    showTile:locateDistrict
   });
   document.querySelector('.map-messages')?.prepend(parcelBar);
   el("map-labels").onchange=e=>atlas.setLabels(e.currentTarget.checked);
@@ -1101,7 +1101,7 @@ function mount(){
     if(!view || !getResearchOptions(view.state,view.seat).some(o=>o.item===item))return;
     openCouncil('research');showCouncilGoal(item);
   });
-  document.addEventListener('civitas-language',()=>{if(!view)return;roster();if(el('research-modal').open)paintResearch();else paintProjects()});
+  document.addEventListener('civitas-language',()=>{if(!view)return;roster();inspect();if(el('research-modal').open)paintResearch();else paintProjects()});
   el("close-combat").onclick=closeCombat;el("cancel-combat").onclick=closeCombat;
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};

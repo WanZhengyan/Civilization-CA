@@ -122,7 +122,7 @@ export function mountInfluencePanel({getView,issue,showTile,closeLedger}) {
   dialog.setAttribute('translate','no');
   document.body.append(dialog);
   const opener=document.getElementById('influence-open');
-  let picks={}, model, markup='', receipt='', pending=null, session='';
+  let picks={}, model, markup='', receipt='', pending=null, session='', triggerButton=null, focusedMap=false;
   function paint() {
     const view=getView(), lang=getLanguage(), L=local(lang);
     const title=L('Spend influence','使用影响力');
@@ -164,6 +164,8 @@ export function mountInfluencePanel({getView,issue,showTile,closeLedger}) {
     const view=getView();
     if(!view || document.body.classList.contains('on-title')) return;
     closeLedger();
+    triggerButton=trigger;
+    focusedMap=false;
     session=JSON.stringify([view.mode,view.session,view.seat]);
     picks=trigger.dataset.influenceCity ? {border:trigger.dataset.influenceCity} : {};
     pending=null;receipt='';markup='';
@@ -187,7 +189,7 @@ export function mountInfluencePanel({getView,issue,showTile,closeLedger}) {
     const card=influencePanelModel(view,lang,picks).cards.find(row=>row.id===group);
     const option=card?.selected;
     if(!option || JSON.stringify(option.action)!==JSON.stringify(shown.action) || option.cost!==shown.cost) {paint();return;}
-    if(button.dataset.map && option.tile) {dialog.close();showTile(option.tile);return;}
+    if(button.dataset.map && option.tile) {focusedMap=true;dialog.close();showTile(option.tile);return;}
     if(!button.dataset.issue || card.reason) return;
     const request={card,option,before:view.state.players[view.seat].influence};
     pending=request;
@@ -198,7 +200,14 @@ export function mountInfluencePanel({getView,issue,showTile,closeLedger}) {
       paint();
     }
   });
-  dialog.addEventListener('close',()=>{pending=null;receipt='';opener.focus({preventScroll:true});});
+  dialog.addEventListener('close',()=>{
+    pending=null;
+    receipt='';
+    if(!focusedMap && !document.body.classList.contains('on-title')){
+      const origin=triggerButton?.isConnected && triggerButton.getClientRects().length ? triggerButton : opener;
+      origin.focus({preventScroll:true});
+    }
+  });
   document.addEventListener('civitas-language',paint);
   document.addEventListener('civitas-screen',()=>{if(dialog.open && document.body.classList.contains('on-title')) dialog.close();});
   return {paint};
