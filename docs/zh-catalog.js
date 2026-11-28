@@ -7,6 +7,13 @@ import {positionTranslations} from './field-position.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(`
+California coast|加州海岸
+Game setup|游戏设置
+Maps|选地图
+Main menu|主导航
+Return to website|返回官网
+`);
+section(`
 Modern fortifications|现代城防
 Fire a city battery|使用城防炮台
 Build City walls in the city center. After Motorization, upgrade to Modern fortifications. Select the city, choose Fire city battery, then click a highlighted field force to review the shot. A city can fire once per round.|在市中心建造城墙，研究机动化后可升级为现代城防。选中城市，选择「发动城防炮击」，再点击高亮敌军查看预估伤害。每座城市每轮可炮击一次。

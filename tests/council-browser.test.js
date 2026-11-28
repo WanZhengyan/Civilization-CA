@@ -7,6 +7,7 @@ import {SCIENCE_PROJECT} from '../docs/victory-rules.js';
 import {councilOverview,initialCouncilView,matchesCouncilView,navigateCouncilButtons,renderCouncilBrowser} from '../docs/research-catalog.js';
 import {setLanguage} from '../docs/i18n.js';
 import {renderCouncilPath} from '../docs/council-path.js';
+import {councilGraphRows,councilEdgePath} from '../docs/council-graph.js';
 
 const catalog={buildings:Object.fromEntries(Object.entries(BUILDINGS).filter(([id])=>!WONDERS[id])),units:UNIT_TYPES,universities:WONDERS,policies:POLICIES,projects:{orbitalSurvey:SCIENCE_PROJECT}};
 const full={mode:'all',era:''};
@@ -25,10 +26,11 @@ const card=(html,id)=>html.split('data-card="'+id+'"')[1]?.split('</article>')[0
 for(const [track,starter,successor] of [['research','industry','mechanics'],['civic','charter','landRegistry']]){
   test(track+' selections follow the same available, full and completed views through a real opening',()=>{
     let state=opening(),c=council(state,track);
-    assert.deepEqual(initialCouncilView(c.options),{mode:'available',era:''});
+    assert.deepEqual(initialCouncilView(c.options),{mode:'all',era:''});
     const browse=(prefs,may=true)=>renderCouncilBrowser(c,prefs,catalog,may);
     const start=browse(initialCouncilView(c.options));
-    assert.deepEqual(new Set(cardIds(start)),new Set(c.options.filter(o=>o.enabled).map(o=>o.item)));
+    assert.deepEqual(new Set(cardIds(start)),new Set(c.options.map(o=>o.item)));
+    assert.deepEqual(new Set(cardIds(browse({mode:'available',era:''}))),new Set(c.options.filter(o=>o.enabled).map(o=>o.item)));
     assert.match(card(start,starter),new RegExp('data-project="'+starter+'"'));
     assert.match(card(start,starter),new RegExp('data-plan-item="'+successor+'"'));
     assert.match(card(browse(full),successor),new RegExp('View prerequisites for '));
@@ -99,4 +101,53 @@ test('keyboard switches wrap, reach either end, and leave native controls and mo
   key('ArrowLeft',0);key('ArrowRight',2);key('Home',2);key('End',0);
   key('Enter',0);key('ArrowRight',0,{altKey:true});key('ArrowRight',9);
   assert.deepEqual(logs,['handled','focus2','choose2','handled','focus0','choose0','handled','focus0','choose0','handled','focus2','choose2']);
+});
+
+test('both vertical trees draw every real prerequisite exactly once and above its dependent project',()=>{
+  for(const pace of [1,2])for(const track of ['research','civic']){
+    const state=opening();state.researchPace=pace;
+    const c=council(state,track), html=renderCouncilBrowser(c,full,catalog,true);
+    const {rows,width}=councilGraphRows(c.options,['frontier','industrial','modern']);
+    const rank=new Map(rows.flatMap((row,i)=>row.nodes.map(({option})=>[option.item,i])));
+    const edges=Array.from(html.matchAll(/data-from="([^"]+)" data-to="([^"]+)"/g),m=>m[1]+'>'+m[2]);
+    assert.deepEqual(edges.sort(),c.options.flatMap(o=>o.requires.map(id=>id+'>'+o.item)).sort());
+    assert.ok(width>=2);
+    for(const row of rows){
+      assert.equal(new Set(row.nodes.map(n=>n.lane)).size,row.nodes.length);
+      for(const {option,lane} of row.nodes){
+        assert.ok(lane>=0 && lane<width);
+        for(const id of option.requires)assert.ok(rank.get(id)<rank.get(option.item));
+      }
+    }
+    for(const o of c.options)assert.ok(html.includes('data-tree-inspect="'+o.item+'" aria-controls="tree-detail-'+o.item+'" aria-expanded="false"'));
+  }
+});
+
+test('inspecting a junction in either council traces its ancestors and reveals only its own detail',()=>{
+  for(const [track,goal] of [['research','motorization'],['civic','regionalPlanning']]){
+    const c=council(opening(),track);
+    const html=renderCouncilBrowser(c,{...full,selected:goal},catalog,true);
+    const option=c.options.find(o=>o.item===goal);
+    assert.equal([...html.matchAll(/aria-expanded="true"/g)].length,1);
+    assert.equal([...html.matchAll(/class="tree-detail" [^>]* hidden/g)].length,c.options.length-1);
+    for(const id of option.requires){
+      assert.match(html,new RegExp('data-from="'+id+'" data-to="'+goal+'" data-known="false" data-traced="true"'));
+      assert.ok(card(html,goal).includes('data-tree-jump="'+id+'"'));
+    }
+    const filtered=renderCouncilBrowser(c,{mode:'available',era:'',selected:goal},catalog,true);
+    assert.ok(!filtered.includes('data-selection="true"'));
+    assert.ok(!filtered.includes('data-to="'+goal+'"'));
+  }
+});
+
+test('a long dependency uses a gutter clear of every intervening node',()=>{
+  const source={left:20,right:90,top:15,bottom:70};
+  const end={left:20,right:90,top:305,bottom:380};
+  const obstacle={left:16,right:100,top:150,bottom:230};
+  const path=councilEdgePath(source,end,0,0,[source,obstacle,end],400,1);
+  const coords=[...path.matchAll(/[HV]([-0-9.]+)/g)].map(m=>Number(m[1]));
+  assert.ok(coords[0]<obstacle.top);
+  assert.ok(coords[1]<obstacle.left || coords[1]>obstacle.right);
+  assert.ok(coords[2]>obstacle.bottom);
+  assert.equal(coords.at(-1),end.top);
 });

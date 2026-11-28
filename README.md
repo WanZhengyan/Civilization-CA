@@ -4,11 +4,21 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 **[Play the Pasadena tutorial](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Start a solo campaign](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Play with friends](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.1.0 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
+[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.2.0 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
 
-[100 playable atlas versions and their changes](./VERSIONS.md)
+## Read the research trees
 
-![Civilization CA running in English on the Los Angeles campaign map](./docs/art/campaign-guide-en.webp)
+Open **Technology** or **Civics** from the left side of the map. Read down from the earliest projects and follow the lines into later eras. When two branches meet at a project, you need both prerequisites. Select a project to inspect its unlocks and cost. If it is available, you can start it from the same card.
+
+![Topographic Mapping selected on the technology tree, with Land Surveying and the Academy in its project details](./docs/art/technology-tree-v72.webp)
+
+**Want an Academy?** Start with **Land Surveying** to unlock the Shop. Follow its branch to **Topographic Mapping**, which lets each city build an Academy for 2 science per turn.
+
+![County Federation on the civics tree, showing the Land Registry prerequisite and natural border growth benefit](./docs/art/civics-tree-v72.webp)
+
+**Want faster border growth?** Follow **Municipal Charter → Land Registry → County Federation** in the civics tree. County Federation gives each city 2 extra points of natural border growth per turn.
+
+[Watch the 29-second research walkthrough (MP4)](https://wanzhengyan.github.io/Civilization-CA/film/councils-v72.mp4)
 
 ## Your first campaign
 
@@ -19,8 +29,6 @@ Three decisions will get you through the opening.
 1. **What does the city need?** Start with a Scout to explore. Open **City production** to see the Settler card, your current population and the requirement of 3 residents to train or buy one. One resident leaves when the unit deploys, so a city of 3 goes back to 2. Choose Agronomy for food or Workshop Engineering to unlock the Workshop and speed up construction.
 2. **Do you need the next hex now?** Open **Influence** to see which parcel your city will gain from natural growth. You can wait, or spend 6 influence to take that parcel immediately. The panel shows the location, time saved and balance after purchase.
 3. **Who still needs orders?** The button at the lower right opens the next unfinished decision. It will take you to an idle city or a unit with movement left. **Skip this turn** keeps the unit in place and preserves its remaining movement if you change your mind. With all decisions resolved, the button becomes **End turn**.
-
-For income, research Land Surveying to unlock the Shop. For science, follow that branch to Topographic Mapping and build an Academy. Each city can build its own Academy. The four university wonders are unique across the map.
 
 The left production drawer names the city and centers it on the exposed map. Pick a highlighted parcel for buildings such as the Academy. Walls always use the city center. After Motorization, a city with walls can build Modern fortifications and fire once per round at a visible enemy field formation within two hexes.
 
@@ -34,7 +42,7 @@ In a siege, the city is the primary target. Each garrison unit takes 25% of the 
 
 ## Explore California
 
-Open **Field guide → California gazetteer** from the title screen, or **Menu → California gazetteer** during play. Look up Oakland in either language to compare its 2010 and 2020 population. Switch to **Field tools → Field trips** to follow the bay entrance from Fort Point to the Golden Gate Bridge and onward to Oakland. Once a corresponding district is charted, open its field notes from the district inspector or locate it on the map from its profile.
+Open **Field guide → California gazetteer** from the homepage, or **Menu → California gazetteer** during play. Look up Oakland in either language to compare its 2010 and 2020 population. Switch to **Field tools → Field trips** to follow the bay entrance from Fort Point to the Golden Gate Bridge and onward to Oakland. Once a corresponding district is charted, open its field notes from the district inspector or locate it on the map from its profile.
 
 The gazetteer covers **3 counties, 9 cities and 6 field sites or coastal works**. The sources give each figure its date, unit and geographic boundary. The game models yields and movement separately for its approximate hexes. The approach of exploring public geography through a strategy map was inspired by [Andrej Karpathy’s USACiv](https://karpathy.ai/usaciv/). [Census QuickFacts](https://www.census.gov/quickfacts/) · [Fort Point historical profile](https://www.nps.gov/places/fort-point.htm)
 
@@ -46,6 +54,10 @@ The gazetteer covers **3 counties, 9 cities and 6 field sites or coastal works**
 | Give a scout a longer assignment | Select your scout and open **Field expeditions** to commission a study, record observations and file the finished report. |
 
 ## Set up a campaign
+
+Pick a region on the homepage to carry it into setup. The setup page shows the landscape for that region and keeps the homepage navigation and language controls while you choose opponents and victory rules.
+
+![Single-player campaign setup with the selected region, civilization and rival settings](./docs/art/campaign-setup-v72.webp)
 
 | Mode | How it works |
 | --- | --- |
@@ -70,7 +82,7 @@ npm test
 npm run playtest
 ```
 
-The first command runs the rules, interface and multiplayer regression tests. The second plays 18 fixed campaigns twice across all three regions and checks their actions and final states for reproducibility. For measured gameplay changes and testing procedures, see the [development notes](./DEVELOPMENT.md).
+The first command runs the rules, interface and multiplayer regression tests. The second plays 18 fixed campaigns twice across all three regions and checks their actions and final states for reproducibility. [Development and testing notes](./DEVELOPMENT.md) · [100 playable atlas revisions](./VERSIONS.md)
 
 | Source | Purpose |
 | --- | --- |

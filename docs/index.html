@@ -20,8 +20,8 @@
   <meta property="og:title" content="Civilization CA | Found your first California city">
   <meta property="og:description" content="Found a port on the Pacific or head inland for the hills. Play turn-based strategy on maps of Los Angeles, San Francisco Bay and San Diego, solo or with friends.">
   <meta property="og:url" content="https://wanzhengyan.github.io/Civilization-CA/">
-  <meta property="og:image" content="https://wanzhengyan.github.io/Civilization-CA/art/california-coast.webp">
-  <meta property="og:image:alt" content="An illustrated California coastline with sailing ships, cliffs and a settlement.">
+  <meta property="og:image" content="https://wanzhengyan.github.io/Civilization-CA/art/technology-tree-v72.webp">
+  <meta property="og:image:alt" content="Technology projects and their prerequisites on the Civilization CA research tree.">
   <meta name="twitter:card" content="summary_large_image">
   <title data-zh="Civilization CA｜加州海岸回合制策略游戏">Civilization CA | Turn-Based Strategy on the California Coast</title>
   <link rel="icon" href="./favicon.svg">
@@ -39,7 +39,8 @@
       <nav aria-label="Main menu" data-zh-label="主导航">
         <a href="#first-turns" data-zh="怎么玩">How to play</a>
         <a href="#regions" data-zh="选地图">Maps</a>
-        <a class="version-link" href="https://github.com/WanZhengyan/Civilization-CA/blob/main/CHANGELOG.md" aria-label="Release notes for v7.1.0" data-zh-label="查看 v7.1.0 版本更新">v7.1.0</a>
+        <a href="./game.html?setup=guide" data-zh="游戏指南">Field guide</a>
+        <a class="version-link" href="https://github.com/WanZhengyan/Civilization-CA/blob/main/CHANGELOG.md" aria-label="Release notes for v7.2.0" data-zh-label="查看 v7.2.0 版本更新">v7.2.0</a>
       </nav>
       <div class="language" role="group" aria-label="Language" data-zh-label="语言">
         <button type="button" data-language="en" lang="en" aria-pressed="true">EN</button>
@@ -60,26 +61,68 @@
           <a class="button glass" href="./game.html?setup=solo" data-zh="单人游戏">Play solo</a>
           <a class="button glass host-choice" href="./game.html?setup=host"><span data-zh="多人游戏">Multiplayer</span><small data-zh="创建房间">Create a room</small></a>
         </nav>
+        <nav class="return-actions" aria-label="Resume play" data-zh-label="返回上次战局" hidden>
+          <a id="continue-campaign" href="./game.html#campaign" data-zh="继续单人战役" hidden>Continue campaign</a>
+          <a id="rejoin-room" data-zh="返回上次房间" hidden>Rejoin room</a>
+        </nav>
         <p class="join-shortcut"><span data-zh="已有房间码？">Have a room code?</span> <a href="./game.html?setup=join" data-zh="加入房间">Join a room</a></p>
       </div>
     </section>
 
     <section id="first-turns" class="first-turns page-width" aria-labelledby="first-title">
       <div class="lesson-heading">
-        <p class="kicker" data-zh="玩法指南">Field guide</p>
-        <h2 id="first-title" data-zh="开局先做什么？">Your first turns</h2>
+        <p class="kicker" data-zh="v7.2.0 实机画面">Gameplay · v7.2.0</p>
+        <h2 id="first-title" data-zh="规划你的开局">Plan your opening</h2>
       </div>
-      <div class="lesson-layout">
+      <fieldset class="screen-switch" hidden>
+        <legend class="sr-only" data-zh="选择实机画面">Choose a gameplay screen</legend>
+        <label><input type="radio" name="screen" aria-controls="screen-technology" value="technology" checked><span data-zh="科技树">Technology tree</span></label>
+        <label><input type="radio" name="screen" aria-controls="screen-civics" value="civics"><span data-zh="市政树">Civics tree</span></label>
+        <label><input type="radio" name="screen" aria-controls="screen-setup" value="setup"><span data-zh="战役设置">Campaign setup</span></label>
+      </fieldset>
+      <article id="screen-technology" class="screen-view" data-screen="technology">
         <figure class="game-figure">
-          <a href="./art/campaign-guide-en.webp" data-zh-href="./art/relief-gameplay.webp" aria-label="Open the full-size game screenshot" data-zh-label="查看实机画面大图">
-            <img src="./art/campaign-guide-en.webp" data-zh-src="./art/relief-gameplay.webp" width="1363" height="936" loading="lazy" alt="The first Pasadena tutorial turn in English, with a settler and the Found capital order highlighted" data-zh-alt="洛杉矶实机画面：侦察兵在卡拉巴萨斯附近的立体地图上，左侧是研究进度，右侧是单位指令">
+          <a href="./art/technology-tree-v72.webp" data-zh-href="./art/technology-tree-v72-zh.webp" aria-label="View the full-size technology tree screenshot" data-zh-label="查看科技树实机大图">
+            <img src="./art/technology-tree-v72.webp" data-zh-src="./art/technology-tree-v72-zh.webp" width="1363" height="936" loading="lazy" alt="Technology tree with Topographic Mapping selected, showing Land Surveying as its prerequisite and the Academy unlock" data-zh-alt="科技树实机画面，地形测绘项目显示前置科技土地测绘与可解锁的学院">
           </a>
-          <figcaption><span data-zh="立体地形 · 实机画面">Relief terrain · In-game view</span><a href="./art/campaign-guide-en.webp" data-zh-href="./art/relief-gameplay.webp" data-zh="查看大图">View full size</a></figcaption>
         </figure>
+        <div class="screen-copy">
+          <h3 data-zh="想建学院，先研究什么？">Which research unlocks an Academy?</h3>
+          <p data-zh="在战役左侧打开「科技」。从「土地测绘」沿线向下看，就能找到「地形测绘」。前者解锁赚取金币的商店，后者解锁每回合产出科研的学院。点开项目卡即可查看花费。">Open Technology on the left of the campaign map. Follow Land Surveying down to Topographic Mapping. The first unlocks Shops for gold. The second lets each city build an Academy for science. Select a project card to see its cost.</p>
+          <a class="map-link" href="./art/technology-tree-v72.webp" data-zh-href="./art/technology-tree-v72-zh.webp" data-zh="查看科技树大图">Enlarge technology tree</a>
+        </div>
+      </article>
+      <article id="screen-civics" class="screen-view" data-screen="civics">
+        <figure class="game-figure">
+          <a href="./art/civics-tree-v72.webp" data-zh-href="./art/civics-tree-v72-zh.webp" aria-label="View the full-size civics tree screenshot" data-zh-label="查看市政树实机大图">
+            <img src="./art/civics-tree-v72.webp" data-zh-src="./art/civics-tree-v72-zh.webp" width="1363" height="936" loading="lazy" alt="County Federation in the civics tree, with its Land Registry prerequisite and border growth benefit" data-zh-alt="市政树实机画面，郡县联邦项目显示前置市政土地登记与扩地收益">
+          </a>
+        </figure>
+        <div class="screen-copy">
+          <h3 data-zh="想让边境更快扩张？">How do you grow your borders faster?</h3>
+          <p data-zh="打开「市政」，从「市政宪章」经「土地登记」走到「郡县联邦」。通过郡县联邦后，每座城市每回合多获得 2 点自然扩地进度。">Open Civics and trace Municipal Charter through Land Registry to County Federation. Adopt County Federation and every city earns two extra points of natural border growth each turn.</p>
+          <a class="map-link" href="./art/civics-tree-v72.webp" data-zh-href="./art/civics-tree-v72-zh.webp" data-zh="查看市政树大图">Enlarge civics tree</a>
+        </div>
+      </article>
+      <article id="screen-setup" class="screen-view" data-screen="setup">
+        <figure class="game-figure">
+          <a href="./art/campaign-setup-v72.webp" data-zh-href="./art/campaign-setup-v72-zh.webp" aria-label="View the full-size campaign setup screenshot" data-zh-label="查看战役设置实机大图">
+            <img src="./art/campaign-setup-v72.webp" data-zh-src="./art/campaign-setup-v72-zh.webp" width="1348" height="926" loading="lazy" alt="The single-player campaign setup with region, civilization and opponent settings" data-zh-alt="单人战役设置，可选择地区、文明和电脑对手">
+          </a>
+        </figure>
+        <div class="screen-copy">
+          <h3 data-zh="第一局，想和谁一起玩？">Who shares your first map?</h3>
+          <p data-zh="选「单人游戏」，可以先在零对手的地图上练习建都。想遇到邻国时，添加一位简单电脑。它从一座城市开始，你可以自行选址建都。">Choose Play solo and set the computer opponents to zero to try founding a city at your own pace. For a neighbor, add one Easy computer. It starts with one city while you choose where to settle.</p>
+          <a class="map-link" href="./game.html?setup=solo" data-zh="设置单人战役">Set up a solo campaign</a>
+        </div>
+      </article>
+      <p class="walkthrough-link"><a href="./film/councils-v72.mp4" data-zh-href="./film/councils-v72-zh.mp4" data-zh="观看科技与市政树操作演示（29 秒，MP4）">Watch the 29-second research walkthrough (MP4)</a></p>
+      <div class="opening-guide">
+        <h3 data-zh="轮到你时">On your turn</h3>
         <ol class="turn-guide">
-          <li><h3 data-zh="选址建都">Found your capital</h3><p data-zh="用初始开拓者建都后，先训练侦察兵探路。城市生产面板会显示训练或购买下一个开拓者所需的 3 人口；出城时会带走 1 名居民。">Found your capital, then train a scout to explore. City production shows when you reach the 3 residents needed for another settler. One resident leaves with it.</p></li>
-          <li><h3 data-zh="处理回合待办">Follow the turn button</h3><p data-zh="点右下角按钮，依次选择科技、市政和城市项目。轮到单位时，可以移动，或让它跳过本回合。">The bottom-right button opens research, civics and idle cities. When a unit needs orders, move it or skip its turn.</p></li>
-          <li><h3 data-zh="决定何时扩地">Choose when to expand</h3><p data-zh="点顶部「影响力」，比较自然扩地还需几回合。若有合适的中立地块，花 6 点即可立即取得，也可以把影响力留到以后。">Open Influence at the top of the map. Compare the natural growth forecast with spending 6 influence to take the next eligible district now.</p></li>
+          <li><h4 data-zh="选址建都">Found your capital</h4><p data-zh="用初始开拓者建城，训练侦察兵探路。本城有 3 名居民后才能训练或购买下一个开拓者，单位出城会带走 1 名居民。">Settle your starting unit and train a scout. Your city needs 3 residents to train or buy another settler. One resident leaves with it.</p></li>
+          <li><h4 data-zh="处理回合待办">Follow the turn button</h4><p data-zh="右下角按钮会打开尚未选择的科技、市政或生产项目，或选中仍可行动的单位。可以移动，也可以跳过本回合。">The bottom-right button opens each unfinished research, civic or production choice. When a unit needs orders, move it or skip its turn.</p></li>
+          <li><h4 data-zh="决定何时扩地">Choose when to expand</h4><p data-zh="打开顶部的「影响力」，查看城市下一次自然扩地还要多久。若下一格值得抢先拿下，可以花 6 点影响力立刻取得。">Open Influence to see how soon your border will grow. If the next parcel is worth taking early, spend 6 influence to claim it now.</p></li>
         </ol>
       </div>
     </section>
@@ -119,17 +162,6 @@
           </div>
         </article>
       </div>
-    </section>
-    <section class="archive page-width" id="film" aria-labelledby="film-title">
-      <div>
-        <p class="kicker" data-zh="早期版本实录">From the archive</p>
-        <h2 id="film-title" data-zh="韦斯特伍德的八个回合">Eight turns in Westwood</h2>
-        <p id="film-caption" data-zh="这段 17 秒的无声旧版实录记录了建城、侦察兵探路、UCLA 落成和一次敌袭。当前版本的立体地图见上方实机画面。">This 17-second silent replay from an earlier edition follows the founding of Westwood, a scout expedition, the completion of UCLA and an enemy attack.</p>
-      </div>
-      <video class="film" width="960" height="540" poster="./film/poster.webp" controls playsinline preload="none" aria-label="Archived Los Angeles campaign replay" data-zh-label="早期洛杉矶战役回放" aria-describedby="film-caption">
-        <source src="./film/campaign.mp4" type="video/mp4">
-        <a href="./film/campaign.mp4" data-zh="打开战役回放视频">Open the replay</a>
-      </video>
     </section>
   </main>
   <footer class="foot">

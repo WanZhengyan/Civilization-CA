@@ -47,21 +47,30 @@ async function openPage(address,storage) {
       }));
       return guideNodes.get(selector);
     },
-    setAttribute(){}, showModal(){this.open=true;}, close(){this.open=false;}
+    setAttribute(){}, show(){this.open=true;this.presentation='page';}, showModal(){this.open=true;this.presentation='overlay';}, close(){this.open=false;}
   });
   const title = Object.assign(new EventTarget(),{querySelectorAll:()=>[]});
-  const elements = {modal:dialog,'title-screen':title,'title-nav':new EventTarget()};
+  const gameDock = {appendChild(node){node.parentNode=this;}};
+  const setupDock = {appendChild(node){node.parentNode=this;}};
+  dialog.parentNode=gameDock;
+  const elements = {modal:dialog,'title-screen':title,'setup-form':setupDock,'title-nav':new EventTarget()};
   Object.assign(document,{
     getElementById:id=>elements[id], querySelector:selector=>selector === 'link[data-region-styles]' ? {} : null,
     body:{classList:{toggle(){}}}
   });
   const location = new URL(address);
+  location.assign = location.replace = url=>{location.href=url;};
+  location.reload = ()=>{};
   const localStorage = {
     getItem:key=>storage.get(key) ?? null,
     setItem:(key,value)=>storage.set(key,String(value)), removeItem:key=>storage.delete(key)
   };
-  const history = {replaceState(_data,_title,url){location.href = url.href;}};
-  Object.assign(globalThis,{document,location,history,window:{localStorage,scrollTo(){}},localStorage,requestAnimationFrame:cb=>cb()});
+  const entries=[location.href];
+  const history = {
+    replaceState(_data,_title,url){location.href=url.href;entries[entries.length-1]=url.href;},
+    pushState(_data,_title,url){location.href=url.href;entries.push(url.href);}
+  };
+  Object.assign(globalThis,{document,location,history,window:Object.assign(new EventTarget(),{localStorage,scrollTo(){}}),localStorage,requestAnimationFrame:cb=>cb()});
   const {Game} = await import('../docs/game.js?session='+crypto.randomUUID());
   let rendered;
   await Game.init({render:view=>{rendered=view;},locate(){},toast(){}});
@@ -70,12 +79,7 @@ async function openPage(address,storage) {
     Object.defineProperty(event,'target',{value:target});
     dialog.dispatchEvent(event);
   }
-  return {Game,dialog,body,location,get view(){return rendered;},
-    titleClick(action){
-      const event = new Event('click');
-      Object.defineProperty(event,'target',{value:{closest:selector=>selector==='[data-title]' ? {dataset:{title:action}} : null}});
-      title.dispatchEvent(event);
-    },
+  return {Game,dialog,body,location,entries,get view(){return rendered;},
     select(name,value){dispatch('change',{name,value:String(value)});},
     click(act){
       assert.ok(dialog.innerHTML.includes('data-act="'+act+'"'),'Missing dialog action '+act);
@@ -165,9 +169,8 @@ test('an occupied slot resumes its original campaign, confirms only a replacemen
   assert.equal(JSON.parse(storage.get(otherKey)).seed,17);
 });
 
-test('a player can search from the title, open the matched topic, and return to the title',async()=>{
-  const page=await openPage('https://example.test/Civilization-CA/game.html',new Map());
-  page.titleClick('help');
+test('a player can search the official field guide, open a topic, and return to the official home',async()=>{
+  const page=await openPage('https://example.test/Civilization-CA/game.html?setup=guide',new Map());
   const input=page.dialog.querySelector('#guide-query'),results=page.dialog.querySelector('#guide-results');
   input.value='影响力';
   input.dispatchEvent(new Event('input'));
@@ -176,8 +179,7 @@ test('a player can search from the title, open the matched topic, and return to 
   assert.match(page.dialog.innerHTML,/aria-selected="true" data-act="guide-influence"/);
   assert.equal(page.dialog.querySelector('[data-guide-target="topic-0"]').scrolled,true);
   page.click('back');
-  assert.equal(page.dialog.open,false);
-  assert.equal(page.location.hash,'');
+  assert.equal(page.location.pathname,'/Civilization-CA/');
 });
 
 test('the guide and standings use the chosen target and a practice finish reports the score earned',async()=>{
@@ -244,7 +246,7 @@ test('the tutorial uses one independent slot across a deep link, reload, restart
   assert.equal(storage.get(SOLO_KEY),ordinary);
   assert.equal(storage.get(regionalKey),ordinary);
 
-  const resumed=await openPage(page.location.href,storage);
+  let resumed=await openPage(page.location.href,storage);
   assert.equal(resumed.view.tutorialId,id);
   assert.equal(resumed.view.state.cities[0].name,'Pasadena');
   assert.equal(resumed.view.tutorialProgress.collapsed,true);
@@ -265,7 +267,8 @@ test('the tutorial uses one independent slot across a deep link, reload, restart
   resumed.Game.open('menu');
   resumed.click('title-screen');
   assert.equal(resumed.location.hash,'');
-  resumed.titleClick('tutorial');
+  assert.equal(resumed.location.pathname,'/Civilization-CA/');
+  resumed=await openPage(base+'?setup=tutorial',storage);
   assert.equal(resumed.view.tutorialId,restartedId);
   resumed.Game.open('campaign-atlas');
   resumed.click('load-region');
@@ -273,4 +276,48 @@ test('the tutorial uses one independent slot across a deep link, reload, restart
   assert.equal(resumed.view.tutorial,false);
   assert.equal(resumed.view.session,existing.seed);
   assert.equal(JSON.parse(storage.get(TUTORIAL_KEY)).id,restartedId);
+});
+
+test('official setup remains on its region after refresh and browser Back from a new campaign', async()=>{
+  const base='https://example.test/Civilization-CA/game.html';
+  const storage=new Map();
+  const page=await openPage(base+'?setup=solo&region=sf',storage);
+  assert.equal(page.dialog.presentation,'page');
+  assert.match(page.dialog.innerHTML,/<h1[^>]*>Solo game setup<\/h1>/);
+  page.select('mapId','sd');
+  const refreshed=await openPage(page.location.href,storage);
+  assert.equal(refreshed.location.searchParams.get('region'),'sd');
+  assert.match(refreshed.dialog.innerHTML,/name="mapId" value="sd" checked/);
+  refreshed.select('rivals',0);
+  refreshed.click('start-configured');
+  assert.equal(refreshed.location.hash,'#campaign');
+  assert.equal(refreshed.location.search,'');
+  assert.equal(refreshed.entries.length,2);
+  const back=await openPage(refreshed.entries[0],storage);
+  assert.equal(back.dialog.presentation,'page');
+  assert.match(back.dialog.innerHTML,/name="mapId" value="sd" checked/);
+  const game=await openPage(refreshed.entries[1],storage);
+  game.Game.open('menu');
+  assert.equal(game.dialog.presentation,'overlay');
+});
+test('the same setup links work on extensionless Sites routes and plain GitHub pages',async()=>{
+  for (const path of ['/game','/Civilization-CA/game.html']) {
+    const url='https://example.test'+path;
+    const store=new Map();
+    const entry=await openPage(url,store);
+    assert.equal(entry.location.href,new URL('./',url).href);
+    const host=await openPage(url+'?setup=host&region=sf',store);
+    assert.equal(host.location.searchParams.get('setup'),'host');
+    host.click('tab-join');
+    assert.equal(host.location.search,'?setup=join');
+    const joined=await openPage(host.location.href,store);
+    assert.match(joined.dialog.innerHTML,/name="code"/);
+    assert.equal(joined.dialog.presentation,'page');
+    assert.match(joined.dialog.innerHTML,/class="setup-home" href="\.\/"/);
+    const invite=await openPage(url+'?room=ABC123',store);
+    assert.equal(invite.location.search,'?room=ABC123');
+    invite.click('tab-create');
+    assert.equal(invite.location.searchParams.has('room'),false);
+    assert.equal(invite.location.searchParams.get('setup'),'host');
+  }
 });

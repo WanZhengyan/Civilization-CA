@@ -1,5 +1,11 @@
 # Campaign updates
 
+## v7.2.0 — Vertical research trees and campaign setup
+
+- Read the Technology and Civics trees from top to bottom. Each line points from a prerequisite to a project it unlocks. You can trace an early choice into the later eras and see where two branches meet.
+- Open a regional campaign from the homepage to carry its map into setup. Solo, room setup and the Field guide share the website’s navigation and language controls. Returning players can resume a local campaign or rejoin a saved room from the homepage.
+- The homepage now shows the current technology tree, civics tree and single-player setup. Each screen opens at full size in the selected language. Both README guides use the same release captures and link to a short walkthrough in their own language.
+
 ## v7.1.0 — City defenses, army budgets and rival openings
 
 - **Set the opposition.** Each Easy, Normal and Hard computer starts with 1, 3 and 5 one-resident cities respectively. Each has one original capital. Online rooms apply the setting separately to each computer seat. The Pasadena tutorial has no rival. When an archived compact map cannot fit a newly requested roster at legal spacing, the new campaign uses Large. Existing saves retain their map.

@@ -27,7 +27,7 @@ npm run playtest
 
 Manual paths cover the points where players enter or leave the map.
 
-1. From the title Field guide, search for **奥克兰**, open Oakland and save the city to the notebook. Start a game and reopen the gazetteer from the menu. Its source and notebook entry should still be available.
+1. From the homepage Field guide, search for **奥克兰**, open Oakland and save the city to the notebook. Start a game and reopen the gazetteer from the menu. Its source and notebook entry should still be available.
 2. On a matching campaign, inspect a charted district with a field record. Open the dossier and return to the district. Repeat on another region and with a different seat to check which map destinations are available.
 3. Open production in a one-resident capital and read the Settler requirement. Grow to three, recruit and verify that one resident departs on deployment. Choose a building with a site, inspect a highlighted parcel, cancel once and then confirm a different legal site.
 4. Bombard an occupied enemy city, then capture it with a ground unit that can take cities. Compare the forecast, city health, ownership and garrison before and after capture.

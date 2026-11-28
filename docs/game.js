@@ -125,31 +125,68 @@ function getState() {
   return renderedView;
 }
 const currentSeat = () => mode === 'online' && room ? room.you : 0;
-function updateRoomShortcut() {
-  const code = read(LAST_ROOM_KEY, '');
-  const shortcut = document.querySelector('[data-title="reconnect"]');
-  if (!shortcut) return;
-  shortcut.hidden = !(validCode(code) && read(SEATS_KEY,{})[code]);
-  shortcut.querySelector('[data-last-room]').textContent = shortcut.hidden ? '' : code;
+const regionArtwork = {la:'topanga', sf:'southBayMarsh', sd:'torreyPines'};
+let gameDialogParent;
+
+function setupPageVisible() {
+  return mode === 'home' || (mode === 'online' && !room?.game);
 }
 
-function updateTutorialShortcut() {
-  const button = document.querySelector('[data-title="tutorial"]');
-  if (!button) return;
-  let hasSave = Boolean(tutorial || lastTutorial);
-  try { hasSave ||= Boolean(localStorage.getItem(TUTORIAL_KEY)); } catch { /* Memory-only play. */ }
-  button.textContent = translate(hasSave ? 'Continue tutorial' : 'New player tutorial',getLanguage());
+function updateSetupRegion() {
+  const picture = document.getElementById('setup-region-art');
+  if (!picture) return;
+  const choosingMap = modal === 'campaign-atlas' || modal === 'restart' ||
+    (modal === 'multiplayer' && (room || roomTab === 'create'));
+  const map = choosingMap ? getMap(room?.mapId || selectedMap,room?.mapSize || selectedSize) : null;
+  const art = './art/' + (regionArtwork[map?.id] || 'california-coast') + '.webp';
+  if (picture.getAttribute('src') !== art) picture.setAttribute('src',art);
+  document.getElementById('setup-region-label').textContent = translate(map ? 'Campaign map' : 'California campaigns');
+  document.getElementById('setup-region-name').textContent = translate(map?.name || 'California coast');
+  for (const [id,value] of [['setup-region-coordinates',map?.coordinates],['setup-region-summary',map?.description]]) {
+    const field = document.getElementById(id);
+    field.textContent = translate(value || '');
+    field.hidden = !value;
+  }
 }
+
 function showTitle(visible) {
-  if (visible) { updateRoomShortcut(); updateTutorialShortcut(); soundtrack?.music.setScene(null); }
   const screen = document.getElementById('title-screen');
-  const leavingTitle = !visible && !screen.hidden;
+  const leavingSetup = !visible && !screen.hidden;
   screen.hidden = !visible;
   document.body.classList.toggle('on-title', visible);
+  const parent = visible ? document.getElementById('setup-form') : gameDialogParent;
+  if (parent && dialog.parentNode !== parent) {
+    if (dialog.open) dialog.close();
+    parent.appendChild(dialog);
+  }
+  if (visible) soundtrack?.music.setScene(null);
   document.dispatchEvent(new Event('civitas-screen'));
-  if (leavingTitle) requestAnimationFrame(() => {
+  if (leavingSetup) requestAnimationFrame(() => {
     if (screen.hidden && !dialog?.open) document.getElementById('board-nav')?.focus({preventScroll:true});
   });
+}
+
+function goHome(replace=false) {
+  if (pending) return;
+  const home = new URL('./',location.href);
+  if (replace) location.replace(home.href);
+  else location.assign(home.href);
+}
+
+function updateSetupAddress(leaveInvitation=false) {
+  if (mode !== 'home') return;
+  const url = new URL(location.href);
+  if (url.searchParams.has('room') && modal === 'multiplayer' && roomTab === 'join' && !leaveInvitation) return;
+  url.searchParams.delete('room');
+  const setup = modal === 'campaign-atlas' || modal === 'restart' ? 'solo' :
+    modal === 'multiplayer' ? (roomTab === 'create' ? 'host' : 'join') : modal === 'help' ? 'guide' : null;
+  if (!setup) return;
+  url.hash = '';
+  url.searchParams.delete('play');
+  url.searchParams.set('setup',setup);
+  if (setup === 'solo' || setup === 'host') url.searchParams.set('region',selectedMap);
+  else url.searchParams.delete('region');
+  if (url.href !== location.href) history.replaceState(null,'',url);
 }
 
 function emit() {
@@ -185,11 +222,15 @@ function roomURL(code) {
 }
 function updateURL(code, board = false) {
   const url = new URL(location.href);
+  const fromSetup = url.searchParams.get('setup');
+  for (const item of ['setup','region','play']) url.searchParams.delete(item);
   if (code) url.searchParams.set('room', code);
   else url.searchParams.delete('room');
   if (board) url.hash = tutorial && mode==='solo' ? 'tutorial' : 'campaign';
   else if (['#tutorial','#campaign'].includes(url.hash)) url.hash = '';
-  history.replaceState(null, '', url);
+  if (url.href === location.href) return;
+  if (fromSetup && fromSetup !== 'tutorial' && (board || code)) history.pushState(null,'',url);
+  else history.replaceState(null,'',url);
 }
 function checkFinished() {
   if (mode === 'home') return;
@@ -356,7 +397,7 @@ async function poll() {
     if ([401, 403, 404].includes(error.status)) {
       const code = room.code;
       forgetSeat(code);
-      enterTitle();
+      beginSetup();
       open('multiplayer', 'join', code);
       showError(error.message);
     } else if (!offline) {
@@ -380,7 +421,7 @@ function returnToSolo() {
   // A room can be the first thing a visitor opens. Let them choose their
   // first solo map instead of silently creating one when leaving the room.
   if (!solo) {
-    enterTitle();
+    beginSetup();
     open('campaign-atlas');
     return;
   }
@@ -403,7 +444,7 @@ function enterSoloCampaign(target) {
   returnToSolo();
 }
 
-function enterTitle() {
+function beginSetup() {
   if (pending) return;
   const wasTutorial = Boolean(tutorial);
   if (wasTutorial) leaveTutorialSlot();
@@ -414,11 +455,9 @@ function enterTitle() {
   mode = 'home';
   room = token = unconfirmedOrder = null;
   offline = inviteOpen = false;
-  updateURL(null);
   close();
   showTitle(true);
   window.scrollTo(0,0);
-  document.querySelector(wasTutorial ? '[data-title="tutorial"]' : '[data-title="solo"]')?.focus({preventScroll:true});
 }
 
 async function seatRequest(form) {
@@ -565,13 +604,17 @@ function open(kind, tab, code) {
   if (changed && ['multiplayer','campaign-atlas','restart'].includes(kind) && !['campaign-atlas','restart'].includes(previousModal) && mode !== 'home') selectCampaignSettings(getState());
   if (changed && kind === 'multiplayer') inviteOpen = false;
   drawDialog();
-  if (!dialog.open) dialog.showModal();
+  if (!dialog.open) {
+    if (setupPageVisible()) dialog.show();
+    else dialog.showModal();
+  }
+  updateSetupAddress();
   if (changed && ['campaign-atlas','restart'].includes(kind)) dialog.querySelector('.modal-body').scrollTop=0;
-  if (changed) dialog.querySelector('.modal-title')?.focus();
+  if (changed) dialog.querySelector('.modal-title')?.focus({preventScroll:setupPageVisible()});
 }
 function dismissDialog() {
   if (modal === 'multiplayer' && pending) return;
-  if (modal === 'multiplayer' && mode === 'online' && room?.phase === 'lobby') enterTitle();
+  if (setupPageVisible()) goHome(true);
   else close();
 }
 function close() {
@@ -687,7 +730,7 @@ function multiplayerContent() {
     const target=room.victoryMode ? muted('<span>Victory conditions</span> · <strong>'+modeLabels[room.victoryMode]+'</strong>') : room.configured ? muted('<span>Legacy civic rules</span> · '+'<span>Team civic target</span> · '+getScoreTarget(room.game || {teams:room.players.map(p=>p.team)})) : '';
     const teamHelp=room.game?.teamPhase && room.phase==='playing' ? muted('Allies act together. Mark ready when you finish. The next team starts once every active ally is ready.') : '';
     return { title: lobby ? 'Room lobby' : 'Your room', kicker: 'Multiplayer', body:
-      sharing + muted(campaignSummary(room.game ? getMap(room.game) : getMap(room.mapId,room.mapSize),room.mapSize)) +target+ list(roster) + (lobby && room.victoryMode?compareCivilizations():'') + teamHelp + muted(status) + actions(footer, button('title-screen', 'Title screen', 'secondary', pending)) };
+      sharing + muted(campaignSummary(room.game ? getMap(room.game) : getMap(room.mapId,room.mapSize),room.mapSize)) +target+ list(roster) + (lobby && room.victoryMode?compareCivilizations():'') + teamHelp + muted(status) + actions(footer, button('title-screen', 'Return to website', 'secondary', pending)) };
   }
   const joining = roomTab === 'join';
   const disabled = pending ? ' disabled' : '';
@@ -909,7 +952,7 @@ function content() {
       (influenceLink ? actions(influenceLink) : '') +
       (guideTab==='start' && (!guideState || guideState.civilizationTraits===1) ? compareCivilizations() : '')+
       (guideTab==='universities' ? wonderJournal(guideState) : '')+guides+'</div>' +
-      actions(button('back',mode==='home'?'Title screen':'Return to map','primary'))};
+      actions(button('back',mode==='home'?'Return to website':'Return to map','primary'))};
   }
   if (modal === 'log') return {
     kicker: 'Campaign records', title: 'Event log',
@@ -963,7 +1006,7 @@ function content() {
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings',state?.victoryMode?'Victory progress':'Faction standings'),button('log','Event log'),
     state?.phase==='playing' ? button('advisors',getLanguage()==='zh-CN'?'顾问团':'Advisors') : '',
-    button('help','Field guide'), button('gazetteer',getLanguage()==='zh-CN'?'加州地名志':'California gazetteer'), button('supplies','Supply ledger'), mode==='solo' && tutorial ? button('restart-tutorial','Restart tutorial') : '', button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
+    button('help','Field guide'), button('gazetteer',getLanguage()==='zh-CN'?'加州地名志':'California gazetteer'), button('supplies','Supply ledger'), mode==='solo' && tutorial ? button('restart-tutorial','Restart tutorial') : '', button('title-screen','Return to website'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
 }
 
 function drawDialog() {
@@ -973,7 +1016,12 @@ function drawDialog() {
   const rosterChoice=previousPayroll?.querySelector('select')?.value;
   const showRoster=previousPayroll?.querySelector('details')?.open;
   const { kicker, title, body } = content();
-  dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl()+soundtrackControls(soundtrack?.music) : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  const setup = setupPageVisible();
+  if (setup) updateSetupRegion();
+  const heading = setup ? 'h1' : 'h2';
+  const back = setup ? '<a class="setup-home" href="./">Return to website</a>' :
+    `<button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button>`;
+  dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><${heading} class="modal-title" id="game-dialog-title" tabindex="-1">${title}</${heading}></div>${back}</div><div class="modal-body">${body}${modal === 'menu' ? languageControl()+soundtrackControls(soundtrack?.music) : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
   if(previousPayroll){
     const roster=dialog.querySelector('.payroll select');
     if(roster && Array.from(roster.options).some(option=>option.value===rosterChoice)) roster.value=rosterChoice;
@@ -1049,7 +1097,7 @@ function modalAction(act) {
     return;
   }
   if(act==='battle-reports'){dismissDialog();document.dispatchEvent(new Event('civitas-battle-history'));return;}
-  if(act==='title-screen'){enterTitle();return}
+  if(act==='title-screen'){goHome();return}
   if(act==='restart-tutorial' && mode==='solo' && tutorial){open('restart-tutorial');return}
   if(act==='confirm-tutorial' && modal==='restart-tutorial' && tutorial){enterTutorial(true);return}
   if(act==='trade-market'){open('trade-market');return}
@@ -1087,6 +1135,7 @@ function modalAction(act) {
     if (pending) return;
     keepForm();
     roomTab = act.slice(4);
+    updateSetupAddress(true);
     errorMessage = '';
     drawDialog();
   } else if (act === 'back') dismissDialog();
@@ -1121,7 +1170,7 @@ async function reconnectRoom(code) {
     if ([401,403,404].includes(error.status)) {
       forgetSeat(code);
       if (read(LAST_ROOM_KEY,'') === code) save(LAST_ROOM_KEY,null);
-      updateRoomShortcut();
+
     }
     showError(error.message);
   } finally {
@@ -1140,6 +1189,8 @@ async function init({ render, locate, toast: showToast }) {
   installMapStyles();
   installLanguage();
   dialog = document.getElementById('modal');
+  gameDialogParent = dialog.parentNode;
+  showTitle(true);
   soundtrack=installSoundtrack(dialog);
   dialog.addEventListener('click', e=>{
     const button=e.target.closest('[data-caravan-order]');
@@ -1190,7 +1241,7 @@ async function init({ render, locate, toast: showToast }) {
     }
     if (name !== 'mapId' && name !== 'mapSize') return;
     keepForm();
-    if (name === 'mapId') selectedMap=value;
+    if (name === 'mapId') { selectedMap=value; updateSetupAddress(); }
     else selectedSize=value;
     drawDialog();
     dialog.querySelector(`input[name="${name}"]:checked`)?.focus({preventScroll:true});
@@ -1199,29 +1250,21 @@ async function init({ render, locate, toast: showToast }) {
   formName = String(read(NAME_KEY, '') || '');
   const title = document.getElementById('title-screen');
   const syncLocale = () => {
-    updateTutorialShortcut();
+    if (setupPageVisible() && modal) updateSetupRegion();
     title.querySelectorAll('[data-title-lang]').forEach(button => {
       button.setAttribute('aria-pressed',String(button.dataset.titleLang === getLanguage()));
     });
   };
   syncLocale();
   document.addEventListener('civitas-language',syncLocale);
-  document.getElementById('title-nav').addEventListener('click',enterTitle);
+  document.getElementById('title-nav').addEventListener('click',()=>goHome());
   title.addEventListener('click', event => {
     const locale = event.target.closest('[data-title-lang]')?.dataset.titleLang;
-    if (locale) { setLanguage(locale); return; }
-    const action = event.target.closest('[data-title]')?.dataset.title;
-    if (pending || !action) return;
-    if (action === 'help') open('help');
-    if (action === 'tutorial') enterTutorial();
-    if (action === 'solo') { selectCampaignSettings(solo); open('campaign-atlas'); }
-    if (action === 'reconnect') reconnectRoom(read(LAST_ROOM_KEY,''));
-    if (action === 'create' || action === 'join') {
-      joinCode = '';
-      selectCampaignSettings(solo);
-      open('multiplayer',action);
-    }
+    if (locale) setLanguage(locale);
   });
+  // Back from a started campaign restores the selected setup. Reloading also
+  // restores the seat or tutorial through the same validated deep-link path.
+  window.addEventListener('popstate',()=>location.reload());
   dialog.addEventListener('click', e => {
     const btn = e.target.closest('button[data-act]');
     if (btn) modalAction(btn.dataset.act);
@@ -1238,14 +1281,9 @@ async function init({ render, locate, toast: showToast }) {
   document.addEventListener('visibilitychange', () => {
     if (mode === 'online' && !document.hidden && !polling) { clearTimeout(pollTimer); poll(); }
   });
-  updateRoomShortcut();
   const entry = launchDestination(location.href, Boolean(solo), read(SEATS_KEY,{}));
-  const address = new URL(location.href);
-  if (address.searchParams.has('setup')) {
-    address.searchParams.delete('setup');
-    address.searchParams.delete('region');
-    history.replaceState(null,'',address);
-  }
+  if (entry.screen === 'home') { goHome(true); return; }
+  if (entry.screen === 'guide') open('help');
   if (entry.screen === 'setup') {
     selectCampaignSettings(solo);
     if (entry.region) selectedMap=entry.region;
