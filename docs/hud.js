@@ -652,6 +652,7 @@ function productionOptions(){
   if(!c||c.seat!==view.seat){closeProduction();return}
   el("production-city").translate=!customCity(c);
   text("production-city",c.name);
+  text("production-coordinates",c.tile);
   const list=getProductionOptions(view.state,c.id,{replace:true});
   if (productionDraft) {
     const o=list.find(o=>o.item===productionDraft.item);
@@ -686,7 +687,19 @@ function productionOptions(){
   el("production-options").innerHTML=(c.queue?cityQueue(c)+'<p class="work-rules">Changing projects saves invested production in this city. A paused university releases its land and refunds the charter fee.</p>':'')+
     '<p class="work-rules">Buy with treasury gold to finish immediately. One remaining production costs three gold.</p>'+html.join('');
 }
-function openProduction(){const c=cityAt(selectedTile);if(!c||c.seat!==view.seat)return;productionDraft=null;productionCity=c.id;productionOptions();el("production-modal").showModal()}
+function openProduction(city=cityAt(selectedTile)){
+  if(!city || city.seat!==view.seat)return;
+  endPlacement();
+  closeMapPanel();
+  select(city.tile,null,true);
+  productionDraft=null;productionCity=city.id;
+  productionOptions();
+  const dialog=el("production-modal");
+  if(!dialog.open)dialog.showModal();
+  redraw();
+  // The drawer must have its final width before the camera measures the exposed map.
+  atlas.focus(city.tile,{minimumZoom:1.65});
+}
 function closeProduction(){if(el("production-modal").open)el("production-modal").close();productionCity=null}
 const councilTypes={
   research:{heading:"Technology",resource:"science",income:"scienceIncome",options:getResearchOptions,choose:"Choose research",done:"All research complete",action:"research"},
@@ -929,6 +942,7 @@ function paint(next){
   const key=regionKey+':'+mode+':'+(room?.code||next.session||'')+':'+seat;
   const focusOpening=key!==matchKey||!selectedTile||(state.round===1&&!explored.has(selectedTile));
   if(key!==matchKey){
+    if(productionCity!=null)closeProduction();
     for(const track of Object.keys(councilGoals)){councilGoals[track]="";delete councilViews[track];delete routeOrigins[track];}
   }
   if(focusOpening){endPlacement();matchKey=key;activeRoster="units";selectOpening()}
@@ -1359,7 +1373,7 @@ function mount(){
   el("confirm-combat").onclick=()=>{if(!battle||!drawCombat())return;const {unit,tile}=battle;closeCombat();order="";Game.doAction({type:"attack",unit,tile})};
   document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(moveDraft){moveDraft=null;updateMap();el("atlas").querySelector("canvas")?.focus({preventScroll:true});return;}if(parcelOrder){endPlacement();redraw();el("atlas").querySelector("canvas")?.focus({preventScroll:true});return;}if(el("layers-menu").contains(document.activeElement))el("layers").focus();toggleLayers(false);if(order){order="";redraw()}}});
   el("close-production").onclick=closeProduction;
-  el("production-modal").addEventListener("close",()=>{productionCity=null});
+  el("production-modal").addEventListener("close",()=>{if(!el("production-modal").open)productionCity=null});
   el("production-modal").onclick=e=>{if(e.target===el("production-modal"))closeProduction()};
   el('production-options').onchange=e=>{if (productionDraft && e.target.matches('[data-work-site]')) productionDraft.site=e.target.value;};
   el("production-options").onclick=e=>{

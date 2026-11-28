@@ -1402,9 +1402,21 @@ export function createAtlas(host, options = {}) {
     stopBattle(){replay=null;if(returnCamera){[cx,cy]=returnCamera;returnCamera=null;bound();}schedule();},
     zoomBy(factor){manualCamera();if(Number.isFinite(factor)&&factor>0){const view=clearView();animateZoom(zoom*factor,view.x,view.y);}},
     reset(){manualCamera();cancelAnimationFrame(tween);zoom=overviewZoom();resetCenter();options.onZoom?.(Math.round(zoom*100));schedule();},
-    focus(id,opening=false){if(!opening)manualCamera();const t=model.byId.get(id);if(t){if(opening){zoom=1.65;options.onZoom?.(165);} const point=pos(t.q,t.r);
+    focus(id,optionsOrOpening=false){
+      const tile=model.byId.get(id);
+      if(!tile)return;
+      const opening=optionsOrOpening===true;
+      if(!opening)manualCamera();
+      cancelAnimationFrame(tween);
+      const minimumZoom=optionsOrOpening?.minimumZoom;
+      if(opening || (Number.isFinite(minimumZoom) && zoom<minimumZoom)){
+        zoom=opening?1.65:clampZoom(minimumZoom);
+        options.onZoom?.(Math.round(zoom*100));
+      }
+      const point=pos(tile.q,tile.r);
       if(fresh || boxW!==Math.round(host.getBoundingClientRect().width))pendingFocus=point;
-      centerAt(...point);schedule();}},
+      centerAt(...point);schedule();
+    },
     setReliefView(show){
       const next=Boolean(show);if(next===reliefView)return;
       manualCamera();cancelAnimationFrame(tween);

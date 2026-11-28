@@ -110,7 +110,7 @@ export function chartViewInsets() {
   const viewport=app.getBoundingClientRect();
   // At phone sizes the drawers slide above the map. Fit uses its resting view
   // so opening the orders sheet never causes a spontaneous camera movement.
-  const placement=app.querySelector('.work-sitebar:not([hidden])');
+  const placement=document.querySelector('#production-modal[open]') || app.querySelector('.work-sitebar:not([hidden])');
   const left=placement ? bounds(placement).right-viewport.left+6 :
     compactScreen.matches ? 0 : bounds(panels.get('plan').panel).right-viewport.left;
   const right=compactScreen.matches ? 0 : viewport.right-bounds(panels.get('command').panel).left;

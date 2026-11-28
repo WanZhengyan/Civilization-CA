@@ -203,3 +203,20 @@ test('destroy removes input handlers and scheduled painting',t=>{
   assert.equal(h.removed,true);assert.equal(h.events.size,0);assert.equal(h.captures.size,0);
   h.emit('keydown',{key:'Enter'});assert.equal(h.selected.length,0);
 });
+
+test('production focus returns from a distant city to the open map beside the drawer',t=>{
+  const insets={left:150,right:210,top:72,bottom:90};
+  const h=harness(t,{insets});
+  h.atlas.reset();h.atlas.focus('6,6');h.flush();
+  insets.left=416;
+  h.atlas.focus('0,0',{minimumZoom:1.65});h.flush();
+  const center=chartViewport(1100,760,insets);
+  const projected=h.project(...pos(0,0));
+  assert.ok(Math.hypot(projected[0]-center.x,projected[1]-center.y)<1e-7);
+  assert.equal(h.zooms.at(-1),165);
+  h.atlas.zoomBy(1.3);h.flush();
+  const closer=h.zooms.at(-1);
+  h.atlas.focus('6,6',{minimumZoom:1.65});h.flush();
+  assert.equal(h.zooms.at(-1),closer);
+  assert.equal(h.underlying(center.x,center.y),'6,6');
+});
