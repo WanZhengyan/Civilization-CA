@@ -103,3 +103,12 @@ test('the launch office compares construction sites only in campaigns that permi
   c.queue={item:'orbitalSurvey',progress:38,required:60};assert.match(read(s).find(r=>r.desk==='launch').detail,/38\/60/);
   s.victoryMode='conquest';assert.ok(!read(s).some(r=>r.desk==='launch'));
 });
+
+test('priority briefing caps its list, keeps each department accessible and handles quiet turns',async()=>{
+  const {advisorAgenda}=await import('../docs/advisors-ui.js');
+  const cards=['food','science','civic','treasury','recovery'].map(desk=>({desk}));
+  assert.deepEqual(advisorAgenda(cards).visible,cards.slice(0,3));
+  assert.deepEqual(advisorAgenda(cards,'knowledge').visible,cards.slice(1,3));
+  assert.deepEqual(advisorAgenda(cards,'all').visible,cards);
+  assert.deepEqual(advisorAgenda([],'cities'),{groups:[],topic:'brief',visible:[]});
+});

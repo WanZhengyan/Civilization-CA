@@ -1,14 +1,17 @@
 import {SCIENCE_PROJECT,allowsScience} from "./victory-rules.js";
-import {getRecoveryForecast,UNIT_TYPES} from "./rules.js";
-import {getFreightManifest} from "./rules.js";
 import {freightCourse} from "./freight-course.js";
-import {getResourceLedger} from "./rules.js";
 import {isProduce,materialShipmentGain,SHIPMENT} from "./resources.js";
 import {councilCourse} from "./council-path.js";
 import {housingCapacity} from "./population.js";
 import {scoutingRoutes} from "./scout-routes.js";
+import {
+  BUILDINGS, IMPROVEMENTS, RESOURCES, UNIT_TYPES, getBorderCharter, getCitizenWorkforce,
+  getCityExpansions, getCityYield, getCivicOptions, getFreightManifest, getMap, getPopulationReport,
+  getProductionOptions, getRecoveryForecast, getResearchOptions, getResourceLedger, getRouteDetail,
+  getSettlementAssessment, getUnitOptions
+} from './rules.js';
+
 // Advisors read only the seat's projected chart. They never issue orders.
-import {getCityExpansions,getBorderCharter,getCivicOptions,getResearchOptions,BUILDINGS,getMap,getPopulationReport,getCitizenWorkforce,getCityYield,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
 import {roomSeatTurn} from './room-turn.js';
 import {translate} from './i18n.js';
 
