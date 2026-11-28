@@ -1,5 +1,9 @@
 # Campaign updates
 
+## Resolve orders from the turn button
+
+The bottom-right button takes you to an available research choice, a civic, an idle city's production, or a unit waiting for orders. Select a task to open the relevant council, city, or map location. A unit can spend its movement or skip the rest of this turn’s reminders. You can still select a skipped unit manually while it has movement. When the list is clear, the button offers **End turn** or **Mark ready** in a shared team turn.
+
 ## Spend influence from the campaign map
 
 Open **Influence / 影响力** to see your balance, where your next turn’s income comes from, and the orders available to your civilization. After founding a city, compare the natural expansion forecast with paying 6 influence for the same visible neutral parcel now. A paid expansion uses the city's accumulated border progress and starts the next claim at zero. Each city can use this order once per round.
