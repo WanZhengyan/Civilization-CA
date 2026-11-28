@@ -429,6 +429,13 @@ Base sight radius|基础视野半径
 section(`
 Manage citizens|管理居民
 City planning|城市规划
+Current → proposed|当前 → 调整后
+City production per turn|城市每回合生产力
+Civilization science per turn|文明每回合科研
+Apply focus|采用工作重心
+Current focus|当前工作重心
+Proposed work assignments|调整后的工作地块
+Choose site on map|在地图上选址
 Citizen focus|居民工作重心
 Worked districts|居民工作地块
 Food / production / science per worker|每名居民的粮食 / 生产力 / 科研点
@@ -446,6 +453,7 @@ Residents / housing|居民 / 住房
 Completed|已建成
 Housing full|住房已满
 Residential quarter|住宅区
+Housing capacity|住房容量
 Housing investments|住房建设
 Plan housing|规划住房
 Under construction|正在建设

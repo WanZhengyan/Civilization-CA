@@ -26,7 +26,7 @@ import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
 import {openCityHall,paintCityHall} from './city-hall.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
-import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
+import {getPopulationReport} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
 import {addPolicyPanel,updateCivicAgenda} from "./policy-panel.js";
 import {draftOrder, orderButtons, orderReview, paintSiteBar, siteOrderAllowed} from './work-orders.js';
@@ -293,7 +293,7 @@ function cityQueue(city){
   if(!q)return '<p class="inspect-caption idle-status"><i></i> This city is ready to produce.</p>';
   const turns=projectTurns(city);
   const remaining=q.progress>=q.required?'Awaiting deployment':turnsText(turns)+' left';
-  return '<div class="queue-info">'+illustration(q.item)+'<div class="queue-name"><strong><span>Producing</span> · <span>'+esc(items[q.item]||q.item)+'</span></strong><small>'+remaining+'</small>'+(q.site?'<small><span>Construction tile</span> · '+esc(mapRegion.byId[q.site]?.name||q.site)+' · '+esc(q.site)+'</small>':'')+'</div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
+  return '<div class="queue-info">'+illustration(q.item)+'<div class="queue-name"><strong><span>Producing</span> · <span>'+esc(items[q.item]||q.item)+'</span></strong><small>'+remaining+'</small>'+(q.site?'<small><span>Construction tile</span> · <span>'+esc(mapRegion.byId[q.site]?.name||q.site)+'</span> · '+esc(q.site)+'</small>':'')+'</div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
 }
 function depositStrip(id){
   return RESOURCES[id] ? '<div class="deposit-strip">'+illustration(id)+'<small>Resource</small><strong>'+esc(RESOURCES[id].name)+'</strong></div>' : '';
@@ -791,9 +791,13 @@ function showCampusOpening(state,seat,key){
 }
 function populationLedger() {
   paintCityHall(view.state,view.seat,mayOrder());
-  paintCitizenLedger(view.state,view.seat,mayOrder(),city=>({
-    population:getPopulationReport(view.state,city.id),workforce:getCitizenWorkforce(view.state,city.id),projects:getProductionOptions(view.state,city.id)
-  }));
+  paintCitizenLedger(view.state,view.seat,mayOrder(),city=>getProductionOptions(view.state,city.id,{replace:true}));
+}
+function reviewHousing(cityId,item) {
+  const city=ownCities().find(c=>c.id===cityId);
+  if(!city || !mayOrder())return;
+  const option=getProductionOptions(view.state,city.id,{replace:true}).find(o=>o.item===item && o.enabled);
+  if(option) startPlacement(draftOrder(city,option,false),city);
 }
 function chooseOrder(key){
   if(moveDraft){moveDraft=null;updateMap();}
@@ -804,7 +808,7 @@ function chooseOrder(key){
   }
   if(key==="citizens"){
     const c=cityAt(selectedTile);
-    if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}),(city,item)=>Game.doAction({type:"produce",city,item}));populationLedger()}
+    if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}),reviewHousing);populationLedger()}
     return;
   }
   if(key==="works-host"){
