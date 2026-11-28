@@ -804,11 +804,14 @@ function drawCombat(){
   const enemy=forecast.defenderType==="wild"?WILDS[defender.type].name:defender.type?items[defender.type]:defender.name;
   const attack=forecastRow("Attacker",items[u.type],forecast.attackerHpBefore,forecast.attackerHpAfter,u.maxHp,forecastCounterLabel(forecast),faction(u.seat).color);
   const defend=forecastRow("Defender",enemy,forecast.defenderHpBefore,forecast.defenderHpAfterHit??forecast.defenderHpAfter,defender.maxHp,forecast.damage+" incoming damage",forecast.defenderType==="wild"?"#c38566":faction(defender.seat).color);
+  const garrison=(forecast.cityGarrison || []).filter(g=>Number.isFinite(g.hpAfter)).map(g=>
+    forecastRow('Garrison',items[g.type],g.hpBefore,g.hpAfter,g.maxHp,(g.hpBefore-g.hpAfter)+' incoming damage',faction(g.seat).color)
+  ).join('');
   const cityHint=cityAttackHint(forecast,UNIT_TYPES[u.type],cityAt(battle.tile));
   const notes=[...(forecast.roleNotes||[]),...(cityHint?[cityHint]:[])].map(note=>'<li>'+esc(note)+'</li>').join('');
   const modifiers=notes?'<ul class="formation-notes">'+notes+'</ul>':'';
   const outcome=forecast.defenderType==="wild" && defender.type==="camp" && forecast.defeated?"Clearing the camp adds 12 capital to your treasury.":forecast.capture?"Your unit will capture this city.":forecast.attackerDefeated&&forecast.defeated?"Both units will fall.":forecast.attackerDefeated?"Your unit will fall in this attack.":forecast.defeated?"The defending unit will fall.":forecast.defenderType==="city" && !UNIT_TYPES[u.type].captures?captureOrderHint:"Both sides will hold their positions.";
-  el("combat-preview").innerHTML='<div class="forecast-grid">'+attack+defend+'</div>'+modifiers+'<p class="forecast-outcome">'+esc(outcome)+'</p>';
+  el("combat-preview").innerHTML='<div class="forecast-grid">'+attack+defend+garrison+'</div>'+modifiers+'<p class="forecast-outcome">'+esc(outcome)+'</p>';
   return true;
 }
 function openCombat(unit,tile){

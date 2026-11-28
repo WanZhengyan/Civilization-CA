@@ -81,7 +81,9 @@ test('allies cannot fight, contest, order or occupy each other’s assets, and c
   assert.deepEqual(hit.cityGarrison.map(g=>[g.id,g.seat]),[[guard,0]]);
   const attacked=applyAction(state,2,{type:'attack',unit:enemy,tile:city.tile});
   assert.equal(attacked.cities.find(c=>c.id===city.id).hp,hit.defenderHpAfter);
-  assert.equal(attacked.units.find(u=>u.id===guard).hp,state.units.find(u=>u.id===guard).hp);
+  assert.equal(attacked.units.find(u=>u.id===guard).hp,state.units.find(u=>u.id===guard).hp-Math.round(hit.damage/4));
+  const guardNotice=campaignView(attacked,0).intel.battles.at(-1);
+  assert.deepEqual(guardNotice.garrisonHits.map(g=>[g.seat,g.hpAfter]),[[0,attacked.units.find(u=>u.id===guard).hp]]);
   assert.equal(attacked.cities.find(c=>c.id===city.id).seat,1);
   assert.equal(attacked.phase,'playing');
   const doomed=structuredClone(state);doomed.cities.find(c=>c.id===city.id).hp=1;

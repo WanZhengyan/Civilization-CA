@@ -56,7 +56,7 @@ test('engineers exploit walls even when a garrison is present and friendly signa
   assert.equal(garrison.damage,covered.damage);
   assert.equal(garrison.defenderId,town.id);
   const next=applyAction(s,0,{type:'attack',unit:'a',tile:town.tile});
-  assert.equal(next.units.find(u=>u.id==='g').hp,s.units.find(u=>u.id==='g').hp);
+  assert.equal(next.units.find(u=>u.id==='g').hp,s.units.find(u=>u.id==='g').hp-Math.round(covered.damage/4));
   assert.equal(next.cities[1].hp,garrison.defenderHpAfter);
 });
 

@@ -677,11 +677,12 @@ Defender|防守方
 No retaliation|无反击伤害
 Finish the capture with a ground unit such as Militia.|用民兵等可占城的地面部队完成占领。
 On capture, the city garrison is defeated and removed.|城市陷落时，城内驻军将被击败并移除。
-City defenses take the damage. The garrison keeps its current HP.|伤害由城市承受，驻军保留当前生命值。
+Each garrison unit loses 25% of the HP lost by the city, rounded to the nearest whole point.|每支驻军受到城市实际损失生命值的 25% 作为伤害，四舍五入取整。
+Garrison|驻军
 This unit can weaken a city down to 1 HP.|此单位最多可将城市削弱至 1 点生命。
 Ranged strike|远程攻击
 Melee strike|近战攻击
-Against a rival city, attacks hit the city first. Ranged attacks draw no retaliation and leave at least 1 HP. A surviving capture-capable land unit can take the city and defeat its garrison. Every attack spends the remaining movement. Neutral raids use their own defenses.|进攻其他文明的城市时，攻击先扣城市生命值。远程攻击不会受到反击，城市至少保留 1 点生命。可占城的陆军若在反击后存活，即可夺城并消灭城内驻军。每次攻击都会耗尽剩余移动力。中立劫掠按其单独的防御规则结算。
+Attacks hit the city first. Each garrison unit takes 25% of the city’s actual HP loss, rounded to the nearest whole point. Ranged attacks draw no retaliation and leave the city at 1 HP or more. A surviving capture-capable land unit takes the city and defeats every remaining garrison unit. Attacking spends all remaining movement.|攻城时先扣城市生命值。每支驻军承受城市实际损失生命值的 25% 作为伤害，四舍五入取整。远程攻击不会受到反击，城市至少保留 1 点生命。具备占城能力且在反击后存活的陆军可以夺城，消灭全部剩余驻军。攻击会耗尽本回合剩余移动力。
 Your militia will capture this city.|你的民兵将占领这座城市。
 Both units will fall.|双方单位均会阵亡。
 Your unit will fall in this attack.|你的单位会在这次进攻中阵亡。

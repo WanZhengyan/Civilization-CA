@@ -595,6 +595,12 @@ test('a concurrent city strike requires a fresh damage and capture forecast even
     return captureRoomOrder(room,{type:'attack',unit:i?'observer-two':'observer-one',tile:city.tile});
   }));
   assert.equal(requests[1].action.defenderId,city.id);
+  // A changed occupant's HP alone invalidates a quote, even when city HP and unit IDs are unchanged.
+  s.units.find(u=>u.id==='garrison').hp=25;
+  f.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(s),code);
+  await f.call('POST',requests[0],host.token,409);
+  const refreshed=(await f.call('GET',{code},host.token)).room;
+  requests[0]=captureRoomOrder(refreshed,{type:'attack',unit:'observer-one',tile:city.tile});
   await f.call('POST',requests[0],host.token,200);
   await f.call('POST',requests[1],ally.token,409);
   const observed=(await f.call('GET',{code},ally.token)).room;

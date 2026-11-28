@@ -45,23 +45,27 @@ test('a lethal shot preserves last-unit sight, hides its unobserved origin and e
   assert.deepEqual(campaignView(game,1).intel.battles,[]);
 });
 
-test('city sieges preserve the garrison until occupation, including its original owner in the journal',()=>{
+test('a bombardment wounds each garrison by a quarter of actual city damage and ground capture removes the survivors',()=>{
   const game=battlefield();
   const city={...createClassicGame(['A','B']).cities[1],id:'harbor',name:'Sunset Harbor',seat:1,tile:'10,6',hp:24};
-  game.cities=[city];game.units=[piece('one',0,'ranged','9,6'),piece('two',0,'melee','10,7'),piece('guard',1,'melee',city.tile,2)];
+  game.cities=[city];game.units=[piece('one',0,'ranged','9,6'),piece('two',0,'melee','10,7'),piece('guard',1,'melee',city.tile,24),piece('weak',1,'ranged',city.tile,2)];
   const forecast=campaignView(game,0).intel.forecasts.one[city.tile];
   assert.equal(forecast.defenderId,city.id);assert.equal(forecast.retaliation,0);
   assert.equal(forecast.defenderHpAfter,1);assert.equal(forecast.capture,false);
+  assert.equal(forecast.damage,23);
+  assert.deepEqual(forecast.cityGarrison.map(g=>[g.hpBefore,g.hpAfter]),[[24,18],[2,0]]);
   let state=attack(game,'one',city.tile);
   const first=journal(state,1)[0];
   assert.equal(first.target.kind,'city');assert.equal(first.target.hpAfter,1);assert.equal(first.garrisonLost,undefined);
-  assert.equal(state.units.find(u=>u.id==='guard').hp,2);
+  assert.equal(state.units.find(u=>u.id==='guard').hp,18);assert.ok(!state.units.some(u=>u.id==='weak'));
+  assert.deepEqual(first.garrisonHits,[{seat:1,type:'melee',hpBefore:24,hpAfter:18},{seat:1,type:'ranged',hpBefore:2,hpAfter:0}]);
+  assert.match(describeBattle(first,state.players,getMap(state),1,'zh-CN').details,/24 → 18 生命/);
   state=attack(JSON.parse(JSON.stringify(state)),'two',city.tile);
   const [saved,second]=journal(state,1);
   assert.deepEqual(saved,first);assert.equal(second.id,first.id+1);
   assert.equal(second.outcome,'captured');assert.equal(second.targetLost,false);assert.deepEqual(second.garrisonLost,[{seat:1,type:'melee'}]);
-  assert.match(describeBattle(second,state.players,getMap(state),1,'en').details,/Garrison lost on capture/);
-  assert.match(describeBattle(second,state.players,getMap(state),1,'zh-CN').details,/城陷时损失的驻军/);
+  assert.match(describeBattle(second,state.players,getMap(state),1,'en').details,/Garrison .*18 → 0 HP · defeated/);
+  assert.match(describeBattle(second,state.players,getMap(state),1,'zh-CN').details,/驻军 .*18 → 0 生命 · 阵亡/);
   assert.equal(second.attacker.tile,'10,7');assert.equal(second.target.seat,1);
   assert.equal(second.target.kind,'city');assert.equal(second.target.name,'Sunset Harbor');
   assert.equal(second.target.hpAfter,0);assert.equal(state.cities[0].seat,0);
@@ -78,7 +82,7 @@ test('a garrison cannot let scouts or ranged units bypass city targeting restric
   game.units[0]=piece('wounded',0,'melee','9,6',1);
   const failed=attack(game,'wounded',city.tile);
   assert.equal(failed.cities[0].seat,1);assert.equal(failed.cities[0].hp,1);
-  assert.ok(failed.units.some(u=>u.id==='guard'));assert.ok(!failed.units.some(u=>u.id==='wounded'));
+  assert.equal(failed.units.find(u=>u.id==='guard').hp,UNIT_TYPES.melee.maxHp);assert.ok(!failed.units.some(u=>u.id==='wounded'));
 });
 
 test('battle journals bound the history and continue numbering across a saved campaign',()=>{

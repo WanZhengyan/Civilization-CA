@@ -55,7 +55,7 @@ export {CAMPAIGN_MAPS, validMapId, validMapSize} from './maps.js';
 import {prepareBattle} from './battle-reports.js';
 import {TRAINING_XP,chooseDrill,drillAttack,drillDefense,recordExperience,attackTrainingNote,defenseTrainingNote,counterTrainingNote} from './combat-training.js';
 import {fieldPosition,holdGround} from './field-position.js';
-import {attackMode} from './attack-mode.js';
+import {attackMode,garrisonImpact} from './attack-mode.js';
 import {barbarianRound,seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
 
 export const MAX_ROUNDS = 30;
@@ -1413,7 +1413,7 @@ function calculateCombatPreview(state,unitId,target) {
   const advances = melee && movementCost(state,unit,target)>0 && attackerHpAfter > 0 && (capture || (defeated && !town));
   return {
     attackMode:mode, defenderType: defender ? 'unit' : 'city', defenderId: opponent.id, roleNotes:role.notes,
-    ...(town && {cityGarrison:occupants.map(g=>({id:g.id,seat:g.seat,type:g.type}))}),
+    ...(town && {cityGarrison:occupants.map(g=>garrisonImpact(g,damage,capture))}),
     damage, retaliation, capture, defeated, advances, attackerDefeated: attackerHpAfter === 0,
     attackerHpBefore: unit.hp, defenderHpBefore: opponent.hp, attackerHpAfter, defenderHpAfterHit,
     defenderHpAfter: capture ? Math.ceil(town.maxHp / 2) : defenderHpAfterHit
@@ -1433,9 +1433,8 @@ function resolveAttack(state, unit, target) {
   const recordResult = prepareBattle(state, unit, defender, result);
   const name = isUnit ? UNIT_TYPES[defender.type].name+' in '+getMap(state).byId[target].name : defender.name;
   defender.hp = result.defenderHpAfter;
+  for (const hit of result.cityGarrison || []) unitOrNull(state,hit.id).hp=hit.hpAfter;
   if (result.capture) {
-    const defeatedGarrison=new Set(result.cityGarrison.map(g=>g.id));
-    state.units=state.units.filter(other=>!defeatedGarrison.has(other.id));
     defender.seat = unit.seat;
     defender.borderProgress = 0;
     delete defender.festival;
@@ -1463,7 +1462,7 @@ function resolveAttack(state, unit, target) {
     if (isUnit) recordExperience(state,defender,UNIT_TYPES[defender.type],result.attackerDefeated);
   }
   if (result.advances) unit.tile = target;
-  if (result.attackerDefeated || result.defeated) state.units = state.units.filter(other => other.hp > 0);
+  if (result.attackerDefeated || result.defeated || result.cityGarrison?.some(hit=>hit.hpAfter===0)) state.units = state.units.filter(other => other.hp > 0);
   const text = UNIT_TYPES[unit.type].name+(result.capture ? ' captured ' : ' attacked ')+name+' for '+result.damage+' damage.';
   record(state, unit.seat, 'attack', text, target, {unit: unit.id, from, ...result});
   if (state.practice) { recordResult(); return; }
@@ -2156,7 +2155,10 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
           -Number(result.attackerDefeated)*40-result.defenderHpAfterHit*.1;
         if(difficulty==='hard') {
           if(result.attackerDefeated && !result.defeated && !result.capture)continue;
-          if(result.capture && result.cityGarrison?.length)value+=60;
+          for(const guard of result.cityGarrison || []) {
+            value+=(guard.hpBefore-guard.hpAfter)*.4;
+            if(guard.hpAfter===0)value+=40;
+          }
           if(result.defenderType==='city' && !UNIT_TYPES[unit.type].captures && !result.damage)continue;
           if(UNIT_TYPES[unit.type].range>1 && result.damage>0)value+=10;
         }

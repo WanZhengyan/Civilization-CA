@@ -109,7 +109,7 @@ test('the city order forecast explains naval bombardment, capture-capable troops
   const {cityAttackHint}=await import('../docs/attack-mode.js');
   const city={tile:'20,15'};
   assert.match(cityAttackHint({defenderType:'city'},{captures:false},city),/1 HP/);
-  assert.match(cityAttackHint({defenderType:'city',cityGarrison:[{}]},{captures:false},city),/keeps its current HP/);
+  assert.match(cityAttackHint({defenderType:'city',cityGarrison:[{}]},{captures:false},city),/25%/);
   assert.match(cityAttackHint({defenderType:'city',cityGarrison:[{}],capture:true},{captures:true},city),/defeated and removed/);
   assert.equal(cityAttackHint({defenderType:'city'},{captures:true},city),'');
   assert.equal(cityAttackHint({defenderType:'unit'},{captures:false},null),'');
