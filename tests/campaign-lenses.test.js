@@ -66,3 +66,12 @@ test('reconnaissance maps real scout destinations with the exact new-hex count',
   assert.ok(routes.length);assert.equal(rows.size,routes.length);
   routes.forEach(r=>assert.equal(rows.get(r.tile).rank,r.newHexes));
 });
+
+test('water links trace only charted water and never disclose isolated waters beyond fog',()=>{
+  const s=campaignView(capital(),0),map=getMap(s),water=map.tiles.filter(t=>t.terrain==='ocean');
+  const first=water.find(t=>map.neighbors(t.id).some(n=>map.byId[n].terrain==='ocean'));
+  const near=map.neighbors(first.id).find(n=>map.byId[n].terrain==='ocean'),far=water.find(t=>t.id!==first.id && t.id!==near && !map.neighbors(near).includes(t.id) && !map.neighbors(first.id).includes(t.id));
+  s.intel.explored=[first.id,near,far.id];s.cities[0].portTile=first.id;
+  const rows=surveyLayer(s,0,'water');assert.equal(rows.size,3);assert.equal(rows.get(first.id).band,0);
+  assert.match(rows.get(near).en,/1 water hexes/);assert.equal(rows.get(far.id).band,3);
+});

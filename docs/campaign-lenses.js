@@ -1,3 +1,4 @@
+import {waterDistances,waterKind} from './water-navigation.js';
 import {getUnitOptions} from './rules.js';
 import {scoutingRoutes} from './scout-routes.js';
 import {getCityExpansions,getBorderCharter} from './rules.js';
@@ -130,6 +131,27 @@ const lenses=[
           'Scout at '+scout.tile+' · reveals '+route.newHexes+' new hexes. Move cost '+route.cost+', '+route.left+' movement left.',
           '位于 '+scout.tile+' 的侦察兵 · 可新探明 '+route.newHexes+' 格。消耗 '+route.cost+' 移动力，剩余 '+route.left+'。',route.newHexes));
       }
+    }
+    return rows;
+  }),
+  definition('water','Harbor connections','港口水网','Follow charted water from your berths. Each tile reports its nearest home berth, sailing distance in hexes and number of connected home ports.','沿已探明水域查看己方泊位，点选水格查看最近的母港、航程格数和已连通的己方港口数。',[
+    ['Home berth','己方泊位'],['Single port','连接单港'],['Linked ports','多港互通'],['No charted link','尚无已知航线']
+  ],({map,own,known})=>{
+    const rows=new Map(),routes=new Map(),berths=new Set();
+    for(const city of own.filter(c=>c.portTile)){
+      berths.add(city.portTile);
+      for(const [id,distance] of waterDistances(city.portTile,map.byId,map.neighbors,Infinity,known)){
+        const list=routes.get(id)||[];list.push({city,distance});routes.set(id,list);
+      }
+    }
+    for(const id of known){
+      if(!waterKind(map.byId[id]))continue;
+      const ports=routes.get(id)||[];
+      if(!ports.length){rows.set(id,reading(3,'No charted water route to a home berth. Explore further or commission a harbor.',
+        '尚无通往己方泊位的已知水路。可继续勘探或建设港口。'));continue;}
+      const {city,distance}=ports.sort((a,b)=>a.distance-b.distance)[0];
+      rows.set(id,reading(berths.has(id)?0:ports.length>1?2:1,'Nearest berth · '+city.name+', '+distance+' water hexes. Connected home ports · '+ports.length+'.',
+        '最近泊位 · '+translate(city.name,'zh-CN')+'，水路 '+distance+' 格。已接通 '+ports.length+' 个己方港口。',ports.length));
     }
     return rows;
   }),
