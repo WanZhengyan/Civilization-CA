@@ -1160,8 +1160,9 @@ function completeCityProject(state,city) {
   const queue=city.queue,map=getMap(state);
   if (Object.hasOwn(UNIT_TYPES,queue.item)) {
     const spawnTile=deploymentTile(state,city,queue.item);
-    if (!spawnTile) return;
+    if (!spawnTile || settlerPopulationReason(city)) return;
     const recruit=spawn(state,city.seat,queue.item,spawnTile);
+    if (queue.item==='settler') city.population-=SETTLER_RESIDENT_COST;
     recruit.moves=0;
     if(UNIT_TYPES[queue.item].domain==='sea' && state.waterways)recruit.launchedFrom=city.id;
   } else {

@@ -33,3 +33,17 @@ test('population one and two block production, replacement and direct or rushed 
     }
   }
 });
+
+test('buying a settler deducts one resident only on successful deployment and a repeated order is stale',()=>{
+  const state=capital(),city=state.cities[0];
+  city.population=3;
+  const gold=option(state).gold;
+  const payload={type:'buyProduction',city:city.id,item:'settler',expected:revisionOf(city),gold};
+  const bought=applyAction(state,0,payload);
+  assert.equal(bought.cities[0].population,2);
+  assert.equal(bought.players[0].capital,state.players[0].capital-gold);
+  assert.equal(bought.units.filter(u=>u.type==='settler').length,1);
+  assert.throws(()=>applyAction(bought,0,payload),/Production changed/);
+  assert.equal(option(bought).enabled,false);
+  assert.equal(city.population,3);
+});
