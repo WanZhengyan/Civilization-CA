@@ -8,6 +8,7 @@ function run(mapId, seats, opening) {
   const hash = createHash("sha256");
   const counts = {moves: 0, attacks: 0, captures: 0, citiesFounded: 0, unitsTrained: 0,
     buildingsCompleted: 0, improvements: 0, technologies: 0, civics: 0, shipsLaunched: 0, fisheries: 0};
+  const orderCounts = {};
   let orders = 0, openingPlayed = false;
   while (state.phase === "playing") {
     // These fixed openings let a production change be compared across versions.
@@ -19,6 +20,7 @@ function run(mapId, seats, opening) {
       : chooseBotAction(state);
     const next = applyAction(state, state.turn, action);
     orders++;
+    orderCounts[action.type] = (orderCounts[action.type] || 0) + 1;
     assert.ok(orders <= 10000, "A campaign failed to terminate within the playtest budget.");
     hash.update(JSON.stringify(action) + "\n");
 
@@ -52,7 +54,7 @@ function run(mapId, seats, opening) {
   }
   assert.ok(state.winners.length, "A finished campaign must have a winner.");
   hash.update(JSON.stringify(state));
-  return {mapId, seats, opening, rounds: state.round, ...counts, victory: state.victoryReason,
+  return {mapId, seats, opening, rounds: state.round, ...counts, orderCounts, victory: state.victoryReason,
     winners: state.winners.map(seat => FACTIONS[state.players[seat].faction].name),
     replayHash: hash.digest("hex")};
 }
