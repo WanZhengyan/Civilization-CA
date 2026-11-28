@@ -90,3 +90,22 @@ test('multiple city festivals end separately even when a building opens between 
   assert.equal(incomeHorizon(25,7,2,2,bonuses),4);
   assert.equal(incomeHorizon(26,7,2,2,bonuses),5);
 });
+
+test('ordinary buildings enter the matching council investment list when their technology is learned',()=>{
+  let state=createGame([{name:'Planner',civilization:'arroyo'}],'la',{seed:624101,practice:true});
+  state=applyAction(state,0,{type:'found',unit:state.units[0].id});
+  assert.ok(!councilInvestments(campaignView(state,0),0).some(q=>['academy','printingHouse'].includes(q.item)));
+  for(const [item,tech,resource,bonus] of [['academy','cartography','science',2],['printingHouse','electricity','culture',3]]) {
+    const scenario=structuredClone(state);
+    scenario.players[0].technologies=[tech];
+    const view=campaignView(scenario,0);
+    const quote=councilInvestments(view,0).find(q=>q.item===item);
+    assert.ok(quote);
+    assert.equal(quote[resource],bonus);
+    assert.equal(quote.fee,0);
+    const bought=applyAction({...scenario,players:scenario.players.map(p=>({...p,capital:200}))},0,
+      {type:'buyProduction',city:quote.city,item,site:quote.site,expected:0,gold:3*getProductionOptions(scenario,quote.city).find(o=>o.item===item).required});
+    assert.equal(getStats(bought,0)[resource+'Income']-getStats(scenario,0)[resource+'Income'],quote[resource]);
+    assert.ok(!councilInvestments(campaignView(bought,0),0).some(q=>q.item===item));
+  }
+});
