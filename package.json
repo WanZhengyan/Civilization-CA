@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/WanZhengyan/Civilization-CA.git"
   },
-  "version": "6.6.0",
+  "version": "6.7.0",
   "private": true,
   "type": "module",
   "description": "A bilingual, turn-based strategy game of exploration and city building across California",
@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "node dev.mjs",
     "test": "node --test",
-    "playtest": "node scripts/playtest.mjs"
+    "playtest": "node scripts/playtest.mjs",
+    "playtest:city": "node scripts/playtest-city.mjs"
   }
 }

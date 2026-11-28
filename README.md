@@ -4,7 +4,7 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 **[Play the Pasadena tutorial](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Start a solo campaign](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Play with friends](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v6.6.0 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
+[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v6.7.0 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
 
 ![Civilization CA running in English on the Los Angeles campaign map](./docs/art/campaign-guide-en.webp)
 
@@ -14,9 +14,11 @@ The tutorial opens on the Los Angeles map with a settler at Pasadena and no riva
 
 Three decisions will get you through the opening.
 
-1. **What does the city need?** Agronomy increases food. Workshop Engineering increases production. Either can be your first technology. Start training a Scout if you want to see more land while the city works.
+1. **What does the city need?** Start with a Scout to explore. A city can train or buy its next Settler once it has 3 residents. One resident leaves when the unit deploys, so a city of 3 goes back to 2. Choose Agronomy for food or Workshop Engineering to unlock the Workshop and speed up construction.
 2. **Do you need the next hex now?** Open **Influence** to see which parcel your city will gain from natural growth. You can wait, or spend 6 influence to take that parcel immediately. The panel shows the location, time saved and balance after purchase.
 3. **Who still needs orders?** The button at the lower right opens the next unfinished decision. It will take you to an idle city or a unit with movement left. **Skip this turn** keeps the unit in place and preserves its remaining movement if you change your mind. With all decisions resolved, the button becomes **End turn**.
+
+For income, research Land Surveying to unlock the Shop. For science, follow that branch to Topographic Mapping and build an Academy. Each city can build its own Academy. The four university wonders are unique across the map.
 
 The next turn’s recap shows which projects finished. Use the field guide in the game for details about resources, buildings, units and wonders.
 
