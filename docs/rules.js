@@ -564,6 +564,15 @@ export function getPopulationReport(state, cityId) {
   return city ? foodForecast(city, getCityYield(state, cityId).food, extraHousing(state.players[city.seat])) : null;
 }
 export function getStats(state,seat) {
+  return calculateStats(state,seat);
+}
+
+// Use the same signed contributions for the bank deposit and the player's receipt.
+export function getInfluenceIncomeSources(state,seat) {
+  return calculateStats(state,seat,true).influenceSources;
+}
+
+function calculateStats(state,seat,includeSources=false) {
   let territories=0,developments=0,landmarks=0,improvements=0,productive=0,fisheries=0;
   for (const tile of getMap(state).tiles) {
     const holding = state.board[tile.id];
@@ -580,6 +589,11 @@ export function getStats(state,seat) {
   const monuments=cities.filter(c=>c.buildings.includes('monument')).length;
   const settled = count > 0 || state.opening !== 'settlers';
   const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
+  const sources = {
+    settlement:2*Number(settled), territory:Math.floor(territories/3), development:developments-productive,
+    monuments:3*monuments, civics:knows(state,seat,'civics') ? count : 0,
+    festivals:0, charters:0, atlases:0, exposition:0, portDues:0
+  };
   const stats = {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
     score:state.legacyFinalScores?.[seat] ?? score,
     cultureIncome:cities.reduce((n,c)=>n+universityYield(c,'culture'),0)+Number(settled)+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
@@ -588,38 +602,41 @@ export function getStats(state,seat) {
       +(adopted(state,seat,'publicRadio') ? 2*count : 0),
     capitalIncome:3*Number(settled)+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +2*cities.filter(c=>tradesBySea(state,c)).length,
-    influenceIncome:2*Number(settled)+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
+    influenceIncome:0};
   for (const city of cities) {
     const festival=festivalBenefit(state,city);
     stats.cultureIncome+=festival?.culture || 0;
     stats.capitalIncome+=festival?.capital || 0;
-    stats.influenceIncome+=festival?.influence || 0;
+    sources.festivals+=festival?.influence || 0;
     const charter=charterBenefit(state,city);
     stats.capitalIncome+=charter?.capital || 0;
-    stats.influenceIncome+=charter?.influence || 0;
+    sources.charters+=charter?.influence || 0;
   }
   const bonus=capitalBonus(state,seat,cities.find(city=>city.originalSeat===seat));
   stats.scienceIncome+=bonus.science || 0;
-  if (state.campaignVariety===1) stats.influenceIncome+=cities.reduce((n,city)=>n+(city.atlasCopies || 0),0);
+  if (state.campaignVariety===1) sources.atlases=cities.reduce((n,city)=>n+(city.atlasCopies || 0),0);
   stats.capitalIncome+=bonus.capital || 0;
   if (adopted(state,seat,'harborCommission')) stats.capitalIncome += 3 * cities.filter(c=>c.buildings.includes('harbor')).length;
   if (adopted(state,seat,'normalSchools')) stats.scienceIncome += 2 * cities.filter(c=>c.population>=3).length;
   if (adopted(state,seat,'exposition')) {
     const campuses=cities.reduce((n,c)=>n+c.buildings.filter(id=>WONDERS[id]).length,0);
     stats.cultureIncome += 2 * campuses;
-    stats.influenceIncome += 2 * campuses;
+    sources.exposition=2 * campuses;
   }
   if (knows(state,seat,'electricity')) stats.scienceIncome+=2*cities.filter(c=>c.buildings.includes('workshop')).length;
   if (adopted(state,seat,'landRegistry')) stats.capitalIncome+=count;
   if (adopted(state,seat,'publicLibraries')) stats.cultureIncome+=2*monuments;
   if (adopted(state,seat,'regionalPlanning')) stats.cultureIncome+=cities.filter(c=>c.population>=5).length;
+  stats.influenceIncome=Object.values(sources).reduce((total,n)=>total+n,0);
   const policy=state.players[seat].policy;
   if (policy==='lectures') { stats.cultureIncome+=count; stats.scienceIncome-=count; }
   if (policy==='grants') { stats.scienceIncome+=2*count; stats.capitalIncome-=2*count; }
   if (policy==='portDues') {
     stats.capitalIncome+=3*cities.filter(c=>c.buildings.includes('harbor')).length;
-    stats.influenceIncome=Math.max(0,stats.influenceIncome-count);
+    sources.portDues=-Math.min(stats.influenceIncome,count);
+    stats.influenceIncome+=sources.portDues;
   }
+  if (includeSources) stats.influenceSources=sources;
   return stats;
 }
 function refreshScores(state) { state.players.forEach((p,i)=>{p.score=getStats(state,i).score;}); }
