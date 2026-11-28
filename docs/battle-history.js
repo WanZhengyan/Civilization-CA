@@ -155,9 +155,10 @@ export function mountBattleReports(atlas) {
     received.setAttribute('aria-pressed',String(incomingOnly));
     const matching=incomingOnly ? attacks : records;
     if(!matching.length)fragment.append(make('p','battle-empty',words(incomingOnly?'noIncoming':'empty',locale)));
-    for(const r of [...matching].reverse()) {
-      const d=describe(r),row=make('article','battle-record');
-      row.append(make('span','battle-meta',d.category+'  ·  '+d.turn),make('h3','',d.action),make('p','',d.details));
+    for(let index=matching.length-1;index>=0;index--) {
+      const r=matching[index],d=describe(r),row=make('article','battle-record');
+      const step=(index+1)+' / '+matching.length+'  ·  '+d.turn;
+      row.append(make('span','battle-meta',d.category+'  ·  '+step),make('h3','',d.action),make('p','',d.details));
       const readings=witnessedHealth(r,locale);
       if(readings.length){
         const health=make('dl','battle-health');
@@ -170,7 +171,7 @@ export function mountBattleReports(atlas) {
       }
       const foot=make('div','battle-record-foot'),loc=make('span','',d.location),b=button('battle-link');
       b.textContent=words('replay',getLanguage());b.dataset.report=String(r.id);
-      b.setAttribute('aria-label',b.textContent+' · '+d.location+' · '+d.action);foot.append(loc,b);row.append(foot);fragment.append(row);
+      b.setAttribute('aria-label',b.textContent+' · '+step+' · '+d.location+' · '+d.action);foot.append(loc,b);row.append(foot);fragment.append(row);
     }
     const scroll=body.scrollTop,active=document.activeElement?.dataset.report;
     body.replaceChildren(fragment);
