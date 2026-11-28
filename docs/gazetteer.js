@@ -1,4 +1,4 @@
-import {counties,cities,places,regions,sourceOf,census2010,landArea,landmarks,coastalWorks} from './gazetteer-data.js';
+import {counties,cities,places,regions,sourceOf,census2010,landArea,landmarks,coastalWorks,regionalEconomy} from './gazetteer-data.js';
 
 import {getMap} from './rules.js';
 
@@ -38,6 +38,8 @@ function profile(view,lang,campaign) {
     '<dl class="gaz-facts">'+fact(tr(['Residents · 1 April 2020','常住人口 · 2020 年 4 月 1 日'],lang),number(place.pop,lang))+fact(tr(['Residents · 1 April 2010','常住人口 · 2010 年 4 月 1 日'],lang),number(census2010[place.id],lang))+fact(tr(['Change over the decade','十年净变化'],lang),number(place.pop-census2010[place.id],lang))+
     fact(tr(['Land area · 2020','土地面积 · 2020 年'],lang),number(area(place,view.unit),lang)+' '+areaUnit(view.unit,lang))+'</dl>'+
     '<div class="gaz-switch">'+unitControls(view,lang)+'</div>'+
+    (Object.hasOwn(regionalEconomy.jobs.values,place.id)?'<h4>'+tr(['County economy','县域经济'],lang)+'</h4><dl class="gaz-facts">'+
+      Object.values(regionalEconomy).map(m=>fact(tr(m.label,lang),number(m.values[place.id],lang))).join('')+'</dl>':'')+
     link(sourceOf(place),tr(['US Census Bureau · QuickFacts','美国人口普查局 · QuickFacts'],lang))+mapControl(place,lang,campaign)+'</article>';
 }
 const area=(p,unit)=>landArea[p.id]*(unit==='km'?2.589988110336:1);
@@ -50,9 +52,11 @@ const metrics={
 };
 function comparison(view,lang) {
   const records=view.scale==='county'?counties:cities;
-  const metric=metrics[view.metric];
+  const available=view.scale==='county'?{...metrics,...Object.fromEntries(Object.entries(regionalEconomy).map(([id,m])=>
+    [id,{label:m.label,value:p=>m.values[p.id]}]))}:metrics;
+  const metric=available[view.metric] || metrics.population;
   const sorted=[...records].sort((a,b)=>metric.value(b,view.unit)-metric.value(a,view.unit));
-  const controls=Object.entries(metrics).map(([id,m])=>choice('metric-'+id,tr(m.label,lang),id===view.metric)).join('');
+  const controls=Object.entries(available).map(([id,m])=>choice('metric-'+id,tr(m.label,lang),m===metric)).join('');
   return '<div class="gaz-switch">'+choice('cities',tr(['Cities','城市'],lang),view.scale==='city')+
     choice('counties',tr(['Counties','县'],lang),view.scale==='county')+'</div><div class="gaz-switch">'+controls+'</div>'+
     (view.metric==='density'?'<div class="gaz-switch">'+unitControls(view,lang)+'</div><p>'+tr(['Residents divided by reported land area in ','人口除以普查公布的土地面积，单位为'],lang)+areaUnit(view.unit,lang)+'</p>':'')+
@@ -86,8 +90,11 @@ export function gazetteerContent(view,lang,campaign) {
 export function gazetteerAction(view,action,campaign) {
   if(action.startsWith('locate-'))return knownAnchor([...places,...landmarks,...coastalWorks].find(p=>p.id===action.slice(7)),campaign);
   if(['unit-mi','unit-km'].includes(action))view.unit=action.slice(5);
-  if(action.startsWith('metric-') && Object.hasOwn(metrics,action.slice(7)))view.metric=action.slice(7);
-  if(action==='cities' || action==='counties')view.scale=action==='cities'?'city':'county';
+  if(action.startsWith('metric-') && (Object.hasOwn(metrics,action.slice(7)) || view.scale==='county' && Object.hasOwn(regionalEconomy,action.slice(7))))view.metric=action.slice(7);
+  if(action==='cities' || action==='counties'){
+    view.scale=action==='cities'?'city':'county';
+    if(view.scale==='city' && Object.hasOwn(regionalEconomy,view.metric))view.metric='population';
+  }
   if(action.startsWith('place-')){
     const place=places.find(p=>p.id===action.slice(6));
     if(place){view.region=place.region;view.place=place.id;view.section='profile';}

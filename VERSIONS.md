@@ -67,3 +67,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.57 | Locate real municipalities on charted campaign districts without exposing fog |
 | 7.0.58 | Open agency field dossiers for canyon trails, bay defenses and coastal navigation |
 | 7.0.59 | Travel a dated coastal construction timeline from the municipal pier to Coronado |
+| 7.0.60 | Investigate county jobs, commutes, household income and retail activity by reporting period |

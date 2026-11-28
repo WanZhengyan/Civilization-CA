@@ -60,3 +60,11 @@ export const coastalWorks=[
     context:['The 2.12-mile bridge opened on August 3. The corresponding campaign district is the Coronado end of the crossing.','这座 2.12 英里的桥梁于 8 月 3 日通车。在战役中对应科罗纳多一侧。'],
     publisher:['City of San Diego · Digital Archives','圣迭戈市政府 · 数字档案'],url:'https://www.sandiego.gov/digitalarchives/new-discoveries/bridging-the-Gap'}
 ];
+
+// Columns follow the county array; reporting periods and units are part of each measure.
+export const regionalEconomy={
+  income:{label:['Median household income · 2020–2024 (2024 USD)','家庭收入中位数 · 2020–2024（2024 年美元）'],values:{'la-county':90112,'sf-county':140970,'sd-county':106268}},
+  commute:{label:['Mean commute · workers aged 16+ · 2020–2024 (minutes)','平均通勤时间 · 16 岁及以上就业者 · 2020–2024（分钟）'],values:{'la-county':30.4,'sf-county':30.4,'sd-county':25.5}},
+  jobs:{label:['Total employment · 2023 (jobs)','就业岗位总数 · 2023（个）'],values:{'la-county':3987736,'sf-county':740362,'sd-county':1391721}},
+  retail:{label:['Retail sales per capita · 2022 (USD)','人均零售额 · 2022（美元）'],values:{'la-county':22010,'sf-county':36554,'sd-county':18777}}
+};

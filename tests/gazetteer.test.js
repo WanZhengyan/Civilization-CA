@@ -53,3 +53,9 @@ test('players can step along three coastal engineering milestones and locate the
   assert.ok(body.indexOf('1909')<body.indexOf('1937'));assert.match(body,/2.12-mile/);assert.match(body,/preceding project · 32/);
   gazetteerAction(v,'work-golden-gate');assert.match(gazetteerContent(v,'zh-CN').body,/5 月 28 日/);
 });
+test('county economies compare four separately dated measures and prevent applying county income to a city',()=>{
+  const v=newGazetteer();gazetteerAction(v,'section-compare');gazetteerAction(v,'counties');gazetteerAction(v,'metric-income');
+  let body=gazetteerContent(v,'en').body;assert.ok(body.indexOf('140,970')<body.indexOf('106,268'));assert.match(body,/2024 USD/);
+  gazetteerAction(v,'cities');assert.equal(v.metric,'population');
+  gazetteerAction(v,'place-sd-county');assert.match(gazetteerContent(v,'zh-CN').body,/1,391,721/);
+});
