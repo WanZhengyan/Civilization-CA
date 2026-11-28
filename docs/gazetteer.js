@@ -1,4 +1,4 @@
-import {counties,cities,places,regions,sourceOf,census2010} from './gazetteer-data.js';
+import {counties,cities,places,regions,sourceOf,census2010,landArea} from './gazetteer-data.js';
 
 const labels = {profile:['Places','地点档案'],compare:['Compare','横向对比']};
 const esc = value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -9,7 +9,7 @@ const fact = (label,value)=>'<div><dt>'+esc(label)+'</dt><dd>'+esc(value)+'</dd>
 const link = (url,label)=>'<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>';
 
 export function newGazetteer(region='la') {
-  return {region:Object.hasOwn(regions,region)?region:'la',section:'profile',place:null,scale:'city',metric:'population'};
+  return {region:Object.hasOwn(regions,region)?region:'la',section:'profile',place:null,scale:'city',metric:'population',unit:'mi'};
 }
 function profile(view,lang) {
   const current=places.filter(p=>p.region===view.region);
@@ -18,23 +18,30 @@ function profile(view,lang) {
   const tabs=Object.entries(regions).map(([key,names])=>choice('region-'+key,tr(names,lang),key===view.region)).join('');
   return '<div class="gaz-switch" role="group" aria-label="'+tr(['Region','地区'],lang)+'" >'+tabs+'</div><div class="gaz-places" role="group" aria-label="'+tr(['County or city','县或城市'],lang)+'">'+list+'</div>'+
     '<article class="gaz-place"><h3>'+esc(tr(place.name,lang))+'</h3><p>'+esc(tr(place.scope,lang))+'</p>'+
-    '<dl class="gaz-facts">'+fact(tr(['Residents · 1 April 2020','常住人口 · 2020 年 4 月 1 日'],lang),number(place.pop,lang))+fact(tr(['Residents · 1 April 2010','常住人口 · 2010 年 4 月 1 日'],lang),number(census2010[place.id],lang))+fact(tr(['Change over the decade','十年净变化'],lang),number(place.pop-census2010[place.id],lang))+'</dl>'+
+    '<dl class="gaz-facts">'+fact(tr(['Residents · 1 April 2020','常住人口 · 2020 年 4 月 1 日'],lang),number(place.pop,lang))+fact(tr(['Residents · 1 April 2010','常住人口 · 2010 年 4 月 1 日'],lang),number(census2010[place.id],lang))+fact(tr(['Change over the decade','十年净变化'],lang),number(place.pop-census2010[place.id],lang))+
+    fact(tr(['Land area · 2020','土地面积 · 2020 年'],lang),number(area(place,view.unit),lang)+' '+areaUnit(view.unit,lang))+'</dl>'+
+    '<div class="gaz-switch">'+unitControls(view,lang)+'</div>'+
     link(sourceOf(place),tr(['US Census Bureau · QuickFacts','美国人口普查局 · QuickFacts'],lang))+'</article>';
 }
+const area=(p,unit)=>landArea[p.id]*(unit==='km'?2.589988110336:1);
+const areaUnit=(unit,lang)=>tr(unit==='km'?['km²','平方公里']:['mi²','平方英里'],lang);
+const unitControls=(v,lang)=>['mi','km'].map(unit=>choice('unit-'+unit,areaUnit(unit,lang),v.unit===unit)).join('');
 const metrics={
+  density:{label:['Residents per land area · 2020','人口密度 · 2020 年'],value:(p,unit)=>p.pop/area(p,unit)},
   population:{label:['Residents in 2020','2020 年人口'],value:p=>p.pop},
   growth:{label:['Population change, 2010–20 (%)','2010–20 人口变化（%）'],value:p=>100*(p.pop-census2010[p.id])/census2010[p.id]}
 };
 function comparison(view,lang) {
   const records=view.scale==='county'?counties:cities;
   const metric=metrics[view.metric];
-  const sorted=[...records].sort((a,b)=>metric.value(b)-metric.value(a));
+  const sorted=[...records].sort((a,b)=>metric.value(b,view.unit)-metric.value(a,view.unit));
   const controls=Object.entries(metrics).map(([id,m])=>choice('metric-'+id,tr(m.label,lang),id===view.metric)).join('');
   return '<div class="gaz-switch">'+choice('cities',tr(['Cities','城市'],lang),view.scale==='city')+
     choice('counties',tr(['Counties','县'],lang),view.scale==='county')+'</div><div class="gaz-switch">'+controls+'</div>'+
+    (view.metric==='density'?'<div class="gaz-switch">'+unitControls(view,lang)+'</div><p>'+tr(['Residents divided by reported land area in ','人口除以普查公布的土地面积，单位为'],lang)+areaUnit(view.unit,lang)+'</p>':'')+
     '<table class="gaz-table"><caption>'+tr(['US Census Bureau · highest first','美国人口普查局 · 由高到低'],lang)+'</caption><thead><tr><th scope="col">'+
     tr(['Place','地点'],lang)+'</th><th scope="col">'+tr(metric.label,lang)+'</th></tr></thead><tbody>'+
-    sorted.map(p=>'<tr><th scope="row">'+choice('place-'+p.id,tr(p.name,lang))+'</th><td>'+number(metric.value(p),lang)+'</td></tr>').join('')+'</tbody></table>';
+    sorted.map(p=>'<tr><th scope="row">'+choice('place-'+p.id,tr(p.name,lang))+'</th><td>'+number(metric.value(p,view.unit),lang)+'</td></tr>').join('')+'</tbody></table>';
 }
 export function gazetteerContent(view,lang,campaign) {
   const modes=Object.entries(labels).map(([id,names])=>choice('section-'+id,tr(names,lang),id===view.section)).join('');
@@ -44,6 +51,7 @@ export function gazetteerContent(view,lang,campaign) {
     (Object.keys(labels).length>1?'<nav class="gaz-nav" aria-label="'+tr(['Gazetteer sections','地名志栏目'],lang)+'">'+modes+'</nav>':'')+body+'</section>'};
 }
 export function gazetteerAction(view,action) {
+  if(['unit-mi','unit-km'].includes(action))view.unit=action.slice(5);
   if(action.startsWith('metric-') && Object.hasOwn(metrics,action.slice(7)))view.metric=action.slice(7);
   if(action==='cities' || action==='counties')view.scale=action==='cities'?'city':'county';
   if(action.startsWith('place-')){

@@ -26,3 +26,9 @@ test('decadal comparison uses the 2010 base and exposes both original counts',()
   assert.match(gazetteerContent(v,'en').body,/12\.78/);
   gazetteerAction(v,'place-oakland');assert.match(gazetteerContent(v,'en').body,/390,724/);
 });
+test('land comparison converts area consistently and can use metric units in both views',()=>{
+  const v=newGazetteer();gazetteerAction(v,'place-berkeley');gazetteerAction(v,'unit-km');
+  assert.match(gazetteerContent(v,'en').body,/27\.01 km²/);
+  gazetteerAction(v,'section-compare');gazetteerAction(v,'metric-density');
+  assert.match(gazetteerContent(v,'zh-CN').body,/单位为平方公里/);
+});

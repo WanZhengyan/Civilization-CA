@@ -29,3 +29,10 @@ export const census2010={
   'santa-monica':89736,'san-francisco':805235,oakland:390724,berkeley:112580,'san-diego':1307402,
   coronado:18912,'chula-vista':243916
 };
+
+// Square miles of land in the 2020 Census QuickFacts geography table.
+export const landArea={
+  'la-county':4059.28,'sf-county':46.91,'sd-county':4210.23,'los-angeles':469.49,pasadena:22.96,
+  'santa-monica':8.41,'san-francisco':46.91,oakland:55.93,berkeley:10.43,'san-diego':325.88,
+  coronado:7.81,'chula-vista':49.64
+};
