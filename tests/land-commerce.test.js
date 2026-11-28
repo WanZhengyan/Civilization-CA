@@ -76,3 +76,14 @@ test('express wagons charge three more gold only for a genuinely earlier deliver
   assert.equal(next.players[0].capital,state.players[0].capital-3);
   assert.ok(next.players[0].caravans[0].turns<route.turns);
 });
+test('recalling cargo retraces the traveled corridor and returns stock without paying freight',()=>{
+  const {state,home,dest}=market();state.players[0].stockpile={citrus:2};state.cities[1].buildings=['shop'];
+  let next=applyAction(state,0,{type:'dispatchCaravan',origin:home,destination:dest,item:'citrusMarket'});
+  next=applyAction(next,0,{type:'end'});
+  const wagon=next.players[0].caravans[0];assert.ok(wagon.cursor>0);
+  next=applyAction(next,0,{type:'recallWagon',wagon:wagon.id});
+  assert.equal(next.players[0].stockpile.citrus,0);
+  assert.throws(()=>applyAction(next,0,{type:'recallWagon',wagon:wagon.id}));
+  next=applyAction(next,0,{type:'end'});
+  assert.equal(next.players[0].stockpile.citrus,2);assert.equal(next.players[0].tradeReceipt.paid,0);
+});

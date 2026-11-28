@@ -43,10 +43,11 @@ export function commerceLedger(state,seat,city,busy,esc) {
       offers.map(o=>dispatchButton(o,enabled,esc)).join('')+'</li>';
   }).join('');
   const active=(player.caravans || []).map(w=>'<p>'+cargoText(w.item)+' · '+cityText(state,w.destination,esc)+' · '+
-    (w.remaining?w.remaining+L(' harvests left',' 次收获后抵达'):L('Awaiting a friendly destination','等待己方收货城市'))+'</p>').join('');
+    (w.returning?L('Returning cargo','原货返程')+' · ':'')+(w.remaining?w.remaining+L(' harvests left',' 次收获后抵达'):L('Awaiting a friendly destination','等待己方收货城市'))+
+    (!w.returning && state.cities.some(c=>c.id===w.origin && c.seat===seat)?'<button type="button" class="cargo-order" data-caravan-order="recallWagon" data-wagon="'+esc(w.id)+'"'+(!enabled?' disabled':'')+'>'+L('Recall cargo','召回原货')+'</button>':'')+'</p>').join('');
   const receipt=player.tradeReceipt;
   return '<section class="commerce-ledger" translate="no"><h3>'+L('Overland trade','陆路贸易')+'</h3><p>'+
     L('Wagon routes from ','商队起点：')+cityText(state,city.id,esc)+ '</p>'+(city.freightTimber?'<p>'+L('Lumber yard reserve','木料库存产能')+' · '+city.freightTimber+'</p>':'')+active+
-    (receipt?'<p>'+L('Last delivery','上次到货')+' · '+cargoText(receipt.item)+' · '+cityText(state,receipt.destination,esc)+' · '+rewardText(receipt)+'</p>':'')+
+    (receipt?'<p>'+L('Last delivery','上次到货')+' · '+cargoText(receipt.item)+' · '+cityText(state,receipt.destination,esc)+' · '+(receipt.returning?L('Cargo returned; no freight paid','原货已退还，无运费收益'):rewardText(receipt))+'</p>':'')+
     (rows?'<ul>'+rows+'</ul>':'<p>'+L('Found a second city and explore a land corridor between them to open a wagon route.','建立第二座城市，并探明两城之间的陆路，便可开通商队路线。')+'</p>')+'</section>';
 }

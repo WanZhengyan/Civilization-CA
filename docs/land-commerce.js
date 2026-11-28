@@ -54,7 +54,7 @@ export function dispatchCaravan(state,seat,order,routes) {
   player.capital-=offer.fare;
   origin.food-=(cargo.food || 0);
   if(cargo.resource)player.stockpile={...player.stockpile,[cargo.resource]:player.stockpile[cargo.resource]-cargo.stock};
-  player.caravans=[...(player.caravans || []),{...offer,id:'wagon-'+state.round+'-'+seat,remaining:offer.turns,launched:state.round}];
+  player.caravans=[...(player.caravans || []),{...offer,id:'wagon-'+state.round+'-'+seat,path:route.path,cursor:0,remaining:offer.turns,launched:state.round}];
   player.lastCaravan=state.round;
 }
 export function harvestCaravans(state,seat) {
@@ -64,8 +64,15 @@ export function harvestCaravans(state,seat) {
   for(const wagon of player.caravans){
     const remaining=Math.max(0,wagon.remaining-1);
     const city=state.cities.find(c=>c.id===wagon.destination && c.seat===seat);
-    if(remaining || !city){pending.push({...wagon,remaining});continue;}
+    const cursor=Math.min(wagon.path.length-1,wagon.cursor+wagon.speed);
+    if(remaining || !city){pending.push({...wagon,remaining,cursor});continue;}
     const cargo=CARGO[wagon.item];
+    if(wagon.returning){
+      city.food=(city.food || 0)+(cargo.food || 0);
+      if(cargo.resource)player.stockpile={...player.stockpile,[cargo.resource]:(player.stockpile?.[cargo.resource] || 0)+cargo.stock};
+      player.tradeReceipt={...wagon,arrived:state.round,paid:0};
+      continue;
+    }
     city.food=(city.food || 0)+(cargo.deliverFood || 0);
     if(cargo.science)player.science=(player.science || 0)+cargo.science;
     if(cargo.production) city.freightTimber=(city.freightTimber || 0)+cargo.production;
@@ -80,4 +87,14 @@ export function workTimber(city) {
   const spent=Math.min(3,city.freightTimber,Math.max(0,city.queue.required-city.queue.progress));
   city.freightTimber-=spent;
   city.queue.progress+=spent;
+}
+
+export function recallWagon(state,seat,id) {
+  const player=state.players[seat],fleet=player.caravans || [];
+  const wagon=fleet.find(w=>w.id===id);
+  if(!wagon || wagon.returning || !state.cities.some(c=>c.id===wagon.origin && c.seat===seat))
+    throw new Error('Choose an outgoing wagon with a friendly home city.');
+  const path=wagon.path.slice(0,wagon.cursor+1).reverse();
+  const turns=Math.max(1,Math.ceil((path.length-1)/wagon.speed));
+  player.caravans=fleet.map(w=>w!==wagon?w:{...w,path,cursor:0,returning:true,destination:w.origin,remaining:turns});
 }
