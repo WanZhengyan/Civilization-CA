@@ -790,7 +790,7 @@ function teamStandings(state){
 function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
-  if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending,escapeHTML,getStats(state,currentSeat()))};
+  if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML,getStats(state,currentSeat()))};
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
@@ -985,6 +985,12 @@ async function init({ render, locate, toast: showToast }) {
   soundtrack=installSoundtrack(dialog);
   dialog.addEventListener('change', e => {
     const {name,value} = e.target;
+    if (modal==='supplies' && name==='supply-city') {
+      supplyCity=value;
+      drawDialog();
+      dialog.querySelector('select[name="supply-city"]')?.focus({preventScroll:true});
+      return;
+    }
     if (name==='rivals' || name==='soloDifficulty') {
       if(name==='rivals') {
         selectedRivals=Number(value);

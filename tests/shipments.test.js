@@ -69,3 +69,22 @@ test('a real settler founds, commissions a builder, and harvests a nearby survey
   assert.equal(s.players[0].lastShipment,s.round);
   assert.ok(!projectForSeat(s,1).log.some(e=>e.type==='shipment'&&e.seat===0));
 });
+
+test('a delivery quotes only the usable production, follows the selected city and settles at harvest',async()=>{
+  const {ledgerBody}=await import('../docs/resource-ledger.js');
+  const {s,city}=market();
+  const idle={...city,id:'idle',name:'Idle city',queue:null};
+  s.cities.unshift(idle);
+  city.queue={item:'settler',required:14,progress:12};
+  const markup=(state,id)=>ledgerBody(state,0,getResourceLedger(state,0),id,false,String);
+  assert.match(markup(s,idle.id),/data-act="cargo-stone-city" disabled/);
+  const active=markup(s,city.id);
+  assert.match(active,/data-act="cargo-stone-city">Send production \+2/);
+  assert.match(active,/12 → 14 \/ 14/);
+  assert.match(active,/Only 2 of the 4/);
+  const shipped=applyAction(s,0,{type:'shipment',resource:'stone',market:'city',city:city.id});
+  assert.deepEqual(shipped.cities.find(c=>c.id===city.id).queue,{item:'settler',required:14,progress:14});
+  assert.equal(shipped.cities[0].queue,null);
+  assert.equal(shipped.players[0].stockpile.stone,0);
+  assert.match(markup(shipped,city.id),/Production is full/);
+});
