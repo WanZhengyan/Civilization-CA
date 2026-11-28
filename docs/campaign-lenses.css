@@ -1,0 +1,10 @@
+.campaign-lens {padding:.45rem 0 .7rem;border-bottom:1px solid #506263;margin-bottom:.45rem}
+.layers-menu .campaign-lens label {display:grid;gap:.3rem;font:600 .9rem/1.3 var(--sans);color:#ecd9a8}
+.campaign-lens select {width:100%;min-height:2.5rem;background:#25353a;color:#f1efdf;border:1px solid #718787;border-radius:4px;font:inherit;padding:.3rem}
+.campaign-lens p,.lens-inspection p {font:normal .84rem/1.45 var(--sans);color:#d2ded9;margin:.4rem 0}
+.lens-legend {display:flex;gap:.32rem .65rem;flex-wrap:wrap}
+.lens-legend span {display:inline-flex;align-items:center;gap:.35rem;color:#edeadb;font:.8rem/1.35 var(--sans)}
+.lens-legend i {height:.62rem;width:.62rem;border-radius:2px}
+.lens-inspection {padding:.45rem .6rem;border-inline-start:2px solid #89b9bc;background:#233236;margin:.45rem 0;border-radius:2px}
+.lens-inspection strong {color:#bbdddd;font:600 .88rem var(--sans)}
+.lens-legend[hidden],.lens-inspection[hidden],.campaign-lens p[hidden] {display:none}

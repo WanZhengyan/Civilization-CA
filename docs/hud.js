@@ -1,5 +1,6 @@
 import {mountCampaignExplorer} from './campaign-explorer.js';
 import {mountAdvisors} from './advisors-ui.js';
+import {mountCampaignLenses} from './campaign-lenses.js';
 import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {mountTutorialCoach} from './tutorial-coach.js';
 import {mountTurnResults} from './turn-results.js';
@@ -547,6 +548,7 @@ function currentFreightCourse(){
   const unit=getUnit();
   return freightTarget && unit?.seat===view.seat ? freightCourse(view.state,unit,freightTarget,selectedOptions?.moves || []) : null;
 }
+let updateCampaignLens;
 function updateMap(){
   paintMove();
   drawPlacement();
@@ -566,7 +568,8 @@ function updateMap(){
       if(freightBar._markup!==html){freightBar.innerHTML=html;freightBar._markup=html;}
     }
   }
-  atlas.update({frontierHexes:moveDraft?.frontier,reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  const campaignLens=updateCampaignLens?.(view.state,view.seat,selectedTile,matchKey);
+  atlas.update({campaignLens,frontierHexes:moveDraft?.frontier,reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -1137,6 +1140,11 @@ function mount(){
   el("inspect-map").onclick=()=>{order=order==="inspect"?"":"inspect";hoverId=null;redraw()};
   el("layers").onclick=()=>toggleLayers(el("layers-menu").hidden);
   mountSurveyControls(atlas);
+  updateCampaignLens=mountCampaignLenses(el('layers-menu'),el('entity-info'),redraw,id=>{
+    if(!explored.has(id))return;
+    select(id);order='inspect';kind='tile';selectedUnit=null;
+    atlas.focus(id,true);redraw();updateHint(id);
+  });
   updateWaterKey=mountWaterKey(el('layers-menu'),id=>{
     if(!explored.has(id) || !chartedWaterSites(mapRegion,explored).some(site=>site.id===id))return;
     select(id);kind='tile';selectedUnit=null;order='inspect';toggleLayers(false);

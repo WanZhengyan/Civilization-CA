@@ -1,3 +1,4 @@
+import {paintCampaignLens} from './campaign-lenses.js';
 import {inkWaterways,inkRiverBridge,waterCaptions} from './water-chart.js';
 import {battleMarkers,paintBattleReport} from './battle-overlay.js';
 import {boxesOverlap,cityFont,cityLabelAt,paintCityLabels,planCityLabels} from './city-labels.js';
@@ -1156,6 +1157,9 @@ export function createAtlas(host, options = {}) {
     if(model.fog)ctx.restore();
     if(grid){ctx.save();if(reliefView)ctx.globalAlpha=.48;inkHexGrid(ctx,mesh,s);ctx.restore();}
     if(model.fog){ctx.save();ctx.clip(model.fog.window);}
+    paintCampaignLens(ctx,model.campaignLens,model,hexPath,{
+      left:cx-boxW/(2*s),right:cx+boxW/(2*s),top:cy-boxH/(2*sy),bottom:cy+boxH/(2*sy)
+    },s);
     renderOverlay(ctx,model.fog ? model.fog.knownTiles : tiles,model,s,labels,territories,unitBoxes,cityBoxes);
     if(model.fog){
       // Previously explored land stays readable, while live figures still
@@ -1367,6 +1371,7 @@ export function createAtlas(host, options = {}) {
         const sites=o.settlementSurvey||[];
         model.settlementSites={now:sites.filter(s=>s.timing==='now').map(s=>s.tile),nextTurn:sites.filter(s=>s.timing==='next'||s.timing==='next-turn').map(s=>s.tile)};
       }
+      if(Object.hasOwn(o,'campaignLens'))model.campaignLens=o.campaignLens;
       if(Object.hasOwn(o,'frontierHexes'))model.frontierHexes=o.frontierHexes;
       if(Object.hasOwn(o,'reviewPath'))model.reviewPath=o.reviewPath;
       if(Object.hasOwn(o,'previewPath'))model.previewPath=o.previewPath||[];
