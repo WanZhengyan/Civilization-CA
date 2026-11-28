@@ -61,6 +61,12 @@ export function openFieldDesk(read,act,preview) {
     if(r.player.fieldCamp)html+='<p>'+local('Current camp','现有营地')+' · '+esc(r.player.fieldCamp.tile)+'</p>';
     html+=button('camp',local('Pitch camp here','在此扎营'),ready && r.canCamp)+'</details>';
     if(Object.keys(r.filed).length)html+='<h3>'+local('Filed reports','已交付报告')+'</h3><ul>'+Object.entries(r.filed).map(([id,f])=>'<li>'+label(studies[id].name)+' · '+local('Turn ','回合 ')+f.filed+'</li>').join('')+'</ul>';
+    if(r.tours.length)html+='<details><summary>'+local('Touring exhibitions','巡回展览')+'</summary><p>'+local('With at least two cities, pack a filed study at its home city for 2 gold. Deliver to a different friendly city for 6 culture. Each study can tour once.','拥有至少两座城市时，在报告收藏地支付 2 金币装展，送到另一座己方城市展出可获 6 文化。每份报告可巡展一次。')+'</p>'+r.tours.map(t=>{
+      const name=label(studies[t.key].name);
+      if(t.loan?.host)return '<p>✓ '+name+' · '+esc(state.cities.find(c=>c.id===t.loan.host)?.name || t.loan.host)+'</p>';
+      if(t.carry)return button('hostTour',local('Open exhibition','举办展览')+' · '+name,ready && t.host,t.key);
+      return button('loadTour',local('Pack exhibit','装运展品')+' · '+name+' · '+esc(t.origin?.name || local('Home city lost','已失去收藏城市')),ready && t.load,t.key);
+    }).join('')+'</details>';
     if(r.filed.corridor)html+='<p>'+local('Habitat dividend this harvest','本次收获的栖息地收益')+' · '+corridorIncome(state,unit.seat)+' '+local('culture','文化')+'</p>';
     body.innerHTML=html;
     body.querySelector('select[data-study]')?.addEventListener('change',e=>{selected=e.target.value;paint();});

@@ -100,13 +100,22 @@ export function fieldReport(state,unit,map,distance) {
     u.moves>0 && distance(u.tile,unit.tile)<=1 && !player.fieldCrews?.[u.id]) : [];
   const lost=mission ? [] : Object.entries(player.fieldCrews || {}).filter(([id,job])=>job.notes.length && !filed[job.key] &&
     !activeKeys.has(job.key) && !state.units.some(u=>u.id===id && u.seat===unit.seat));
+  const tours=Object.entries(filed).map(([key,report])=>{
+    const origin=ownCities.find(c=>c.id===report.city),loan=player.fieldLoans?.[key];
+    const carrier=loan && state.units.find(u=>u.seat===unit.seat && u.id===loan.unit);
+    const carry=carrier?.id===unit.id;
+    const host=ownCities.find(c=>c.id!==report.city && distance(c.tile,unit.tile)<=1);
+    const loaded=Object.values(player.fieldLoans || {}).some(l=>l.unit===unit.id && !l.host);
+    const load=Boolean(!loan?.host && !carrier && !loaded && origin && ownCities.length>1 && distance(origin.tile,unit.tile)<=1 && player.capital>=2);
+    return {key,loan,origin,host,carry,load};
+  });
   const spec=studies[mission?.key];
   const complete=Boolean(spec && notes.length===spec.steps.length);
   const canSample=Boolean(spec && !complete && unit.moves>0 && spec.sample(context));
   const sponsor=mission && state.cities.find(c=>c.id===mission.sponsor && c.seat===unit.seat);
   const archive=state.board[unit.tile]?.fieldStation==='archive';
   const canMail=Boolean(archive && sponsor && complete && !spec.reward.food && player.influence>=2);
-  return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,relay,lost,open,spec,complete,canSample,context};
+  return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,relay,lost,tours,open,spec,complete,canSample,context};
 }
 
 // Only recommend currently visible endpoints. Dynamic plot conditions and archive
@@ -155,6 +164,22 @@ export function fieldOrder(state,seat,action,map,distance) {
     storeCrew(player,unit.id,record[1]);
     unit.moves--;
     return 'Recovered a lost field notebook.';
+  }
+  if(action.item==='loadTour' || action.item==='hostTour'){
+    const tour=r.tours.find(t=>t.key===action.target);
+    if(action.item==='loadTour' && tour?.load){
+      player.capital-=2;
+      player.fieldLoans={...player.fieldLoans,[tour.key]:{unit:unit.id,departure:state.round}};
+      unit.moves--;
+      return 'Touring exhibition dispatched.';
+    }
+    if(action.item==='hostTour' && tour?.carry && tour.host && !tour.loan.host){
+      player.fieldLoans={...player.fieldLoans,[tour.key]:{...tour.loan,host:tour.host.id,round:state.round}};
+      player.culture+=6;
+      unit.moves--;
+      return 'Touring exhibition opened.';
+    }
+    throw new Error('This field order is unavailable here.');
   }
   if(action.item==='start') {
     const entry=r.open.find(([key])=>key===action.study);

@@ -99,3 +99,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.89 | Hand a commissioned study and its original notes between adjacent scout teams |
 | 7.0.90 | Preview reachable observation and filing sites with movement left to work |
 | 7.0.91 | Recover a lost expedition at the crew’s last recorded observation site |
+| 7.0.92 | Carry filed exhibits between friendly cities to open one-time touring exhibitions |

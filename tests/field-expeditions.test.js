@@ -142,3 +142,14 @@ test('a replacement scout can salvage a lost crew’s notebook only at its last 
   const next=recover(s);assert.equal(next.players[0].capital,0);assert.equal(next.players[0].fieldCrews.replacement.notes[0].tile,home);
   assert.equal(next.players[0].fieldCrews[lost.id],undefined);assert.throws(()=>recover(next));
 });
+
+test('a travelling exhibition moves a filed report between two different owned cities and pays culture once',()=>{
+  let s=start();const home=s.cities[0],map=getMap(s);
+  s.players[0].fieldReports={transect:{key:'transect',city:home.id,notes:[],filed:1}};
+  const tour=(state,item)=>order(state,item,'transect',{target:'transect'});
+  assert.throws(()=>tour(s,'loadTour'));const location=map.tiles.find(t=>t.terrain==='plains' && hexDistance(t.id,home.tile)>4);
+  s.cities.push({...home,id:'host-town',tile:location.id,originalSeat:null});s=tour(s,'loadTour');assert.equal(s.players[0].capital,38);
+  assert.throws(()=>tour(s,'loadTour'));assert.throws(()=>tour(s,'hostTour'));const before=s.players[0].culture;
+  s=tour(travel(s,location.id),'hostTour');assert.equal(s.players[0].culture,before+6);assert.equal(s.players[0].fieldLoans.transect.host,'host-town');
+  assert.throws(()=>tour(s,'hostTour'));assert.throws(()=>tour(travel(s,home.tile),'loadTour'));
+});
