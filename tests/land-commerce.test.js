@@ -134,3 +134,16 @@ test('Public Works grades both directions once and shortens an actual standard v
   next=applyAction(next,0,{type:'dispatchCaravan',origin:home,destination:dest,item:'provisions'});
   next=applyAction(next,0,{type:'end'});assert.equal(next.players[0].tradeReceipt.paid,4);
 });
+test('reverse mail runs consume one short-lived backhaul ticket and deliver culture and gold without creating another ticket',()=>{
+  const {state,home,dest}=market();
+  const mail={type:'dispatchCaravan',origin:dest,destination:home,item:'returnMail'};
+  assert.throws(()=>applyAction(state,0,mail));
+  let next=applyAction(state,0,{...mail,origin:home,destination:dest,item:'provisions'});
+  while(next.players[0].caravans.length)next=applyAction(next,0,{type:'end'});
+  const old=structuredClone(next);old.round+=4;assert.throws(()=>applyAction(old,0,mail));
+  let control=structuredClone(next);next=applyAction(next,0,mail);
+  while(next.players[0].caravans.length){next=applyAction(next,0,{type:'end'});control=applyAction(control,0,{type:'end'});}
+  assert.equal(next.players[0].culture-control.players[0].culture,3);
+  assert.equal(next.players[0].tradeReceipt.paid,3);
+  assert.deepEqual(next.players[0].mailTickets,{});
+});

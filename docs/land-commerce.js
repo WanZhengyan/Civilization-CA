@@ -29,6 +29,7 @@ function roadsFrom(start,originId,cities,map,explored) {
 }
 
 export const CARGO={
+  returnMail:{en:'Return mail',zh:'回程邮运',culture:3,market:3},
   fair:{en:'County fair contract',zh:'地区集市订单',stock:2,market:11},
   scholars:{en:'Traveling scholars',zh:'学者交流团',atOrigin:'academy',fare:6,science:7},
   citrusMarket:{en:'Citrus market consignment',zh:'柑橘批销',resource:'citrus',stock:2,atDestination:'shop',market:8,freight:true},
@@ -44,6 +45,8 @@ export function freightOffer(state,seat,route,item,service='standard') {
   if(cargo.atOrigin && !origin.buildings.includes(cargo.atOrigin))return null;
   if(cargo.atDestination && !destination.buildings.includes(cargo.atDestination))return null;
   const player=state.players[seat], fleet=player.caravans || [];
+  const mailKey=JSON.stringify([route.origin,route.destination]),mailThrough=player.mailTickets?.[mailKey];
+  if(item==='returnMail' && !(mailThrough>=state.round))return null;
   const season=Math.floor((state.round-1)/3);
   const [q,r]=destination.tile.split(',').map(Number);
   const resource=item==='fair'?['grain','citrus','timber'][(season+q+r)%3]:cargo.resource;
@@ -57,7 +60,7 @@ export function freightOffer(state,seat,route,item,service='standard') {
   const reason=item==='fair' && player.fairBookings?.[destination.id]===season?'booked':(departures.length>=capacity || departures.includes(origin.id))?'departure':fleet.length>=capacity?'crew':
     player.capital<fare?'fare':(origin.food || 0)<(cargo.food || 0)?'food':
     resource && (player.stockpile?.[resource] || 0)<cargo.stock?'stock':'';
-  return {origin:origin.id,destination:destination.id,item,service,speed,turns,fare,gold,reason,resource,...(item==='fair'?{season}: {})};
+  return {origin:origin.id,destination:destination.id,item,service,speed,turns,fare,gold,reason,resource,...(item==='returnMail'?{mailThrough}:{}),...(item==='fair'?{season}: {})};
 }
 export function dispatchCaravan(state,seat,order,routes) {
   const route=routes.find(r=>r.destination===order.destination);
@@ -67,6 +70,11 @@ export function dispatchCaravan(state,seat,order,routes) {
   player.capital-=offer.fare;
   origin.food-=(cargo.food || 0);
   if(offer.resource)player.stockpile={...player.stockpile,[offer.resource]:player.stockpile[offer.resource]-cargo.stock};
+  if(order.item==='returnMail'){
+    const tickets={...player.mailTickets};
+    delete tickets[JSON.stringify([route.origin,route.destination])];
+    player.mailTickets=tickets;
+  }
   if(order.item==='fair')player.fairBookings={...player.fairBookings,[route.destination]:offer.season};
   player.caravans=[...(player.caravans || []),{...offer,id:'wagon-'+state.round+'-'+seat+'-'+origin.id,path:route.path,cursor:0,remaining:offer.turns,launched:state.round}];
   const origins=player.caravanDay?.round===state.round?player.caravanDay.origins:[];
@@ -91,6 +99,12 @@ export function harvestCaravans(state,seat) {
       continue;
     }
     city.food=(city.food || 0)+(cargo.deliverFood || 0);
+    if(wagon.item!=='returnMail'){
+      const tickets=Object.fromEntries(Object.entries(player.mailTickets || {}).filter(([,through])=>through>=state.round));
+      tickets[JSON.stringify([city.id,wagon.origin])]=state.round+3;
+      player.mailTickets=tickets;
+    }
+    if(cargo.culture)player.culture=(player.culture || 0)+cargo.culture;
     if(cargo.science)player.science=(player.science || 0)+cargo.science;
     if(cargo.production) city.freightTimber=(city.freightTimber || 0)+cargo.production;
     player.capital+=wagon.gold;
@@ -119,7 +133,7 @@ export function recallWagon(state,seat,id) {
 export function diversionRoads(state,seat,id,map,explored) {
   const wagon=state.players[seat]?.caravans?.find(w=>w.id===id);
   const current=wagon?.path?.[wagon.cursor];
-  if(!current || wagon.returning)return [];
+  if(!current || wagon.returning || wagon.item==='returnMail')return [];
   const cargo=CARGO[wagon.item];
   const speed=wagon.service==='express'?6:3;
   const towns=state.cities.filter(c=>c.seat===seat && c.id!==wagon.destination &&

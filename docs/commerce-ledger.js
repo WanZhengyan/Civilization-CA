@@ -16,10 +16,11 @@ function costText(offer) {
   if(offer.fare)parts.push(offer.fare+L(' gold',' 金币'));
   if(offer.resource)parts.push(c.stock+' '+translate(RESOURCES[offer.resource].name));
   if(c.food)parts.push(c.food+L(' food',' 储粮'));
-  return parts.join(' + ');
+  return parts.join(' + ') || L('Return-mail ticket','回程邮票');
 }
 function rewardText(offer) {
   const c=CARGO[offer.item],parts=[];
+  if(c.culture)parts.push('+'+c.culture+L(' culture',' 文化'));
   if(c.science)parts.push('+'+c.science+L(' science',' 科研'));
   if(c.production)parts.push('+'+c.production+L(' yard production (up to 3 per harvest)',' 库存产能（每次收获最多用 3）'));
   if(c.deliverFood)parts.push('+'+c.deliverFood+L(' food',' 储粮'));
@@ -29,7 +30,7 @@ function rewardText(offer) {
 const reasons={booked:['Already reserved for this fair.','本期集市订单已被承接。'],fare:['Not enough treasury gold for the fare.','国库金币不足以支付旅费。'],stock:['Insufficient goods in the stockpile.','库存物资不足。'],departure:['A wagon has left this turn.','本回合已发车。'],crew:['Crew in transit.','商队正在途中。'],food:['Not enough stored food at the origin.','起点城市储粮不足。']};
 function dispatchButton(offer,enabled,esc) {
   const reason=reasons[offer.reason];
-  const window=offer.item==='fair'?' · '+L('book by round ','签约截止回合 ')+(offer.season+1)*3:'';
+  const window=offer.item==='returnMail'?' · '+L('ticket through round ','邮票有效至回合 ')+offer.mailThrough:offer.item==='fair'?' · '+L('book by round ','签约截止回合 ')+(offer.season+1)*3:'';
   return '<div class="commerce-offer"><strong>'+cargoText(offer.item)+'</strong><span>'+costText(offer)+' → '+rewardText(offer)+window+'</span>'+
     '<button type="button" class="cargo-order" data-caravan-order="dispatchCaravan" data-origin="'+esc(offer.origin)+'" data-destination="'+esc(offer.destination)+'" data-item="'+esc(offer.item)+'" data-season="'+(offer.season??'')+'" data-service="'+esc(offer.service)+'"'+
     (!enabled || reason?' disabled':'')+'>'+(offer.service==='express'?L('Express','加急'):L('Dispatch','发运'))+' · '+offer.turns+L(' harvests',' 次收获')+'</button>'+(reason?'<small>'+L(...reason)+'</small>':'')+'</div>';
