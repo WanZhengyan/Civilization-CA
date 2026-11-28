@@ -169,3 +169,30 @@ export function gradeRoad(state,seat,order,routes) {
   player.capital-=roadCost(route);
   player.wagonRoads=[...(player.wagonRoads || []),roadKey(route.origin,route.destination)];
 }
+
+export function planOverlandCommerce(state,seat,routesFor) {
+  const player=state.players[seat],towns=state.cities.filter(c=>c.seat===seat);
+  if(state.campaignVariety!==1 || towns.length<2 || player.lastCaravan===state.round ||
+     (player.caravans?.length || 0)>=tradeCapacity(state,seat))return null;
+  const routesByOrigin=new Map(),stock=player.stockpile || {};
+  let best;
+  const consider=(city,destination,item,priority)=>{
+    if(!routesByOrigin.has(city.id))routesByOrigin.set(city.id,routesFor(state,seat,city.id));
+    const route=routesByOrigin.get(city.id).find(r=>r.destination===destination.id);
+    const offer=route && freightOffer(state,seat,route,item);
+    if(!offer || offer.reason || offer.resource && (stock[offer.resource] || 0)<3)return;
+    const score=priority/offer.turns;
+    if(!best || score>best.score)best={score,order:{type:'dispatchCaravan',origin:city.id,destination:destination.id,item,...(item==='fair'?{season:offer.season}:{})}};
+  };
+  for(const city of towns){
+    for(const destination of towns){
+      if(city===destination)continue;
+      if(city.food>=10 && destination.food<4)consider(city,destination,'provisions',8);
+      if(destination.queue && !destination.freightTimber && (stock.timber || 0)>=3)consider(city,destination,'lumber',6);
+      if(player.capital<20 && destination.buildings.includes('shop') && (stock.citrus || 0)>=3)consider(city,destination,'citrusMarket',5);
+      if(player.capital<15 && Object.values(stock).some(n=>n>=3))consider(city,destination,'fair',4);
+      if(player.research && player.capital>=24 && city.buildings.includes('academy'))consider(city,destination,'scholars',3);
+    }
+  }
+  return best?.order || null;
+}

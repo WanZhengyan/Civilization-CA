@@ -157,3 +157,15 @@ test('the exchange compares funded bids across all cities and exposes dispatchab
   assert.equal(freightExchange(view,1,false,String),'');
   assert.match(freightExchange(view,0,true,String),/data-service="standard" disabled/);
 });
+import {planOverlandCommerce} from '../docs/land-commerce.js';
+test('rival freight planners serve hungry towns without emptying their own reserves or issuing duplicate orders',()=>{
+  const {state,home,dest}=market();
+  const view=campaignView(state,0),order=planOverlandCommerce(view,0,getLandRoutes);
+  assert.deepEqual(order,{type:'dispatchCaravan',origin:home,destination:dest,item:'provisions'});
+  const next=applyAction(state,0,order);
+  assert.equal(planOverlandCommerce(next,0,getLandRoutes),null);
+  state.cities[0].food=9;
+  assert.equal(planOverlandCommerce(state,0,getLandRoutes),null);
+  state.players[0].capital=30;state.players[0].research='writing';state.cities[0].buildings=['academy'];
+  assert.equal(planOverlandCommerce(state,0,getLandRoutes).item,'scholars');
+});

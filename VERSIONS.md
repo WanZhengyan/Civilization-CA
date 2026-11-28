@@ -58,3 +58,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.48 | Grade two-way wagon roads with Public Works to accelerate deliveries |
 | 7.0.49 | Carry return mail on earned three-round backhaul tickets |
 | 7.0.50 | Compare and dispatch the best funded bids across the intercity exchange |
+| 7.0.51 | Give rival governors supply, construction, market and scholarship priorities |

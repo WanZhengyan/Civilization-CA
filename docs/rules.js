@@ -1,4 +1,4 @@
-import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon,establishDepot,gradeRoad} from './land-commerce.js';
+import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon,establishDepot,gradeRoad,planOverlandCommerce} from './land-commerce.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
@@ -2180,6 +2180,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if (policy) return policy;
   const shipment=planShipment(state,seat);
   if(shipment)return shipment;
+  const wagon=planOverlandCommerce(state,seat,getLandRoutes);
+  if(wagon)return wagon;
   for (const city of state.cities) if (city.seat===seat && city.focusRound!==state.round) {
     const food=getPopulationReport(state,city.id);
     const focusResearch=player.research && pursuingOrbitalResearch(state,seat);
