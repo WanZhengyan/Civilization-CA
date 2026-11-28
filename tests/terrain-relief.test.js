@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {RELIEF_PITCH,reliefProject,reliefFacetLight,terrainReliefMesh,reliefRasterLayout,renderReliefAtlas} from '../docs/terrain-relief.js';
+import {RELIEF_PITCH,reliefProject,reliefFacetLight,terrainReliefMesh,reliefRasterLayout,renderReliefAtlas,reliefScenery,reliefDepth} from '../docs/terrain-relief.js';
 import {getMap} from '../docs/rules.js';
 import {pos,W,H} from '../docs/hex-survey.js';
 
@@ -59,4 +59,48 @@ test('unexplored terrain is absent from relief generation and cannot change an o
     const center=terrainReliefMesh(visible[0]);
     assert.deepEqual(center,terrainReliefMesh({...visible[0],resource:'gold',owner:3}),'private holdings do not steer terrain');
   }finally{if(previous===undefined)delete globalThis.OffscreenCanvas;else globalThis.OffscreenCanvas=previous;}
+});
+
+
+test('neighboring hills and mountains vary their silhouette instead of scaling one mound',()=>{
+  for(const terrain of ['hills','mountains']){
+    const silhouettes=new Set();
+    for(let q=0;q<8;q++)for(let r=0;r<4;r++){
+      const tile={q,r,id:q+','+r,terrain},[x,y]=pos(q,r),mesh=terrainReliefMesh(tile);
+      const maximum=Math.max(...mesh.flat().map(p=>p[2]));
+      const signature=mesh.flat().map(([a,b,z])=>[(a-x).toFixed(3),(b-y).toFixed(3),(z/maximum).toFixed(5)])
+        .sort((a,b)=>a[0].localeCompare(b[0])||a[1].localeCompare(b[1]));
+      silhouettes.add(JSON.stringify(signature));
+      const depths=mesh.map(face=>face.reduce((sum,p)=>sum+reliefDepth(p),0)/3);
+      assert.ok(depths.every((n,i)=>!i||n>=depths[i-1]));
+    }
+    assert.equal(silhouettes.size,32);
+  }
+});
+
+test('regional groves vary density and height while every projected unit clearing remains open',()=>{
+  const regions={};
+  for(const region of ['la','sf','sd']){
+    const counts=[],heights=[];
+    for(let q=0;q<8;q++)for(let r=0;r<4;r++)for(const terrain of ['forest','plains','urban','coast','hills','mountains']){
+      const tile={q,r,id:q+','+r,terrain},[x,y]=pos(q,r),objects=reliefScenery(tile,region);
+      assert.deepEqual(objects,reliefScenery({...tile,owner:3,resource:'gold'},region),'private holdings cannot alter background objects');
+      assert.ok(objects.every((p,i)=>!i||p.depth>=objects[i-1].depth));
+      for(const p of objects){
+        const width=p.width*(p.kind==='palm'?1.6:1),dx=p.x-x,dy=p.y-y;
+        const top=dy-(p.z+p.height*1.04)/RELIEF_PITCH,bottom=dy-p.z/RELIEF_PITCH+width;
+        assert.ok(Math.abs(dx)>=10+width || top>=11 || bottom<=-11,'canopy or roof must not cover the central selection pad');
+      }
+      if(terrain==='forest'){counts.push(objects.length);heights.push(...objects.map(p=>p.height));}
+    }
+    assert.ok(new Set(counts).size>1);
+    assert.ok(Math.max(...heights)-Math.min(...heights)>9);
+    regions[region]={trees:counts.reduce((sum,n)=>sum+n,0),height:heights.reduce((sum,n)=>sum+n,0)/heights.length};
+  }
+  assert.ok(regions.sf.trees>regions.la.trees&&regions.la.trees>regions.sd.trees);
+  assert.ok(regions.sf.height>regions.la.height&&regions.la.height>regions.sd.height);
+  // Equal screen projections can have different depth: tall objects on the
+  // rear row must not be ordered solely by their ground y coordinate.
+  assert.deepEqual(reliefProject([3,10,7]),reliefProject([3,20,14]));
+  assert.ok(reliefDepth([3,20,14])>reliefDepth([3,10,7]));
 });
