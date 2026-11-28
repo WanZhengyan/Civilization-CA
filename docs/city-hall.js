@@ -1,3 +1,4 @@
+import {FESTIVALS,festivalOptions} from './city-festivals.js';
 import {charterOptions} from './city-charters.js';
 import {illustration} from './illustrations.js';
 
@@ -13,6 +14,21 @@ function charterCards(state,seat,city,canAct) {
         '<button class="modal-tab" data-hall-choice="cityCharter" data-item="'+row.id+'">Review charter</button>')+'</div></div>';
   });
   return '<section><h3>Municipal charter</h3><p class="modal-muted">A city with two residents can spend 18 gold on one permanent charter. The charter stays with the city if it changes hands.</p>'+rows.join('')+'</section>';
+}
+
+function festivalCards(state,seat,city,canAct) {
+  const options=festivalOptions(state,seat,city);
+  if(!options.length) return '<section><h3>City festivals</h3><small>Adopt Municipal Charter to organize local festivals.</small></section>';
+  let body='<p class="modal-muted">Hosting costs 8 gold and 4 stored city food. After three festival harvests the city needs three more harvests to prepare another event.</p>';
+  body+='<p><span>Stored food</span> · '+city.food+'</p>';
+  if(city.festival) {
+    const current=FESTIVALS[city.festival];
+    return '<section><h3>'+current.name+'</h3><p>'+current.description+'</p><p><span>Festival harvests remaining</span> · '+city.festivalHarvests+'</p></section>';
+  }
+  if(city.festivalRecovery) return '<section><h3>City festivals</h3><p><span>Harvests before the next festival</span> · '+city.festivalRecovery+'</p></section>';
+  return '<section><h3>City festivals</h3>'+body+options.map(row=>'<div class="city-hall-card">'+illustration(row.art)+
+    '<div><strong>'+row.name+'</strong><p>'+row.description+'</p>'+(row.reason || !canAct ? '<small>'+esc(row.reason||'Wait for your turn.')+'</small>':
+    '<button class="modal-tab" data-hall-choice="cityFestival" data-item="'+row.id+'">Review festival</button>')+'</div></div>').join('')+'</section>';
 }
 
 export function openCityHall(id,onOrder) {
@@ -41,13 +57,14 @@ export function paintCityHall(state,seat,canAct) {
   const city=state.cities.find(c=>c.id===cityId && c.seat===seat);
   if(!city || state.campaignVariety!==1){dialog.close();return;}
   previous=[state,seat,canAct];
-  let body=charterCards(state,seat,city,canAct);
+  let body=charterCards(state,seat,city,canAct)+festivalCards(state,seat,city,canAct);
   if(review) {
-    const row=charterOptions(state,seat,city).find(option=>option.id===review.item);
+    const festival=review.type==='cityFestival';
+    const row=(festival ? festivalOptions : charterOptions)(state,seat,city).find(option=>option.id===review.item);
     if(row && !row.reason){
-      body='<h3>'+row.name+'</h3><p>'+row.description+'</p><p>Spend 18 gold to grant this city its permanent charter.</p>'+
+      body='<h3>'+row.name+'</h3><p>'+row.description+'</p><p>'+(festival?'Spend 8 gold and 4 stored food to open this festival.':'Spend 18 gold to grant this city its permanent charter.')+'</p>'+
         '<div class="focus-options"><button class="modal-tab" data-hall-back>Back</button>'+
-        '<button class="modal-tab" data-hall-confirm '+(canAct?'':'disabled')+'>Grant charter</button></div>';
+        '<button class="modal-tab" data-hall-confirm '+(canAct?'':'disabled')+ '>'+(festival?'Open festival':'Grant charter')+'</button></div>';
     } else review=null;
   }
   const html='<div class="modal-shell"><div class="modal-head"><div><small class="modal-kicker">City hall</small>'+

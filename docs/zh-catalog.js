@@ -10,6 +10,26 @@ section(positionTranslations);
 import {stationCopy} from './field-stations.js';
 section(stationCopy);
 section(`
+Craft exhibition|工艺展
+Each of the next three harvests adds 3 production to the city and 1 culture to the council.|接下来三次收获，本城每次额外获得 3 点生产力，议会额外获得 1 点文化。
+Market days|集市
+Each of the next three harvests earns 5 gold and 1 influence.|接下来三次收获，每次额外获得 5 金币与 1 点影响力。
+Heritage festival|地方文化节
+Each of the next three harvests earns 2 culture and 2 influence.|接下来三次收获，每次额外获得 2 点文化与 2 点影响力。
+A festival is already underway.|本城正在举办节庆。
+Festival preparations are still underway.|本城仍在筹备下一场节庆。
+Save 4 food in this city.|本城需要储备 4 点粮食。
+The festival requires 8 gold.|举办节庆需要 8 金币。
+Choose an available city festival.|请选择可以举办的城市节庆。
+City festival opened.|城市节庆已开幕。
+City festivals|城市节庆
+Adopt Municipal Charter to organize local festivals.|通过「市政宪章」即可举办地方节庆。
+Hosting costs 8 gold and 4 stored city food. After three festival harvests the city needs three more harvests to prepare another event.|举办节庆需支付 8 金币和本城 4 点储粮。节庆持续三次收获，结束后还需三次收获来筹备下一场。
+Festival harvests remaining|节庆剩余收获次数
+Harvests before the next festival|距下次节庆的收获次数
+Review festival|查看节庆
+Spend 8 gold and 4 stored food to open this festival.|花费 8 金币和本城 4 点储粮开始节庆。
+Open festival|举办节庆
 City hall|市政厅
 Municipal charter|城市特许状
 A city with two residents can spend 18 gold on one permanent charter. The charter stays with the city if it changes hands.|至少有两位居民的城市可以花费 18 金币颁发一份永久特许状。城市易主后仍保留该特许状。

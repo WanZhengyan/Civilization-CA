@@ -2,6 +2,7 @@ import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStatio
 import {sendDelegation,proposeDelegation} from './diplomacy.js';
 import {councilProjectCost} from './council-costs.js';
 import {allowsConquest,allowsScience,SCIENCE_PROJECT,validVictoryMode} from './victory-rules.js';
+import {endFestivalHarvest,festivalBenefit,openFestival,proposeFestival} from './city-festivals.js';
 import {charterBenefit,grantCharter,proposeCharter} from './city-charters.js';
 import {advanceCityBorder, planCityBorders} from './city-expansion.js';
 import {advancementRoutes,promotionOutcome,recoveryAt,nearestServiceStation} from './unit-service.js';
@@ -505,6 +506,12 @@ export function getCityYield(state,cityId) {
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
+  const festival=festivalBenefit(state,city);
+  if (festival) {
+    result.production+=festival.production || 0;
+    result.capital+=festival.capital || 0;
+    result.influence+=festival.influence || 0;
+  }
   const charter=charterBenefit(state,city);
   if (charter) for (const key of ['food','production','capital','influence']) result[key]+=charter[key] || 0;
   const bonus=capitalBonus(state,city.seat,city);
@@ -555,6 +562,10 @@ export function getStats(state,seat) {
       +2*cities.filter(c=>tradesBySea(state,c)).length,
     influenceIncome:2*Number(settled)+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
   for (const city of cities) {
+    const festival=festivalBenefit(state,city);
+    stats.cultureIncome+=festival?.culture || 0;
+    stats.capitalIncome+=festival?.capital || 0;
+    stats.influenceIncome+=festival?.influence || 0;
     const charter=charterBenefit(state,city);
     stats.capitalIncome+=charter?.capital || 0;
     stats.influenceIncome+=charter?.influence || 0;
@@ -1110,6 +1121,7 @@ function settleSeatEconomy(state,seat) {
     const parcel=advanceCityBorder(state,city,borders.get(city.id));
     if (parcel) record(state,seat,'border','The city incorporated a district.',parcel,{city:city.id});
     produceCityTurn(state,city);
+    endFestivalHarvest(state,city);
     if (state.phase==='finished') {refreshScores(state); return;}
   }
   player.science += income.scienceIncome;
@@ -1284,6 +1296,9 @@ function resolveAttack(state, unit, target) {
   if (result.capture) {
     defender.seat = unit.seat;
     defender.borderProgress = 0;
+    delete defender.festival;
+    delete defender.festivalHarvests;
+    delete defender.festivalRecovery;
     const lostCharter=WONDERS[defender.queue?.item];
     defender.queue = null;
     delete defender.parkedProduction;
@@ -1430,6 +1445,10 @@ function resolveOrder(source,seat,action) {
   } else if (action.type==='policy') {
     const name=ratifyPolicy(next,seat,action.item);
     record(next,seat,'policy','Ruling policy · '+name,null,{item:action.item});
+  } else if (action.type==='cityFestival') {
+    const city=cityOrNull(next,action.city);
+    openFestival(next,seat,city,action.item);
+    record(next,seat,'cityFestival','City festival opened.',city.tile,{city:city.id,item:action.item});
   } else if (action.type==='cityCharter') {
     const city=cityOrNull(next,action.city);
     grantCharter(next,seat,city,action.item);
@@ -1916,6 +1935,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   }
   const charter=proposeCharter(state,seat);
   if (charter) return charter;
+  const festival=proposeFestival(state,seat);
+  if (festival) return festival;
   const veteran=plans.find(([,options])=>options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
   if (veteran) return {type:'upgrade',unit:veteran[0].id,item:veteran[1].upgrade.to};
   for (const city of state.cities) if (city.seat===seat && !city.queue) {
