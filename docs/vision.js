@@ -158,6 +158,7 @@ export function projectForSeat(state,seat) {
       return [id,fields];
     }
     const cellMemory={owner:null,level:0,improvement:null};
+    if(explored.has(id) && cell.fieldStation)cellMemory.fieldStation=cell.fieldStation;
     if(explored.has(id) && cell.naturalWonder)cellMemory.naturalWonder=cell.naturalWonder;
     if (memory[id] && surveyed) cellMemory.resource=memory[id];
     return [id,cellMemory];

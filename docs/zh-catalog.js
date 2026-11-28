@@ -7,6 +7,8 @@ import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
 section(positionTranslations);
+import {stationCopy} from './field-stations.js';
+section(stationCopy);
 section(`
 Applied Mechanics|应用力学
 Each workshop supplies 1 additional production per turn.|每座工坊每回合额外提供 1 点产能。

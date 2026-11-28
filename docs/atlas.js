@@ -2,6 +2,7 @@ import {inkWaterways,inkRiverBridge,waterCaptions} from './water-chart.js';
 import {battleMarkers,paintBattleReport} from './battle-overlay.js';
 import {boxesOverlap,cityFont,cityLabelAt,paintCityLabels,planCityLabels} from './city-labels.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
+import {drawFieldStation} from './field-stations.js';
 import {drawNaturalWonder} from './natural-wonder-marker.js';
 import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom,chartViewport,atlasRasterLayout} from './hex-survey.js';
 import {politicalPaths, inkPolitics} from './political-borders.js';
@@ -899,6 +900,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories,unitBoxes,cityBoxe
   }
   for(const t of tiles){
     const holding=board[t.id];
+    if(holding?.fieldStation)drawFieldStation(g,holding.fieldStation,...pos(t.q,t.r));
     if(holding?.naturalWonder)drawNaturalWonder(g,holding.naturalWonder,...pos(t.q,t.r),scale);
     if(holding?.facility){const [x,y]=pos(t.q,t.r);drawCivicBuilding(g,holding.facility,x,y,getFaction(holding.owner));}
     if(holding?.wonder){const [x,y]=pos(t.q,t.r);drawCampus(g,holding.wonder,x,y,getFaction(holding.owner));}

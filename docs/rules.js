@@ -1,3 +1,4 @@
+import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
 import {sendDelegation,proposeDelegation} from './diplomacy.js';
 import {councilProjectCost} from './council-costs.js';
 import {allowsConquest,allowsScience,SCIENCE_PROJECT,validVictoryMode} from './victory-rules.js';
@@ -406,6 +407,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   refreshScores(next);
   for (const player of next.players) player.surveyEnabled=false;
   populateDeposits(next,map,seed,map.neighbors);
+  placeFieldStations(next,map,hexDistance);
   return rememberVision(addResearch(next));
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
@@ -1406,7 +1408,10 @@ function resolveOrder(source,seat,action) {
   if (!action || typeof action!=='object') throw new Error('Choose an action.');
   const next=cloneGame(state);
   if (action.type==='end') {endTurn(next,seat);return next;}
-  if (action.type==='delegation') {
+  if (action.type==='visitStation') {
+    const visit=visitFieldStation(next,seat,action);
+    record(next,seat,'visitStation',visit.text,visit.tile,{unit:action.unit});
+  } else if (action.type==='delegation') {
     sendDelegation(next,seat,action.target,getVisibleTiles(next,seat));
     record(next,seat,'delegation','Diplomatic delegation dispatched.',null,{target:action.target});
   } else if (action.type==='shipment') {
@@ -1716,7 +1721,10 @@ function botMovement(state,unit,options,difficulty) {
     return flotillaMove(state,unit,options.moves,map,UNIT_TYPES,hexDistance,sameTeam,id=>surveyedFishery(state,unit,id));
   }
   if (unit.type==='signals') return signalPosition(state,unit,options.moves,UNIT_TYPES,hexDistance);
-  if (unit.type==='scout') return exploreFrontier(state,unit,options.moves);
+  if (unit.type==='scout') {
+    const station=nearestKnownStation(state,unit,options.moves,hexDistance);
+    return station ? {type:'move',unit:unit.id,tile:station} : exploreFrontier(state,unit,options.moves);
+  }
   if (settle) goals=state.intel.visible.filter(id=>canSettle(state,unit.seat,id));
   else if (unit.type==='workboat') {
     const site=options.moves.find(id=>surveyedFishery(state,unit,id));
@@ -1901,6 +1909,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
     if (order) return order;
   }
   for (const [unit,options] of plans) {
+    const station=volunteerStationOrder(state,unit);
+    if(station)return station;
     const move=botMovement(state,unit,options,difficulty);
     if (move) return move;
   }

@@ -1,3 +1,5 @@
+import {FIELD_STATIONS,fieldStationReport,nearestKnownStation,stationInstruction} from './field-stations.js';
+import {hexDistance} from './rules.js';
 import {previewMove,sameMove,reviewPointerMove} from './move-review.js';
 import {mountDiplomacy,paintDiplomacy,publicContacts} from './diplomacy-ui.js';
 import {chartedWaterSites,knownCrossings,mountWaterKey,waterKind} from './water-key.js';
@@ -251,6 +253,8 @@ function updateHint(id){
   const crossings=tile ? knownCrossings(mapRegion,tile.id,explored) : [];
   if(crossings.length)hint+=" · "+crossings.map(b=>b.name).join(", ");
   const nature=NATURAL_WONDERS[view.state.board[id]?.naturalWonder];
+  const station=FIELD_STATIONS[view.state.board[id]?.fieldStation];
+  if(station)hint+=' · '+station.name;
   if(nature)hint+=' · '+nature.name;
   const neutral=tile && wildAt(view.state,tile.id);
   if (neutral) hint+=" · "+WILDS[neutral.type].name;
@@ -368,6 +372,14 @@ function inspect(){
         const definition=UNIT_TYPES[u.type];
         explanation=definition.description||itemDesc[u.type]||("Attack range · "+definition.range+" hexes.");
       }
+      const visit=fieldStationReport(state,u);
+      if(visit){
+        info+=note(visit.name)+note(visit.visited?'Your expedition has visited this station.':'Each civilization can visit once. An exchange uses the scout’s remaining movement.');
+        if(!visit.visited)for(const choice of visit.choices)actions+=actionButton('station:'+choice.key,choice.name,choice.label,'gold',disabled||!choice.enabled);
+      }else if(u.type==='scout'){
+        const nearest=nearestKnownStation(state,u,explored,hexDistance);
+        if(nearest)actions+=actionButton('locate-station','Nearest known station',FIELD_STATIONS[state.board[nearest].fieldStation].name);
+      }
       if(canSurvey(state,u)) actions+=actionButton('survey','Survey resources','1 movement','gold',disabled);
       const plans=getUpgradePlans(state,u.id,view.seat);
       if (!u.fortified) actions+=fieldPositionPanel(position,u,true,disabled);
@@ -392,11 +404,16 @@ function inspect(){
       '<small>'+esc(items[item]||item)+' · '+esc(mapRegion.byId[id]?.name||id)+' · '+esc(id)+'</small>').join('')+'</div>';
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
   }else{
+    const station=FIELD_STATIONS[holding?.fieldStation];
+    if(station){
+      text("entity-kind","Field station");text("entity-name",station.name);text("entity-location",tile.name);
+    }
     if(!visible.has(tile.id)){
-      el("entity-info").innerHTML=stat("Terrain",surface)+depositStrip(depositId)+(nature?note(nature.description)+note(nature.effect):"");
+      el("entity-info").innerHTML=stat("Terrain",surface)+depositStrip(depositId)+(station?note(stationInstruction):"")+(nature?note(nature.description)+note(nature.effect):"");
       el("entity-commands").innerHTML=note("Outside current sight");return;
     }
     info='<div class="province-meta"><i style="background:'+esc(gov?.color||"#98a1a6")+'"></i>'+esc(gov?.name||(tile.terrain==="ocean"?"Open water":"Unclaimed land"))+'</div><div class="entity-stats">'+stat("Terrain",surface)+stat("Improvement",items[holding?.improvement]||"None")+'</div>';
+    if(station)info+=note(stationInstruction);
     if(nature){
       info+=note(nature.description)+note(nature.effect);
       explanation='This protected site cannot host a city, improvement or campus.';
@@ -790,6 +807,12 @@ function chooseOrder(key){
     return;
   }
   const u=getUnit();if(!u||u.seat!==view.seat)return;
+  if(key==="locate-station"){
+    const station=nearestKnownStation(view.state,u,explored,hexDistance);
+    if(station){atlas.focus(station);openMapOnMobile()}
+    return;
+  }
+  if(mayOrder() && key.startsWith('station:')){Game.doAction({type:'visitStation',unit:u.id,item:key.slice(8)});return}
   if(key==="locate-care"){
     const station=getRecoveryForecast(view.state,u.id,view.seat)?.nearest;
     if(station){atlas.focus(station.tile);openMapOnMobile()}
