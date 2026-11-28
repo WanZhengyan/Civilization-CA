@@ -1,3 +1,4 @@
+import {fieldGuideOrders} from './campaign-field-guide.js';
 import {installSoundtrack,soundtrackControls} from './music-controls.js';
 import {fishingGuide,inlandGuide,freightGuide,voyageGuide} from './maritime-guide.js';
 import {captureRoomOrder,isComputerActing,recoveryMessage,roomSeatTurn,teamMemberStatus} from './room-turn.js';
@@ -793,6 +794,7 @@ function content() {
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
+    const orders=(!state || state.campaignVariety===1) ? fieldGuideOrders(guideTab,getLanguage()) : [];
     let entries=guideSections[guideTab].entries;
     if(state && state.campaignVariety!==1)entries=entries.filter(entry=>entry!==freightGuide && entry!==voyageGuide);
     if(guideTab==='research' && (!state || state.victoryMode)){
@@ -804,6 +806,7 @@ function content() {
     return {kicker:'Field guide', title:'How to play', body:tabs +
       (guideTab==='start' && (!state || state.civilizationTraits===1) ? compareCivilizations() : '') +
       (guideTab === 'universities' ? wonderJournal(state) : '') +
+      (orders.length ? list(orders.map(([title,text])=>row(title,text))) : '') +
       (guideTab === 'formations' ? armyHandbook(escapeHTML) : list(entries.map(([title, text]) => row(title, typeof text === 'function' ? text(state) : text)))) + actions(button('back', 'Return to map', 'primary'))};
   }
   if (modal === 'log') return {
