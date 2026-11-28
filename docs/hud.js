@@ -833,6 +833,13 @@ function reviewScoutDestination(unit,target){
 }
 let tutorialCoach,paintAdvisors;
 function reviewAdvice(link){
+  if(link.unit){
+    const unit=ownUnits().find(u=>u.id===link.unit);
+    if(!unit)return;
+    select(unit.tile,unit.id);atlas.focus(unit.tile);redraw();inspectMapOnMobile();
+    if(link.kind==='move' && mayOrder())reviewScoutDestination(unit,link.tile);
+    return;
+  }
   const city=ownCities().find(c=>c.id===link.city);
   if(!city)return;
   select(city.tile,null,true);atlas.focus(city.tile);redraw();

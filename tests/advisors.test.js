@@ -15,3 +15,10 @@ test('the food desk quotes actual worker assignments and accepts only the reques
   assert.ok(food.food>getCitizenWorkforce(v,city.id).yields.food);
   assert.match(read(s,'zh-CN').find(r=>r.desk==='food').detail,/粮食/);
 });
+
+test('the founding desk compares only charted sites and quotes a legal route',()=>{
+  const s=start(),v=campaignView(s,0),sites=read(s).filter(x=>x.desk==='settle');
+  assert.ok(sites.length);assert.ok(sites.length<=2);
+  for(const site of sites){assert.ok(v.intel.explored.includes(site.link.tile));assert.equal(site.link.unit,s.units[0].id);}
+  assert.equal(read(capital()).filter(x=>x.desk==='settle').length,0);
+});

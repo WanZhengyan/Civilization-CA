@@ -1,5 +1,5 @@
 // Advisors read only the seat's projected chart. They never issue orders.
-import {getMap,getPopulationReport,getCitizenWorkforce} from './rules.js';
+import {getMap,getPopulationReport,getCitizenWorkforce,getSettlementAssessment,getUnitOptions} from './rules.js';
 import {roomSeatTurn} from './room-turn.js';
 import {translate} from './i18n.js';
 
@@ -18,7 +18,32 @@ function foodDesk(ctx) {
   }
 }
 
-const desks=[foodDesk];
+function settlementDesk({state,units,map,L,t,add,active}){
+  if(!active)return;
+  const chart=new Set(state.intel.explored);
+  for(const unit of units.filter(u=>u.type==='settler' && u.moves>0 && u.skippedRound!==state.round)){
+    const sites=[];
+    for(const tile of [unit.tile,...getUnitOptions(state,unit.id).moves]){
+      if(!chart.has(tile))continue;
+      const report=getSettlementAssessment(state,unit.id,tile);
+      if(!report.canFoundThisTurn && !report.canFoundNextTurn)continue;
+      const ground=map.neighbors(tile).filter(id=>chart.has(id));
+      const food=ground.filter(id=>['plains','coast'].includes(map.byId[id].terrain)).length;
+      const hills=ground.filter(id=>['hills','forest'].includes(map.byId[id].terrain)).length;
+      sites.push({tile,report,food,hills,score:Number(report.canFoundThisTurn)*5+Math.min(food,2)*2+Math.min(hills,2)-report.moveCost});
+    }
+    sites.sort((a,b)=>b.score-a.score || a.tile.localeCompare(b.tile));
+    for(const [i,s] of sites.slice(0,2).entries()){
+      const site=t(map.byId[s.tile].name)+' ('+s.tile+')';
+      add('settle',L('Survey a town site · ','查看建城点 · ')+site,
+        L((s.report.canFoundThisTurn?'Can found this turn. ':'Can found next turn. ')+s.report.moveCost+' movement. Charted neighboring hexes include '+s.food+' lowland/coast and '+s.hills+' foothill/woodland.',
+          (s.report.canFoundThisTurn?'本回合可建城。':'下回合可建城。')+'移动消耗 '+s.report.moveCost+'。相邻已探索地块包括 '+s.food+' 格低地或海岸、'+s.hills+' 格丘陵或林地。'),
+        86-i,{kind:s.tile===unit.tile?'unit':'move',unit:unit.id,tile:s.tile});
+    }
+  }
+}
+
+const desks=[settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;
