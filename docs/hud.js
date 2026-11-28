@@ -1114,6 +1114,10 @@ function mount(){
   document.addEventListener('civitas-language',()=>turnResults(view));
   function inspectCityReport(city,command,value){
     if(command==='profile'){cityProfile.open(city.id);return;}
+    if(command==='tile'){
+      if(!view.state.board[value] || !(visible.has(value) || explored.has(value)))return;
+      closeMapPanel();select(value,null,true);atlas.focus(value);redraw();return;
+    }
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
     if(command==='production')openProduction();
     else if(command==='citizens')chooseOrder('citizens');

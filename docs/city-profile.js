@@ -1,3 +1,4 @@
+import {workforcePage} from './city-profile-people.js';
 import {getCityYield,getMap,getPopulationReport} from './rules.js';
 import {local,safe,label,cityLabel,section,table,action,signed} from './city-profile-format.js';
 
@@ -13,7 +14,8 @@ function overview(state,city){
     action('citizens',local('Manage citizens','管理市民'))+'</div>';
 }
 
-const pages={overview:{name:()=>local('Overview','总览'),render:overview}};
+const pages={overview:{name:()=>local('Overview','总览'),render:overview},
+  people:{name:()=>local('Workforce','劳动力'),render:workforcePage}};
 
 export function cityProfilePage(state,seat,id,page='overview'){
   if(!state || state.intel && state.intel.seat!==seat)return '';

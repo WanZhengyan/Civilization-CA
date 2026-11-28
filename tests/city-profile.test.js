@@ -14,3 +14,9 @@ test('city accounts use the real local harvest and stay private to the owner',()
   assert.ok(report.includes('Food consumed</th><td>-'+getPopulationReport(state,city.id).consumption));
   assert.equal(cityProfilePage(view,1,city.id),'');
 });
+test('a workforce profile locates worked land and accounts for every resident',()=>{
+  const state=capital(),city=state.cities[0];
+  const text=cityProfilePage(campaignView(state,0),0,city.id,'people');
+  assert.match(text,/district workers and/);
+  assert.match(text,/data-study-command="tile"/);
+});
