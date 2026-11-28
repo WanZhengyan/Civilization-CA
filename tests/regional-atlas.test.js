@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,applyAction,campaignView,getStats,getCityYield,getMap,hexDistance} from '../docs/rules.js';
-import {notebookReport} from '../docs/regional-atlas.js';
+import {createGame,applyAction,campaignView,getStats,getCityYield,getMap,hexDistance,UNIT_TYPES} from '../docs/rules.js';
+import {notebookReport,expeditionScout} from '../docs/regional-atlas.js';
 
 test('a coastal scout returns three distinct regional observations to its founding city',()=>{
   let game=createGame([{name:'Field team'}],'la',{seed:17,mapSize:'large',practice:true});
@@ -47,4 +47,15 @@ test('scout notebooks and the publishing history are private, and older campaign
   assert.equal(rival.players[0].publishedAtlas,undefined);
   const legacy={...game,campaignVariety:undefined};
   for(const type of ['recordTransect','fileTransect'])assert.throws(()=>applyAction(legacy,0,{type,unit:'observer'}));
+});
+
+test('a governor retains its most experienced scout unless a visible capture unit threatens home',()=>{
+  const units=[{id:'trainee',seat:0,type:'scout',tile:'4,4'},{id:'observer',seat:0,type:'scout',tile:'4,5',fieldNotes:[{tile:'3,2',terrain:'coast'}]}];
+  const base={campaignVariety:1,players:[{},{}],cities:[{seat:0,tile:'4,4'}],units};
+  const keep=state=>expeditionScout(state,0,hexDistance,UNIT_TYPES);
+  assert.equal(keep(base),'observer');
+  assert.equal(keep({...base,units:[...units,{seat:1,type:'settler',tile:'5,4'}]}),'observer');
+  assert.equal(keep({...base,units:[...units,{seat:1,type:'melee',tile:'5,4'}]}),null);
+  assert.equal(keep({...base,players:[{publishedAtlas:{round:14}},{}]}),null);
+  assert.equal(keep({...base,campaignVariety:undefined}),null);
 });

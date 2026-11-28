@@ -1,3 +1,5 @@
+import {sameTeam} from './teams.js';
+
 // Three observations belong to the scout carrying the notebook. Publishing is once per civilization.
 const terrainNames={plains:'Lowlands',urban:'Urban',coast:'Coast',forest:'Woodland',hills:'Foothills'};
 const fieldGoal=3;
@@ -40,11 +42,30 @@ export function runAtlasOrder(state,seat,action,map,distance){
   return {tile:city.tile,text:'Regional atlas published.'};
 }
 
+export function expeditionScout(state,seat,distance,definitions){
+  if(state.campaignVariety!==1 || state.players[seat].publishedAtlas)return null;
+  const scouts=state.units.filter(unit=>unit.seat===seat && unit.type==='scout');
+  if(!scouts.length)return null;
+  const cities=state.cities.filter(city=>city.seat===seat);
+  const needsDefense=state.units.some(unit=>!sameTeam(state,seat,unit.seat) && definitions[unit.type]?.captures
+    && cities.some(city=>distance(city.tile,unit.tile)<=2));
+  if(needsDefense)return null;
+  return scouts.reduce((best,u)=>(u.fieldNotes?.length || 0)>(best.fieldNotes?.length || 0)?u:best).id;
+}
+
 export function expeditionOrder(state,unit,moves,map,distance){
   const report=notebookReport(state,unit,map,distance);
   if(!report || report.publisher)return null;
   if(report.canFile)return {type:'fileTransect',unit:unit.id};
   if(report.canRecord)return {type:'recordTransect',unit:unit.id};
+  if(!report.full && moves.length){
+    const missing=moves.filter(tile=>Boolean(terrainNames[map.byId[tile].terrain]) &&
+      report.notes.every(note=>note.terrain!==map.byId[tile].terrain && distance(note.tile,tile)>=separation));
+    if(missing.length){
+      const target=missing.reduce((best,tile)=>distance(unit.tile,tile)<distance(unit.tile,best)?tile:best);
+      return {type:'move',unit:unit.id,tile:target};
+    }
+  }
   if(report.full && moves.length){
     const cities=state.cities.filter(city=>city.seat===unit.seat);
     if(!cities.length)return null;

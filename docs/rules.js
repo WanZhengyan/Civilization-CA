@@ -1,4 +1,4 @@
-import {expeditionOrder,runAtlasOrder} from './regional-atlas.js';
+import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
 import {sendDelegation,proposeDelegation} from './diplomacy.js';
 import {councilProjectCost} from './council-costs.js';
@@ -2005,7 +2005,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if (charter) return charter;
   const festival=proposeFestival(state,seat);
   if (festival) return festival;
-  const veteran=plans.find(([,options])=>options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
+  const surveyor=expeditionScout(state,seat,hexDistance,UNIT_TYPES);
+  const veteran=plans.find(([unit,options])=>unit.id!==surveyor && options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
   if (veteran) return {type:'upgrade',unit:veteran[0].id,item:veteran[1].upgrade.to};
   for (const city of state.cities) if (city.seat===seat && !city.queue) {
     const order=botProject(state,city,difficulty);
