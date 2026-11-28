@@ -1,5 +1,6 @@
 import {CIVILIZATIONS} from './civilizations.js';
 import {observeContacts,diplomacyView} from './diplomacy.js';
+import {alliedFreightPorts} from './coastal-freight.js';
 import {chartedWaterways} from './waterways.js';
 import {actingPerspective,publicTeamPhase} from './team-turns.js';
 import {sameTeam} from './teams.js';
@@ -158,6 +159,7 @@ export function projectForSeat(state,seat) {
       return [id,fields];
     }
     const cellMemory={owner:null,level:0,improvement:null};
+    if(explored.has(id) && cell.fieldStation)cellMemory.fieldStation=cell.fieldStation;
     if(explored.has(id) && cell.naturalWonder)cellMemory.naturalWonder=cell.naturalWonder;
     if (memory[id] && surveyed) cellMemory.resource=memory[id];
     return [id,cellMemory];
@@ -167,12 +169,12 @@ export function projectForSeat(state,seat) {
   const cities=state.cities.filter(c=>c.seat===seat || visible.has(c.tile)).map(c=>c.seat===seat ? c :
     {...publicShape(c,['id','name','seat','tile','hp','maxHp','population','originalSeat']),buildings:[]});
   const units=state.units.filter(u=>u.seat===seat || visible.has(u.tile)).map(u=>u.seat===seat ? u :
-    publicShape(u,['id','seat','type','tile','hp','maxHp','maxMoves']));
+    publicShape(u,['id','seat','type','tile','hp','maxHp','maxMoves','fortified','drill']));
   // A founder remembers their first capital even after losing sight of it.
   // Campaigns predating the settler opening began with a capital for every seat.
   const hasFoundedCapital=state.opening!=='settlers' || state.cities.some(city=>city.originalSeat===seat);
   const diplomacy=diplomacyView(state,seat,visible),knownSeats=new Set(diplomacy.map(record=>record.seat));
-  const view={...publicShape(state,['rulesVersion','researchPace','civilizationTraits','opening','mapId','mapShape','mapSize','scoreTarget','victoryMode','practice','difficulty','firstSeat','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
+  const view={...publicShape(state,['rulesVersion','campaignVariety','researchPace','civilizationTraits','opening','mapId','mapShape','mapSize','scoreTarget','victoryMode','practice','difficulty','firstSeat','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
     ...(state.teams ? {teams:[...state.teams]} : {}),
     ...(state.teamPhase ? {teamPhase:publicTeamPhase(state,seat)} : {}),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
@@ -182,6 +184,7 @@ export function projectForSeat(state,seat) {
     const occupied=state.cities.flatMap(city=>[city.portTile,city.queue?.portTile]);
     view.intel.visibleBerths=[...new Set(occupied.filter(id=>id && visible.has(id)))].sort();
   }
+  if (state.campaignVariety===1) view.intel.alliedFreightPorts=alliedFreightPorts(state,seat,visible);
   if (state.barbarians) {
     const shown=entries=>(entries||[]).filter(e=>visible.has(e.tile))
       .map(e=>publicShape(e,['id','tile','type','hp','maxHp']));

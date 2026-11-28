@@ -1,6 +1,12 @@
+import {notebookReport,notebookPanel} from './regional-atlas.js';
+import {FIELD_STATIONS,fieldStationReport,nearestKnownStation,stationInstruction} from './field-stations.js';
+import {hexDistance} from './rules.js';
 import {previewMove,sameMove,reviewPointerMove} from './move-review.js';
 import {mountDiplomacy,paintDiplomacy,publicContacts} from './diplomacy-ui.js';
 import {chartedWaterSites,knownCrossings,mountWaterKey,waterKind} from './water-key.js';
+import {getFreightManifest} from './rules.js';
+import {voyageQuote,voyageAllowance} from './voyage-stores.js';
+import {freightPanel,voyagePanel} from './harbor-ledger-ui.js';
 import {fishingTask} from './maritime.js';
 import {modeLabels} from './campaign-choices.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
@@ -11,10 +17,14 @@ import {naturalWonderArt} from './natural-wonder-art.js';
 import {mountMapWorkspace, compactMap, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
 import {illustration, illustrationPath} from './illustrations.js';
 import {mountBattleReports} from './battle-history.js';
+import {constructionTurns} from './harvest-forecast.js';
+import {directoryButton,mountCityDirectory} from './city-directory.js';
+import {councilInvestments,investmentPanel} from './council-investment.js';
 import {councilStages,stageHeading,renderCouncilPath,prerequisiteLine,projectQuote} from './council-path.js';
 import {researchLinks,syncResearchLens} from './research-catalog.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
+import {openCityHall,paintCityHall} from './city-hall.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
@@ -26,6 +36,8 @@ import {sameTeam,teamLabel} from './teams.js';
 import {cityKind,developmentPanel,developmentReceipt,foundingLabel} from './district-command.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
 import {captureOrderHint,cityAttackHint,forecastCounterLabel} from './attack-mode.js';
+import {militaryTraining,trainingPanel} from './combat-training.js';
+import {fieldPosition,fieldPositionPanel} from './field-position.js';
 import {advancementPanel,recoveryPanel} from './unit-service-ui.js';
 import {getUpgradePlans,getRecoveryForecast} from './rules.js';
 import {mountSurveyControls, showSelectedFrontier} from './survey-controls.js';
@@ -42,7 +54,7 @@ const unitRole={settler:"Civilian unit",builder:"Engineering unit",melee:"Melee 
 const isSeaUnit=item=>UNIT_TYPES[item]?.domain==="sea";
 const portBuildings=new Set(["harbor","shipyard"]);
 const eraName=id=>ERAS[id]?.name||id;
-let updateWaterKey;
+let updateWaterKey,cityDirectory;
 const councilGoals={research:"",civics:""};
 let mapRegion,councilKind="research",lastCouncilMarkup="",lastProjectsMarkup="";
 const itemDesc={settler:"Founds a new city at least three hexes from another city.",builder:"Builds farms and mines in your territory. Three charges.",melee:"Fights adjacent enemies and captures weakened cities.",ranged:"Strikes enemies up to two hexes away.",granary:"Adds 2 food per turn to help this city grow.",workshop:"Adds 2 production per turn in this city.",monument:"Adds 3 influence per turn.",walls:"Increases this city’s defenses."};
@@ -250,6 +262,8 @@ function updateHint(id){
   const crossings=tile ? knownCrossings(mapRegion,tile.id,explored) : [];
   if(crossings.length)hint+=" · "+crossings.map(b=>b.name).join(", ");
   const nature=NATURAL_WONDERS[view.state.board[id]?.naturalWonder];
+  const station=FIELD_STATIONS[view.state.board[id]?.fieldStation];
+  if(station)hint+=' · '+station.name;
   if(nature)hint+=' · '+nature.name;
   const neutral=tile && wildAt(view.state,tile.id);
   if (neutral) hint+=" · "+WILDS[neutral.type].name;
@@ -277,8 +291,7 @@ function artFor(tile,city){
 function cityQueue(city){
   const q=city.queue;
   if(!q)return '<p class="inspect-caption idle-status"><i></i> This city is ready to produce.</p>';
-  const production=getCityYield(view.state,city.id).production;
-  const turns=Math.ceil(Math.max(0,q.required-q.progress)/Math.max(1,production));
+  const turns=projectTurns(city);
   const remaining=q.progress>=q.required?'Awaiting deployment':turnsText(turns)+' left';
   return '<div class="queue-info">'+illustration(q.item)+'<div class="queue-name"><strong><span>Producing</span> · <span>'+esc(items[q.item]||q.item)+'</span></strong><small>'+remaining+'</small>'+(q.site?'<small><span>Construction tile</span> · '+esc(mapRegion.byId[q.site]?.name||q.site)+' · '+esc(q.site)+'</small>':'')+'</div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
 }
@@ -335,7 +348,11 @@ function inspect(){
   updateSurvey();
   if(activeUnit){
     const u=activeUnit,o=selectedOptions;
-    info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+(["builder","workboat"].includes(u.type)?stat("Charges",u.charges):(UNIT_TYPES[u.type].range?stat("Range",UNIT_TYPES[u.type].range):stat("Terrain",surface)))+'</div>'+healthBar(u.hp,u.maxHp);
+    info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,voyageAllowance(u))+(["builder","workboat"].includes(u.type)?stat("Charges",u.charges):(UNIT_TYPES[u.type].range?stat("Range",UNIT_TYPES[u.type].range):stat("Terrain",surface)))+'</div>'+healthBar(u.hp,u.maxHp);
+    const position=fieldPosition(state,u,UNIT_TYPES[u.type],tile.terrain);
+    info+=fieldPositionPanel(position,u,false,disabled);
+    const training=militaryTraining(state,u,UNIT_TYPES[u.type]);
+    if (training?.drill) info+=trainingPanel(training,own,disabled);
     const radius=getSightRadius();
     info+='<div class="unit-sight"><span>'+icon("inspect")+' <span>Sight radius</span></span><strong>'+radius+' <small>'+(radius===1?'hex':'hexes')+'</small></strong></div>';
     if(own){
@@ -356,18 +373,32 @@ function inspect(){
         }
         if(water){
           const task=fishingTask(state,u,mapRegion.byId);
+          actions+=freightPanel(getFreightManifest(state,u),esc,actionButton,disabled);
           if(u.fishCargo) info+='<div class="unit-sight"><span>Catch aboard</span><strong>1</strong></div>';
           if(task)actions+=actionButton(task.type,task.type==="landCatch"?"Land the catch":"Load a catch",task.type==="landCatch"?"1 stored fish and 3 city food":"Spends all remaining movement","gold",disabled||!u.moves);
         }
-        explanation=water?(u.fishCargo?"Return to an owned harbor berth to land this catch.":"Load a catch at a fish shoal or fishery, or build a fishery on suitable water."):"Work an owned site connected to a city within two land steps.";
+        explanation=water?(u.freight?"Unload at another friendly berth for food and gold, or return the crate to its origin.":u.fishCargo?"Return to an owned harbor berth to land this catch.":"Load a catch at a fish shoal or fishery, or build a fishery on suitable water."):"Work an owned site connected to a city within two land steps.";
       }else{
         actions+=actionButton("attack","Preview attack",o.attacks.length+' '+(o.attacks.length===1?'target':'targets'),"red",disabled||!o.attacks.length,order==="attack");
         const definition=UNIT_TYPES[u.type];
         explanation=definition.description||itemDesc[u.type]||("Attack range · "+definition.range+" hexes.");
       }
+      const journal=notebookReport(state,u,mapRegion,hexDistance);
+      const visit=fieldStationReport(state,u);
+      if(visit){
+        info+=note(visit.name)+note(visit.visited?'Your expedition has visited this station.':'Each civilization can visit once. An exchange uses the scout’s remaining movement.');
+        if(!visit.visited)for(const choice of visit.choices)actions+=actionButton('station:'+choice.key,choice.name,choice.label,'gold',disabled||!choice.enabled);
+      }else if(u.type==='scout'){
+        const nearest=nearestKnownStation(state,u,explored,hexDistance);
+        if(nearest)actions+=actionButton('locate-station','Nearest known station',FIELD_STATIONS[state.board[nearest].fieldStation].name);
+      }
+      actions+=notebookPanel(journal,disabled,actionButton,esc);
       if(canSurvey(state,u)) actions+=actionButton('survey','Survey resources','1 movement','gold',disabled);
       const plans=getUpgradePlans(state,u.id,view.seat);
+      if (!training?.drill) actions+=trainingPanel(training,true,disabled || !u.moves);
+      if (!u.fortified) actions+=fieldPositionPanel(position,u,true,disabled);
       const previous=el("entity-commands").querySelector("[data-service-plans]");
+      actions+=voyagePanel(voyageQuote(state,u,UNIT_TYPES[u.type]),esc,actionButton,disabled);
       actions+=recoveryPanel(u,getRecoveryForecast(state,u.id,view.seat),disabled);
       actions+=advancementPanel(plans,previous?.open && previous.dataset.unit===String(u.id),disabled,u.id);
     }else explanation=allied?"Your teammate commands this unit.":"Select a friendly unit to give orders.";
@@ -384,15 +415,22 @@ function inspect(){
     if(buildings.length)info+='<div class="built-gallery">'+buildings.join('')+'</div>';
     const expansion=expansionForecasts.get(c.id);
     info+=populationSummary(getPopulationReport(state,c.id))+borderSummary(expansion,mapRegion.byId[expansion?.tile],esc)+cityQueue(c);
+    if(c.atlasCopies)info+='<div class="unit-sight"><span>Regional atlas collection</span><strong>+'+Number(c.atlasCopies)+' <span>influence</span></strong></div>';
     if(own && c.buildingSites) info+='<div class="works-sites">'+Object.entries(c.buildingSites).map(([item,id])=>
       '<small>'+esc(items[item]||item)+' · '+esc(mapRegion.byId[id]?.name||id)+' · '+esc(id)+'</small>').join('')+'</div>';
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
+    if(own && state.campaignVariety===1) actions+=actionButton("city-hall","City hall","City charter");
   }else{
+    const station=FIELD_STATIONS[holding?.fieldStation];
+    if(station){
+      text("entity-kind","Field station");text("entity-name",station.name);text("entity-location",tile.name);
+    }
     if(!visible.has(tile.id)){
-      el("entity-info").innerHTML=stat("Terrain",surface)+depositStrip(depositId)+(nature?note(nature.description)+note(nature.effect):"");
+      el("entity-info").innerHTML=stat("Terrain",surface)+depositStrip(depositId)+(station?note(stationInstruction):"")+(nature?note(nature.description)+note(nature.effect):"");
       el("entity-commands").innerHTML=note("Outside current sight");return;
     }
     info='<div class="province-meta"><i style="background:'+esc(gov?.color||"#98a1a6")+'"></i>'+esc(gov?.name||(tile.terrain==="ocean"?"Open water":"Unclaimed land"))+'</div><div class="entity-stats">'+stat("Terrain",surface)+stat("Improvement",items[holding?.improvement]||"None")+'</div>';
+    if(station)info+=note(stationInstruction);
     if(nature){
       info+=note(nature.description)+note(nature.effect);
       explanation='This protected site cannot host a city, improvement or campus.';
@@ -485,20 +523,20 @@ function updateMap(){
 function roster(){
   const unitTab=activeRoster==="units",ownList=unitTab?ownUnits():ownCities();
   el("roster-units").setAttribute("aria-pressed",String(unitTab));el("roster-cities").setAttribute("aria-pressed",String(!unitTab));
-  el("roster").innerHTML=ownList.map(o=>{
+  el("roster").innerHTML=(!unitTab && ownList.length ? directoryButton() : "")+(ownList.map(o=>{
     const active=unitTab ? kind==="unit"&&sameId(o.id,selectedUnit) : kind==="city"&&o.tile===selectedTile;
     const label=unitTab ? items[o.type]||o.type : o.name;
     const turns=unitTab?null:projectTurns(o);
     const subtitle=unitTab?o.moves+' / '+o.maxMoves+' movement':o.queue?(items[o.queue.item]||o.queue.item)+' · '+(turns?turnsText(turns):'Awaiting deployment'):'Awaiting production';
     return '<button class="roster-unit" aria-pressed="'+active+'" data-roster-id="'+esc(o.id)+'"><span class="roster-symbol">'+icon(unitTab?o.type:'city')+'</span><span><b'+(unitTab?'':cityNameAttrs(o))+'>'+esc(label)+'</b><small>'+esc(subtitle)+'</small></span></button>';
-  }).join('')||'<div class="roster-empty">'+(unitTab?'You have no units in the field.':'You have no cities.')+'</div>';
+  }).join('')||'<div class="roster-empty">'+(unitTab?'You have no units in the field.':'You have no cities.')+'</div>');
   el("next-unit").disabled=!mayOrder()||!ownUnits().some(u=>u.moves>0);
 }
 function redraw(){inspect();updateMap();roster()}
 function projectTurns(city){
   if(!city.queue)return null;
   const remaining=Math.max(0,city.queue.required-city.queue.progress);
-  return Math.ceil(remaining / Math.max(1,getCityYield(view.state,city.id).production));
+  return constructionTurns(view.state,city,remaining,getCityYield(view.state,city.id).production);
 }
 function paintProjects(){
   const cities=ownCities();
@@ -509,7 +547,7 @@ function paintProjects(){
     const title = settler ? "Founding expedition" : "City projects";
     if (heading.lastChild.textContent !== title) heading.lastChild.textContent = title;
   }
-  const markup=settler ? '<div class="expedition-orders"><p>Choose a site for your first city. Surveying or founding can reveal local resources.</p><button type="button" data-founding-unit="'+esc(settler.id)+'">Locate settler</button></div>' : cities.map(city=>{
+  const markup=settler ? '<div class="expedition-orders"><p>Choose a site for your first city. Surveying or founding can reveal local resources.</p><button type="button" data-founding-unit="'+esc(settler.id)+'">Locate settler</button></div>' : (cities.length?directoryButton():'')+cities.map(city=>{
     const turns=projectTurns(city);
     const status=turns===null?"Choose production":turns===0?"Awaiting deployment":items[city.queue.item]||city.queue.item;
     return '<button class="watch-city" type="button" data-watch="'+esc(city.id)+'">'+illustration(city.queue?.item)+'<strong'+cityNameAttrs(city)+'>'+esc(city.name)+'</strong><span>'+esc(status)+'</span>'+(turns>0?'<small>'+esc(turnsText(turns))+'</small>':'')+'</button>';
@@ -630,7 +668,7 @@ function paintResearch(){
     });
     const bankNote=active ? '<p class="modal-muted">'+(id==='research'
       ? 'Changing research keeps your banked science.' : 'Changing debates keeps your banked culture.')+'</p>' : '';
-    const markup='<div class="council-summary"><strong>'+esc(c.balance+" "+c.resource+" banked")+'</strong><span>'+esc("+"+c.rate+" per turn")+'</span><span>'+c.completed+' / '+c.options.length+' complete</span></div>'+bankNote+renderCouncilPath(c,goal,mayOrder())+eraGroups.join("");
+    const markup='<div class="council-summary"><strong>'+esc(c.balance+" "+c.resource+" banked")+'</strong><span>'+esc("+"+c.rate+" per turn")+'</span><span>'+c.completed+' / '+c.options.length+' complete</span></div>'+bankNote+investmentPanel(state,seat,c,goal,mayOrder())+renderCouncilPath(c,goal,mayOrder())+eraGroups.join("");
     if(markup!==lastCouncilMarkup){el("research-options").innerHTML=markup;lastCouncilMarkup=markup}
     updateCivicAgenda(council,id==='civics' && !goal,UNIT_TYPES);
     syncResearchLens(id,el("research-options"),Boolean(goal));
@@ -702,6 +740,7 @@ function paint(next){
   if(!mayOrder())order="";
   const player=state.players[seat],stats=getStats(state,seat),f=faction(seat);
   paintDiplomacy(next,stats);
+  cityDirectory?.paint();
   text("brand-region",mapRegion.shortName);text("campaign-title",mapRegion.name);
   text("chart-coordinate",mapRegion.coordinates);text("footer-region",mapRegion.shortName);
   document.querySelector(".map-panel").setAttribute("aria-label","Tactical map · "+mapRegion.shortName);
@@ -751,12 +790,18 @@ function showCampusOpening(state,seat,key){
   old?.remove();host.before(banner);campusNoticeKey=id;
 }
 function populationLedger() {
+  paintCityHall(view.state,view.seat,mayOrder());
   paintCitizenLedger(view.state,view.seat,mayOrder(),city=>({
     population:getPopulationReport(view.state,city.id),workforce:getCitizenWorkforce(view.state,city.id),projects:getProductionOptions(view.state,city.id)
   }));
 }
 function chooseOrder(key){
   if(moveDraft){moveDraft=null;updateMap();}
+  if(key==="city-hall"){
+    const c=cityAt(selectedTile);
+    if(c?.seat===view.seat){openCityHall(c.id,action=>Game.doAction(action));paintCityHall(view.state,view.seat,mayOrder());}
+    return;
+  }
   if(key==="citizens"){
     const c=cityAt(selectedTile);
     if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}),(city,item)=>Game.doAction({type:"produce",city,item}));populationLedger()}
@@ -786,13 +831,24 @@ function chooseOrder(key){
     return;
   }
   const u=getUnit();if(!u||u.seat!==view.seat)return;
+  if(mayOrder() && ['record-terrain','file-atlas'].includes(key)){
+    Game.doAction({type:key==='record-terrain'?'recordTransect':'fileTransect',unit:u.id});return;
+  }
+  if(key==="locate-station"){
+    const station=nearestKnownStation(view.state,u,explored,hexDistance);
+    if(station){atlas.focus(station);openMapOnMobile()}
+    return;
+  }
+  if(mayOrder() && key.startsWith('station:')){Game.doAction({type:'visitStation',unit:u.id,item:key.slice(8)});return}
   if(key==="locate-care"){
     const station=getRecoveryForecast(view.state,u.id,view.seat)?.nearest;
     if(station){atlas.focus(station.tile);openMapOnMobile()}
     return;
   }
   if(!mayOrder())return;
-  if(key==="landCatch" || key==="haulFish"){order="";Game.doAction({type:key,unit:u.id});return}
+  if(key.startsWith("train:")){order="";Game.doAction({type:"train",unit:u.id,item:key.slice(6)});return}
+  if(key==="fortify"){order="";Game.doAction({type:"fortify",unit:u.id});return}
+  if(["provisionVoyage","loadFreight","landFreight","returnFreight","landCatch","haulFish"].includes(key)){order="";Game.doAction({type:key,unit:u.id});return}
   if(key==="recover"){order="";Game.doAction({type:"recover",unit:u.id});return}
   if(key==="move"){
     order="";redraw();openMapOnMobile();return;
@@ -820,6 +876,11 @@ function toggleLayers(open){el("layers-menu").hidden=!open;el("layers").setAttri
 function mount(){
   atlas=createAtlas(el("atlas"),{viewInsets:chartViewInsets,onSelect:onMapSelect,onHover:updateHint,onZoom:percent=>text("map-zoom",Math.round(percent)+"%")});
   battleReports=mountBattleReports(atlas);
+  cityDirectory=mountCityDirectory(()=>view,(city,command)=>{
+    closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
+    if(command==='production')openProduction();
+    else chooseOrder('citizens');
+  });
   parcelBar=document.createElement('section');parcelBar.className='work-sitebar';parcelBar.hidden=true;
   parcelBar.setAttribute('aria-label','Construction site selection');
   el('map-hint').before(parcelBar);
@@ -907,6 +968,7 @@ function mount(){
     el("switch-"+id).onclick=()=>openCouncil(id);
   }
   el("watch-cities").onclick=e=>{
+    if(e.target.closest("[data-cities-compare]")){cityDirectory.open();return;}
     const founder=e.target.closest("[data-founding-unit]");
     if(founder){
       const unit=ownUnits().find(u=>sameId(u.id,founder.dataset.foundingUnit));
@@ -922,6 +984,17 @@ function mount(){
   const councilPanel=el("research-options");
   councilPanel.onchange=e=>{if(e.target.matches("[data-council-goal]"))showCouncilGoal(e.target.value,false)};
   councilPanel.onclick=e=>{
+    const investment=e.target.closest('[data-invest-city]');
+    if(investment){
+      if(!mayOrder())return;
+      const quote=councilInvestments(view.state,view.seat).find(q=>q.city===investment.dataset.investCity && q.item===investment.dataset.investItem && q[councilTypes[councilKind].resource]>0);
+      const city=quote && ownCities().find(c=>c.id===quote.city);
+      const option=city && getProductionOptions(view.state,city.id,{replace:true}).find(o=>o.item===quote.item && o.enabled);
+      if(!option)return;
+      el("research-modal").close();
+      startPlacement({...draftOrder(city,option,false),site:quote.site},city);
+      return;
+    }
     const plan=e.target.closest("[data-plan-item],[data-path-back]");
     if(plan){showCouncilGoal(plan.dataset.planItem || "");return;}
     const b=e.target.closest("[data-project],[data-route-order]");
@@ -935,7 +1008,7 @@ function mount(){
     if(!view || !getResearchOptions(view.state,view.seat).some(o=>o.item===item))return;
     openCouncil('research');showCouncilGoal(item);
   });
-  document.addEventListener('civitas-language',()=>{if(view && el('research-modal').open)paintResearch()});
+  document.addEventListener('civitas-language',()=>{if(!view)return;roster();if(el('research-modal').open)paintResearch();else paintProjects()});
   el("close-combat").onclick=closeCombat;el("cancel-combat").onclick=closeCombat;
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};
@@ -964,7 +1037,7 @@ function mount(){
   };
   el("roster-units").onclick=()=>showRoster("units");el("roster-cities").onclick=()=>showRoster("cities");
   for(const [id,type] of [["units-summary","units"],["cities-summary","cities"]])el(id).onclick=()=>{showRoster(type);showMapPanel("roster")};
-  el("roster").onclick=e=>{const b=e.target.closest("[data-roster-id]");if(b)chooseRoster(b.dataset.rosterId)};
+  el("roster").onclick=e=>{if(e.target.closest("[data-cities-compare]")){cityDirectory.open();return;}const b=e.target.closest("[data-roster-id]");if(b)chooseRoster(b.dataset.rosterId)};
   el("next-unit").onclick=nextReady;
   function locateDistrict(tile){
     if(!explored.has(tile))return;

@@ -17,3 +17,31 @@
 .housing-project { display:grid; gap:3px; align-content:start; min-height:46px; padding:7px; text-align:left; font:inherit; color:#f1e5c8; background:#30363b; border:1px solid #6e654b; border-radius:4px; cursor:pointer; }
 .housing-project span { font-size:.75rem; color:#ddd9c9; }
 .housing-project:disabled { cursor:default; opacity:.67; }
+
+.city-hall-card { display:flex; align-items:flex-start; gap:.8rem; margin:.5rem 0; padding:.7rem; border:1px solid #575d5b; border-radius:5px; background:#283035; }
+.city-hall-card > :first-child:not(div) { flex:none; }
+.city-hall-card p { margin:.3rem 0; line-height:1.4; }
+.city-hall-card small { color:#d6cbab; }
+.city-hall-card button { margin-top:.3rem; }
+.city-hall-card .item-illustration { width:48px; height:48px; flex:none; }
+.cities-compare,.city-directory button:not(.modal-close),.city-directory select {
+  min-height:38px;padding:5px 9px;border-radius:4px;border:1px solid #61766e;color:#e3ebe1;background:#273a34;font:600 14px var(--sans)
+}
+.cities-compare {width:100%;margin:2px 0}
+.city-directory {max-width:min(720px,96vw)}
+.city-directory .modal-title {margin:0}
+.report-filters,.city-report footer {display:flex;flex-wrap:wrap;gap:8px}
+.report-filters label {display:grid;gap:3px;font:14px var(--sans);color:#d3dfd7}
+.city-directory .report-count {color:#b7ccc0;margin:10px 0}
+.city-reports {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,255px),1fr));gap:10px}
+.city-report {padding:12px;border:1px solid #4a625a;border-radius:5px;background:#23312f;color:#dde5dc;font:14px/1.45 var(--sans)}
+.city-report header {display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.city-report header h3 {color:#f0e7cf;font:normal 19px/1.2 var(--serif);margin:0;overflow-wrap:anywhere}
+.city-report header span,.city-report dt {font-size:13px;color:#bdccc3}
+.city-report dl {display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;margin:10px 0}
+.city-report dd {margin:0;font-weight:650;color:#e5eee0}
+.city-report p {margin:6px 0}
+.report-flags {display:flex;flex-wrap:wrap;gap:4px}
+.report-flags span {font-size:12px;border:1px solid #96805a;color:#efd7a6;padding:1px 5px;border-radius:3px}
+.city-report .report-queue {padding-top:6px;border-top:1px solid #4a625a}
+.city-directory :is(button,select):focus-visible,.cities-compare:focus-visible {outline:2px solid #edca86;outline-offset:2px}

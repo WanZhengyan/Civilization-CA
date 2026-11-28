@@ -1,10 +1,18 @@
+import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
+import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
+import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
 import {sendDelegation,proposeDelegation} from './diplomacy.js';
 import {councilProjectCost} from './council-costs.js';
 import {allowsConquest,allowsScience,SCIENCE_PROJECT,validVictoryMode} from './victory-rules.js';
+import {endFestivalHarvest,festivalBenefit,openFestival,proposeFestival} from './city-festivals.js';
+import {charterBenefit,grantCharter,proposeCharter} from './city-charters.js';
 import {advanceCityBorder, planCityBorders} from './city-expansion.js';
 import {advancementRoutes,promotionOutcome,recoveryAt,nearestServiceStation} from './unit-service.js';
 import {fleetBasin,flotillaMove} from './naval-plan.js';
 import {waterKind} from './water-navigation.js';
+import {freightManifest,carryFreight} from './coastal-freight.js';
+import {buyVoyageStores,beginVoyageTurn,navalStoresOrder} from './voyage-stores.js';
+import {sailTo} from './naval-plan.js';
 import {harborSites,fishingTask,runFishingTask} from './maritime.js';
 import {revisionOf, advanceProduction, verifyProduction, parkedProduction, parkProject, resumeWork, purchasePrice} from './works.js';
 import {NATURAL_WONDERS, placeNaturalWonders, neighboringWonders} from './natural-wonders.js';
@@ -35,6 +43,8 @@ import {campaignChart, largeCampaignChart, neighborCoordinates, REGIONAL_SHAPE} 
 import {LOS_ANGELES, regionalMaps, MAP_SCALES, validMapId, validMapSize} from './maps.js';
 export {CAMPAIGN_MAPS, validMapId, validMapSize} from './maps.js';
 import {prepareBattle} from './battle-reports.js';
+import {TRAINING_XP,chooseDrill,drillAttack,drillDefense,recordExperience,attackTrainingNote,defenseTrainingNote,counterTrainingNote} from './combat-training.js';
+import {fieldPosition,holdGround} from './field-position.js';
 import {attackMode} from './attack-mode.js';
 import {barbarianRound,seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
 
@@ -361,7 +371,7 @@ function drawOpeningSeat(seed,teams,count) {
   const pick=options=>options[Math.floor(random()*options.length)];
   return pick(pick([...members.values()]));
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2, campaignVariety=!legacyVictory && researchPace===2} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!validVictoryMode(victoryMode)) throw new Error('Choose a valid victory mode.');
   if (!legacyVictory && practice && victoryMode==='conquest') throw new Error('Conquest requires a rival civilization.');
@@ -388,7 +398,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const waterPlan=waterways ? planWaterways(base,seed) : null;
   const map=waterwayChart(base,waterPlan);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
+  const next = {seed, mapId, ...(campaignVariety ? {campaignVariety:1} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
     ...(teams ? {teams:[...teams]} : {}), ...(difficulty!=='normal' ? {difficulty} : {}),
     ...(drawInitiative===true ? {firstSeat} : {}), ...(!legacyVictory || scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:firstSeat,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
@@ -405,6 +415,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   refreshScores(next);
   for (const player of next.players) player.surveyEnabled=false;
   populateDeposits(next,map,seed,map.neighbors);
+  placeFieldStations(next,map,hexDistance);
   return rememberVision(addResearch(next));
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
@@ -501,10 +512,19 @@ export function getCityYield(state,cityId) {
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
+  const festival=festivalBenefit(state,city);
+  if (festival) {
+    result.production+=festival.production || 0;
+    result.capital+=festival.capital || 0;
+    result.influence+=festival.influence || 0;
+  }
+  const charter=charterBenefit(state,city);
+  if (charter) for (const key of ['food','production','capital','influence']) result[key]+=charter[key] || 0;
   const bonus=capitalBonus(state,city.seat,city);
   result.food+=bonus.food || 0;
   result.production+=bonus.production || 0;
   result.capital+=bonus.capital || 0;
+  if (state.campaignVariety===1 && city.atlasCopies) result.influence+=city.atlasCopies;
   if (farms && adopted(state,city.seat,'irrigationDistricts')) result.food += 2;
   if (has('harbor') && adopted(state,city.seat,'harborCommission')) result.capital += 3;
   if (adopted(state,city.seat,'exposition')) result.influence += 2 * city.buildings.filter(id=>WONDERS[id]).length;
@@ -548,8 +568,18 @@ export function getStats(state,seat) {
     capitalIncome:3*Number(settled)+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +2*cities.filter(c=>tradesBySea(state,c)).length,
     influenceIncome:2*Number(settled)+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
+  for (const city of cities) {
+    const festival=festivalBenefit(state,city);
+    stats.cultureIncome+=festival?.culture || 0;
+    stats.capitalIncome+=festival?.capital || 0;
+    stats.influenceIncome+=festival?.influence || 0;
+    const charter=charterBenefit(state,city);
+    stats.capitalIncome+=charter?.capital || 0;
+    stats.influenceIncome+=charter?.influence || 0;
+  }
   const bonus=capitalBonus(state,seat,cities.find(city=>city.originalSeat===seat));
   stats.scienceIncome+=bonus.science || 0;
+  if (state.campaignVariety===1) stats.influenceIncome+=cities.reduce((n,city)=>n+(city.atlasCopies || 0),0);
   stats.capitalIncome+=bonus.capital || 0;
   if (adopted(state,seat,'harborCommission')) stats.capitalIncome += 3 * cities.filter(c=>c.buildings.includes('harbor')).length;
   if (adopted(state,seat,'normalSchools')) stats.scienceIncome += 2 * cities.filter(c=>c.population>=3).length;
@@ -798,7 +828,7 @@ function unitImprovement(state,unit,tile) {
   if (!unit.charges) return null;
   if (state.intel?.workSites) return state.intel.workSites[unit.id]?.[tile] ?? null;
   if (unit.type==='workboat') {
-    if(unit.fishCargo)return null;
+    if(unit.fishCargo || unit.freight)return null;
     const chart=state.waterways ? getVision(state,unit.seat).explored : null;
     return fisheryPort(state,unit.seat,tile,map.byId,map.neighbors,chart) ? 'fishery' : null;
   }
@@ -902,7 +932,7 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
       (!gold ? 'This project is ready for completion.' : '') ||
       (state.players[city.seat].capital+(replace && !current ? city.queue?.grant || 0 : 0)<gold ? 'Not enough gold.' : '') ||
       (kind==='unit' && !deploymentTile(state,city,item) ? 'No deployment tile is available. Move a unit before buying.' : '');
-    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,era:def.era || null,saved:parkedProduction(city,item),turns:Math.ceil((def.required-parkedProduction(city,item))/rate),required:def.required,enabled:!reason,reason};
+    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,era:def.era || null,saved:parkedProduction(city,item),turns:constructionTurns(state,city,def.required-(current?city.queue.progress:parkedProduction(city,item)),rate),required:def.required,enabled:!reason,reason};
   });
 }
 const SCIENCE = {bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
@@ -916,6 +946,7 @@ function councilOptions(state, seat, track) {
   const known = player[track.known] || [];
   const bank = player[track.bank] || 0;
   const income = getStats(state, seat)[track.income];
+  const bonuses=councilFestivalIncome(state,seat,track.bank);
   const tree=councilTree(state,track.focus);
   return Object.entries(tree).filter(([item])=>item!=='rocketry' || allowsScience(state)).map(([item, project]) => {
     const completed = known.includes(item);
@@ -929,7 +960,7 @@ function councilOptions(state, seat, track) {
     else if (missing.length) reason = "Requires " + missing.map(key=>tree[key].name).join(" + ") + ".";
     const cost=councilProjectCost(state,track.focus,tree,item);
     const remaining = Math.max(0, cost - bank);
-    const turns = completed || remaining === 0 ? 0 : income > 0 ? Math.ceil(remaining / income) : null;
+    const turns = completed ? 0 : incomeHorizon(remaining,income,0,0,bonuses);
     return {item, label: project.name, description: project.description, cost, remaining, era: project.era,
       requires: project.requires, ...(project.tier ? {tier:project.tier} : {}), locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
   });
@@ -1099,6 +1130,7 @@ function settleSeatEconomy(state,seat) {
     const parcel=advanceCityBorder(state,city,borders.get(city.id));
     if (parcel) record(state,seat,'border','The city incorporated a district.',parcel,{city:city.id});
     produceCityTurn(state,city);
+    endFestivalHarvest(state,city);
     if (state.phase==='finished') {refreshScores(state); return;}
   }
   player.science += income.scienceIncome;
@@ -1131,6 +1163,7 @@ function refreshSeat(state,next) {
     const def=UNIT_TYPES[unit.type];
     if (def.domain==='sea' && knows(state,next,'hydrography')) unit.maxMoves=def.moves+1;
     unit.moves=unit.maxMoves;
+    if(state.campaignVariety===1 && def.domain==='sea')beginVoyageTurn(unit);
     unit.hp=recoveryAt(state,unit,def,hexDistance).hpAfter;
     if (unit.resting) delete unit.resting;
   }
@@ -1216,7 +1249,7 @@ function calculateCombatPreview(state,unitId,target) {
   if (!active(state, unit) || !attackTargets(state, unit).includes(target)) return null;
 
   const wild=wildAt(state,target);
-  if (wild) return wildForecast(unit,UNIT_TYPES[unit.type],wild);
+  if (wild) return wildForecast(unit,UNIT_TYPES[unit.type],wild,state);
 
   // A garrison absorbs the hit before the city can be damaged.
   const defender = state.units.find(other => other.tile === target && !sameTeam(state,other.seat,unit.seat));
@@ -1232,7 +1265,12 @@ function calculateCombatPreview(state,unitId,target) {
   const attackBonus = (knows(state, unit.seat, 'tactics') ? 7 : 0)
     + (UNIT_TYPES[unit.type].range > 1 && knows(state, unit.seat, 'ballistics') ? 5 : 0);
   const role=matchup(unit,defender,town,state,hexDistance,UNIT_TYPES);
-  let damage = Math.min(opponent.hp, Math.max(1, strength + role.damage + attackBonus - terrainDefense - (walls ? 7 : 0)));
+  const position=defender?.fortified && fieldPosition(state,defender,UNIT_TYPES[defender.type],terrain);
+  if (position) role.notes.push(position.benefit);
+  const assault=drillAttack(state,unit), guard=drillDefense(state,defender);
+  if (assault) role.notes.push(attackTrainingNote);
+  if (guard) role.notes.push(defenseTrainingNote);
+  let damage = Math.min(opponent.hp, Math.max(1, strength + role.damage + attackBonus + assault - guard - terrainDefense - (position?.guard || 0) - (walls ? 7 : 0)));
   let retaliation = 0;
   if (melee) {
     if (defender) {
@@ -1242,6 +1280,11 @@ function calculateCombatPreview(state,unitId,target) {
     } else {
       retaliation = walls ? 24 : 15;
     }
+  }
+  const counterGuard=drillDefense(state,unit);
+  if (counterGuard && retaliation) {
+    role.notes.push(counterTrainingNote);
+    retaliation=Math.max(0,retaliation-counterGuard);
   }
   retaliation = Math.min(retaliation, unit.hp);
   const attackerHpAfter = unit.hp - retaliation;
@@ -1260,7 +1303,11 @@ function calculateCombatPreview(state,unitId,target) {
 function resolveAttack(state, unit, target) {
   const result = combatPreview(state, unit.id, target);
   if (!result) throw new Error('Choose an enemy unit or city within range.');
-  if (result.defenderType==="wild") return resolveWildAttack(state,unit,wildAt(state,target),result,record);
+  if (result.defenderType==="wild") {
+    resolveWildAttack(state,unit,wildAt(state,target),result,record);
+    if (result.damage>0 || result.retaliation>0) recordExperience(state,unit,UNIT_TYPES[unit.type],result.defeated);
+    return;
+  }
   const from = unit.tile;
   const isUnit = result.defenderType === 'unit';
   const defender = isUnit ? unitOrNull(state, result.defenderId) : cityOrNull(state, result.defenderId);
@@ -1271,6 +1318,9 @@ function resolveAttack(state, unit, target) {
   if (result.capture) {
     defender.seat = unit.seat;
     defender.borderProgress = 0;
+    delete defender.festival;
+    delete defender.festivalHarvests;
+    delete defender.festivalRecovery;
     const lostCharter=WONDERS[defender.queue?.item];
     defender.queue = null;
     delete defender.parkedProduction;
@@ -1288,6 +1338,10 @@ function resolveAttack(state, unit, target) {
   }
   unit.hp = result.attackerHpAfter;
   unit.moves = 0;
+  if (result.damage>0 || result.retaliation>0) {
+    recordExperience(state,unit,UNIT_TYPES[unit.type],result.defeated || result.capture);
+    if (isUnit) recordExperience(state,defender,UNIT_TYPES[defender.type],result.attackerDefeated);
+  }
   if (result.advances) unit.tile = target;
   if (result.attackerDefeated || result.defeated) state.units = state.units.filter(other => other.hp > 0);
   const text = UNIT_TYPES[unit.type].name+(result.capture ? ' captured ' : ' attacked ')+name+' for '+result.damage+' damage.';
@@ -1317,12 +1371,24 @@ function resolveAttack(state, unit, target) {
   }
   recordResult();
 }
+export function getFreightManifest(state,unit) {
+  if(state.campaignVariety!==1 || !unit || unit.type!=='workboat' || state.intel && state.intel.seat!==unit.seat)return null;
+  return freightManifest(state,unit,getMap(state),getVision(state,unit.seat),hexDistance);
+}
+const freightOrders=['loadFreight','landFreight','returnFreight'];
 function unitOrder(state,seat,action) {
   const unit=unitOrNull(state,action.unit);
   if (!unit || unit.seat!==seat) throw new Error('Choose one of your units.');
   if (!unit.moves) throw new Error('This unit has spent its movement for the turn.');
   const id=unit.tile, label=UNIT_TYPES[unit.type].name;
-  if (action.type==='move') {
+  if (unit.fortified && action.type!=='fortify') delete unit.fortified;
+  if (action.type==='train') {
+    chooseDrill(state,unit,UNIT_TYPES[unit.type],action.item);
+    record(state,seat,'train',action.item==='assault'?'The unit completed assault training.':'The unit completed guard training.',id,{unit:unit.id,item:action.item});
+  } else if (action.type==='fortify') {
+    holdGround(state,unit,UNIT_TYPES[unit.type],getMap(state).byId[id].terrain);
+    record(state,seat,'fortify','The unit prepared a defensive position.',id,{unit:unit.id});
+  } else if (action.type==='move') {
     const path=getMovePath(state,unit.id,action.tile);
     if (!path.length) throw new Error('Choose an unoccupied tile within movement range.');
     unit.moves-=path.slice(1).reduce((sum,k,i)=>sum+routeStepCost(state,unit,path[i],k),0);
@@ -1333,6 +1399,14 @@ function unitOrder(state,seat,action) {
     unit.moves--;
     state.players[seat].surveyEnabled=true;
     record(state,seat,'survey','Resource survey completed.',id,{unit:unit.id});
+  } else if (action.type==='provisionVoyage') {
+    buyVoyageStores(state,unit,UNIT_TYPES[unit.type]);
+    record(state,seat,action.type,'Voyage supplies stowed for the next sailing turn.',id,{unit:unit.id});
+  } else if (freightOrders.includes(action.type)) {
+    const manifest=getFreightManifest(state,unit);
+    carryFreight(state,unit,action,manifest);
+    const message={loadFreight:'Loaded 4 food for coastal freight.',landFreight:'Coastal freight delivered.',returnFreight:'Cargo returned to its departure city.'};
+    record(state,seat,action.type,message[action.type],id,{unit:unit.id,food:manifest.food,gold:manifest.delivery?.gold || 0});
   } else if (action.type==='haulFish' || action.type==='landCatch') {
     runFishingTask(state,unit,action,getMap(state).byId);
     record(state,seat,action.type,action.type==='haulFish'?'Fishing crew loaded a catch.':'The harbor received 3 food and 1 stored fish.',id,{unit:unit.id});
@@ -1399,7 +1473,13 @@ function resolveOrder(source,seat,action) {
   if (!action || typeof action!=='object') throw new Error('Choose an action.');
   const next=cloneGame(state);
   if (action.type==='end') {endTurn(next,seat);return next;}
-  if (action.type==='delegation') {
+  if (action.type==='recordTransect' || action.type==='fileTransect') {
+    const entry=runAtlasOrder(next,seat,action,getMap(next),hexDistance);
+    record(next,seat,action.type,entry.text,entry.tile,{unit:action.unit});
+  } else if (action.type==='visitStation') {
+    const visit=visitFieldStation(next,seat,action);
+    record(next,seat,'visitStation',visit.text,visit.tile,{unit:action.unit});
+  } else if (action.type==='delegation') {
     sendDelegation(next,seat,action.target,getVisibleTiles(next,seat));
     record(next,seat,'delegation','Diplomatic delegation dispatched.',null,{target:action.target});
   } else if (action.type==='shipment') {
@@ -1410,6 +1490,14 @@ function resolveOrder(source,seat,action) {
   } else if (action.type==='policy') {
     const name=ratifyPolicy(next,seat,action.item);
     record(next,seat,'policy','Ruling policy · '+name,null,{item:action.item});
+  } else if (action.type==='cityFestival') {
+    const city=cityOrNull(next,action.city);
+    openFestival(next,seat,city,action.item);
+    record(next,seat,'cityFestival','City festival opened.',city.tile,{city:city.id,item:action.item});
+  } else if (action.type==='cityCharter') {
+    const city=cityOrNull(next,action.city);
+    grantCharter(next,seat,city,action.item);
+    record(next,seat,'cityCharter','Municipal charter granted.',city.tile,{city:city.id,item:action.item});
   } else if (action.type==='focus') {
     const city=cityOrNull(next,action.city);
     if(!city || city.seat!==seat) throw new Error('Choose one of your cities.');
@@ -1447,7 +1535,7 @@ function resolveOrder(source,seat,action) {
       advanceProduction(city);
       record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
     }
-  } else if (['move','attack','found','improve','upgrade','survey','recover','haulFish','landCatch'].includes(action.type)) {
+  } else if (['move','attack','found','improve','upgrade','survey','recover','haulFish','landCatch','fortify','train','provisionVoyage',...freightOrders].includes(action.type)) {
     unitOrder(next,seat,action);
   } else {
     if (typeof action.tile!=='string') throw new Error('Choose a district.');
@@ -1464,6 +1552,10 @@ function resolveOrder(source,seat,action) {
   refreshScores(next);
   return next;
 }
+function pursuingOrbitalResearch(state,seat) {
+  return state.campaignVariety===1 && state.victoryMode==='science' && !knows(state,seat,'rocketry');
+}
+
 function botProject(state,city,difficulty) {
   const units=state.units.filter(u=>u.seat===city.seat);
   const cities=state.cities.filter(c=>c.seat===city.seat);
@@ -1474,7 +1566,8 @@ function botProject(state,city,difficulty) {
   const surveyedPorts=vacant.map(id=>({id,basin:fleetBasin(state,city,id,region)}))
     .filter(p=>p.basin.available.length).sort((a,b)=>b.basin.score-a.basin.score);
   let preferredBerth=surveyedPorts[0]?.id;
-  if (allowsScience(state) && !cities.some(c=>c.queue?.item===SCIENCE_PROJECT.id)) choices.push(SCIENCE_PROJECT.id);
+  // A locked launch project must leave the production list open for university proposals.
+  if (allowsScience(state) && !pursuingOrbitalResearch(state,city.seat) && !cities.some(c=>c.queue?.item===SCIENCE_PROJECT.id)) choices.push(SCIENCE_PROJECT.id);
   const rivals=state.units.filter(unit=>!sameTeam(state,city.seat,unit.seat));
   const hostileCities=state.cities.filter(other=>!sameTeam(state,city.seat,other.seat));
   // A bombardment needs one healthy ground formation to occupy the city.
@@ -1707,7 +1800,10 @@ function botMovement(state,unit,options,difficulty) {
     return flotillaMove(state,unit,options.moves,map,UNIT_TYPES,hexDistance,sameTeam,id=>surveyedFishery(state,unit,id));
   }
   if (unit.type==='signals') return signalPosition(state,unit,options.moves,UNIT_TYPES,hexDistance);
-  if (unit.type==='scout') return exploreFrontier(state,unit,options.moves);
+  if (unit.type==='scout') {
+    const station=nearestKnownStation(state,unit,options.moves,hexDistance);
+    return station ? {type:'move',unit:unit.id,tile:station} : exploreFrontier(state,unit,options.moves);
+  }
   if (settle) goals=state.intel.visible.filter(id=>canSettle(state,unit.seat,id));
   else if (unit.type==='workboat') {
     const site=options.moves.find(id=>surveyedFishery(state,unit,id));
@@ -1797,7 +1893,9 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if(!validDifficulty(difficulty))throw new Error('Choose a valid AI difficulty.');
   const {visible,explored,hasFoundedCapital,teamSurveyed}=view.intel;
   const observedBerths=Array.isArray(view.intel.visibleBerths) ? {visibleBerths:view.intel.visibleBerths.filter(id=>visible.includes(id))} : {};
-  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,...observedBerths}};
+  const friendlyHarbors=view.campaignVariety===1 ? {alliedFreightPorts:(view.intel.alliedFreightPorts || []).filter(port=>
+    visible.includes(port.portTile) && sameTeam(view,seat,port.seat))} : {};
+  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,...observedBerths,...friendlyHarbors}};
   const player = state.players[seat];
   if (!state.cities.some(c=>c.seat===seat)) {
     const pioneer=state.units.find(u=>u.type==='settler' && u.seat===seat && u.moves>0);
@@ -1834,9 +1932,22 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   for (const [unit,options] of plans) {
     if (options.canFound) return {type:'found',unit:unit.id};
     if(unit.type==='workboat' && Array.isArray(state.intel.visibleBerths)){
+      const freight=getFreightManifest(state,unit);
+      if(freight?.ready && (freight.type==='landFreight' || freight.type==='loadFreight' && freight.origin.food>=8))
+        return {type:freight.type,unit:unit.id};
+      if(freight?.cargo){
+        const destinations=freight.routes.filter(r=>!state.units.some(u=>u.id!==unit.id && u.tile===r.berth)).map(r=>r.berth);
+        const sail=sailTo(state,unit,options.moves,destinations,getMap(state));
+        if(sail)return sail;
+        if(freight.ready && freight.type==='returnFreight' && !freight.routes.length)return {type:'returnFreight',unit:unit.id};
+      }
       const task=fishingTask(state,unit,getMap(state).byId);
       if(task && (task.type==='landCatch' || unit.charges<2 || !options.improvements.length))
         return {type:task.type,unit:unit.id};
+    }
+    if(difficulty!=='easy' && !options.attacks.length && unit.moves===1 && UNIT_TYPES[unit.type].domain==='sea'){
+      const supplies=navalStoresOrder(state,unit,UNIT_TYPES[unit.type],getMap(state).byId,hexDistance);
+      if(supplies)return supplies;
     }
     if (options.improvements.length && (unit.type!=='workboat' || surveyedFishery(state,unit,unit.tile))) return {type:'improve',unit:unit.id,item:options.improvements[0]};
     if (options.attacks.length) {
@@ -1857,8 +1968,23 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
       if(difficulty!=='hard' && combinedAttack)return combinedAttack;
     }
   }
+  if (state.campaignVariety===1) {
+    const ready=available.find(unit=>!unit.drill && unit.combatXP>=TRAINING_XP && UNIT_TYPES[unit.type].strength);
+    // A finishing blow takes priority over spending the formation's turn on training.
+    if (ready && bestValue<80) {
+      const defending=state.cities.some(city=>city.seat===seat && city.tile===ready.tile);
+      return {type:'train',unit:ready.id,item:defending || ready.hp*2<ready.maxHp?'guard':'assault'};
+    }
+  }
   if(combinedAttack)return combinedAttack;
   if(assault.advance)return assault.advance;
+  if (state.campaignVariety===1 && difficulty!=='easy') {
+    const guard=available.find(unit=>!unit.fortified && unit.moves===unit.maxMoves &&
+      fieldPosition(state,unit,UNIT_TYPES[unit.type],getMap(state).byId[unit.tile].terrain) &&
+      state.cities.some(city=>city.seat===seat && city.tile===unit.tile) &&
+      state.units.some(other=>!sameTeam(state,seat,other.seat) && UNIT_TYPES[other.type].strength && hexDistance(other.tile,unit.tile)<=2));
+    if (guard) return {type:'fortify',unit:guard.id};
+  }
   // A fully trained unit waits in its city when no legal deployment space
   // remains. Bank that work if this government can launch from the same city.
   if (state.researchPace>=1 && allowsScience(state) && player.technologies.includes('rocketry')) {
@@ -1874,17 +2000,29 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if(shipment)return shipment;
   for (const city of state.cities) if (city.seat===seat && city.focusRound!==state.round) {
     const food=getPopulationReport(state,city.id);
-    const focus=food.surplus<0 ? 'food' : food.housingLimited ? 'industry' :
+    const focusResearch=player.research && pursuingOrbitalResearch(state,seat);
+    const focus=food.surplus<0 ? 'food' : food.housingLimited && !focusResearch ? 'industry' :
       (city.population>=3 && player.research ? 'science' : 'balanced');
     if ((city.focus || 'balanced')!==focus) return {type:'focus',city:city.id,item:focus};
   }
-  const veteran=plans.find(([,options])=>options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
+  const charter=proposeCharter(state,seat);
+  if (charter) return charter;
+  const festival=proposeFestival(state,seat);
+  if (festival) return festival;
+  const surveyor=expeditionScout(state,seat,hexDistance,UNIT_TYPES);
+  const veteran=plans.find(([unit,options])=>unit.id!==surveyor && options.upgrade?.enabled && player.capital >= options.upgrade.cost + 8);
   if (veteran) return {type:'upgrade',unit:veteran[0].id,item:veteran[1].upgrade.to};
   for (const city of state.cities) if (city.seat===seat && !city.queue) {
     const order=botProject(state,city,difficulty);
     if (order) return order;
   }
   for (const [unit,options] of plans) {
+    const station=volunteerStationOrder(state,unit);
+    if(station)return station;
+    if(unit.type==='scout'){
+      const fieldwork=expeditionOrder(state,unit,options.moves,getMap(state),hexDistance);
+      if(fieldwork)return fieldwork;
+    }
     const move=botMovement(state,unit,options,difficulty);
     if (move) return move;
   }

@@ -1,3 +1,5 @@
+import {drillAttack,drillDefense,recordExperience,attackTrainingNote,counterTrainingNote} from './combat-training.js';
+import {fieldPosition} from './field-position.js';
 import {attackMode} from './attack-mode.js';
 import {prepareBattle} from './battle-reports.js';
 import {sameTeam} from './teams.js';
@@ -47,17 +49,21 @@ export function seedCamps(state,map,neighbors,distance) {
     result.parties.push({id:'w'+result.nextPiece++,tile:site,type:'lookout',hp:24,maxHp:24,campId:id});
   }
 }
-export function wildForecast(unit,definition,target) {
+export function wildForecast(unit,definition,target,state={}) {
   const mode=attackMode(definition);
   const occupies=mode==='melee' && definition.captures===true;
-  const hit=Math.max(1,Math.round(definition.strength*(.75+.25*unit.hp/unit.maxHp)));
-  const retaliation=mode==='melee' ? Math.min(unit.hp,WILDS[target.type].strength) : 0;
+  const assault=drillAttack(state,unit), guard=drillDefense(state,unit);
+  const hit=Math.max(1,Math.round(definition.strength*(.75+.25*unit.hp/unit.maxHp))+assault);
+  const retaliation=mode==='melee' ? Math.min(unit.hp,Math.max(0,WILDS[target.type].strength-guard)) : 0;
+  const notes=[];
+  if (assault) notes.push(attackTrainingNote);
+  if (guard && mode==='melee') notes.push(counterTrainingNote);
   // Only a surviving close-combat unit can take a camp and collect its spoils.
   const camp=target.type==='camp';
   const canClear=occupies && unit.hp>retaliation;
   const damage=Math.max(0,Math.min(hit,target.hp-(camp&&!canClear ? 1 : 0)));
   const after=target.hp-damage;
-  return {attackMode:mode,defenderType:'wild', defenderId:target.id, damage, retaliation, capture:false,
+  return {...(notes.length?{roleNotes:notes}:{}),attackMode:mode,defenderType:'wild', defenderId:target.id, damage, retaliation, capture:false,
     defeated:after===0, advances:occupies&&after===0&&unit.hp>retaliation, attackerDefeated:unit.hp===retaliation,
     attackerHpBefore:unit.hp,attackerHpAfter:unit.hp-retaliation,
     defenderHpBefore:target.hp,defenderHpAfterHit:after,defenderHpAfter:after};
@@ -156,7 +162,8 @@ function raidTurn(state,party,town,defs,map,neighbors,distance,record) {
   }
   const foe=state.units.find(u=>defs[u.type]?.strength>0 && defs[u.type]?.domain!=='sea' && sameTeam(state,u.seat,town.seat) && distance(u.tile,party.tile)===1);
   if (foe) {
-    const damage=Math.min(foe.hp,14);
+    const position=foe.fortified && fieldPosition(state,foe,defs[foe.type],map.byId[foe.tile].terrain);
+    const damage=Math.min(foe.hp,Math.max(1,14-(position?.guard || 0)-drillDefense(state,foe)));
     const retaliation=Math.min(party.hp,Math.max(4,Math.round(defs[foe.type].strength*.4)));
     const garrison=state.cities.find(c=>c.tile===foe.tile && c.seat===foe.seat);
     const recordResult=prepareBattle(state,party,foe,{
@@ -165,6 +172,7 @@ function raidTurn(state,party,town,defs,map,neighbors,distance,record) {
     }, {garrison:garrison?.name});
     foe.hp-=damage;
     party.hp-=retaliation;
+    recordExperience(state,foe,defs[foe.type],party.hp===0);
     if(!foe.hp)state.units=state.units.filter(u=>u.id!==foe.id);
     record(state,foe.seat,'barbarian','Barbarian raiders clashed with your military unit.',foe.tile);
     recordResult();

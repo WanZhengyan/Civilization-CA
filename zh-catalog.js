@@ -2,9 +2,64 @@ import {maritimeCopy} from './maritime-guide.js';
 // The English UI copy is the catalog key. The rules and network protocol keep
 // their canonical IDs in both languages.
 import {CIVILIZATIONS} from './civilizations.js';
+import {trainingTranslations} from './combat-training.js';
+import {positionTranslations} from './field-position.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
+section(positionTranslations);
+import {stationCopy} from './field-stations.js';
+section(stationCopy);
+import {notebookCopy} from './regional-atlas.js';
+section(notebookCopy);
+section(`
+Craft exhibition|工艺展
+Each of the next three harvests adds 3 production to the city and 1 culture to the council.|接下来三次收获，本城每次额外获得 3 点生产力，议会额外获得 1 点文化。
+Market days|集市
+Each of the next three harvests earns 5 gold and 1 influence.|接下来三次收获，每次额外获得 5 金币与 1 点影响力。
+Heritage festival|地方文化节
+Each of the next three harvests earns 2 culture and 2 influence.|接下来三次收获，每次额外获得 2 点文化与 2 点影响力。
+A festival is already underway.|本城正在举办节庆。
+Festival preparations are still underway.|本城仍在筹备下一场节庆。
+Save 4 food in this city.|本城需要储备 4 点粮食。
+The festival requires 8 gold.|举办节庆需要 8 金币。
+Choose an available city festival.|请选择可以举办的城市节庆。
+City festival opened.|城市节庆已开幕。
+City festivals|城市节庆
+Adopt Municipal Charter to organize local festivals.|通过「市政宪章」即可举办地方节庆。
+Hosting costs 8 gold and 4 stored city food. After three festival harvests the city needs three more harvests to prepare another event.|举办节庆需支付 8 金币和本城 4 点储粮。节庆持续三次收获，结束后还需三次收获来筹备下一场。
+Festival harvests remaining|节庆剩余收获次数
+Harvests before the next festival|距下次节庆的收获次数
+Review festival|查看节庆
+Spend 8 gold and 4 stored food to open this festival.|花费 8 金币和本城 4 点储粮开始节庆。
+Open festival|举办节庆
+City hall|市政厅
+City charter|城市特许状
+Return to city hall|返回市政厅
+Gold after signing|签署后金币
+Food after opening|开幕后存粮
+Gold after opening|开幕后金币
+A city with two residents can spend 18 gold on one permanent charter. The charter stays with the city if it changes hands.|至少有两位居民的城市可以花费 18 金币颁发一份永久特许状。城市易主后仍保留该特许状。
+Growers’ cooperative|种植合作社
+The granary supplies 3 additional food each harvest.|每次收获时，粮仓额外提供 3 点粮食。
+Machinists’ guild|机械工匠行会
+The workshop supplies 3 additional production each harvest.|每次收获时，工坊额外提供 3 点生产力。
+Merchants’ exchange|商贸交易所
+The monument attracts merchants, earning 3 gold and 1 influence each harvest.|纪念碑吸引商人，每次收获时额外获得 3 金币与 1 点影响力。
+Review charter|查看特许状
+Grant charter|颁发特许状
+Spend 18 gold to grant this city its permanent charter.|花费 18 金币，为本城颁发永久特许状。
+Charter in force|特许状已生效
+This city has already granted its charter.|本城已颁发特许状。
+The city needs two residents.|本城至少需要两位居民。
+Build a granary first.|请先建造粮仓。
+Build a workshop first.|请先建造工坊。
+Build a monument first.|请先建造纪念碑。
+The charter requires 18 gold.|颁发特许状需要 18 金币。
+Choose a charter for one of your cities.|请选择己方城市的特许状。
+Municipal charter granted.|城市特许状已颁发。
+`);
+section(trainingTranslations);
 section(`
 Applied Mechanics|应用力学
 Each workshop supplies 1 additional production per turn.|每座工坊每回合额外提供 1 点产能。
