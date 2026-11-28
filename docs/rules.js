@@ -1550,6 +1550,10 @@ function resolveOrder(source,seat,action) {
   refreshScores(next);
   return next;
 }
+function pursuingOrbitalResearch(state,seat) {
+  return state.campaignVariety===1 && state.victoryMode==='science' && !knows(state,seat,'rocketry');
+}
+
 function botProject(state,city,difficulty) {
   const units=state.units.filter(u=>u.seat===city.seat);
   const cities=state.cities.filter(c=>c.seat===city.seat);
@@ -1560,7 +1564,8 @@ function botProject(state,city,difficulty) {
   const surveyedPorts=vacant.map(id=>({id,basin:fleetBasin(state,city,id,region)}))
     .filter(p=>p.basin.available.length).sort((a,b)=>b.basin.score-a.basin.score);
   let preferredBerth=surveyedPorts[0]?.id;
-  if (allowsScience(state) && !cities.some(c=>c.queue?.item===SCIENCE_PROJECT.id)) choices.push(SCIENCE_PROJECT.id);
+  // A locked launch project must leave the production list open for university proposals.
+  if (allowsScience(state) && !pursuingOrbitalResearch(state,city.seat) && !cities.some(c=>c.queue?.item===SCIENCE_PROJECT.id)) choices.push(SCIENCE_PROJECT.id);
   const rivals=state.units.filter(unit=>!sameTeam(state,city.seat,unit.seat));
   const hostileCities=state.cities.filter(other=>!sameTeam(state,city.seat,other.seat));
   // A bombardment needs one healthy ground formation to occupy the city.
@@ -1991,7 +1996,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if(shipment)return shipment;
   for (const city of state.cities) if (city.seat===seat && city.focusRound!==state.round) {
     const food=getPopulationReport(state,city.id);
-    const focus=food.surplus<0 ? 'food' : food.housingLimited ? 'industry' :
+    const focusResearch=player.research && pursuingOrbitalResearch(state,seat);
+    const focus=food.surplus<0 ? 'food' : food.housingLimited && !focusResearch ? 'industry' :
       (city.population>=3 && player.research ? 'science' : 'balanced');
     if ((city.focus || 'balanced')!==focus) return {type:'focus',city:city.id,item:focus};
   }
