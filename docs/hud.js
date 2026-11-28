@@ -44,7 +44,7 @@ import {captureOrderHint,cityAttackHint,forecastCounterLabel} from './attack-mod
 import {militaryTraining,trainingPanel} from './combat-training.js';
 import {fieldPosition,fieldPositionPanel} from './field-position.js';
 import {advancementPanel,recoveryPanel} from './unit-service-ui.js';
-import {getUpgradePlans,getRecoveryForecast} from './rules.js';
+import {canSkipUnit,getUpgradePlans,getRecoveryForecast} from './rules.js';
 import {mountSurveyControls, showSelectedFrontier} from './survey-controls.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
@@ -90,6 +90,7 @@ const symbols={
   city:'<path d="M3 21h18M5 20V9h5v11m0-14 4-3 4 3v14m0-10h3v10M7 12h1m5-3h2m-2 4h2"/>',
   land:'<path d="m3 18 5-9 4 6 3-4 6 7H3z"/><circle cx="17" cy="6" r="2"/>',
   move:'<path d="M12 2v20M2 12h20M9 5l3-3 3 3m-6 14 3 3 3-3M5 9l-3 3 3 3m14-6 3 3-3 3"/>',
+  skipUnit:'<path d="m5 5 10 7L5 19zM19 5v14"/>',
   attack:'<path d="m3 3 4 1 12 14m-4 1 4-5m-9-1-5 6-2-2 5-6m5-2 4-5 4-1-1 4-5 4"/>',
   found:'<path d="M3 21h18M5 20V10l4-4 4 4v10m0-8 3-3 4 3v8M9 6V2m0 0 5 1-5 2"/>',
   farm:'<path d="M12 21V8m-1 7C7 16 4 12 4 8c4 0 7 2 8 6m1-1c1-4 4-6 8-6-1 4-4 7-8 7m-1-6c-3-2-3-4 0-7 3 3 3 5 0 7"/>',
@@ -118,6 +119,24 @@ function cityAt(tile){return view.state.cities.find(c=>c.tile===tile)}
 function getUnit(){return view.state.units.find(u=>sameId(u.id,selectedUnit))}
 function faction(seat){const player=view.state.players[seat];return {name:names[player?.faction??seat],color:FACTIONS[player?.faction??seat]?.color||"#9aabb2"}}
 function ownUnits(){return view.state.units.filter(u=>u.seat===view.seat)}
+function readyUnits(){
+  if(view.mode==='online' && !view.state.intel?.turnReadiness)return ownUnits().filter(u=>u.moves>0);
+  const needed=new Set(pendingTurnTasks(view).filter(task=>task.kind==="unit").map(task=>task.id));
+  return ownUnits().filter(unit=>needed.has(unit.id));
+}
+function skipUnitButton(unit,locked){
+  const {state,seat}=view;
+  if(state.intel && !state.intel.turnReadiness)return "";
+  const skipped=unit.skippedRound===state.round;
+  let detail="Keeps remaining movement";
+  if(state.phase!=="playing")detail="The campaign has ended.";
+  else if(locked)detail=view.busy?"Updating orders…":"Wait for your turn.";
+  else if(skipped && unit.moves>0)detail="Can still act this turn";
+  else if(unit.fortified)detail="Fortified position";
+  else if(unit.resting)detail="Rest order committed";
+  else if(!unit.moves)detail="No movement left";
+  return actionButton("skipUnit",skipped?"Skipped this turn":"Skip this turn",detail,"",locked||!canSkipUnit(state,seat,unit.id));
+}
 function ownCities(){return view.state.cities.filter(c=>c.seat===view.seat)}
 function customCity(city){return Boolean(city && city.name!==mapRegion.byId[city.tile]?.name)}
 function cityNameAttrs(city){return customCity(city)?' translate="no"':''}
@@ -146,7 +165,7 @@ function select(tile,unit=null,city=false){
   kind=piece?"unit":place?"city":"tile";selectedUnit=piece?.id??null;
 }
 function selectOpening(){
-  const units=ownUnits(),starter=units.find(u=>u.type==="settler"&&u.moves>0)||units.find(u=>u.moves>0)||units[0];
+  const ready=readyUnits(),starter=ready.find(u=>u.type==="settler")||ready[0]||ownUnits()[0];
   if(starter)select(starter.tile,starter.id);
   else {const city=ownCities()[0];select(city?.tile || view.state.intel?.explored?.[0] || mapRegion.tiles[0].id,null,true)}
 }
@@ -390,6 +409,7 @@ function inspect(){
         const definition=UNIT_TYPES[u.type];
         explanation=definition.description||itemDesc[u.type]||("Attack range · "+definition.range+" hexes.");
       }
+      actions+=skipUnitButton(u,disabled);
       const journal=notebookReport(state,u,mapRegion,hexDistance);
       const visit=fieldStationReport(state,u);
       if(visit){
@@ -556,9 +576,10 @@ function roster(){
     const label=unitTab ? items[o.type]||o.type : o.name;
     const turns=unitTab?null:projectTurns(o);
     const subtitle=unitTab?o.moves+' / '+o.maxMoves+' movement':o.queue?(items[o.queue.item]||o.queue.item)+' · '+(turns?turnsText(turns):'Awaiting deployment'):'Awaiting production';
-    return '<button class="roster-unit" aria-pressed="'+active+'" data-roster-id="'+esc(o.id)+'"><span class="roster-symbol">'+icon(unitTab?o.type:'city')+'</span><span><b'+(unitTab?'':cityNameAttrs(o))+'>'+esc(label)+'</b><small>'+esc(subtitle)+'</small></span></button>';
+    const skipped=unitTab && o.skippedRound===view.state.round ? ' · <span>Skipped this turn</span>' : '';
+    return '<button class="roster-unit" aria-pressed="'+active+'" data-roster-id="'+esc(o.id)+'"><span class="roster-symbol">'+icon(unitTab?o.type:'city')+'</span><span><b'+(unitTab?'':cityNameAttrs(o))+'>'+esc(label)+'</b><small><span>'+esc(subtitle)+'</span>'+skipped+'</small></span></button>';
   }).join('')||'<div class="roster-empty">'+(unitTab?'You have no units in the field.':'You have no cities.')+'</div>');
-  el("next-unit").disabled=!mayOrder()||!ownUnits().some(u=>u.moves>0);
+  el("next-unit").disabled=!mayOrder()||!readyUnits().length;
 }
 function redraw(){inspect();updateMap();roster()}
 function projectTurns(city){
@@ -925,6 +946,17 @@ function chooseOrder(key){
     return;
   }
   if(!mayOrder())return;
+  if(key==="skipUnit"){
+    if(!canSkipUnit(view.state,view.seat,u.id))return;
+    order="";freightTarget=null;
+    const fromButton=document.activeElement?.dataset.order==="skipUnit";
+    const session=matchKey;
+    Promise.resolve(Game.doAction({type:"skipUnit",unit:u.id})).then(()=>{
+      if(fromButton && matchKey===session && sameId(getUnit()?.id,u.id) && getUnit().skippedRound===view.state.round && document.activeElement===document.body)
+        el("end-turn").focus({preventScroll:true});
+    });
+    return;
+  }
   if(key.startsWith("train:")){order="";Game.doAction({type:"train",unit:u.id,item:key.slice(6)});return}
   if(key==="fortify"){order="";Game.doAction({type:"fortify",unit:u.id});return}
   if(["provisionVoyage","loadFreight","landFreight","returnFreight","landCatch","haulFish"].includes(key)){order="";Game.doAction({type:key,unit:u.id});return}
@@ -959,7 +991,7 @@ function chooseRoster(id){
   if(!item)return;closeMapPanel();select(item.tile,units?item.id:null,!units);atlas.focus(item.tile);redraw();openMapOnMobile();
 }
 function nextReady(){
-  const ready=ownUnits().filter(u=>u.moves>0);if(!ready.length)return;
+  const ready=readyUnits();if(!ready.length)return;
   const i=ready.findIndex(u=>sameId(u.id,selectedUnit));activeRoster="units";chooseRoster(ready[(i+1)%ready.length].id);
 }
 function showRoster(type){activeRoster=type;roster()}

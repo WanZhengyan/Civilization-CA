@@ -601,6 +601,12 @@ Move unit|移动单位
 Show moves|显示可移动地块
 Select|选择
 Spent|已用尽
+Skip this turn|跳过本回合
+Skipped this turn|本回合已跳过
+Keeps remaining movement|保留剩余移动力
+Can still act this turn|本回合仍可行动
+No movement left|移动力已用尽
+Updating orders…|正在同步指令…
 Found city|建造城市
 Settle here|在此建城
 Unavailable|不可用

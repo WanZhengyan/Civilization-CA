@@ -1,6 +1,9 @@
 // Each chapter opens with an order a player can try on the map.
 const chapters = {
   start: [
+    ['Finish a turn', '完成一个回合',
+      'Use the lower-right button to open each pending decision. After founding, choose research, a civic and production for each idle city. For a unit with movement left, move it or choose Skip this turn in Field command. Skipping keeps its movement. You can select it again on the map or in the roster to give another order. When all prompts are resolved, choose End turn.',
+      '点右下角的按钮，会直接打开下一项待办。建都后，依次选科技、市政，再给空闲城市安排生产。还有移动力的单位可以行动，也可以在「战场指挥」中选「跳过本回合」。跳过会保留移动力，如需改主意，可在地图或名册中重新选中它。待办处理完后，点「结束回合」。'],
     ['Travel with a scout', '派侦察兵出行',
       'Train a scout and select it at a trading post, field archive or trail lodge to choose an exchange. The same scout can also record three different terrains at least three hexes apart. Bring the notebook within one hex of one of your cities to publish your regional atlas.',
       '训练侦察兵，抵达商贸驿站、田野档案馆或山径驿舍后可以选择一次交换。也可以让同一名侦察兵在三个不同类型的地形做记录，各点之间至少相隔三格。带着记录返回己方城市一格以内，即可出版地区图志。']
