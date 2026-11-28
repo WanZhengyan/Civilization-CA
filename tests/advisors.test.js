@@ -22,3 +22,12 @@ test('the founding desk compares only charted sites and quotes a legal route',()
   for(const site of sites){assert.ok(v.intel.explored.includes(site.link.tile));assert.equal(site.link.unit,s.units[0].id);}
   assert.equal(read(capital()).filter(x=>x.desk==='settle').length,0);
 });
+
+test('scout proposals report real sight gains and stop advising a skipped unit',()=>{
+  const s=capital(),u={...start().units[0],id:'scout-test',type:'scout',moves:3,maxMoves:3,tile:s.cities[0].tile};s.units.push(u);
+  const choice=read(s).find(r=>r.desk==='explore');assert.ok(choice);
+  const before=campaignView(s,0).intel.explored.length;
+  const after=applyAction(s,0,{type:'move',unit:u.id,tile:choice.link.tile});
+  assert.ok(choice.detail.includes('chart '+(campaignView(after,0).intel.explored.length-before)+' new'));
+  u.skippedRound=s.round;assert.ok(!read(s).some(r=>r.desk==='explore'));
+});

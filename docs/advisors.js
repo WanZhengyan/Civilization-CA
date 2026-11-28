@@ -1,3 +1,4 @@
+import {scoutingRoutes} from "./scout-routes.js";
 // Advisors read only the seat's projected chart. They never issue orders.
 import {getMap,getPopulationReport,getCitizenWorkforce,getSettlementAssessment,getUnitOptions} from './rules.js';
 import {roomSeatTurn} from './room-turn.js';
@@ -43,7 +44,22 @@ function settlementDesk({state,units,map,L,t,add,active}){
   }
 }
 
-const desks=[settlementDesk,foodDesk];
+function explorationDesk({state,units,map,L,t,add,active}){
+  if(!active)return;
+  for(const unit of units.filter(u=>u.type==='scout' && u.moves>0 && u.skippedRound!==state.round)){
+    const targets=getUnitOptions(state,unit.id).moves.filter(id=>state.intel.explored.includes(id));
+    const routes=scoutingRoutes(state,unit,targets);
+    if(!routes[0]?.newHexes)continue;
+    const best=routes[0],nimble=routes.find(r=>r.left>best.left && r.newHexes);
+    for(const [i,r] of [best,nimble].filter(Boolean).entries()){
+      add('explore',L(i?'Keep a scout move · ':'Reveal the frontier · ',i?'保留侦察兵移动力 · ':'勘探边界 · ')+t(map.byId[r.tile].name),
+        L('At '+r.tile+', chart '+r.newHexes+' new hexes for '+r.cost+' movement. '+r.left+' movement remains.',
+          '到达 '+r.tile+' 可探索 '+r.newHexes+' 格，消耗 '+r.cost+' 移动力，剩余 '+r.left+'。'),65-i,{kind:'move',unit:unit.id,tile:r.tile});
+    }
+  }
+}
+
+const desks=[explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;
