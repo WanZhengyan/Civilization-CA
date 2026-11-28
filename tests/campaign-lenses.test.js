@@ -75,3 +75,14 @@ test('water links trace only charted water and never disclose isolated waters be
   const rows=surveyLayer(s,0,'water');assert.equal(rows.size,3);assert.equal(rows.get(first.id).band,0);
   assert.match(rows.get(near).en,/1 water hexes/);assert.equal(rows.get(far.id).band,3);
 });
+
+test('campus survey uses the researched school and authoritative specialty terrain',async()=>{
+  const {getWonderSites,hexDistance}=await import('../docs/rules.js'),raw=capital(),c=raw.cities[0];
+  for(const tile of getMap(raw).tiles)if(hexDistance(tile.id,c.tile)<=2 && !['ocean','mountains'].includes(tile.terrain))raw.board[tile.id]={owner:0,level:0};
+  assert.equal(surveyLayer(campaignView(raw,0),0,'campus').size,0);
+  raw.players[0].technologies=['industry'];raw.players[0].capital=100;
+  const s=campaignView(raw,0),sites=getWonderSites(s,c.id,'stanford'),rows=surveyLayer(s,0,'campus');
+  assert.ok(sites.length);sites.forEach(site=>{
+    assert.equal(rows.get(site.id).band,Number(site.favored));assert.match(rows.get(site.id).en,/Stanford/);
+  });
+});

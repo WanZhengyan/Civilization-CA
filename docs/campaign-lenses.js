@@ -1,3 +1,5 @@
+import {getWonderSites,getProductionOptions} from './rules.js';
+import {WONDERS,campusStatus} from './wonders.js';
 import {waterDistances,waterKind} from './water-navigation.js';
 import {getUnitOptions} from './rules.js';
 import {scoutingRoutes} from './scout-routes.js';
@@ -152,6 +154,31 @@ const lenses=[
       const {city,distance}=ports.sort((a,b)=>a.distance-b.distance)[0];
       rows.set(id,reading(berths.has(id)?0:ports.length>1?2:1,'Nearest berth · '+city.name+', '+distance+' water hexes. Connected home ports · '+ports.length+'.',
         '最近泊位 · '+translate(city.name,'zh-CN')+'，水路 '+distance+' 格。已接通 '+ports.length+' 个己方港口。',ports.length));
+    }
+    return rows;
+  }),
+  definition('campus','University charters','大学选址','Compare legal sites for researched campuses. Favored terrain adds one point to the university’s specialty each harvest.','为已解锁的大学比较合规地块。匹配地形每回合额外获得 1 点该校的专长产出。',[
+    ['Standard site','普通选址'],['Favored terrain','优势地形'],['Order unavailable','暂不可委托']
+  ],({state,own})=>{
+    const rows=new Map(),matches=new Map();
+    for(const city of own){
+      const options=getProductionOptions(state,city.id,{replace:true});
+      for(const option of options.filter(o=>WONDERS[o.item] && campusStatus(state,o.item)!=='complete')){
+        const school=WONDERS[option.item];
+        for(const site of getWonderSites(state,city.id,option.item)){
+          const list=matches.get(site.id)||[];list.push({city,option,school,site});matches.set(site.id,list);
+        }
+      }
+    }
+    for(const [id,list] of matches){
+      const available=list.filter(m=>m.option.enabled),bonus=available.filter(m=>m.site.favored).length;
+      const info=lang=>list.map(({city,option,school,site})=>{
+        const zh=lang==='zh-CN',name=translate(school.name,lang),town=translate(city.name,lang);
+        const specialty={production:['production','生产力'],science:['science','科研'],culture:['culture','文化']}[school.specialty];
+        return town+' · '+name+' · '+school.grant+(zh?' 金币':' gold')+
+          (site.favored?' · +1 '+specialty[Number(zh)]:'')+(option.enabled?'':' · '+translate(option.reason,lang));
+      }).join(' / ');
+      rows.set(id,reading(!available.length?2:bonus?1:0,info('en'),info('zh-CN'),bonus*10+available.length));
     }
     return rows;
   }),
