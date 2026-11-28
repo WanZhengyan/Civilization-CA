@@ -1,16 +1,15 @@
 # Civilization CA
 
-A bilingual, turn-based strategy game for one to four players. Each California campaign begins with one settler, a chosen or randomly drawn civilization and a new starting location. Choose Los Angeles, San Francisco Bay or San Diego, and a Large, Grand or Epic map. Practice on your own, face computer rivals or invite friends to a team match.
+**v6.5.0 · California Campaigns / 加州战役**  
+A bilingual turn-based strategy game set in Los Angeles, San Francisco Bay and San Diego. Found a capital, send scouts into the hills, and decide how to spend your city's production and influence.
 
-[Official website](https://wanzhengyan.github.io/Civilization-CA/) · [Play solo](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Create a room](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host) · [Watch a campaign](https://wanzhengyan.github.io/Civilization-CA/#film) · [Campaign updates](./CHANGELOG.md)
+**[Play the guided first campaign / 开始新手教程](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Official homepage / 游戏主页](https://wanzhengyan.github.io/Civilization-CA/) · [Solo setup](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Create a room](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host) · [What's new](./CHANGELOG.md)
 
-![The Civilization CA title screen](./media/campaign-home.webp)
+第一次玩，可以从帕萨迪纳开局。教程会在实际地图上带你建都、选择科技和市政、安排生产，并用侦察兵探索周围。教程使用独立存档，可以中途离开再继续。
 
-[English campaign board](./media/board-preview.webp)
+![A scout exploring east of the capital on the Los Angeles relief map, with research on the left and unit orders on the right](./docs/art/relief-gameplay.webp)
 
-[中文实机画面](./media/board-zh.webp)
-
-In new campaigns, train a scout to visit field stations and bring home a regional atlas. Give cities individual charters or host a festival for a short burst of production, culture or income. Carry food by sea to another friendly harbor. A veteran can hold a ridge or spend a turn on a permanent combat drill. Open the city overview to compare cities or select a council goal to find a building that can shorten its research time.
+In the guided campaign, learn the controls with one settler and no rival civilizations. The bottom-right button takes you to your next decision. When a unit needs orders, move it or skip this turn and keep its remaining movement. You can play regular campaigns solo or with up to three other players.
 
 ## Enter a campaign
 
