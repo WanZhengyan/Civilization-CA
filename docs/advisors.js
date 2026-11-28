@@ -1,3 +1,5 @@
+import {getFreightManifest} from "./rules.js";
+import {freightCourse} from "./freight-course.js";
 import {getResourceLedger} from "./rules.js";
 import {isProduce,materialShipmentGain,SHIPMENT} from "./resources.js";
 import {councilCourse} from "./council-path.js";
@@ -213,7 +215,25 @@ function supplyDesk({state,seat,cities,L,t,name,add,active}){
     best?.score||38,{kind:'supplies',city:best?.city.id,resource:key,market:best?'city':'sell'});
 }
 
-const desks=[supplyDesk,influenceDesk,civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function coastDesk({state,units,L,t,add,active}){
+  if(!active || state.campaignVariety!==1)return;
+  for(const boat of units.filter(u=>u.type==='workboat' && u.moves>0 && u.skippedRound!==state.round)){
+    const manifest=getFreightManifest(state,boat);
+    if(!manifest || !manifest.cargo && !manifest.ready)continue;
+    const moves=getUnitOptions(state,boat.id).moves;
+    const courses=manifest.routes.map(port=>freightCourse(state,boat,port.berth,moves)).filter(c=>c?.unloadRound!=null);
+    const efficiency=c=>c.port.gold/(1+c.unloadRound-state.round);
+    courses.sort((a,b)=>efficiency(b)-efficiency(a) || a.unloadRound-b.unloadRound);
+    const c=courses[0];if(!c)continue;
+    const feedback=manifest.cargo?L('Crate aboard. ','已装货。'):L('Loading uses this turn and removes '+manifest.food+' food from the origin. ','装货占用本回合，出发港消耗 '+manifest.food+' 粮食。');
+    add('coast',L('Chart a food delivery to ','规划海运粮食 · ')+t(c.port.name),
+      feedback+L('Berth '+c.port.berth+' is '+c.steps+' charted water hexes away. At current speed, unload in round '+c.unloadRound+' for +'+manifest.food+' food there and +'+c.port.gold+' gold for the carrier.',
+        '目的泊位 '+c.port.berth+'，航线经 '+c.steps+' 格已探索水域。按当前速度，第 '+c.unloadRound+' 轮可卸下 '+manifest.food+' 粮食，船方获 '+c.port.gold+' 金币。'),
+      manifest.cargo?76:52,{kind:'freight',unit:boat.id,tile:c.port.berth});
+  }
+}
+
+const desks=[coastDesk,supplyDesk,influenceDesk,civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;

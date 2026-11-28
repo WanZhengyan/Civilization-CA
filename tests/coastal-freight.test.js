@@ -1,3 +1,4 @@
+import {advisorReport} from "../docs/advisors.js";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {applyAction,campaignView,createGame,getFreightManifest,getRouteDetail,getMap,getUnitOptions} from '../docs/rules.js';
@@ -129,4 +130,11 @@ test('a course avoids visible traffic without testing hidden occupants or disclo
   assert.deepEqual(route().path,original.path);
   chart.intel.explored=chart.intel.explored.filter(id=>id!==berth);
   assert.equal(route(),null);
+});
+
+test('the advisory council opens the charted course with the port tariff and arrival round',()=>{
+  const s=twoPorts(),v=campaignView(s,0),card=advisorReport(v,0).find(r=>r.desk==='coast');
+  assert.ok(card);assert.equal(card.link.tile,'8,16');assert.match(card.detail,/\+5 gold/);
+  const u=v.units.find(u=>u.id===card.link.unit),course=freightCourse(v,u,card.link.tile,getUnitOptions(v,u.id).moves);
+  assert.ok(card.detail.includes('round '+course.unloadRound+' for'));
 });

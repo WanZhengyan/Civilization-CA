@@ -849,6 +849,7 @@ function reviewAdvice(link){
     if(!unit)return;
     select(unit.tile,unit.id);atlas.focus(unit.tile);redraw();inspectMapOnMobile();
     if(link.kind==='move' && mayOrder())reviewScoutDestination(unit,link.tile);
+    if(link.kind==='freight')chooseOrder('freight-course:'+link.tile);
     return;
   }
   const city=ownCities().find(c=>c.id===link.city);

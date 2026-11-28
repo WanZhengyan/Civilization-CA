@@ -26,3 +26,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.16 | Compare civic paths by total new income across eligible settlements |
 | 7.0.17 | Weigh immediate border charters against natural acquisition on the seat’s chart |
 | 7.0.18 | Match one-per-turn storehouse shipments with city shortages and the cash alternative |
+| 7.0.19 | Rank charted freight voyages by cargo delivery time and tariff |
