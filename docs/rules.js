@@ -11,7 +11,7 @@ import {advancementRoutes,promotionOutcome,recoveryAt,nearestServiceStation} fro
 import {fleetBasin,flotillaMove} from './naval-plan.js';
 import {waterKind} from './water-navigation.js';
 import {freightManifest,carryFreight} from './coastal-freight.js';
-import {buyVoyageStores,beginVoyageTurn,navalStoresOrder} from './voyage-stores.js';
+import {buyVoyageStores,beginVoyageTurn,navalStoresOrder,chartSortie} from './voyage-stores.js';
 import {sailTo} from './naval-plan.js';
 import {harborSites,fishingTask,runFishingTask} from './maritime.js';
 import {revisionOf, advanceProduction, verifyProduction, parkedProduction, parkProject, resumeWork, purchasePrice} from './works.js';
@@ -1400,6 +1400,11 @@ function unitOrder(state,seat,action) {
     state.players[seat].surveyEnabled=true;
     record(state,seat,'survey','Resource survey completed.',id,{unit:unit.id});
   } else if (action.type==='provisionVoyage') {
+    if (state.fieldCommandRevision===1 && action.chartSortie===true) {
+      const view=projectForSeat(state,seat);
+      const route=chartSortie(view,unit,getMap(view),UNIT_TYPES,hexDistance);
+      if(route)unit.voyagePlan=route;
+    }
     buyVoyageStores(state,unit,UNIT_TYPES[unit.type]);
     record(state,seat,action.type,'Voyage supplies stowed for the next sailing turn.',id,{unit:unit.id});
   } else if (freightOrders.includes(action.type)) {
@@ -1946,7 +1951,7 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
         return {type:task.type,unit:unit.id};
     }
     if(difficulty!=='easy' && !options.attacks.length && unit.moves===1 && UNIT_TYPES[unit.type].domain==='sea'){
-      const supplies=navalStoresOrder(state,unit,UNIT_TYPES[unit.type],getMap(state).byId,hexDistance);
+      const supplies=navalStoresOrder(state,unit,UNIT_TYPES,getMap(state),hexDistance);
       if(supplies)return supplies;
     }
     if (options.improvements.length && (unit.type!=='workboat' || surveyedFishery(state,unit,unit.tile))) return {type:'improve',unit:unit.id,item:options.improvements[0]};
