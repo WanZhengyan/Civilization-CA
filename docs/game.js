@@ -1005,7 +1005,8 @@ function modalAction(act) {
     return;
   }
   if(modal==='gazetteer' && act.startsWith('gaz-')){
-    gazetteerAction(gazetteer,act.slice(4));
+    const tile=gazetteerAction(gazetteer,act.slice(4),mode==='home'?null:getState());
+    if(tile){dismissDialog();locateDistrict?.(tile);return;}
     drawDialog();
     dialog.querySelector('[data-act="'+act+'"]')?.focus({preventScroll:true});
     return;

@@ -32,3 +32,12 @@ test('land comparison converts area consistently and can use metric units in bot
   gazetteerAction(v,'section-compare');gazetteerAction(v,'metric-density');
   assert.match(gazetteerContent(v,'zh-CN').body,/单位为平方公里/);
 });
+test('locating a place requires a previously charted district on the matching campaign',()=>{
+  const v=newGazetteer();gazetteerAction(v,'place-pasadena');
+  const campaign={mapId:'la',intel:{explored:[]}};
+  assert.equal(gazetteerAction(v,'locate-pasadena',campaign),null);
+  campaign.intel.explored=['15,3'];
+  assert.equal(gazetteerAction(v,'locate-pasadena',campaign),'15,3');
+  assert.match(gazetteerContent(v,'en',campaign).body,/Show charted district/);
+  assert.equal(gazetteerAction(v,'locate-berkeley',campaign),null);
+});

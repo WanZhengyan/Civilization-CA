@@ -1,5 +1,22 @@
 import {counties,cities,places,regions,sourceOf,census2010,landArea} from './gazetteer-data.js';
 
+import {getMap} from './rules.js';
+
+export function knownAnchor(place,campaign) {
+  if (!place?.anchor || !campaign?.intel || place.region!==(campaign.mapId||'la')) return null;
+  const map=getMap(campaign);
+  const surveyed=campaign.intel.explored.map(id=>map.byId[id]).filter(Boolean);
+  return surveyed.find(tile=>tile.name===place.anchor || tile.locality===place.anchor)?.id ||
+    surveyed.find(tile=>tile.district===place.anchor)?.id || null;
+}
+function mapControl(place,lang,campaign) {
+  if(!place.anchor)return '';
+  const anchor=knownAnchor(place,campaign);
+  if(anchor)return '<div class="gaz-switch">'+choice('locate-'+place.id,tr(['Show charted district on map','在地图上查看已探索的地区'],lang))+'</div>';
+  return '<p>'+tr(campaign && place.region===(campaign.mapId||'la')?
+    ['Explore the corresponding district to view it on the map.','探索对应地区后，可以在地图上定位。']:
+    ['Map navigation is available in the corresponding campaign.','进入对应战役后可以使用地图定位。'],lang)+'</p>';
+}
 const labels = {profile:['Places','地点档案'],compare:['Compare','横向对比']};
 const esc = value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tr = (pair,lang)=>pair[lang==='zh-CN'?1:0];
@@ -11,7 +28,7 @@ const link = (url,label)=>'<a href="'+esc(url)+'" target="_blank" rel="noopener 
 export function newGazetteer(region='la') {
   return {region:Object.hasOwn(regions,region)?region:'la',section:'profile',place:null,scale:'city',metric:'population',unit:'mi'};
 }
-function profile(view,lang) {
+function profile(view,lang,campaign) {
   const current=places.filter(p=>p.region===view.region);
   const place=current.find(p=>p.id===view.place) || current[0];
   const list=current.map(p=>choice('place-'+p.id,tr(p.name,lang),p===place)).join('');
@@ -21,7 +38,7 @@ function profile(view,lang) {
     '<dl class="gaz-facts">'+fact(tr(['Residents · 1 April 2020','常住人口 · 2020 年 4 月 1 日'],lang),number(place.pop,lang))+fact(tr(['Residents · 1 April 2010','常住人口 · 2010 年 4 月 1 日'],lang),number(census2010[place.id],lang))+fact(tr(['Change over the decade','十年净变化'],lang),number(place.pop-census2010[place.id],lang))+
     fact(tr(['Land area · 2020','土地面积 · 2020 年'],lang),number(area(place,view.unit),lang)+' '+areaUnit(view.unit,lang))+'</dl>'+
     '<div class="gaz-switch">'+unitControls(view,lang)+'</div>'+
-    link(sourceOf(place),tr(['US Census Bureau · QuickFacts','美国人口普查局 · QuickFacts'],lang))+'</article>';
+    link(sourceOf(place),tr(['US Census Bureau · QuickFacts','美国人口普查局 · QuickFacts'],lang))+mapControl(place,lang,campaign)+'</article>';
 }
 const area=(p,unit)=>landArea[p.id]*(unit==='km'?2.589988110336:1);
 const areaUnit=(unit,lang)=>tr(unit==='km'?['km²','平方公里']:['mi²','平方英里'],lang);
@@ -50,7 +67,8 @@ export function gazetteerContent(view,lang,campaign) {
     tr(['Real places and public measurements. Campaign hexes represent approximate locations and have their own game yields.','查阅现实地点与公开数据。战役地块是近似位置，产出按游戏规则计算。'],lang)+'</p>'+
     (Object.keys(labels).length>1?'<nav class="gaz-nav" aria-label="'+tr(['Gazetteer sections','地名志栏目'],lang)+'">'+modes+'</nav>':'')+body+'</section>'};
 }
-export function gazetteerAction(view,action) {
+export function gazetteerAction(view,action,campaign) {
+  if(action.startsWith('locate-'))return knownAnchor(places.find(p=>p.id===action.slice(7)),campaign);
   if(['unit-mi','unit-km'].includes(action))view.unit=action.slice(5);
   if(action.startsWith('metric-') && Object.hasOwn(metrics,action.slice(7)))view.metric=action.slice(7);
   if(action==='cities' || action==='counties')view.scale=action==='cities'?'city':'county';
