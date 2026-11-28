@@ -1,3 +1,93 @@
+## v6.7.0 city production review
+
+The reference was v6.6.0. In Los Angeles with seed 323, a one-resident capital could commission a Settler for 14 production or buy it immediately for 42 gold without losing a resident. In 50 matched openings all 50 starting capitals could also commission Workshops and walls, and all 50 could spend a district order on their own city tile.
+
+A newly founded town has three housing spaces. A three-resident recruitment gate allows the first expansion without requiring a Granary. The city must still grow, and one resident must join the departing Settler. In the seed-323 opening the city reached three in round 5 and deployed the settler in round 8, leaving two residents. Housing and a food focus gave leaner starts a working route to expansion.
+
+### Fifty review passes
+
+Each group below records ten separate decisions or checks. The released game combines these changes in one compatible client and room-service update.
+
+| Pass | Settlers and residents |
+| ---: | --- |
+| 1 | Reproduced recruitment in a newly founded size-one capital and required three residents in the producing city. |
+| 2 | Applied the population check to production switches and outright purchases. |
+| 3 | Moved one resident into the unit only when the unit successfully deploys. |
+| 4 | Held invested production after starvation and resumed it on recovery. |
+| 5 | Preserved both the project and the resident when the deployment ring is full. |
+| 6 | Prevented material shipments into a paused Settler project while permitting food deliveries. |
+| 7 | Quoted the resident cost before a player confirms either form of recruitment. |
+| 8 | Distinguished population holds from a blocked deployment site in the queue, city roster and ledger. |
+| 9 | Showed the current population, minimum and next growth forecast in one place on a locked card. |
+| 10 | Replayed a duplicate rush order and a reconnect through the room service. One unit, one gold charge and one resident movement survived. |
+
+| Pass | Borders and the city economy |
+| ---: | --- |
+| 11 | Reproduced the old paid upgrade on LA seed 417005 and retired the command in the authority. |
+| 12 | Removed the upgrade button, preview and receipt from owned tiles. |
+| 13 | Kept the neutral claim at four gold and one district order. |
+| 14 | Made rival border prices independent of the historical upgrade level. |
+| 15 | Changed computer border choices to work with claims and contests. |
+| 16 | Updated treasury, difficulty descriptions and field-guide instructions in both languages. |
+| 17 | Exercised owned tile levels zero through three across all three regions. |
+| 18 | Replayed a harvest on previously developed land and preserved existing income and scoring. |
+| 19 | Submitted the retired order to a room and checked the rejection left its revision, balance and log intact. |
+| 20 | Exercised a real border claim in simultaneous-team play and checked the seat's budget after reconnect. |
+
+| Pass | Buildings, research and the governor |
+| ---: | --- |
+| 21 | Required Workshop Engineering before new Workshop orders and Field Tactics before new walls. |
+| 22 | Preserved invested work and existing facilities in historical city saves. |
+| 23 | Added the Shop and verified its three gold enter the owner's treasury income. |
+| 24 | Added the Academy and verified its two science enter the research bank. |
+| 25 | Added the Grain mill and verified both its food forecast and its production contribution. |
+| 26 | Added the Foundry with a local Workshop prerequisite and measured its three extra production. |
+| 27 | Added the Printing house and verified its three culture enter the civic bank. |
+| 28 | Checked legal sites, private projections, ordinary production and gold purchases against the same gates. |
+| 29 | Taught AI cities to invest in income, food, research or culture according to their position. |
+| 30 | Followed an AI that knew metallurgy but lacked a Workshop and made it plan the enabling Workshop first. |
+
+| Pass | Identifying buildings and reading production cards |
+| ---: | --- |
+| 31 | Used an arcaded school building for the Academy portrait. |
+| 32 | Distinguished the Shop by its storefront awning. |
+| 33 | Made the Grain mill identifiable by its waterwheel. |
+| 34 | Used a casting furnace as the Foundry silhouette. |
+| 35 | Featured the hand press in the Printing house portrait. |
+| 36 | Gave the new buildings separate models on placed map parcels. |
+| 37 | Separated the industrial Workshop and the waterfront Shipyard with their own silhouettes. |
+| 38 | Reviewed the five portraits at thumbnail size and regenerated the small first-paint previews. |
+| 39 | Widened production cards and let the grid collapse as space runs out. |
+| 40 | Provided 44-pixel action targets and kept the shipment styles intact when regenerating the art atlas. |
+
+| Pass | Reading the technology and civic trees |
+| ---: | --- |
+| 41 | Opened both map-side council buttons through the same project browser. |
+| 42 | Applied Available, Full tree and Completed filters to both tracks. |
+| 43 | Applied era filtering to both and preserved each council's selection on switching. |
+| 44 | Ensured the tutorial and outstanding turn prompts can reveal a selectable project even after filtering. |
+| 45 | Showed the current project, bank, income, progress and expected completion in the same locations. |
+| 46 | Distinguished available, locked, active and completed projects using text as well as color. |
+| 47 | Read unlock names from the real unit, building, wonder and policy catalogs. |
+| 48 | Opened a successor's prerequisite route and returned focus to the originating project. |
+| 49 | Checked arrow keys, Home, End, normal Tab behavior and focus preservation after a room refresh. |
+| 50 | Checked Chinese and English cards, narrow-screen layout, touch controls and empty-filter recovery. |
+
+### Replay the openings
+
+From the repository root run `npm run --silent playtest:city`. Each of the 50 fixed practice campaigns founds a city, selects food focus, trains a Scout, grows to three, trains a Settler, researches a building and completes or purchases it. The ten campaigns per building cover both production and gold. The script uses normal orders and the city's own harvests. It also rejects the retired order and checks the unit and final building exist.
+
+| Measurement | Result |
+| --- | --- |
+| Capitals allowed to train an opening Settler at one resident | 50 of 50 on v6.6.0 and zero on v6.7.0 |
+| First round at three residents | 4–9, median 5 |
+| Round when the newly trained Settler was present | 6–13, median 9 |
+| Shop / Academy present | Rounds 4–11 / 14–27 |
+| Grain mill / Foundry present | Rounds 12–27 / 26–54 |
+| Printing house present | Rounds 43–87 |
+
+The competitive `npm run --silent playtest` suite separately plays 18 campaigns twice using the standard AI or the same scripted scout opening on both revisions. The retired district order occurred 2,050 times in the reference and zero times in the candidate. Both revisions produced identical replays on their second run. On these seeds the reference had 14 science wins and four conquests, while the candidate had eight science wins and ten conquests. Median finish moved from round 74 to 56, and 74 cities were founded versus 78 previously. These results describe the sampled AI campaigns. They do not estimate human multiplayer win rates.
+
 ## Relief-map review
 
 The reference was `ebe5056`. The hypothesis was that a tilted ground plane, height-based terrain light and upright game pieces would make height and unit position clearer without changing a campaign order. This release used ten source iterations, followed by a final cache/memory correction.

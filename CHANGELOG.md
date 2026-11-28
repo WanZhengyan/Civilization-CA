@@ -1,5 +1,26 @@
 # Campaign updates
 
+## v6.7.0 — Grow a city before sending settlers
+
+Cities need **3 residents** to train or buy a Settler. One resident leaves when the unit deploys. A size-three city therefore becomes size two. The starting Settler is still free, and a newly founded capital can train a Scout immediately. If a city falls below three while training, its work waits for the population to recover. A blocked deployment hex also preserves the resident.
+
+The **Develop district** order has been retired. A neutral border claim costs 4 gold and one district order. Contesting a rival border costs 4 gold, 5 influence and one order. Citizens still work the land, builders can improve resources, and influence can advance a city's natural border growth. Land upgraded in a previous save keeps its earned yield.
+
+| City building | Research needed | Production | Benefit each turn |
+| --- | --- | ---: | --- |
+| Shop | Land Surveying | 12 | 3 gold |
+| Workshop | Workshop Engineering | 13 | 2 production before technology bonuses |
+| Academy | Topographic Mapping | 22 | 2 science |
+| Grain mill | Crop Rotation | 21 | 2 food and 1 production |
+| Foundry | Industrial Metallurgy and a local Workshop | 27 | 3 production |
+| Printing house | Electrical Engineering | 26 | 3 culture |
+
+City walls now require Field Tactics. Existing finished Workshops and walls remain in service. Partially funded historical orders keep their investment. Each city can build its own Academy, while each university wonder is unique across the map.
+
+Technology and Civics now share a project browser. Compare banked points, income, cost and time in either council. Use **Full tree** to see a locked project's prerequisites and the units, buildings or policies a discovery unlocks. Both councils support keyboard navigation and a single-column layout on narrow screens. Search for a building in either language in the field guide to see its price, gate and output.
+
+The [development review](./DEVELOPMENT.md) covers 50 review passes, 50 scripted city openings and 18 competitive campaigns played twice.
+
 ## v6.6.0 — Choose a game mode and find the next order
 
 The homepage and title screen present the tutorial, solo play and multiplayer in the same order. Select **Multiplayer** to open room creation. Players with an invitation code can go straight to **Join a room**.
