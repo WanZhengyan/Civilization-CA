@@ -5,7 +5,7 @@
   <link rel="canonical" href="https://wanzhengyan.github.io/Civilization-CA/">
   <script>
     const entry = new URL(location.href);
-    if (entry.hash === "#campaign" || entry.searchParams.has("room") || entry.searchParams.has("setup") || entry.searchParams.get("play") === "1") {
+    if (entry.hash === "#campaign" || entry.hash === "#tutorial" || entry.searchParams.has("room") || entry.searchParams.has("setup") || entry.searchParams.get("play") === "1") {
       const game = new URL("./game.html", entry);
       game.search = entry.search;
       game.hash = entry.hash;
@@ -13,15 +13,15 @@
     }
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#142a28">
-  <meta name="description" content="Choose where to found your capital on the California coast. Explore, build wonders and face rivals in a turn-based browser game, solo or with friends.">
+  <meta name="theme-color" content="#15262b">
+  <meta name="description" content="Learn Civilization CA in a guided Los Angeles campaign. Explore a relief map of California, found your capital and play solo or with friends.">
   <meta name="civitas-api-origin" content="https://angel-basin-civilization.gifteddream3.chatgpt.site">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Your California starts with one settler. | Civilization CA">
+  <meta property="og:title" content="Civilization CA | Found your first California city">
   <meta property="og:description" content="Found a port on the Pacific or head inland for the hills. Play turn-based strategy on maps of Los Angeles, San Francisco Bay and San Diego, solo or with friends.">
   <meta property="og:url" content="https://wanzhengyan.github.io/Civilization-CA/">
   <meta property="og:image" content="https://wanzhengyan.github.io/Civilization-CA/art/california-coast.webp">
-  <meta property="og:image:alt" content="A painted California coastline with sailing ships, cliffs and a shore settlement.">
+  <meta property="og:image:alt" content="An illustrated California coastline with sailing ships, cliffs and a settlement.">
   <meta name="twitter:card" content="summary_large_image">
   <title data-zh="Civilization CA｜加州海岸回合制策略游戏">Civilization CA | Turn-Based Strategy on the California Coast</title>
   <link rel="icon" href="./favicon.svg">
@@ -37,8 +37,9 @@
     <div class="mast-inner">
       <a class="wordmark" href="./"><img src="./favicon.svg" width="32" height="36" alt="">Civilization <span>CA</span></a>
       <nav aria-label="Main menu" data-zh-label="主导航">
-        <a href="#film" data-zh="实机回放">Gameplay</a>
-        <a href="#regions" data-zh="战役地图">Campaign maps</a>
+        <a href="#first-turns" data-zh="怎么玩">How to play</a>
+        <a href="#regions" data-zh="选地图">Maps</a>
+        <a class="version-link" href="https://github.com/WanZhengyan/Civilization-CA/blob/main/CHANGELOG.md" aria-label="Release notes for v6.5.0" data-zh-label="查看 v6.5.0 版本更新">v6.5.0</a>
       </nav>
       <div class="language" role="group" aria-label="Language" data-zh-label="语言">
         <button type="button" data-language="en" lang="en" aria-pressed="true">EN</button>
@@ -51,36 +52,51 @@
       <img class="hero-art" src="./art/california-coast.webp" width="1536" height="1024" alt="" fetchpriority="high">
       <div class="hero-wash"></div>
       <div class="hero-content">
-        <p class="kicker"><span class="line"></span><span data-zh="回合制策略游戏">Turn-based strategy</span></p>
-        <h1 id="hero-title"><span data-zh="你的加州，">Your California</span><br> <em data-zh="从一名开拓者开始。">starts with one settler.</em></h1>
-        <p class="intro" data-zh="在太平洋岸边建都，还是穿过山丘寻找内陆家园？派侦察兵绘制地区图志，用船给盟友送粮，或让部队在通往首都的山脊上构筑工事。">Found a port on the Pacific or cross the hills for an inland capital. Send scouts to chart California, ship food to an ally, or dig in on the ridge that guards your city.</p>
+        <p class="kicker"><span class="line"></span><span data-zh="加州回合制策略游戏">Turn-based strategy in California</span></p>
+        <h1 id="hero-title"><span data-zh="你的第一座城，">Where will you</span><br><em data-zh="建在哪里？">found your capital?</em></h1>
+        <p class="intro" data-zh="带领一名开拓者来到加州。在山谷里建城，训练侦察兵探路，再决定是修建港口、扩张边境，还是投资下一项发现。">Lead a settler into California. Build a city in the foothills, send a scout beyond the ridge, then decide whether to build a port, expand your border or invest in your next discovery.</p>
         <div class="hero-actions">
-          <a class="button primary" href="./game.html?setup=solo" data-zh="开始单人战役">Play solo</a>
-          <a class="button glass" href="./game.html?setup=host" data-zh="创建联机房间">Create a room</a>
-          <a class="join" href="./game.html?setup=join" data-zh="加入房间">Join a room</a>
+          <a class="button primary" href="./game.html?setup=tutorial" data-zh="进入新手教程">Play the tutorial</a>
+          <a class="button glass" href="./game.html?setup=solo" data-zh="单人战役">Play solo</a>
         </div>
-        <p class="play-note" data-zh="选择你的文明。与好友组队夺取首都，或率先完成轨道勘测。">Choose your civilization. Take the capitals with friends or race to launch an orbital survey.</p>
+        <p class="play-note" data-zh="第一次玩？跟着地图上的提示，亲自完成开局决策。">New here? Make your first decisions on the map with the guided campaign.</p>
       </div>
     </section>
 
-    <section id="film" class="feature page-width" aria-labelledby="film-title">
-      <div class="feature-heading">
-        <p class="kicker" data-zh="实机回放">Gameplay film</p>
-        <h2 id="film-title" data-zh="洛杉矶的一局战役">A campaign in Los Angeles</h2>
+    <section class="friends-strip" aria-label="Multiplayer" data-zh-label="多人联机">
+      <div class="page-width">
+        <h2 data-zh="和朋友一起玩">Play with friends</h2>
+        <p data-zh="最多四人，可组队。">Up to four players, with optional teams.</p>
+        <div><a href="./game.html?setup=host" data-zh="创建房间">Create a room</a><span aria-hidden="true">/</span><a href="./game.html?setup=join" data-zh="输入房间码">Enter a room code</a></div>
       </div>
-      <video class="film" width="960" height="540" poster="./film/poster.webp" controls playsinline preload="none" aria-label="Los Angeles campaign replay" data-zh-label="洛杉矶战役回放" aria-describedby="film-caption">
-        <source src="./film/campaign.mp4" type="video/mp4">
-        <a href="./film/campaign.mp4" data-zh="打开战役回放视频">Open the campaign film</a>
-      </video>
-      <p id="film-caption" class="film-caption" data-zh="这段 17 秒的无声实录从韦斯特伍德建城开始，随后是侦察兵探路、UCLA 落成，以及第八回合的敌袭。">This silent 17-second replay follows the founding of Westwood, a scout’s expedition, the completion of UCLA and an enemy attack on turn eight.</p>
+    </section>
+
+    <section id="first-turns" class="first-turns page-width" aria-labelledby="first-title">
+      <div class="lesson-heading">
+        <p class="kicker" data-zh="玩法指南">Field guide</p>
+        <h2 id="first-title" data-zh="开局先做什么？">Your first turns</h2>
+      </div>
+      <div class="lesson-layout">
+        <figure class="game-figure">
+          <a href="./art/relief-gameplay.webp" aria-label="Open the full-size game screenshot" data-zh-label="查看实机画面大图">
+            <img src="./art/relief-gameplay.webp" loading="lazy" alt="A playable California campaign with an angled hex map, the council on the left and field commands on the right" data-zh-alt="加州战役实机画面：倾斜的六边格地图，左侧为议会，右侧为战场指挥">
+          </a>
+          <figcaption><span data-zh="立体地形 · 实机画面">Relief terrain · In-game view</span><a href="./art/relief-gameplay.webp" data-zh="查看大图">View full size</a></figcaption>
+        </figure>
+        <ol class="turn-guide">
+          <li><h3 data-zh="选址建都">Found your capital</h3><p data-zh="点选开拓者，比较能建城的地块。建都后，城市每回合都有收入，也能开始生产。">Select your settler and compare the sites where it can found a city. Your capital earns income and can start production as soon as you settle.</p></li>
+          <li><h3 data-zh="处理回合待办">Follow the turn button</h3><p data-zh="点右下角按钮，依次选择科技、市政和城市项目。轮到单位时，可以移动，或让它跳过本回合。">The bottom-right button opens research, civics and idle cities. When a unit needs orders, move it or skip its turn.</p></li>
+          <li><h3 data-zh="决定何时扩地">Choose when to expand</h3><p data-zh="点顶部「影响力」，比较自然扩地还需几回合。若有合适的中立地块，花 6 点即可立即取得，也可以把影响力留到以后。">Open Influence at the top of the map. Compare the natural growth forecast with spending 6 influence to take the next eligible district now.</p></li>
+        </ol>
+      </div>
     </section>
 
     <section class="atlas" id="regions" aria-labelledby="atlas-heading">
       <div class="page-width">
         <div class="atlas-heading">
           <p class="kicker" data-zh="战役地图">Campaign atlas</p>
-          <h2 id="atlas-heading" data-zh="选择一片海岸">Choose your coast</h2>
-          <p class="section-intro" data-zh="选择大型、宏大或史诗地图。每次新开局的河道与湖泊随种子变化。洛杉矶从 689 格到 2,747 格，可从海岸一路航行到内陆。">Choose a Large, Grand or Epic map. Los Angeles spans 689 to 2,747 playable hexes. Discover the rivers and lakes drawn for your opening, then sail inland from the coast.</p>
+          <h2 id="atlas-heading" data-zh="选择你的战役地图">Choose your campaign map</h2>
+          <p class="section-intro" data-zh="先选地区，再在战役设置中选择地图大小、文明和对手。每次新开局都会生成不同的河道与湖泊。">Pick a region, then choose your map size, civilization and opponents in campaign setup. Each new opening charts its own rivers and lakes.</p>
         </div>
         <fieldset class="region-switch" hidden>
           <legend class="sr-only" data-zh="查看地区">Explore a region</legend>
@@ -92,32 +108,35 @@
           <figure><img src="./art/topanga.webp" width="680" height="300" loading="lazy" alt="Painted sandstone slopes of Topanga Canyon" data-zh-alt="托潘加峡谷的砂岩山坡画作"><figcaption data-zh="托潘加峡谷">Topanga Canyon</figcaption></figure>
           <div class="region-copy"><h3 data-zh="洛杉矶盆地">Los Angeles Basin</h3>
             <p data-zh="圣莫尼卡山脉绵延于城市以北。沿山脚寻找托潘加峡谷，市民在峡谷旁的地块工作能获得额外的生产力与科研。">The Santa Monica Mountains rise above the basin. Find Topanga Canyon in the foothills and put citizens to work beside it for extra production and science.</p>
-            <a class="map-link" href="./game.html?setup=solo&amp;region=la" data-zh="游玩洛杉矶地图">Play Los Angeles</a>
+            <a class="map-link" href="./game.html?setup=solo&amp;region=la" data-zh="设置洛杉矶战役">Set up Los Angeles</a>
           </div>
         </article>
         <article class="region" data-region="sf">
           <figure><img src="./art/southBayMarsh.webp" width="680" height="300" loading="lazy" alt="Painted tidal channels in the South Bay Salt Marshes" data-zh-alt="南湾盐沼潮沟画作"><figcaption data-zh="南湾盐沼">South Bay Salt Marshes</figcaption></figure>
           <div class="region-copy"><h3 data-zh="旧金山湾">San Francisco Bay</h3>
             <p data-zh="建造港口横渡海湾，或沿岸向南穿过湿地。若在南湾盐沼旁建城，附近劳作的市民就能带回额外粮食。">Build a port on the bay or follow the shoreline south to its wetlands. Settle near the South Bay Salt Marshes to give neighboring workers extra food.</p>
-            <a class="map-link" href="./game.html?setup=solo&amp;region=sf" data-zh="游玩旧金山湾地图">Play San Francisco Bay</a>
+            <a class="map-link" href="./game.html?setup=solo&amp;region=sf" data-zh="设置旧金山战役">Set up San Francisco Bay</a>
           </div>
         </article>
         <article class="region" data-region="sd">
           <figure><img src="./art/torreyPines.webp" width="680" height="300" loading="lazy" alt="Painted coastal cliffs and pines above the Pacific" data-zh-alt="俯瞰太平洋的托里松林与海崖画作"><figcaption data-zh="托里松林">Torrey Pines</figcaption></figure>
           <div class="region-copy"><h3 data-zh="圣迭戈湾">San Diego Bay</h3>
             <p data-zh="沿科罗纳多的狭长海岸建设港区，或向北探索拉霍亚的海崖。托里松林为相邻的工作地块增加粮食与生产力。">Develop the harbor along Coronado or explore the bluffs near La Jolla. Torrey Pines rewards adjacent worked districts with food and production.</p>
-            <a class="map-link" href="./game.html?setup=solo&amp;region=sd" data-zh="游玩圣迭戈湾地图">Play San Diego Bay</a>
+            <a class="map-link" href="./game.html?setup=solo&amp;region=sd" data-zh="设置圣迭戈战役">Set up San Diego Bay</a>
           </div>
         </article>
       </div>
     </section>
-    <section class="campus page-width" aria-labelledby="campus-title">
-      <img src="./art/ucla.webp" alt="UCLA campus wonder artwork" data-zh-alt="UCLA 大学奇观的游戏插画" width="504" height="336" loading="lazy">
-      <div><p class="kicker" data-zh="大学奇观">University wonders</p>
-        <h2 id="campus-title" data-zh="让 UCLA 成为你的世界奇观">Make UCLA a world wonder</h2>
-        <p data-zh="通过「市政宪章」，在自己控制的地块上为 UCLA 选址。每局只有一个文明能率先建成 UCLA。斯坦福、加州大学伯克利分校和加州理工也各有自己的解锁条件。">Adopt the Municipal Charter, pick a district you control, and start building UCLA. Only one civilization can finish it in each campaign. Stanford, UC Berkeley and Caltech each have their own route to discovery.</p>
-        <a class="button dark" href="./game.html?setup=solo" data-zh="开启你的战役">Start your campaign</a>
+    <section class="archive page-width" id="film" aria-labelledby="film-title">
+      <div>
+        <p class="kicker" data-zh="早期版本实录">From the archive</p>
+        <h2 id="film-title" data-zh="韦斯特伍德的八个回合">Eight turns in Westwood</h2>
+        <p id="film-caption" data-zh="这段 17 秒的无声旧版实录记录了建城、侦察兵探路、UCLA 落成和一次敌袭。当前版本的立体地图见上方实机画面。">This 17-second silent replay from an earlier edition follows the founding of Westwood, a scout expedition, the completion of UCLA and an enemy attack.</p>
       </div>
+      <video class="film" width="960" height="540" poster="./film/poster.webp" controls playsinline preload="none" aria-label="Archived Los Angeles campaign replay" data-zh-label="早期洛杉矶战役回放" aria-describedby="film-caption">
+        <source src="./film/campaign.mp4" type="video/mp4">
+        <a href="./film/campaign.mp4" data-zh="打开战役回放视频">Open the replay</a>
+      </video>
     </section>
   </main>
   <footer class="foot">
