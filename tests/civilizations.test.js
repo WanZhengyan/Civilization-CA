@@ -102,7 +102,7 @@ for (const civilization of ids) {
     assert.deepEqual(getStats(state,0),getStats(historical,0));
     const prepare=g=>{
       g=applyAction(g,0,{type:'found',unit:g.units[0].id});
-      return applyAction(g,0,{type:'produce',city:g.cities[0].id,item:'settler'});
+      return applyAction(g,0,{type:'produce',city:g.cities[0].id,item:'ranged'});
     };
     state=prepare(state); historical=prepare(historical);
     const cityId=state.cities[0].id;

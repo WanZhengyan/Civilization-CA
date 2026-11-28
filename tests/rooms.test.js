@@ -1052,3 +1052,29 @@ test('reconnected allies resolve their own turn reminders and mark ready indepen
   await act(ally,end,422);
   assert.equal((await read(ally)).revision,before);
 });
+
+test('rooms reject small-city settler orders and duplicate population charges after reconnect',async t=>{
+  const fixture=roomFixture(t),seats=await twoPlayers(fixture);
+  await seats.start();
+  let state=rules.createGame(['Host','Guest'],'la',{seed:323});
+  state=rules.applyAction(state,0,{type:'found',unit:state.units[0].id});
+  state.players[0].capital=100;
+  const city=state.cities[0];
+  const restore=()=>fixture.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(state),seats.code);
+  restore();
+  let room=await seats.read(seats.host);
+  const buy={type:'buyProduction',city:city.id,item:'settler',expected:0,gold:42};
+  const result=await seats.act(seats.host,room.revision,buy,422);
+  assert.match(result.error,/3 residents/);
+  assert.equal((await seats.read(seats.host)).revision,room.revision);
+  city.population=3;
+  restore();
+  room=await seats.read(seats.host);
+  const bought=(await seats.act(seats.host,room.revision,buy)).room;
+  assert.equal(bought.game.cities[0].population,2);
+  await seats.act(seats.host,room.revision,buy,409);
+  const reconnected=await seats.read(seats.host);
+  assert.equal(reconnected.game.players[0].capital,58);
+  assert.equal(reconnected.game.cities[0].population,2);
+  assert.equal(reconnected.game.units.filter(u=>u.seat===0 && u.type==='settler').length,1);
+});

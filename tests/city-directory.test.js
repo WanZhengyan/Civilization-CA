@@ -9,7 +9,8 @@ test('city comparisons use the same food, housing, production and time as a play
   act({type:'found',unit:s.units[0].id});
   act({type:'research',item:'industry'});
   act({type:'civic',item:'charter'});
-  for(let i=0;i<3;i++)act({type:'end'});
+  for(let i=0;i<12 && s.cities[0].population<3;i++)act({type:'end'});
+  assert.equal(s.cities[0].population,3);
   const capital=s.cities[0];
   act({type:'produce',city:capital.id,item:'settler'});
   for(let i=0;i<12 && !s.units.some(u=>u.type==='settler');i++)act({type:'end'});
