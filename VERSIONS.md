@@ -14,3 +14,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.4 | Price visible border claims and contests and locate the selected proposal |
 | 7.0.5 | Match available construction crews to reachable jobs and remaining work capacity |
 | 7.0.6 | Compare legal harbor berths by their sponsoring city and construction time |
+| 7.0.7 | Survey university parcels against charter fees, specialty terrain and build time |

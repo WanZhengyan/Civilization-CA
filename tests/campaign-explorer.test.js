@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGame, campaignView, applyAction} from '../docs/rules.js';
 import {explorerRows} from '../docs/campaign-explorer.js';
-const start=()=>createGame([{name:'Explorer',civilization:'arroyo'}],'la',{practice:true,seed:624101});
+const start=(seed=624101)=>createGame([{name:'Explorer',civilization:'arroyo'}],'la',{practice:true,seed});
 function view(s){return {seat:0,state:campaignView(s,0)};}
-function capital(){const s=start();return applyAction(s,0,{type:'found',unit:s.units[0].id});}
+function capital(seed){const s=start(seed);return applyAction(s,0,{type:'found',unit:s.units[0].id});}
 test('the place index contains only personally charted tiles and rejects an unprojected or mismatched seat',()=>{
  const s=start(),v=view(s),rows=explorerRows(v);
  assert.deepEqual(new Set(rows.map(r=>r.id)),new Set(v.state.intel.explored));
@@ -48,4 +48,11 @@ test('fresh inland campaigns show no fictitious port investment or hidden berth'
  const v=view(capital()),r=explorerRows(v,'ports');
  assert.ok(r.every(site=>v.state.intel.explored.includes(site.id) && site.terrain==='ocean'));
  const first=view(start());assert.deepEqual(explorerRows(first,'ports'),[]);
+});
+
+test('university sites require the actual charter and list its fee and local host',()=>{
+ const s=capital(624102);assert.deepEqual(explorerRows(view(s),'campuses'),[]);
+ s.players[0].civics=['charter'];s.players[0].capital=100;
+ const rows=explorerRows(view(s),'campuses');
+ assert.ok(rows.some(r=>/UCLA.*5 gold/.test(r.info)));
 });

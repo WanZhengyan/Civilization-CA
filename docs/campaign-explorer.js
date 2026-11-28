@@ -1,6 +1,6 @@
 import {RESOURCES} from './resources.js';
 import {WONDERS} from './wonders.js';
-import {getUnitOptions,getSettlementAssessment,IMPROVEMENTS,getActions,getRouteDetail,getProductionOptions,getProjectSites,getMap,TERRAIN_NAMES} from './rules.js';
+import {getUnitOptions,getSettlementAssessment,IMPROVEMENTS,getActions,getRouteDetail,getProductionOptions,getProjectSites,getWonderSites,getMap,TERRAIN_NAMES} from './rules.js';
 import {getLanguage,translate} from './i18n.js';
 
 const L=(en,zh)=>getLanguage()==='zh-CN'?zh:en;
@@ -13,6 +13,7 @@ const modes={
   borders:['Border proposals','边界提案'],
   crews:['Worker assignments','建设者工作地点'],
   ports:['Harbor siting','港口选址'],
+  campuses:['University charters','大学奇观选址'],
 };
 
 function describe(row,info){return {...row,info,search:row.search+' '+info};}
@@ -86,6 +87,22 @@ export function explorerRows(view,mode='places'){
       }
     }
     return rows.filter(row=>sites.has(row.id)).map(row=>describe(row,sites.get(row.id).join(' / ')));
+  }
+  if(mode==='campuses'){
+    const offers=new Map();
+    for(const city of state.cities.filter(c=>c.seat===seat)){
+      for(const project of getProductionOptions(state,city.id,{replace:true})){
+        const wonder=WONDERS[project.item];
+        if(!wonder || !project.enabled)continue;
+        for(const site of getWonderSites(state,city.id,project.item)){
+          const items=offers.get(site.id)||[];
+          const detail=tr(project.label)+' · '+tr(city.name)+' · '+wonder.grant+L(' gold',' 金币')+
+            ' · '+project.turns+L(' turns',' 回合')+(site.favored?' · +1 '+tr(wonder.specialty):'');
+          items.push(detail);offers.set(site.id,items);
+        }
+      }
+    }
+    return rows.filter(row=>offers.has(row.id)).map(row=>describe(row,offers.get(row.id).join(' / ')));
   }
   return rows;
 }
