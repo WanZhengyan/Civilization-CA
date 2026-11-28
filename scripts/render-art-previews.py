@@ -11,6 +11,7 @@ from PIL import Image, ImageOps
 ROOT = Path(__file__).resolve().parents[1]
 CSS = ROOT / "docs" / "production-art.css"
 MARKER = "/* Embedded production miniatures"
+END = "/* End embedded production miniatures. */"
 SIDE = 24
 COLUMNS = 7
 CATALOG = """
@@ -39,11 +40,14 @@ for index, item in enumerate(items):
 output = io.BytesIO()
 sheet.save(output, "WEBP", quality=49, method=6)
 payload = base64.b64encode(output.getvalue()).decode()
-base = CSS.read_text().split(MARKER, 1)[0].rstrip()
+before, start, generated_and_after = CSS.read_text().partition(MARKER)
+if not start or END not in generated_and_after:
+    raise ValueError("Missing production miniature boundaries in production-art.css")
+after = generated_and_after.split(END, 1)[1]
 generated = f"""{MARKER}. Regenerate with scripts/render-art-previews.py. */
 .item-illustration[data-art] {{
   background-image:url("data:image/webp;base64,{payload}");
   background-size:{COLUMNS * 100}% {rows * 100}%;
   background-repeat:no-repeat;
 }}"""
-CSS.write_text(base + "\n\n" + generated + "\n" + "\n".join(positions) + "\n")
+CSS.write_text(before + generated + "\n" + "\n".join(positions) + "\n" + END + after)
