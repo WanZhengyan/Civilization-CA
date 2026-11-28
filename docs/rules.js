@@ -1002,7 +1002,7 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
     const gold=purchasePrice(city,item,def.required);
     const current=city.queue?.item===item;
     const buyReason=kind==='project' ? 'Orbital Survey requires city production.' : WONDERS[item] ? 'University wonders require city production.' :
-      (current && state.phase==='playing' && seatMayOrder(state,city.seat) ? '' : reason) ||
+      (current && state.phase==='playing' && seatMayOrder(state,city.seat) ? populationReason : reason) ||
       (!gold ? 'This project is ready for completion.' : '') ||
       (state.players[city.seat].capital+(replace && !current ? city.queue?.grant || 0 : 0)<gold ? 'Not enough gold.' : '') ||
       (kind==='unit' && !deploymentTile(state,city,item) ? 'No deployment tile is available. Move a unit before buying.' : '');
