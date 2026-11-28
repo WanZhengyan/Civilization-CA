@@ -1,3 +1,4 @@
+import {mountTutorialCoach} from './tutorial-coach.js';
 import {turnButtonState,paintTurnButton,pendingTurnTasks} from './turn-button.js';
 import {getLanguage} from './i18n.js';
 import {mountInfluencePanel} from "./influence-panel.js";
@@ -809,6 +810,38 @@ function handleTurnButton(){
     el("production-options").querySelector("[data-produce]:enabled")?.focus();
   }
 }
+let tutorialCoach;
+function locateTutorialOrder(lesson){
+  if(!view?.tutorial)return;
+  const {step,city,unit}=lesson;
+  if(step==="research" || step==="civic"){
+    const track=step==="research"?"research":"civics";
+    councilGoals[track]="";
+    openCouncil(track);focusAvailableProject(track,el("research-options"));
+    return;
+  }
+  if(step==="influence"){el("influence-open").click();return;}
+  if(step==="restart"){Game.open("restart-tutorial");return;}
+  if(step==="turn" || step==="wait" || step==="restFounder"){
+    closeMapPanel();
+    el("end-turn").focus({preventScroll:true});return;
+  }
+  endPlacement();closeMapPanel();
+  if(step==="produce" && city){
+    select(city.tile,null,true);atlas.focus(city.tile);redraw();
+    openProduction();
+    const list=el("production-options");
+    (list.querySelector('[data-produce="scout"]:enabled') || list.querySelector('[data-produce]:enabled'))?.focus({preventScroll:true});
+  }else if(unit){
+    select(unit.tile,unit.id);atlas.focus(unit.tile);redraw();
+    if(step==="found"){
+      inspectMapOnMobile();
+      const found=el("entity-commands").querySelector('[data-order="found"]:enabled');
+      if(found){found.focus({preventScroll:true});return;}
+    }
+    displayMapOnMobile();el("atlas").querySelector("canvas")?.focus({preventScroll:true});
+  }
+}
 let expansionForecasts = new Map();
 function paint(next){
   expansionForecasts=getCityExpansions(next.state,next.seat);
@@ -860,6 +893,7 @@ function paint(next){
   if(el("production-modal").open)productionOptions();
   if(el("combat-modal").open)drawCombat();
   battleReports.update(next,key,mapRegion);
+  tutorialCoach?.paint();
 }
 let campusNoticeKey='',hiddenCampusNotice='';
 function showCampusOpening(state,seat,key){
@@ -1053,6 +1087,8 @@ function mount(){
     atlas.focus(id,true);redraw();updateHint(id);inspectMapOnMobile();
   });
   mountMapWorkspace();
+  tutorialCoach=mountTutorialCoach({getView:()=>view,getLanguage,locate:locateTutorialOrder,
+    saveProgress:patch=>Game.setTutorialProgress(patch)});
   moveBar=document.createElement("section");
   moveBar.className="move-review";moveBar.hidden=true;moveBar.setAttribute("aria-label","Movement preview");
   moveBar.innerHTML=`<div class="move-place"><strong id="move-place"></strong> <small id="move-coord"></small></div>

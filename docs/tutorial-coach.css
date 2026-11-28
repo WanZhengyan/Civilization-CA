@@ -1,0 +1,33 @@
+.map-workspace #tutorial-coach{
+  position:absolute;z-index:3;top:calc(var(--top) + env(safe-area-inset-top) + 59px);
+  left:calc(var(--plan) + var(--gutter) * 2);right:calc(var(--field) + var(--gutter) * 2);
+  width:min(365px,calc(100% - var(--plan) - var(--field) - 4 * var(--gutter)));
+  max-height:calc(100dvh - var(--top) - 180px);overflow:auto;margin:auto;
+  border:1px solid #8a896c;border-left:3px solid #d7bd83;border-radius:5px;
+  padding:11px 15px 13px;color:#eee9dc;background:#202d30f7;
+  box-shadow:0 4px 16px #10191b55;text-align:left;line-height:1.45;
+}
+#tutorial-coach[hidden],#tutorial-coach [hidden]{display:none}
+#tutorial-coach .tutor-line,.tutor-actions{display:flex;align-items:center;gap:.6rem}
+#tutorial-coach .tutor-line{font-size:.8rem;color:#e4cd9e}
+#tutorial-caption{font-weight:650}
+#tutorial-coach .tutor-count{font-variant-numeric:tabular-nums;color:#c1cec9}
+#tutorial-coach button{color:inherit;font:inherit;cursor:pointer}
+#tutorial-coach [data-tutor-toggle]{margin-inline-start:auto;border:0;background:transparent;text-decoration:underline;text-underline-offset:3px}
+#tutorial-coach progress{display:block;width:100%;height:3px;margin:7px 0;border:0;accent-color:#d6b97a;background:#4d5654}
+#tutorial-coach progress::-webkit-progress-bar{background:#4d5654}
+#tutorial-coach progress::-webkit-progress-value{background:#d6b97a}
+#tutorial-coach h2{margin:5px 0;font:600 1.18rem/1.25 var(--serif,Georgia,serif);color:#fff3d6}
+#tutorial-coach p{margin:0 0 .6rem;font-size:.92rem;color:#dee3dc}
+#tutorial-coach .tutor-actions{flex-wrap:wrap;gap:4px 9px}
+#tutorial-coach .tutor-actions button{border:1px solid #a88e5f;border-radius:3px;padding:4px 8px;background:#dfc797;color:#172429;font-size:.85rem;min-height:32px}
+#tutorial-coach .tutor-actions [data-tutor-alt]{color:#e6d4ae;border-color:transparent;background:transparent;text-decoration:underline;text-underline-offset:3px}
+#tutorial-coach button:focus-visible{outline:2px solid #ffe3a1;outline-offset:2px}
+.map-workspace .tutorial-target{box-shadow:0 0 0 2px #eccd89}
+@media(max-width:800px){
+  .map-workspace #tutorial-coach{top:calc(var(--top) + env(safe-area-inset-top) + 54px);left:8px;right:8px;width:min(365px,calc(100% - 16px));max-height:35dvh;padding:8px 11px 9px}
+  #tutorial-coach .tutor-line{min-height:25px}
+  #tutorial-coach h2{font-size:1.08rem}
+  #tutorial-coach p{font-size:.9rem}
+}
+@media(max-height:520px){.map-workspace #tutorial-coach{max-height:38dvh}}
