@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {settlerPopulationReason} from './population.js';
 
 // Deposits belong to the campaign, never to the public geographical template.
@@ -56,7 +57,7 @@ export function canSeeDeposits(state, seat) {
   return state.players[seat]?.surveyEnabled === true || state.cities.some(city => city.seat === seat);
 }
 export function canSurvey(state, unit) {
-  return Boolean(unit && unit.moves>0 && ['settler','scout','builder'].includes(unit.type) && !canSeeDeposits(state,unit.seat));
+  return Boolean(unit && unit.moves>0 && (unit.type==='settler' || unit.type==='builder' || trainedAs(unit,'scout')) && !canSeeDeposits(state,unit.seat));
 }
 
 export const SPECIAL_IMPROVEMENTS = {

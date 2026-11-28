@@ -10,7 +10,7 @@ import {allowsConquest,allowsScience,SCIENCE_PROJECT,validVictoryMode} from './v
 import {endFestivalHarvest,festivalBenefit,openFestival,proposeFestival} from './city-festivals.js';
 import {charterBenefit,grantCharter,proposeCharter} from './city-charters.js';
 import {advanceCityBorder, planCityBorders} from './city-expansion.js';
-import {advancementRoutes,promotionOutcome,recoveryAt,nearestServiceStation} from './unit-service.js';
+import {advancementRoutes,trainedAs,serviceSpecialties,promotionOutcome,modernizeFormations,recoveryAt,nearestServiceStation} from './unit-service.js';
 import {fleetBasin,flotillaMove} from './naval-plan.js';
 import {waterKind} from './water-navigation.js';
 import {freightManifest,carryFreight} from './coastal-freight.js';
@@ -372,7 +372,7 @@ function addResearch(state) {
 }
 export function migrateGame(state) {
   if (state?.intel) return state;
-  let migrated=migrateCore(state);
+  let migrated=modernizeFormations(migrateCore(state),UNIT_TYPES);
   if (migrated?.opening==='settlers' && migrated.resourceVersion!==1 && Number.isInteger(migrated.seed)) {
     migrated={...migrated,board:{...migrated.board},players:migrated.players.map((p,seat)=>({
       ...p,surveyEnabled:p.surveyEnabled ?? migrated.cities.some(city=>city.seat===seat)
@@ -447,7 +447,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const waterPlan=waterways ? planWaterways(base,seed) : null;
   const map=waterwayChart(base,waterPlan);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, ...(influencePlanning && campaignVariety ? {influencePlanning:1} : {}), ...(campaignVariety ? {campaignVariety:1} : {}), ...(campaignVariety && fieldCommandRevision===1 ? {fieldCommandRevision} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
+  const next = {seed, mapId, formationVersion:1, ...(influencePlanning && campaignVariety ? {influencePlanning:1} : {}), ...(campaignVariety ? {campaignVariety:1} : {}), ...(campaignVariety && fieldCommandRevision===1 ? {fieldCommandRevision} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
     ...(teams ? {teams:[...teams]} : {}), ...(difficulty!=='normal' ? {difficulty} : {}),
     ...(drawInitiative===true ? {firstSeat} : {}), ...(!legacyVictory || scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:firstSeat,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
@@ -741,9 +741,9 @@ export function getActions(state,seat,id,visible) {
 
 function movementCost(state,unit, tileId) {
   const terrain=getMap(state).byId[tileId].terrain;
-  const reconnaissance = unit.type==='scout' || unit.type==='cavalry';
+  const reconnaissance = trainedAs(unit,'scout') || trainedAs(unit,'cavalry');
   if (terrain==='hills' && reconnaissance && knows(state,unit.seat,'cartography')) return 1;
-  if (unit.type==='skirmisher' && (terrain==='forest'||terrain==='hills')) return 1;
+  if (trainedAs(unit,'skirmisher') && (terrain==='forest'||terrain==='hills')) return 1;
   return UNIT_TYPES[unit.type].domain==='sea' ? Number(terrain==='ocean') : terrainCost[terrain];
 }
 function bridgeTo(state,from,to) {
@@ -959,6 +959,7 @@ export function getUpgradePlans(state,unitId,seat) {
     if (!seatMayOrder(state,seat)) blockers.push('Wait for your turn.');
     return {...route,era:target.era,tech:target.tech,civic:target.civic,eraReady,techReady,civicReady,
       future:advancementRoutes(route.to,UNIT_TYPES).map(p=>p.to),
+      from:unit.type, retained:[...new Set([...(unit.serviceHistory || []),unit.type])].filter(type=>serviceSpecialties[type]),
       current:{strength:current.strength,range:current.range,maxMoves:unit.maxMoves,hp:unit.hp,maxHp:unit.maxHp},
       outcome:promotionOutcome(unit,current,target,knows(state,seat,'hydrography')),
       qualified,legalSite,station:sea?'shipyard':'territory',capital:player.capital,moves:unit.moves,enabled:!blockers.length,reason:blockers[0]||'',blockers};
@@ -1577,6 +1578,7 @@ function unitOrder(state,seat,action) {
     if (!upgrade?.enabled) throw new Error(upgrade?.reason || 'No field upgrade is available.');
     const def=UNIT_TYPES[upgrade.to];
     const {hp,maxHp,moves,maxMoves}=upgrade.outcome;
+    unit.serviceHistory=[...new Set([...(unit.serviceHistory || []),unit.type])];
     Object.assign(unit,{type:upgrade.to,hp,maxHp,moves,maxMoves});
     state.players[seat].capital-=upgrade.cost;
     record(state,seat,'upgrade',label+' upgraded to '+def.name+'.',id,{unit:unit.id,item:upgrade.to});
@@ -2021,7 +2023,7 @@ function botMovement(state,unit,options,difficulty) {
     return flotillaMove(state,unit,options.moves,map,UNIT_TYPES,hexDistance,sameTeam,id=>surveyedFishery(state,unit,id));
   }
   if (unit.type==='signals') return signalPosition(state,unit,options.moves,UNIT_TYPES,hexDistance);
-  if (unit.type==='scout') {
+  if (trainedAs(unit,'scout')) {
     const station=nearestKnownStation(state,unit,options.moves,hexDistance);
     return station ? {type:'move',unit:unit.id,tile:station} : exploreFrontier(state,unit,options.moves);
   }
@@ -2266,7 +2268,7 @@ export function chooseBotActionFromView(view,difficulty=view.players[view.turn]?
   for (const [unit,options] of plans) {
     const station=volunteerStationOrder(state,unit);
     if(station)return station;
-    if(unit.type==='scout'){
+    if(trainedAs(unit,'scout')){
       const fieldwork=expeditionOrder(state,unit,options.moves,getMap(state),hexDistance);
       if(fieldwork)return fieldwork;
     }

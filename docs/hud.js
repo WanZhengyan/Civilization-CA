@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {mountCampaignExplorer} from './campaign-explorer.js';
 import {mountAdvisors} from './advisors-ui.js';
 import {mountCampaignLenses} from './campaign-lenses.js';
@@ -54,7 +55,7 @@ import {WONDERS, campusStatus} from './wonders.js';
 import {captureOrderHint,cityAttackHint,forecastCounterLabel,siegeQuote} from './attack-mode.js';
 import {militaryTraining,trainingPanel} from './combat-training.js';
 import {fieldPosition,fieldPositionPanel} from './field-position.js';
-import {advancementPanel,recoveryPanel} from './unit-service-ui.js';
+import {advancementPanel,recoveryPanel,retainedTraining} from './unit-service-ui.js';
 import {canSkipUnit,getUpgradePlans,getRecoveryForecast} from './rules.js';
 import {mountSurveyControls, showSelectedFrontier} from './survey-controls.js';
 import {createAtlas} from "./atlas.js";
@@ -286,7 +287,7 @@ function updateHint(id){
       const route=getRouteDetail(view.state,u.id,id);
       const left=u.moves-route.cost;
       hint+=" · Move costs "+route.cost+(route.cost===1?" point":" points")+" · "+left+(left===1?" point left":" points left");
-      if(u.type==="scout" && view.state.intel)hint+=" · Newly charted hexes · "+unchartedFrom(view.state,id,explored).length;
+      if(trainedAs(u,'scout') && view.state.intel)hint+=" · Newly charted hexes · "+unchartedFrom(view.state,id,explored).length;
       if(route.crossings.length)hint+=" · "+route.crossings.join(", ");
     }
   }
@@ -397,12 +398,13 @@ function inspect(){
     info+=fieldPositionPanel(position,u,false,disabled);
     const training=militaryTraining(state,u,UNIT_TYPES[u.type]);
     if (training?.drill) info+=trainingPanel(training,own,disabled);
+    if (own) info+=retainedTraining(u.serviceHistory);
     const radius=getSightRadius();
     info+='<div class="unit-sight"><span>'+icon("inspect")+' <span>Sight radius</span></span><strong>'+radius+' <small>'+(radius===1?'hex':'hexes')+'</small></strong></div>';
     if(own){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
-      if(u.type==='scout' && state.intel && o.moves.length)actions+=actionButton('scout-routes','Scouting routes','Compare new ground','',disabled);
+      if(trainedAs(u,'scout') && state.intel && o.moves.length)actions+=actionButton('scout-routes','Scouting routes','Compare new ground','',disabled);
       if(u.type==="settler"){
         actions+=actionButton("found",foundingLabel(state,view.seat),o.canFound?"Settle here":"Unavailable","gold",disabled||!o.canFound);
         const assessment=survey.get(u.tile);
@@ -434,7 +436,7 @@ function inspect(){
       if(visit){
         info+=note(visit.name)+note(visit.visited?'Your expedition has visited this station.':'Each civilization can visit once. An exchange uses the scout’s remaining movement.');
         if(!visit.visited)for(const choice of visit.choices)actions+=actionButton('station:'+choice.key,choice.name,choice.label,'gold',disabled||!choice.enabled);
-      }else if(u.type==='scout'){
+      }else if(trainedAs(u,'scout')){
         const nearest=nearestKnownStation(state,u,explored,hexDistance);
         if(nearest)actions+=actionButton('locate-station','Nearest known station',FIELD_STATIONS[state.board[nearest].fieldStation].name);
       }

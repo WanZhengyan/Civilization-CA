@@ -1,3 +1,5 @@
+import {serviceSpecialties} from './unit-service.js';
+import {unitUpkeep} from './unit-upkeep.js';
 import {CIVICS,ERAS,TECHS,UNIT_TYPES} from './rules.js';
 
 function esc(value) {
@@ -6,6 +8,11 @@ function esc(value) {
 const label=text=>'<span>'+esc(text)+'</span>';
 const change=(before,after)=>before===after ? String(after) : before+' → '+after;
 const metric=(name,value)=>'<span class="service-metric">'+label(name)+'<b>'+esc(value)+'</b></span>';
+export function retainedTraining(types=[]) {
+  const skills=types.filter(type=>Object.hasOwn(serviceSpecialties,type));
+  return skills.length ? '<p class="retained-training">'+label('Retained training')+' · '+
+    skills.map(type=>label(serviceSpecialties[type])).join(' ')+'</p>' : '';
+}
 function prerequisite(name,ready) {
   return '<span class="service-gate '+(ready?'met':'missing')+'"><i aria-hidden="true">'+(ready?'✓':'○')+'</i>'+label(name)+'</span>';
 }
@@ -21,10 +28,13 @@ export function advancementPanel(plans,open=false,disabled=false,unitId='') {
     const old=plan.current;
     const stats=metric('Strength',change(old.strength,out.strength))+metric('Range',change(old.range,out.range))+
       metric('Movement',change(old.maxMoves,out.maxMoves))+metric('HP',change(old.hp+' / '+old.maxHp,out.hp+' / '+out.maxHp));
-    const budget=metric('Price in gold',plan.cost)+metric('Treasury',plan.capital)+metric('Remaining movement',plan.moves);
+    const capture=def.captures ? 'Can capture cities' : 'Cannot capture cities';
+    const training=retainedTraining(plan.retained);
+    const gains=serviceSpecialties[plan.to] ? '<p>'+label(serviceSpecialties[plan.to])+'</p>' : '';
+    const budget=metric('Gold upkeep per turn',change(unitUpkeep(plan.from),unitUpkeep(plan.to)))+metric('Price in gold',plan.cost)+metric('Treasury',plan.capital)+metric('Remaining movement',plan.moves);
     const future=plan.future.length ? '<p>'+label('Later upgrades')+' · '+plan.future.map(t=>label(UNIT_TYPES[t].name)).join(' / ')+'</p>' : '';
     return '<article><header><b>'+esc(def.name)+'</b>'+label(def.role||'Military unit')+'</header><div class="service-gates">'+gates.join('')+
-      '</div><div class="service-metrics">'+stats+'</div><div class="service-metrics service-ledger">'+budget+'</div>'+label('Spends all remaining movement')+future+
+      '</div><div class="service-metrics">'+stats+'</div>'+label(capture)+gains+training+'<div class="service-metrics service-ledger">'+budget+'</div>'+label('Spends all remaining movement')+future+
       (!plan.enabled?'<p>'+esc(plan.reason)+'</p>':'')+'<button type="button" class="service-commit" data-order="upgrade:'+esc(plan.to)+'" '+
       (disabled||!plan.enabled?'disabled':'')+'>'+label('Upgrade to')+' '+label(def.name)+'</button></article>';
   }).join('');

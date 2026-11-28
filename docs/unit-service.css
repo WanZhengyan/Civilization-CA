@@ -18,3 +18,7 @@
 .recovery-panel>div,.recovery-healthy{color:var(--muted)}
 .recovery-healthy{font-size:.7rem;margin:.2rem 0}
 .service-location{display:block;text-align:left;color:var(--gold);padding:4px 0;text-decoration:underline;text-underline-offset:3px}
+
+.retained-training{font-size:.81rem;color:var(--muted);line-height:1.45}
+.service-panel .service-metric{font-variant-numeric:tabular-nums}
+.service-panel .service-commit{min-height:40px}

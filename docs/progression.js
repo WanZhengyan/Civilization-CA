@@ -117,8 +117,8 @@ export const ERA_UNITS = {
     maxHp:110, moves:2, range:1, strength:55, required:15, upgrade:'armor', upgradeCost:16},
   artillery: {name:'Field Artillery', era:'industrial', role:'Siege unit', tech:'steam', captures:false,
     description:'Guns bombard targets up to three hexes away. A ground unit must occupy the city.',
-    maxHp:75, moves:2, range:3, strength:46, required:17},
+    maxHp:90, moves:3, range:3, strength:46, required:17},
   armor: {name:'Armored Column', era:'modern', role:'Armored unit', tech:'motorization', captures:true,
-    description:'Armored columns move three hexes, break defended positions and occupy cities.',
-    maxHp:130, moves:3, range:1, strength:68, required:21}
+    description:'Armored columns move four hexes, break defended positions and occupy cities.',
+    maxHp:130, moves:4, range:1, strength:68, required:21}
 };

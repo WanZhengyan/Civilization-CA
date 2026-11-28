@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {seededRandom,shuffled} from './opening.js';
 
 const exchanges={
@@ -53,7 +54,7 @@ export function placeFieldStations(state,map,distance) {
 }
 
 export function fieldStationReport(state,unit) {
-  if(state.campaignVariety!==1 || !unit || unit.type!=='scout')return null;
+  if(state.campaignVariety!==1 || !unit || !trainedAs(unit,'scout'))return null;
   const station=FIELD_STATIONS[state.board[unit.tile]?.fieldStation];
   if(!station)return null;
   const visited=Boolean(state.players[unit.seat].stationVisits?.includes(unit.tile));
@@ -76,7 +77,7 @@ export function visitFieldStation(state,seat,action){
 }
 
 export function nearestKnownStation(state,unit,tiles,distance){
-  if(state.campaignVariety!==1 || unit.type!=='scout')return null;
+  if(state.campaignVariety!==1 || !trainedAs(unit,'scout'))return null;
   const visited=new Set(state.players[unit.seat].stationVisits);
   let nearest=null;
   for(const tile of tiles)if(state.board[tile]?.fieldStation && !visited.has(tile) &&

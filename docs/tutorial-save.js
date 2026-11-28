@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {createGame} from './rules.js';
 import {restoreSolo} from './solo-saves.js';
 
@@ -32,7 +33,7 @@ export function tutorialProgressAfter(progress, before, action) {
   if (action.type === 'end' && hasCity) changes.endedTurn = true;
   if (action.type === 'move' || action.type === 'skipUnit') {
     if (hasCity) changes.mobileUnitOrder = true;
-    if (before.units.find(unit=>unit.id === action.unit)?.type === 'scout') {
+    if (trainedAs(before.units.find(unit=>unit.id === action.unit),'scout')) {
       changes[action.type === 'move' ? 'movedScout' : 'skippedScout'] = true;
     }
   }

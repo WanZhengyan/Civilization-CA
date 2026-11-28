@@ -175,3 +175,87 @@ test('an active teammate can refit or rest before the lead seat passes; recovery
   s=applyAction(s,2,{type:'end'});
   assert.equal(s.units.find(u=>u.id===unit.id).hp,82);
 });
+
+import {CIVICS,TECHS,hexDistance,migrateGame} from '../docs/rules.js';
+import {serviceSpecialties} from '../docs/unit-service.js';
+import {unitUpkeep} from '../docs/unit-upkeep.js';
+import {matchup} from '../docs/regiments.js';
+import {fieldReport} from '../docs/field-expeditions.js';
+
+test('every field upgrade strengthens the original formation and charges its quoted price',()=>{
+  let checked=0;
+  for(const [id,source] of Object.entries(UNIT_TYPES))for(const route of advancementRoutes(id,UNIT_TYPES)){
+    const {state,unit}=fixture(),city=state.cities[0], map=getMap(state);
+    state.players[0].technologies=Object.keys(TECHS);
+    state.players[0].civics=Object.keys(CIVICS);
+    state.players[0].capital=100;
+    const sea=source.domain==='sea',baseMoves=source.moves+Number(sea);
+    const tile=sea?map.tiles.find(t=>t.terrain==='ocean').id:city.tile;
+    if(sea){city.portTile=tile;city.buildings=['harbor','shipyard'];}
+    Object.assign(unit,{type:id,tile,maxHp:source.maxHp+20,hp:source.maxHp-3,moves:baseMoves,maxMoves:baseMoves,drill:'assault',combatXP:3});
+    const plan=getUpgradePlans(state,unit.id,0).find(p=>p.to===route.to),target=UNIT_TYPES[route.to];
+    assert.ok(plan.enabled,id+' → '+route.to+' '+plan.reason);
+    assert.equal(source.domain,target.domain);
+    assert.ok(!source.captures || target.captures);
+    assert.ok(unitUpkeep(route.to)>unitUpkeep(id));
+    for(const stat of ['strength','range','maxMoves','hp','maxHp'])
+      assert.ok(plan.outcome[stat]>=plan.current[stat],id+' → '+route.to+' '+stat);
+    const upgraded=applyAction(state,0,{type:'upgrade',unit:unit.id,item:route.to});
+    const piece=upgraded.units.find(u=>u.id===unit.id);
+    assert.deepEqual([piece.type,piece.hp,piece.maxHp,piece.maxMoves,piece.moves],
+      [route.to,plan.outcome.hp,target.maxHp+20,plan.outcome.maxMoves,0]);
+    assert.equal(piece.drill,'assault');assert.equal(piece.combatXP,3);
+    assert.deepEqual(piece.serviceHistory,[id]);
+    assert.equal(upgraded.players[0].capital,100-route.cost);
+    checked++;
+  }
+  assert.equal(checked,16);
+});
+
+test('expedition commissions follow the original scout, including a second upgrade and a reload',()=>{
+  const {state,unit}=fixture();state.campaignVariety=1;unit.type='scout';
+  Object.assign(unit,{maxHp:65,hp:59,maxMoves:3,moves:3,tile:state.cities[0].tile});
+  state.players[0].technologies=Object.keys(TECHS);state.players[0].civics=Object.keys(CIVICS);
+  state.players[0].capital=80;
+  const commissioned=applyAction(state,0,{type:'fieldStudy',unit:unit.id,item:'start',study:'transect'});
+  const promote=(game,to)=>applyAction(advance(game),0,{type:'upgrade',unit:unit.id,item:to});
+  const advanced=JSON.parse(JSON.stringify(promote(promote(commissioned,'skirmisher'),'artillery')));
+  const gun=advanced.units.find(u=>u.id===unit.id);
+  assert.deepEqual(gun.serviceHistory,['scout','skirmisher']);
+  assert.equal(fieldReport(advanced,gun,getMap(advanced),hexDistance).mission.key,'transect');
+  assert.equal(fieldReport(advanced,{...gun,serviceHistory:[]},getMap(advanced),hexDistance),null);
+});
+
+test('specialized gunnery and infantry training keep affecting actual combat matchups',()=>{
+  const {state,unit}=fixture();state.players[0].technologies=Object.keys(TECHS);
+  state.players[0].civics=Object.keys(CIVICS);state.players[0].capital=100;
+  for(const [source,to,opponent,town,bonus] of [
+    ['pikes','riflemen',{type:'cavalry'},null,14],
+    ['sappers','armor',null,{buildings:['walls']},18],
+    ['ironclad','destroyer',null,{buildings:[]},14]
+  ]){
+    unit.type=source;
+    if(source==='ironclad'){
+      unit.tile=getMap(state).tiles.find(t=>t.terrain==='ocean').id;
+      state.cities[0].portTile=unit.tile;state.cities[0].buildings=['harbor','shipyard'];
+    }
+    const plan=getUpgradePlans(state,unit.id,0).find(p=>p.to===to);
+    const markup=advancementPanel([plan]);
+    assert.ok(markup.includes('Retained training'));assert.ok(markup.includes(serviceSpecialties[source]));
+    assert.ok(markup.includes('Gold upkeep per turn'));assert.ok(translate(serviceSpecialties[source],'zh-CN')!==serviceSpecialties[source]);
+    const next=applyAction(state,0,{type:'upgrade',unit:unit.id,item:to});
+    const piece=next.units.find(u=>u.id===unit.id);
+    assert.equal(matchup(piece,opponent,town,next,hexDistance,UNIT_TYPES).damage,bonus);
+    assert.equal(matchup({...piece,serviceHistory:[]},opponent,town,next,hexDistance,UNIT_TYPES).damage,0);
+  }
+});
+
+test('old formations migrate once with proportional wounds, mobilization health and recorded service',()=>{
+  const {state,unit}=fixture();delete state.formationVersion;
+  Object.assign(unit,{type:'artillery',hp:38,maxHp:95,moves:1,maxMoves:2});
+  state.log.push({type:'upgrade',unit:unit.id,item:'artillery',text:'Rangers upgraded to Field Artillery.'});
+  const loaded=migrateGame(state),gun=loaded.units.find(u=>u.id===unit.id);
+  assert.deepEqual([gun.hp,gun.maxHp,gun.maxMoves,gun.moves],[44,110,3,1]);
+  assert.deepEqual(gun.serviceHistory,['ranged']);assert.equal(migrateGame(loaded),loaded);
+  assert.equal(unit.maxHp,95);
+});

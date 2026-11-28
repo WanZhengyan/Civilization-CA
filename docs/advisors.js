@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {SCIENCE_PROJECT,allowsScience} from "./victory-rules.js";
 import {freightCourse} from "./freight-course.js";
 import {isProduce,materialShipmentGain,SHIPMENT} from "./resources.js";
@@ -57,7 +58,7 @@ function settlementDesk({state,units,map,L,t,add,active}){
 
 function explorationDesk({state,units,map,L,t,add,active}){
   if(!active)return;
-  for(const unit of units.filter(u=>u.type==='scout' && u.moves>0 && u.skippedRound!==state.round)){
+  for(const unit of units.filter(u=>trainedAs(u,'scout') && u.moves>0 && u.skippedRound!==state.round)){
     const targets=getUnitOptions(state,unit.id).moves.filter(id=>state.intel.explored.includes(id));
     const routes=scoutingRoutes(state,unit,targets);
     if(!routes[0]?.newHexes)continue;

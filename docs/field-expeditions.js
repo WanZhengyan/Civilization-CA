@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {getVision} from './vision.js';
 import {canSeeDeposits} from './resources.js';
 // Field studies are fictional contracts played on the campaign's own terrain.
@@ -81,7 +82,7 @@ export function corridorIncome(state,seat) {
 }
 
 export function fieldReport(state,unit,map,distance) {
-  if(state.campaignVariety!==1 || unit?.type!=='scout' || (state.intel && state.intel.seat!==unit.seat))return null;
+  if(state.campaignVariety!==1 || !trainedAs(unit,'scout') || (state.intel && state.intel.seat!==unit.seat))return null;
   const player=state.players[unit.seat], mission=player.fieldCrews?.[unit.id];
   const filed=player.fieldReports || {};
   const base=state.cities.find(c=>c.seat===unit.seat && distance(c.tile,unit.tile)<=1);
@@ -96,7 +97,7 @@ export function fieldReport(state,unit,map,distance) {
   const catalog=Object.entries(studies).filter(([,study])=>!study.region || study.region===map.id);
   const activeKeys=new Set(state.units.filter(u=>u.seat===unit.seat).map(u=>player.fieldCrews?.[u.id]?.key));
   const open=catalog.filter(([key])=>!filed[key] && !activeKeys.has(key));
-  const relay=mission && mission.relayRound!==state.round ? state.units.filter(u=>u.id!==unit.id && u.seat===unit.seat && u.type==='scout' &&
+  const relay=mission && mission.relayRound!==state.round ? state.units.filter(u=>u.id!==unit.id && u.seat===unit.seat && trainedAs(u,'scout') &&
     u.moves>0 && distance(u.tile,unit.tile)<=1 && !player.fieldCrews?.[u.id]) : [];
   const lost=mission ? [] : Object.entries(player.fieldCrews || {}).filter(([id,job])=>job.notes.length && !filed[job.key] &&
     !activeKeys.has(job.key) && !state.units.some(u=>u.id===id && u.seat===unit.seat));

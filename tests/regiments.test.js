@@ -45,7 +45,7 @@ test('engineers exploit walls even when a garrison is present and friendly signa
   town.buildings=['walls'];
   s.units=[piece('a','sappers',0,'10,7')];
   const unsupported=combatPreview(s,'a',town.tile);
-  assert.equal(unsupported.damage,40+18-7);
+  assert.equal(unsupported.damage,UNIT_TYPES.sappers.strength+18-7);
   s.units.push(piece('signal','signals',0,'10,8'),piece('signal-2','signals',0,'9,7'));
   const covered=combatPreview(s,'a',town.tile);
   assert.equal(covered.damage,unsupported.damage+8);
@@ -79,12 +79,12 @@ test('specialist shipyards, coastal bombardment and fleet damage use the same ru
   assert.equal(combatPreview(s,'a',town.tile).defenderHpAfter,1);
   s.units=[piece('a','destroyer',0,'3,7'),piece('b','frigate',1,'3,8')];
   const escort=combatPreview(s,'a','3,8');
-  assert.equal(escort.damage,57);
+  assert.equal(escort.damage,UNIT_TYPES.destroyer.strength+18);
   assert.equal(escort.roleNotes.length,1);
   const next=applyAction(s,0,{type:'attack',unit:'a',tile:'3,8'});
   assert.equal(next.units.find(u=>u.id==='b').hp,escort.defenderHpAfter);
   s.units[1]=piece('b','workboat',1,'3,8');
-  assert.equal(combatPreview(s,'a','3,8').damage,39);
+  assert.equal(combatPreview(s,'a','3,8').damage,UNIT_TYPES.destroyer.strength);
 });
 
 test('adjacent teammate signals assist a visible attack once without treating friendly riders as enemies',()=>{

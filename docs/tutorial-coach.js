@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {getMap,getUnitOptions} from './rules.js';
 import {scoutingRoutes} from './scout-routes.js';
 import {translate} from './i18n.js';
@@ -68,7 +69,7 @@ export function tutorialLesson(view) {
   const city=state.cities.find(c=>c.seat===seat);
   const units=state.units.filter(u=>u.seat===seat);
   const mobile=units.filter(u=>u.hp>0 && u.moves>0 && !u.fortified && u.skippedRound!==state.round);
-  const fieldUnit=mobile.find(u=>u.type==='scout') || mobile[0];
+  const fieldUnit=mobile.find(u=>trainedAs(u,'scout')) || mobile[0];
   const player=state.players[seat];
   const done=[
     progress.founded || city,
@@ -86,7 +87,7 @@ export function tutorialLesson(view) {
   else if (step==='found' && !settler.moves) step='restFounder';
   if (step==='explore' && !fieldUnit) step='wait';
   let route=null;
-  if(step==='explore' && fieldUnit?.type==='scout' && state.intel?.seat===seat) {
+  if(step==='explore' && trainedAs(fieldUnit,'scout') && state.intel?.seat===seat) {
     const visible=new Set(state.intel.visible);
     const destinations=getUnitOptions(state,fieldUnit.id).moves.filter(tile=>visible.has(tile));
     const best=scoutingRoutes(state,fieldUnit,destinations)[0];

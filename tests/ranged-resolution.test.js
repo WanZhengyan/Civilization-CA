@@ -43,7 +43,7 @@ test('Rangers preserve their 35 outgoing damage at range one and two with zero a
   }
 });
 test('guns, light infantry and every armed ship fire even beside their target',()=>{
-  for(const [type,damage] of Object.entries({artillery:46,skirmisher:26,cutter:36,frigate:48,ironclad:40,destroyer:39})){
+  for(const [type,damage] of Object.entries({artillery:46,skirmisher:37,cutter:36,frigate:48,ironclad:40,destroyer:52})){
     const {state,attacker,tile}=scenario(type,'unit');
     attacker.hp=attacker.maxHp;
     const {forecast,actual}=strike(state,attacker,tile);

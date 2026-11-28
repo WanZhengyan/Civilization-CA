@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {sameTeam} from './teams.js';
 
 // Definitions and combat roles for specialized formations. The forecast and
@@ -5,17 +6,17 @@ import {sameTeam} from './teams.js';
 export const REGIMENTS = {
   ironclad: {
     name:'Harbor Ironclad', role:'Coastal siege unit', domain:'sea', era:'industrial', tech:'metallurgy',
-    shipyard:true, moves:2, range:2, maxHp:125, strength:40, required:19, captures:false,
-    description:'A slow armored ship that deals 14 extra damage to cities. Requires a shipyard.'
+    shipyard:true, moves:3, range:2, maxHp:125, strength:40, required:19, captures:false,
+    description:'An armored ship that deals 14 extra damage to cities. Requires a shipyard.'
   },
   destroyer: {
     name:'Escort Destroyer', role:'Fleet escort unit', domain:'sea', era:'modern', tech:'radar',
-    shipyard:true, moves:4, range:2, maxHp:90, strength:39, required:19, captures:false,
+    shipyard:true, moves:4, range:2, maxHp:130, strength:52, required:19, captures:false,
     description:'A fast escort with four movement points. It deals 18 extra damage to armed ships. Requires a shipyard.'
   },
   sappers: {
     name:'Siege Engineers', role:'Siege infantry unit', era:'industrial', tech:'steam',
-    moves:2, range:1, maxHp:90, strength:40, required:16, captures:true,
+    moves:2, range:1, maxHp:105, strength:45, required:16, captures:true,
     description:'Siege Engineers deal 18 extra damage to a walled city and can capture it.'
   },
   signals: {
@@ -25,12 +26,12 @@ export const REGIMENTS = {
   },
   skirmisher: {
     name:'Trail Skirmishers', role:'Light infantry unit', era:'frontier', tech:'tactics',
-    moves:3, range:2, maxHp:65, strength:26, required:11, captures:false,
+    moves:3, range:2, maxHp:85, strength:37, required:11, captures:false,
     description:'Light ranged infantry. Woodland and foothills cost only one movement point.'
   },
   pikes: {
     name:'Pike Guard', role:'Defensive infantry unit', era:'frontier', civic:'mutualAid',
-    moves:2, range:1, maxHp:95, strength:34, required:12, captures:true,
+    moves:2, range:1, maxHp:105, strength:42, required:12, captures:true,
     description:'Guards gain 14 attack damage against mounted scouts and cut their incoming charge damage by 14.'
   }
 };
@@ -38,19 +39,19 @@ export const REGIMENTS = {
 export function matchup(unit, defender, town, state, distance, definitions) {
   const notes=[];
   let damage=0;
-  if (unit.type==='pikes' && defender?.type==='cavalry') {
+  if (trainedAs(unit,'pikes') && defender?.type==='cavalry') {
     damage+=14;
     notes.push('Pikes against cavalry · +14 damage');
   }
-  if (unit.type==='cavalry' && defender?.type==='pikes') {
+  if (unit.type==='cavalry' && trainedAs(defender,'pikes')) {
     damage-=14;
     notes.push('Defending pike line · −14 damage');
   }
-  if (unit.type==='sappers' && town?.buildings.includes('walls') && !defender) {
+  if (trainedAs(unit,'sappers') && town?.buildings.includes('walls') && !defender) {
     damage+=18;
     notes.push('Siege engineers at the walls · +18 damage');
   }
-  if (unit.type==='ironclad' && town) {
+  if (trainedAs(unit,'ironclad') && town) {
     damage+=14;
     notes.push('Coastal bombardment · +14 damage');
   }

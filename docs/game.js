@@ -774,7 +774,7 @@ const guideSections = {
     freightGuide,
     voyageGuide,
     inlandGuide,
-    ['Choose a warship', 'An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.'],
+    ['Choose a warship', 'An ironclad moves three hexes and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.'],
     ['Launch a fleet', 'A harbor trains Revenue cutters. Research Steam Power to unlock the Shipyard, then build one to train Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.']
   ]},
   research: {label:'Research & victory', entries:[

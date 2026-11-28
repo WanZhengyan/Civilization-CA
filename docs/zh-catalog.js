@@ -1177,7 +1177,7 @@ Recon unit|侦察单位
 Fast riders move four hexes and can occupy a weakened city.|骑马侦察兵可移动四格，并能占领防御薄弱的城市。
 Durable infantry fight at close range and capture weakened cities.|耐久的步兵擅长近战，可以攻占防御薄弱的城市。
 Guns bombard targets up to three hexes away. A ground unit must occupy the city.|野战炮可炮击三格内的目标。占领城市需要地面部队。
-Armored columns move three hexes, break defended positions and occupy cities.|装甲纵队可移动三格，突破防线并占领城市。
+Armored columns move four hexes, break defended positions and occupy cities.|装甲纵队可移动四格，突破防线并占领城市。
 Move into your territory to upgrade.|进入己方领土后才能升级。
 Your treasury cannot cover this upgrade.|金库中的资金不足以升级。
 No field upgrade is available.|当前没有可用的战场升级。
@@ -1395,7 +1395,7 @@ Harbor Ironclad|港防铁甲舰
 Escort Destroyer|护航驱逐舰
 Coastal siege unit|近岸攻城舰
 Fleet escort unit|舰队护航单位
-A slow armored ship that deals 14 extra damage to cities. Requires a shipyard.|低速装甲舰，对城市额外造成 14 点伤害。需要船厂。
+An armored ship that deals 14 extra damage to cities. Requires a shipyard.|装甲舰，对城市额外造成 14 点伤害。需要船厂。
 A fast escort with four movement points. It deals 18 extra damage to armed ships. Requires a shipyard.|高速护航舰，拥有四点移动力，对武装舰船额外造成 18 点伤害。需要船厂。
 Coastal bombardment · +14 damage|近岸炮击 · 伤害 +14
 Escort against a warship · +18 damage|护航舰对敌舰 · 伤害 +18
@@ -1407,7 +1407,7 @@ Trail skirmishers cross woods and hills for one movement point. Pike Guards make
 Support an assault|支援进攻
 Siege Engineers attack city walls directly, including in garrisoned cities. An adjacent friendly Signal Corps adds 8 damage against rival civilizations.|攻城工兵直接攻击城墙，即使城里有驻军也能生效。邻格的友方通信兵可在与其他文明交战时增加 8 点伤害。
 Choose a warship|选择作战舰船
-An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.|港防铁甲舰速度较慢，耐久性高，擅长近岸攻城。护航驱逐舰可移动四格，攻击武装舰船时有额外伤害。两种船都需要船厂。
+An ironclad moves three hexes and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.|港防铁甲舰可移动三格，擅长近岸攻城。护航驱逐舰可移动四格，攻击武装舰船时有额外伤害。两种船都需要船厂。
 Unit handbook|兵种手册
 Compare base movement, sight, attack range and production cost. Select a formation to see its role and requirements.|比较各兵种的基础移动力、视野、射程和生产成本。点开兵种可查看用途和训练条件。
 Formation|兵种

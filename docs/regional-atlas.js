@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {sameTeam} from './teams.js';
 
 // Three observations belong to the scout carrying the notebook. Publishing is once per civilization.
@@ -7,7 +8,7 @@ const separation=3;
 export const atlasInstruction='Record three different terrains at least three hexes apart. Bring the same scout back to a friendly city.';
 
 export function notebookReport(state,unit,map,distance){
-  if(state.campaignVariety!==1 || !unit || unit.type!=='scout')return null;
+  if(state.campaignVariety!==1 || !unit || !trainedAs(unit,'scout'))return null;
   const publisher=state.players[unit.seat].publishedAtlas;
   const notes=unit.fieldNotes || [];
   const terrain=map.byId[unit.tile]?.terrain;
@@ -44,7 +45,7 @@ export function runAtlasOrder(state,seat,action,map,distance){
 
 export function expeditionScout(state,seat,distance,definitions){
   if(state.campaignVariety!==1 || state.players[seat].publishedAtlas)return null;
-  const scouts=state.units.filter(unit=>unit.seat===seat && unit.type==='scout');
+  const scouts=state.units.filter(unit=>unit.seat===seat && trainedAs(unit,'scout'));
   if(!scouts.length)return null;
   const cities=state.cities.filter(city=>city.seat===seat);
   const needsDefense=state.units.some(unit=>!sameTeam(state,seat,unit.seat) && definitions[unit.type]?.captures

@@ -1,3 +1,4 @@
+import {trainedAs} from './unit-service.js';
 import {pos,W,H} from './hex-survey.js';
 import {mountLensFinder} from './lens-finder.js';
 import {FIELD_STATIONS,fieldStationReport} from './field-stations.js';
@@ -134,7 +135,7 @@ const lenses=[
     ['Already charted','无新增视野'],['Reveals 1–3 hexes','新探明 1–3 格'],['Reveals 4+ hexes','新探明 4 格以上']
   ],({state,seat})=>{
     const rows=new Map(),bestCost=new Map();
-    for(const scout of state.units.filter(u=>u.seat===seat && u.type==='scout' && u.moves>0)){
+    for(const scout of state.units.filter(u=>u.seat===seat && trainedAs(u,'scout') && u.moves>0)){
       for(const route of scoutingRoutes(state,scout,getUnitOptions(state,scout.id).moves)){
         if((bestCost.get(route.tile)??Infinity)<=route.cost)continue;
         bestCost.set(route.tile,route.cost);
@@ -266,7 +267,7 @@ const lenses=[
   definition('stations','Field station exchanges','野外站点交换','Plan visits to charted posts, archives and lodges. Each civilization may choose one exchange per station.','为已探明的驿站、档案馆和驿舍安排访问。每个文明在每个站点只能选择一次交换。',[
     ['Scout needed','需派侦察兵'],['Scout on site','侦察兵已抵达'],['Exchange available','可立即交换'],['Already visited','已访问']
   ],({state,seat,known})=>{
-    const rows=new Map(),scouts=state.units.filter(u=>u.seat===seat && u.type==='scout');
+    const rows=new Map(),scouts=state.units.filter(u=>u.seat===seat && trainedAs(u,'scout'));
     for(const tile of known){
       const station=FIELD_STATIONS[state.board[tile]?.fieldStation];if(!station)continue;
       const here=scouts.find(u=>u.tile===tile);
