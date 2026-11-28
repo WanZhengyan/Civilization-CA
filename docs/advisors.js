@@ -1,3 +1,4 @@
+import {getRecoveryForecast,UNIT_TYPES} from "./rules.js";
 import {getFreightManifest} from "./rules.js";
 import {freightCourse} from "./freight-course.js";
 import {getResourceLedger} from "./rules.js";
@@ -233,7 +234,23 @@ function coastDesk({state,units,L,t,add,active}){
   }
 }
 
-const desks=[coastDesk,supplyDesk,influenceDesk,civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function recoveryDesk({state,seat,units,map,L,t,add,active}){
+  if(!active)return;
+  for(const u of units.filter(u=>u.hp<u.maxHp && u.moves>0 && !u.resting && u.skippedRound!==state.round)){
+    const care=getRecoveryForecast(state,u.id,seat);
+    if(!care?.canRest && !care?.nearest?.hexes)continue;
+    const now=L('Holding here gives '+care.hpAfter+'/'+u.maxHp+' HP at the next muster. ',
+      '在此停留至下回合开始，生命值预计为 '+care.hpAfter+'/'+u.maxHp+'。');
+    const alternative=care.canRest?L('Resting spends the remaining '+u.moves+' movement and gives '+(u.hp+care.restGain)+'/'+u.maxHp+' HP.',
+      '本回合休整会消耗剩余 '+u.moves+' 移动力，生命值可达 '+(u.hp+care.restGain)+'/'+u.maxHp+'。'):'';
+    const station=care.nearest?.hexes?L(' The nearest service station, '+t(care.nearest.name)+', is '+care.nearest.hexes+' hexes away in a straight line.',
+      ' 最近的补给站为'+t(care.nearest.name)+'，直线距离 '+care.nearest.hexes+' 格。'):'';
+    add('recovery',L('Care for ','安排休整 · ')+t(UNIT_TYPES[u.type].name)+' · '+t(map.byId[u.tile].name),
+      now+alternative+station,Math.round(52+24*(1-u.hp/u.maxHp)),{kind:'care',unit:u.id,rest:care.canRest});
+  }
+}
+
+const desks=[recoveryDesk,coastDesk,supplyDesk,influenceDesk,civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;

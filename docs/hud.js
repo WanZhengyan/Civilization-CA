@@ -850,6 +850,7 @@ function reviewAdvice(link){
     select(unit.tile,unit.id);atlas.focus(unit.tile);redraw();inspectMapOnMobile();
     if(link.kind==='move' && mayOrder())reviewScoutDestination(unit,link.tile);
     if(link.kind==='freight')chooseOrder('freight-course:'+link.tile);
+    if(link.kind==='care')document.querySelector('[data-order="'+(link.rest?'recover':'locate-care')+'"]')?.focus();
     return;
   }
   const city=ownCities().find(c=>c.id===link.city);

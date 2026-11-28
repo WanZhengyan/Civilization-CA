@@ -87,3 +87,12 @@ test('material dispatch quotes the capped remaining construction and its cash al
   const card=read(s).find(r=>r.desk==='supplies');assert.equal(card.link.city,c.id);assert.match(card.detail,/\+2 production/);
   const after=applyAction(s,0,{type:'shipment',resource:'iron',city:c.id,market:'city'});assert.ok(!read(after).some(r=>r.desk==='supplies'));
 });
+
+
+test('recovery advice compares the two real health forecasts before consuming movement',()=>{
+  const s=capital(),u={...start().units[0],id:'patient',type:'melee',tile:s.cities[0].tile,hp:30,maxHp:100,moves:2};
+  s.units.push(u);
+  const card=read(s).find(r=>r.desk==='recovery');
+  assert.match(card.detail,/42\/100/);assert.match(card.detail,/46\/100/);assert.equal(card.link.rest,true);
+  u.resting=true;assert.ok(!read(s).some(r=>r.desk==='recovery'));
+});
