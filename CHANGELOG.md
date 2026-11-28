@@ -1,5 +1,15 @@
 # Campaign updates
 
+## Sail inland and meet the civilizations beyond your borders
+
+New campaigns in all three regions draw navigable rivers and lakes from the opening seed. A harbor can launch on fresh water. Cutters can sail inland and fire at a city in range. Fishing crews can load at a surveyed shoal or their own fishery and return to an owned berth with 3 food and 1 stored fish. Bridges keep ground crossings open. Explored waterways can be located from the map key.
+
+The portraits in the upper right open a civilization dossier. It shows your civilization’s trait, economy and influence uses. After first contact, you can review the rival’s trait and the cities your team has actually observed. A delegation costs 6 influence and reports the rival’s current era and city count for three rounds.
+
+Industrial and Modern discoveries and civics now take longer. Both councils show the number of turns remaining at current income and keep banked points when you change focus. The original costs and geography stay with existing games and rooms.
+
+Three original pieces accompany the Frontier, Industrial and Modern eras. Mute the music or set its volume in the game menu. Both languages offer the same controls.
+
 ## Choose your civilization and race for conquest or science
 
 Choose a victory mode when starting solo or hosting a room. In Standard, your team can win by conquest or by researching Rocketry and committing 60 production in one city to the Orbital Survey. Science and Conquest each offer a single objective. Earlier campaigns and rooms keep the victory rules they started with.

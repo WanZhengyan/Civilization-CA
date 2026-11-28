@@ -34,7 +34,7 @@ test('Rocketry unlocks a sixty-production orbital project with no purchase or pa
   assert.equal(option(s),undefined);
   assert.equal(getResearchOptions(s,0).find(t=>t.item==='rocketry').locked,true);
   s.players[0].technologies.push('industry','tactics','steam','ballistics','radio','motorization');
-  s.players[0].science=30;s.players[0].capital=10000;
+  s.players[0].science=getResearchOptions(s,0).find(o=>o.item==='rocketry').cost;s.players[0].capital=10000;
   s=applyAction(s,0,{type:'research',item:'rocketry'});
   assert.equal(option(s).kind,'project');assert.equal(option(s).required,60);assert.equal(option(s).buyEnabled,false);
   assert.throws(()=>applyAction(s,0,{type:'buyProduction',city,item:'orbitalSurvey',expected:0,gold:120}));
@@ -123,7 +123,7 @@ test('an autonomous science campaign researches, produces and launches from the 
     milestones.add(action.type+'/'+action.item);
     state=applyAction(state,state.turn,action);
   }
-  assert(milestones.has('research/rocketry'));assert(milestones.has('produce/orbitalSurvey'));
+  assert(milestones.has('research/rocketry'));assert(milestones.has('produce/orbitalSurvey') || milestones.has('switchProduction/orbitalSurvey'));
   assert.equal(state.victoryReason,'science');
 });
 

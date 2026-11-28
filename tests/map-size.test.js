@@ -55,7 +55,7 @@ test('large-game seeds yield separated settler starts, private sight, nearby res
       assert.ok(game.units.every(other=>other===unit || hexDistance(unit.tile,other.tile)>=9));
       assert.ok(map.neighbors(unit.tile).some(id=>game.board[id].resource && land(map.byId[id])));
       const view=campaignView(game,unit.seat);
-      assert.equal(getMap(view),map);
+      for(const id of view.intel.explored)assert.deepEqual(getMap(view).byId[id],map.byId[id]);
       assert.deepEqual(view.units.map(u=>u.id),[unit.id]);
       assert.ok(view.intel.visible.length<=19);
       assert.ok(view.intel.visible.every(id=>hexDistance(unit.tile,id)<=2));
@@ -122,7 +122,9 @@ test('new-size surveys retain every regional center, connect land and sea, and r
     assert.ok(places.length>=2,region+' '+size);
     assert.equal(new Set(places.map(t=>t.locality)).size,places.length);
     const state=createGame(undefined,region,{mapSize:size,seed:842});
-    assert.equal(getMap(campaignView(state,0)),map);
-    assert.equal(getMap(migrateGame(JSON.parse(JSON.stringify(state)))),map);
+    const view=campaignView(state,0),actual=getMap(state);
+    assert.deepEqual(getMap(view).tiles.map(t=>t.id),map.tiles.map(t=>t.id));
+    for(const id of view.intel.explored)assert.deepEqual(getMap(view).byId[id],actual.byId[id]);
+    assert.equal(getMap(migrateGame(JSON.parse(JSON.stringify(state)))),actual);
   }
 });

@@ -138,14 +138,15 @@ test('hard commissions an expansion settler only after its escort reveals a usab
   assert.equal(chooseBotAction(state,'hard').item,'settler');
 });
 
-test('during a public university race the exact site in a private city queue cannot guide a contest',()=>{
+for(const item of ['stanford','neighborhood'])test('a governor considers every plausible private '+item+' site equally',()=>{
   const state=createClassicGame(['A','B']);
   state.units=[];state.board['10,7']={owner:1,level:2};
   for(const other of getMap(state).neighbors('11,7'))if(other!=='10,7')state.board[other]={owner:0,level:3};
   Object.assign(state.players[0],{research:'industry',civic:'charter',policyRound:state.round,capital:30,influence:30});
   Object.assign(state.cities[0],{queue:{item:'granary'},focusRound:state.round});
-  Object.assign(state.cities[1],{tile:'9,7',queue:{item:'stanford',site:'10,7'}});
-  state.wonderRegistry={stanford:'commissioned'};
+  Object.assign(state.cities[1],{tile:'9,7',queue:{item,site:'10,7'}});
+  if(item==='stanford')state.wonderRegistry={stanford:'commissioned'};
+  else state.researchPace=1;
   const otherSite=structuredClone(state);
   otherSite.cities[1].queue.site='9,6';
   for(const difficulty of AI_LEVELS) {
@@ -155,7 +156,6 @@ test('during a public university race the exact site in a private city queue can
     assert.doesNotThrow(()=>applyAction(state,0,action));
   }
 });
-
 test('computer allies see the same shared chart as the human and ignore enemies outside it',()=>{
   const state=createGame([{bot:true},'Partner','Rival'],'la',{seed:701,mapSize:'large',teams:[0,0,1]});
   const chart=projectForSeat(state,0);

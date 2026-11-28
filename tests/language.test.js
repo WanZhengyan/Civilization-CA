@@ -17,6 +17,8 @@ test('settlement, research, production, map labels and dynamic campaign events u
   for(const sample of [
     '5 sites within reach. Follow a blue flag to settle next turn.',
     'Downtown LA is 1 hex away. Cities must be at least 3 hexes apart.',
+    'Changing research keeps your banked science.','Changing debates keeps your banked culture.',
+    '2 turns left','1 turn left','5 science banked','3 culture banked',
     'Current site · Pico-Union','Pico-Robertson · 2 movement · Move here and found a city next turn.',
     'Your Civilian unit','+3 science per turn','Requires Steam Power + Ballistics',
     'Pacific Union attacked Militia in Hollywood Hills for 13 damage.',

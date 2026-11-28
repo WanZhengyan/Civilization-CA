@@ -1,3 +1,4 @@
+import {inkWaterways,inkRiverBridge,waterCaptions} from './water-chart.js';
 import {battleMarkers,paintBattleReport} from './battle-overlay.js';
 import {boxesOverlap,cityFont,cityLabelAt,paintCityLabels,planCityLabels} from './city-labels.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
@@ -244,7 +245,7 @@ function bezierRoute(g,coords,colors) {
   p.lineTo(...pts.at(-1));for(const [color,width] of colors){g.strokeStyle=color;g.lineWidth=width;g.stroke(p);}
   return p;
 }
-function roadNetwork(g){
+function roadNetwork(g, historic){
   g.save();g.lineJoin='round';g.lineCap='round';
   const highways=[
     [[3.72,7.13],[4.62,7.6],[5.81,7.85],[7.1,7.82],[8.61,7.35],[9.43,7.55],[10.69,7.94],[11.73,7.76],[12.67,7.23],[14.9,7.6],[17.5,6.8]],
@@ -255,7 +256,7 @@ function roadNetwork(g){
   for(const highway of highways)bezierRoute(g,highway,[['#7d7b6390',5.2],['#efe0b9',3.8],['#c7b48d',.82]]);
   // The LA River and its greenbelt curve through the central basin.
   const river=[[6.3,2.55],[7.45,2.72],[8.42,2.86],[9.4,3.00],[10.02,3.15],[10.71,3.45],[11.37,3.43],[11.92,3.83],[12.06,4.49],[11.89,5.12],[11.67,5.87],[11.86,6.56],[11.9,7.17],[12.22,7.83],[12.36,8.5],[12.47,9.47],[13.0,10.22],[13.25,11.13],[13.9,12.3],[14.45,14.0]];
-  bezierRoute(g,river,[['#77977096',13],['#a5b486',8],['#c6bd99',6.1],['#4d9293',4.5],['#a2d0bd',1.35]]);
+  if(historic)bezierRoute(g,river,[['#77977096',13],['#a5b486',8],['#c6bd99',6.1],['#4d9293',4.5],['#a2d0bd',1.35]]);
   g.restore();
 }
 function figuresOnTerrain(g,geo,extended,landmarks,shore,{width:worldW,height:worldH,resolution}){
@@ -362,7 +363,7 @@ function ridgeSilhouette(g,x,y,s,rng) {
   line(g,[peak+2,-h+1,peak+5,-h*.58,peak+4,-h*.31,peak+9,-1],'#b3ab80',.8);
   g.restore();
 }
-function renderAtlas(tiles,map,landmarkTiles) {
+function renderAtlas(tiles,map,landmarkTiles,drawHistoricRiver=true) {
   const survey=map.terrainAtlas || tiles;
   const layout=atlasRasterLayout(survey);
   const {width:worldW,height:worldH,rows,columns,margin,resolution}=layout;
@@ -405,7 +406,7 @@ function renderAtlas(tiles,map,landmarkTiles) {
     g.save();
     const factor=map.scaleFactor||1;
     g.translate((1-factor)*W/2,(1-factor)*H/2);g.scale(factor,factor);
-    roadNetwork(g);
+    roadNetwork(g,drawHistoricRiver);
     g.restore();
   }
   for(const bridge of map.crossings||[]) {
@@ -434,7 +435,7 @@ function renderAtlas(tiles,map,landmarkTiles) {
     }});
   }
   scene.sort((a,b)=>a.y-b.y);for(const item of scene)item.run();
-  const boats=illustratedCoast?[[.8,7,1.1],[3,11,1.15],[1,10,.73],[4,9,.9]]:tiles.filter(t=>t.terrain==='ocean'&&(t.q*73+t.r*37)%31===0).map(t=>[t.q,t.r,.82]);
+  const boats=illustratedCoast?[[.8,7,1.1],[3,11,1.15],[1,10,.73],[4,9,.9]]:tiles.filter(t=>t.terrain==='ocean'&&!t.waterway&&(t.q*73+t.r*37)%31===0).map(t=>[t.q,t.r,.82]);
   for(const [q,r,s] of boats){const [x,y]=pos(q,r);seaBoat(g,x+4,y+5,s);}
   if(typeof buffer.transferToImageBitmap==='function')return {buffer:buffer.transferToImageBitmap(),margin,resolution};
   // Snapshot the vector painting on engines without transferable canvas bitmaps.
@@ -969,9 +970,25 @@ function renderOverlay(g,tiles,model,scale,labels,territories,unitBoxes,cityBoxe
     const point=placeLabel(lx,ly,name);
     if(point)label(g,name,...point,owner!=null && territories?getFaction(owner):'#a5997a',labelScale);
   }
+  if(scale>.45 && region.waterways){
+    for(const {name,tile,alternates} of model.waterCaptions||[]){
+      const caption=translate(name),size=Math.max(12,Math.min(20,12/scale));
+      g.save();g.font='italic 600 '+size+'px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
+      const half=g.measureText(caption).width/2+2,occupied=[...cityBoxes,...unitBoxes,...labelBounds];
+      for(const candidate of [tile,...alternates]){
+        const [x,y]=pos(candidate.q,candidate.r),box=[x-half,y+4,x+half,y+6+size];
+        if(occupied.some(other=>boxesOverlap(box,other,2/scale)))continue;
+        if(model.fog && [box[0],x,box[2]].some(xx=>[box[1],box[3]].some(yy=>
+          !chartHit(xx,yy,id=>model.fog.explored.has(id)))))continue;
+        g.strokeStyle='#25515b';g.lineWidth=2.8/Math.max(.72,scale);g.strokeText(caption,x,y+5+size/2);
+        g.fillStyle='#e8f6e8';g.fillText(caption,x,y+5+size/2);labelBounds.push(box);break;
+      }
+      g.restore();
+    }
+  }
   if(scale>.88){
     for(const tile of tiles){
-      if(!tile.localityLabel||model.cityTiles.has(tile.id)||board[tile.id]?.wonder)continue;
+      if(!tile.localityLabel||tile.waterway||model.cityTiles.has(tile.id)||board[tile.id]?.wonder)continue;
       const [x,y]=pos(tile.q,tile.r),name=translate(tile.locality);
       g.save();g.font='italic 11px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
       const half=g.measureText(name).width/2+2,box=[x-half,y+7,x+half,y+23];
@@ -1012,7 +1029,14 @@ export function createAtlas(host, options = {}) {
   let landmarkTiles=tiles.filter(tile=>tile.landmark);
   let cityMarks=[],cityCamera=null;
   function forgetBackground(){background?.buffer.close?.();background=null;}
-  function ensureBackground() {if(!background)background=renderAtlas(tiles,model.region||getMap('la'),landmarkTiles);}
+  function ensureBackground() {
+    if(background)return;
+    const region=model.region||getMap('la');
+    // The printed plate is stable across discoveries. Water fills, bridges and
+    // their labels are overprinted from this seat's changing survey below.
+    const paper=region.waterways ? getMap(region.id,region.mapSize) : region;
+    background=renderAtlas(paper.tiles,paper,landmarkTiles,!region.waterways);
+  }
   function draw(){
     request=0;if(disposed||boxW<2||boxH<2)return;ensureBackground();
     const dpi=canvas.width/boxW,s=base*zoom;
@@ -1053,6 +1077,12 @@ export function createAtlas(host, options = {}) {
     const bh=Math.min(buffer.height/resolution-margin,cy+boxH/(2*s)+2,visible.bottom+2)-by;
     if(bw>0&&bh>0)ctx.drawImage(buffer,(bx+margin)*resolution,(by+margin)*resolution,
       bw*resolution,bh*resolution,bx,by,bw,bh);
+    if(model.region?.waterways){
+      inkWaterways(ctx,model.region);
+      for(const bridge of model.region.waterways.crossings || []){
+        inkRiverBridge(ctx,model.region.byId[bridge.a],model.region.byId[bridge.b]);
+      }
+    }
     if(model.fog)ctx.restore();
     if(grid)inkHexGrid(ctx,mesh,s);
     if(model.fog){ctx.save();ctx.clip(model.fog.window);}
@@ -1206,16 +1236,22 @@ export function createAtlas(host, options = {}) {
     update(o={}){
       const region=o.state?getMap(o.state):model.region;
       const nextTiles=o.tiles||region?.tiles;
+      const sameSurvey=Boolean(region?.waterways && model.region?.waterways && o.campaignKey &&
+        o.campaignKey===model.campaignKey && region.id===model.region.id && region.mapSize===model.region.mapSize);
+      model.campaignKey=o.campaignKey;
       if(region && region!==model.region){
         model.region=region;
         canvas.setAttribute('aria-label',region.name+' strategy map. Use arrow keys to preview a district. Press Enter or Space to select it. Use plus and minus to zoom, and Home to reset the view.');
       }
       const tilesChanged=nextTiles && nextTiles!==tiles;
       if(tilesChanged){
-        tiles=nextTiles;extent=chartExtent(tiles);frame=chartFrame(tiles);mesh=chartMesh(tiles);model.byId=new Map(tiles.map(t=>[t.id,t]));forgetBackground();
-        model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
-        pendingFocus=null;returnCamera=null;replay=null;cityCamera=null;
-        base=referenceScale();zoom=1;resetCenter();options.onZoom?.(100);
+        tiles=nextTiles;model.byId=new Map(tiles.map(t=>[t.id,t]));
+        if(!sameSurvey){
+          extent=chartExtent(tiles);frame=chartFrame(tiles);mesh=chartMesh(tiles);forgetBackground();
+          model.motions=[];model.haveState=false;model.units=[];model.hitUnits=[];model.previewPath=[];model.hoverId=null;
+          pendingFocus=null;returnCamera=null;replay=null;cityCamera=null;
+          base=referenceScale();zoom=1;resetCenter();options.onZoom?.(100);
+        }
       }
       const state=o.state||o;if(o.state)model.state=o.state;
       if(o.borderForecasts)model.borderForecasts=o.borderForecasts;
@@ -1226,6 +1262,7 @@ export function createAtlas(host, options = {}) {
         for(const t of knownTiles){window.addPath(hexPath(t.q,t.r));if(!visible.has(t.id)) memory.addPath(hexPath(t.q,t.r));}
         model.intel=state.intel;model.fog={explored,visible,window,memory,knownTiles,extent:chartExtent(knownTiles)};
       } else if(!state.intel){model.fog=null;model.intel=null;}
+      if(tilesChanged || priorFog!==model.fog)model.waterCaptions=waterCaptions(model.fog?.knownTiles || tiles);
       const boardChanged=state.board && state.board!==model.board;
       if(tilesChanged || boardChanged || priorFog!==model.fog){
         model.politics=politicalPaths(tiles,state.board||model.board,model.fog?.visible,hexPath);
@@ -1234,7 +1271,7 @@ export function createAtlas(host, options = {}) {
         if(state.board)model.board=state.board;
         // Only the seat's observed parcels may replace the printed landmark artwork.
         const next=tiles.filter(t=>t.landmark && getAtlasPlace(t,model.board[t.id])?.landmark);
-        if(next.length!==landmarkTiles.length || next.some((t,i)=>t!==landmarkTiles[i]))forgetBackground();
+        if(next.length!==landmarkTiles.length || next.some((t,i)=>t.id!==landmarkTiles[i].id))forgetBackground();
         landmarkTiles=next;
       }
       if(state.players)model.players=state.players;

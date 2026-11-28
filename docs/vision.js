@@ -1,3 +1,6 @@
+import {CIVILIZATIONS} from './civilizations.js';
+import {observeContacts,diplomacyView} from './diplomacy.js';
+import {chartedWaterways} from './waterways.js';
 import {actingPerspective,publicTeamPhase} from './team-turns.js';
 import {sameTeam} from './teams.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
@@ -107,11 +110,31 @@ export function rememberVision(state, previous) {
     const audience=sights.reduce((mask,visible,seat)=>visible.has(entry.tile) ? mask|(1<<seat) : mask,0);
     return {...entry,audience};
   });
-  return {...state,exploration,log:discoveries.length ? [...log,...discoveries].slice(-160) : log};
+  const contacts=sights.map((visible,seat)=>observeContacts(state,seat,visible));
+  const introductions=[];
+  if (previous?.contacts && state.phase==='playing') contacts.forEach((records,seat)=>{
+    let earlier;
+    for(const id of Object.keys(records)) {
+      if(previous.contacts[seat]?.[id]) continue;
+      // A loaded game can already have a diplomatic contact in present sight
+      // before its first order writes that observation to the save.
+      earlier ??= observeContacts(previous,seat,getVisibleTiles(previous,seat));
+      if(earlier[id]) continue;
+      const civ=CIVILIZATIONS[state.players[id].faction];
+      if(civ) introductions.push({round:state.round,seat,type:'contact',target:Number(id),text:'First contact with '+civ.name+'.'});
+    }
+  });
+  const firstOrder=introductions.length ? state.log.findIndex(e=>!oldLog.has(e)) : -1;
+  const split=firstOrder<0 ? log.length : firstOrder;
+  return {...state,contacts,exploration,log:introductions.length || discoveries.length
+    ? [...log.slice(0,split),...introductions,...log.slice(split),...discoveries].slice(-160) : log};
 }
 
 const publicShape=(object,keys)=>Object.fromEntries(keys.filter(key=>Object.hasOwn(object,key)).map(key=>[key,object[key]]));
-function observedEvent(entry,seat) {
+function observedEvent(entry,seat,knownSeats) {
+  if (entry.type==='end' && !knownSeats.has(entry.seat)) {
+    return {round:entry.round,type:'end',text:'An unmet civilization ended its turn.'};
+  }
   if(entry.seat===seat || ['start','end','finish','victory'].includes(entry.type)) {
     const {audience,...copy}=entry;
     return copy;
@@ -148,11 +171,17 @@ export function projectForSeat(state,seat) {
   // A founder remembers their first capital even after losing sight of it.
   // Campaigns predating the settler opening began with a capital for every seat.
   const hasFoundedCapital=state.opening!=='settlers' || state.cities.some(city=>city.originalSeat===seat);
-  const view={...publicShape(state,['rulesVersion','civilizationTraits','opening','mapId','mapShape','mapSize','scoreTarget','victoryMode','practice','difficulty','firstSeat','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
+  const diplomacy=diplomacyView(state,seat,visible),knownSeats=new Set(diplomacy.map(record=>record.seat));
+  const view={...publicShape(state,['rulesVersion','researchPace','civilizationTraits','opening','mapId','mapShape','mapSize','scoreTarget','victoryMode','practice','difficulty','firstSeat','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
     ...(state.teams ? {teams:[...state.teams]} : {}),
     ...(state.teamPhase ? {teamPhase:publicTeamPhase(state,seat)} : {}),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
-    log:state.log.map(e=>observedEvent(e,seat)).filter(Boolean),intel:{seat,hasFoundedCapital,...(state.teams ? {teamSurveyed:surveyed} : {}),visible:[...visible],explored:[...explored],battles:state.battleReports?.[seat] || []}};
+    log:state.log.map(e=>observedEvent(e,seat,knownSeats)).filter(Boolean),intel:{seat,diplomacy,hasFoundedCapital,...(state.teams ? {teamSurveyed:surveyed} : {}),visible:[...visible],explored:[...explored],battles:state.battleReports?.[seat] || []}};
+  if (state.waterways) view.waterways=chartedWaterways(state.waterways,explored);
+  if (state.waterways) {
+    const occupied=state.cities.flatMap(city=>[city.portTile,city.queue?.portTile]);
+    view.intel.visibleBerths=[...new Set(occupied.filter(id=>id && visible.has(id)))].sort();
+  }
   if (state.barbarians) {
     const shown=entries=>(entries||[]).filter(e=>visible.has(e.tile))
       .map(e=>publicShape(e,['id','tile','type','hp','maxHp']));

@@ -719,7 +719,7 @@ test('a host can choose a bot civilization, while open and occupied human seats 
 test('an old unstarted lobby and a resumed historical campaign keep their original score and civilization rules', async t=>{
   const f=roomFixture(t), s=await twoPlayers(f);
   const row=f.sqlite.prepare('SELECT members FROM game_rooms WHERE code=?').get(s.code);
-  const members=JSON.parse(row.members).map(({victoryMode,civilization,...original})=>original);
+  const members=JSON.parse(row.members).map(({victoryMode,civilization,researchPace,waterwayVersion,...original})=>original);
   f.sqlite.prepare('UPDATE game_rooms SET members=? WHERE code=?').run(JSON.stringify(members),s.code);
   const before=await s.read(s.guest);
   assert.equal(before.victoryMode,null);assert(before.players.every(p=>p.civilization==='random'));
@@ -788,4 +788,60 @@ test('room authority awards the selected science or conquest victory to both mem
     assert.deepEqual(room.game.winners,[0,1]);assert.deepEqual(guestView.game.winners,[0,1]);
     assert.equal(guestView.phase,'finished');
   }
+});
+
+
+test('rooms keep the council rules they were opened under, including unstarted lobbies',async t=>{
+  const f=roomFixture(t);
+  for (const historical of [false,true]) {
+    const seats=await twoPlayers(f);
+    if (historical) {
+      const stored=f.sqlite.prepare('SELECT members FROM game_rooms WHERE code=?').get(seats.code);
+      const members=JSON.parse(stored.members);
+      delete members[0].researchPace;delete members[0].waterwayVersion;
+      f.sqlite.prepare('UPDATE game_rooms SET members=? WHERE code=?').run(JSON.stringify(members),seats.code);
+    }
+    const started=await seats.start();
+    assert.equal(started.victoryMode,'standard');
+    assert.equal(started.game.researchPace,historical ? undefined : 1);
+    const rejoined=await seats.read(seats.guest);
+    assert.equal(rejoined.game.researchPace,started.game.researchPace);
+  }
+});
+
+test('allied observation opens an authenticated private delegation, with one debit, expiry and ticket recovery', async t=>{
+  const f=roomFixture(t),seats=[0,0,1].map(team=>({kind:'human',team}));
+  const host=await f.call('POST',{op:'create',name:'Host',seats},null,201),code=host.room.code;
+  const ally=await f.call('POST',{op:'join',code,name:'Ally'}),rival=await f.call('POST',{op:'join',code,name:'Rival'});
+  const read=async actor=>(await f.call('GET',{code},actor.token)).room;
+  const act=async (actor,action)=>{
+    const room=await read(actor);
+    return f.call('POST',{op:'action',code,revision:room.revision,orderKey:room.game.teamPhase.orderKey,action},actor.token);
+  };
+  let room=(await f.call('POST',{op:'start',code,revision:rival.room.revision},host.token)).room;
+  if(room.game.teamPhase.team===1)await act(rival,{type:'end'});
+  const state=JSON.parse(f.sqlite.prepare('SELECT game FROM game_rooms WHERE code=?').get(code).game);
+  state.units.forEach(unit=>{unit.tile=['9,6','2,5','10,6'][unit.seat];});
+  state.players[1].influence=11;
+  f.sqlite.prepare('UPDATE game_rooms SET game=? WHERE code=?').run(JSON.stringify(state),code);
+  room=await read(ally);
+  const publicRow=(v,seat)=>v.game.intel.diplomacy.find(x=>x.seat===seat);
+  assert.equal(publicRow(room,2).firstMetRound,state.round);
+  const request={op:'action',code,revision:room.revision,orderKey:room.game.teamPhase.orderKey,action:{type:'delegation',target:2}};
+  const replies=await Promise.all([f.request('POST',request,ally.token),f.request('POST',request,ally.token)]);
+  assert.deepEqual(replies.map(r=>r.status).sort(),[200,409]);
+  const own=await read(ally);
+  assert.equal(own.game.players[1].influence,5);
+  assert.equal(publicRow(own,2).delegation.cityCount,0);
+  assert.equal(publicRow(await read(host),2).delegation,null);
+  const spy=await read(rival);
+  assert.equal(spy.game.players[1].influence,undefined);
+  assert.equal(spy.game.delegations,undefined);
+  assert(!spy.game.log.some(event=>event.type==='delegation'));
+  const back=(await f.call('POST',{op:'join',code,ticket:ally.token,name:'Returned'})).room;
+  assert.deepEqual(back.game.intel.diplomacy,own.game.intel.diplomacy);
+  for(let i=0;i<3;i++) {
+    await act(ally,{type:'end'});await act(host,{type:'end'});await act(rival,{type:'end'});
+  }
+  assert.equal(publicRow(await read(ally),2).delegation,null);
 });

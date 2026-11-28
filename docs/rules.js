@@ -1,7 +1,11 @@
+import {sendDelegation,proposeDelegation} from './diplomacy.js';
+import {councilProjectCost} from './council-costs.js';
 import {allowsConquest,allowsScience,SCIENCE_PROJECT,validVictoryMode} from './victory-rules.js';
 import {advanceCityBorder, planCityBorders} from './city-expansion.js';
 import {advancementRoutes,promotionOutcome,recoveryAt,nearestServiceStation} from './unit-service.js';
-import {harborSites} from './maritime.js';
+import {fleetBasin,flotillaMove} from './naval-plan.js';
+import {waterKind} from './water-navigation.js';
+import {harborSites,fishingTask,runFishingTask} from './maritime.js';
 import {revisionOf, advanceProduction, verifyProduction, parkedProduction, parkProject, resumeWork, purchasePrice} from './works.js';
 import {NATURAL_WONDERS, placeNaturalWonders, neighboringWonders} from './natural-wonders.js';
 import {REGIMENTS, matchup, formationChoices, signalPosition} from './regiments.js';
@@ -26,6 +30,7 @@ import {nextTechnology} from './applied-science.js';
 import {TECHS, CIVICS, ERAS, ERA_UNITS, eraFor} from './progression.js';
 export {TECHS, CIVICS, ERAS} from './progression.js';
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
+import {planWaterways, waterwayChart} from './waterways.js';
 import {campaignChart, largeCampaignChart, neighborCoordinates, REGIONAL_SHAPE} from './region-shapes.js';
 import {LOS_ANGELES, regionalMaps, MAP_SCALES, validMapId, validMapSize} from './maps.js';
 export {CAMPAIGN_MAPS, validMapId, validMapSize} from './maps.js';
@@ -198,10 +203,13 @@ export function getMap(stateOrId, mapSize='standard') {
   if (isState && stateOrId.mapShape !== REGIONAL_SHAPE) return classicCharts[key];
   const size=(isState?stateOrId.mapSize:mapSize)||'standard';
   const scale=MAP_SCALES[size];
-  if(!scale||scale===1)return regionalCharts[key];
-  const cacheKey=key+'.'+size;
-  if(!largeCharts.has(cacheKey))largeCharts.set(cacheKey,largeCampaignChart(regionalCharts[key],size,scale));
-  return largeCharts.get(cacheKey);
+  let base=regionalCharts[key];
+  if(scale>1){
+    const cacheKey=key+'.'+size;
+    if(!largeCharts.has(cacheKey))largeCharts.set(cacheKey,largeCampaignChart(base,size,scale));
+    base=largeCharts.get(cacheKey);
+  }
+  return isState ? waterwayChart(base,stateOrId.waterways) : base;
 }
 export function getCityExpansion(state, cityId) {
   const city = state.cities.find(c => c.id === cityId);
@@ -255,7 +263,7 @@ function tradesBySea(state, city) {
   if (!knows(state,city.seat,'navigation')) return false;
   const {byId,neighbors}=map;
   return city.buildings.includes('harbor') || byId[city.tile].terrain==='coast'
-    || neighbors(city.tile).some(id=>byId[id].terrain==='ocean');
+    || neighbors(city.tile).some(id=>waterKind(byId[id]));
 }
 function hasPark(state, city) {
   const map=getMap(state);
@@ -353,7 +361,7 @@ function drawOpeningSeat(seed,teams,count) {
   const pick=options=>options[Math.floor(random()*options.length)];
   return pick(pick([...members.values()]));
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, victoryMode='standard', legacyVictory=false} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 1} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!validVictoryMode(victoryMode)) throw new Error('Choose a valid victory mode.');
   if (!legacyVictory && practice && victoryMode==='conquest') throw new Error('Conquest requires a rival civilization.');
@@ -376,9 +384,11 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const seed = campaignSeed(requestedSeed);
   const firstSeat=drawInitiative===true ? drawOpeningSeat(seed,teams,players.length) : 0;
   const allocation = allocateCivilizations(players.map(player=>player?.civilization),seed);
-  const map = getMap(mapId,mapSize);
+  const base=getMap(mapId,mapSize);
+  const waterPlan=waterways ? planWaterways(base,seed) : null;
+  const map=waterwayChart(base,waterPlan);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
+  const next = {seed, mapId, ...(waterPlan ? {waterways:waterPlan} : {}), ...(researchPace===1 ? {researchPace:1} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
     ...(teams ? {teams:[...teams]} : {}), ...(difficulty!=='normal' ? {difficulty} : {}),
     ...(drawInitiative===true ? {firstSeat} : {}), ...(!legacyVictory || scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:firstSeat,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
@@ -780,7 +790,11 @@ function unitImprovement(state,unit,tile) {
   const map=getMap(state);
   if (!unit.charges) return null;
   if (state.intel?.workSites) return state.intel.workSites[unit.id]?.[tile] ?? null;
-  if (unit.type==='workboat') return fisheryPort(state,unit.seat,tile,map.byId,map.neighbors) ? 'fishery' : null;
+  if (unit.type==='workboat') {
+    if(unit.fishCargo)return null;
+    const chart=state.waterways ? getVision(state,unit.seat).explored : null;
+    return fisheryPort(state,unit.seat,tile,map.byId,map.neighbors,chart) ? 'fishery' : null;
+  }
   return unit.type==='builder' ? improvementAt(state,unit.seat,tile) : null;
 }
 function attackTargets(state,unit) {
@@ -803,7 +817,7 @@ export function getUpgradePlans(state,unitId,seat) {
   const player=state.players[seat], era=getEra(state,seat);
   const sea=current.domain==='sea', owner=state.board[unit.tile]?.owner;
   const terrain=getMap(state).byId[unit.tile]?.terrain;
-  const workingYard=sea && terrain==='ocean' && (owner==null || owner===seat) && state.cities.some(city=>
+  const workingYard=sea && waterKind(getMap(state).byId[unit.tile]) && (owner==null || owner===seat) && state.cities.some(city=>
     city.seat===seat && city.portTile && city.buildings.includes('harbor') &&
     city.buildings.includes('shipyard') && hexDistance(city.portTile,unit.tile)<=1);
   return routes.map(route=>{
@@ -905,9 +919,10 @@ function councilOptions(state, seat, track) {
     else if (completed) reason = "Your faction has already completed this project.";
     else if (active) reason = "This is your current project.";
     else if (missing.length) reason = "Requires " + missing.map(key=>track.tree[key].name).join(" + ") + ".";
-    const remaining = Math.max(0, project.cost - bank);
+    const cost=councilProjectCost(state,track,item);
+    const remaining = Math.max(0, cost - bank);
     const turns = completed || remaining === 0 ? 0 : income > 0 ? Math.ceil(remaining / income) : null;
-    return {item, label: project.name, description: project.description, cost: project.cost, era: project.era,
+    return {item, label: project.name, description: project.description, cost, remaining, era: project.era,
       requires: project.requires, locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
   });
 }
@@ -916,8 +931,10 @@ export function getCivicOptions(state, seat) { return councilOptions(state,seat,
 
 function finishProject(state, seat, track) {
   const player = state.players[seat], item = player[track.focus];
-  if (!item || player[track.bank] < track.tree[item].cost) return;
-  player[track.bank] -= track.tree[item].cost;
+  if (!item) return;
+  const cost=councilProjectCost(state,track,item);
+  if (player[track.bank] < cost) return;
+  player[track.bank] -= cost;
   player[track.known] = [...player[track.known], item];
   player[track.focus] = null;
   record(state, seat, track.event, FACTIONS[state.players[seat].faction].name+' '+track.verb+' '+track.tree[item].name+'.', null, {item});
@@ -972,7 +989,7 @@ function deploymentTile(state,city,item) {
   const vessel=UNIT_TYPES[item].domain==='sea';
   const origin=vessel ? city.portTile : city.tile;
   if (!origin) return null;
-  return [origin,...map.neighbors(origin)].find(id=>(vessel ? map.byId[id].terrain==='ocean' : terrainCost[map.byId[id].terrain]) &&
+  return [origin,...map.neighbors(origin)].find(id=>(vessel ? waterKind(map.byId[id]) : terrainCost[map.byId[id].terrain]) &&
     !wildAt(state,id) && !state.units.some(u=>u.tile===id) && !state.cities.some(c=>c.tile===id && c.seat!==city.seat) &&
     (state.board[id].owner===null || state.board[id].owner===city.seat));
 }
@@ -988,7 +1005,9 @@ function completeCityProject(state,city) {
   if (Object.hasOwn(UNIT_TYPES,queue.item)) {
     const spawnTile=deploymentTile(state,city,queue.item);
     if (!spawnTile) return;
-    spawn(state,city.seat,queue.item,spawnTile).moves=0;
+    const recruit=spawn(state,city.seat,queue.item,spawnTile);
+    recruit.moves=0;
+    if(UNIT_TYPES[queue.item].domain==='sea' && state.waterways)recruit.launchedFrom=city.id;
   } else {
     if (queue.item==='harbor') {
       const tile = queue.portTile || getPortSite(state,city.id);
@@ -1305,6 +1324,9 @@ function unitOrder(state,seat,action) {
     unit.moves--;
     state.players[seat].surveyEnabled=true;
     record(state,seat,'survey','Resource survey completed.',id,{unit:unit.id});
+  } else if (action.type==='haulFish' || action.type==='landCatch') {
+    runFishingTask(state,unit,action,getMap(state).byId);
+    record(state,seat,action.type,action.type==='haulFish'?'Fishing crew loaded a catch.':'The harbor received 3 food and 1 stored fish.',id,{unit:unit.id});
   } else if (action.type==='recover') {
     if (!recoveryAt(state,unit,UNIT_TYPES[unit.type],hexDistance).canRest)
       throw new Error('Choose a wounded unit with movement on a valid recovery site.');
@@ -1336,9 +1358,10 @@ function unitOrder(state,seat,action) {
   } else {
     const item=unitImprovement(state,unit,id);
     if (!item || item!==action.item) throw new Error(unit.type==='workboat'
-      ? 'Build a fishery on open water within two water hexes of a friendly harbor.'
+      ? 'Build a fishery within two connected sea steps or three charted inland water steps of your harbor.'
       : 'Build a suitable improvement on one of your unimproved districts.');
-    const port=item==='fishery' ? fisheryPort(state,seat,id,getMap(state).byId,getMap(state).neighbors) : null;
+    const port=item==='fishery' ? fisheryPort(state,seat,id,getMap(state).byId,getMap(state).neighbors,
+      state.waterways ? getVision(state,seat).explored : null) : null;
     state.board[id]={...state.board[id],improvement:item,...(port ? {owner:seat,portCity:port.id} : {})};
     unit.moves=0;unit.charges--;
     if (!unit.charges) state.units=state.units.filter(u=>u.id!==unit.id);
@@ -1367,7 +1390,10 @@ function resolveOrder(source,seat,action) {
   if (!action || typeof action!=='object') throw new Error('Choose an action.');
   const next=cloneGame(state);
   if (action.type==='end') {endTurn(next,seat);return next;}
-  if (action.type==='shipment') {
+  if (action.type==='delegation') {
+    sendDelegation(next,seat,action.target,getVisibleTiles(next,seat));
+    record(next,seat,'delegation','Diplomatic delegation dispatched.',null,{target:action.target});
+  } else if (action.type==='shipment') {
     shipGoods(next,seat,action);
     record(next,seat,'shipment','Resource shipment dispatched.');
   } else if (action.type==='research' || action.type==='civic') {
@@ -1412,7 +1438,7 @@ function resolveOrder(source,seat,action) {
       advanceProduction(city);
       record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
     }
-  } else if (['move','attack','found','improve','upgrade','survey','recover'].includes(action.type)) {
+  } else if (['move','attack','found','improve','upgrade','survey','recover','haulFish','landCatch'].includes(action.type)) {
     unitOrder(next,seat,action);
   } else {
     if (typeof action.tile!=='string') throw new Error('Choose a district.');
@@ -1434,6 +1460,11 @@ function botProject(state,city,difficulty) {
   const cities=state.cities.filter(c=>c.seat===city.seat);
   const count=type=>units.filter(u=>u.type===type).length+cities.filter(c=>c.queue?.item===type).length;
   const choices=[];
+  const survey=Array.isArray(state.intel.visibleBerths), region=getMap(state);
+  const vacant=!city.buildings.includes('harbor') && survey ? harborSites(state,city,region.byId,region.neighbors,new Set(state.intel.visible)) : [];
+  const surveyedPorts=vacant.map(id=>({id,basin:fleetBasin(state,city,id,region)}))
+    .filter(p=>p.basin.available.length).sort((a,b)=>b.basin.score-a.basin.score);
+  let preferredBerth=surveyedPorts[0]?.id;
   if (allowsScience(state) && !cities.some(c=>c.queue?.item===SCIENCE_PROJECT.id)) choices.push(SCIENCE_PROJECT.id);
   const rivals=state.units.filter(unit=>!sameTeam(state,city.seat,unit.seat));
   const hostileCities=state.cities.filter(other=>!sameTeam(state,city.seat,other.seat));
@@ -1461,6 +1492,7 @@ function botProject(state,city,difficulty) {
     if(!city.buildings.includes('workshop'))choices.push('workshop');
   }
   if (state.opening==='settlers' && count('scout')===0 && state.round<8) choices.push('scout');
+  if (preferredBerth && !rivals.some(u=>UNIT_TYPES[u.type].strength>0 && hexDistance(u.tile,city.tile)<=2)) choices.push('harbor');
   const forecast=getPopulationReport(state,city.id);
   if (forecast.housingLimited && !city.buildings.includes('granary')) choices.push('granary');
   if (forecast.housingLimited && !city.buildings.includes('neighborhood')) choices.push('neighborhood');
@@ -1478,21 +1510,25 @@ function botProject(state,city,difficulty) {
       if(site) return {type:'produce',city:city.id,item:university,site:site.id};
     }
   }
-  if(!city.buildings.includes('harbor')) {
+  if(!city.buildings.includes('harbor') && !survey) {
     const map=getMap(state);
     const berth=findPortSite(state,city,map.byId,map.neighbors,new Set(state.intel.visible),false,
       id=>observedCoast(state,city.seat,id));
-    if(berth)choices.push('harbor');
+    if(berth){preferredBerth=berth;choices.push('harbor');}
   }
   if (city.buildings.includes('harbor')) {
     const worked=Object.values(state.board).filter(tile=>tile.portCity===city.id).length;
-    if (worked<2 && count('workboat')===0) choices.push('workboat');
-    if (count('cutter')===0) choices.push('cutter');
-    if (city.buildings.includes('shipyard')) {
+    const basin=survey ? fleetBasin(state,city,city.portTile,region) : null;
+    const countFleet=basin?.count || count;
+    if (worked<2 && !countFleet('workboat') && (!basin || basin.available.some(id=>basin.tiles.get(id)<=2))) choices.push('workboat');
+    const haveYard=city.buildings.includes('shipyard');
+    const hullLimit=basin && haveYard && basin.tiles.size>=8 && state.round>=14 ? 2 : 1;
+    if (!countFleet('cutter') && (!basin || (!basin.armed && basin.tiles.size>=4))) choices.push('cutter');
+    if (haveYard && (!basin || (basin.tiles.size>=8 && basin.armed<hullLimit))) {
       if (!count('destroyer') && (state.round>=14 || rivals.some(u=>UNIT_TYPES[u.type].domain==='sea'))) choices.push('destroyer');
       if (!count('ironclad') && hostileCities.length) choices.push('ironclad');
       if (!count('frigate')) choices.push('frigate');
-    } else if (knows(state,city.seat,'steam')) choices.push('shipyard');
+    } else if (knows(state,city.seat,'steam') && (!basin || basin.tiles.size>=8)) choices.push('shipyard');
   }
   if (count('builder')===0) choices.push('builder');
   const charted=new Set(state.intel.explored),map=getMap(state);
@@ -1504,7 +1540,7 @@ function botProject(state,city,difficulty) {
   if (count('ranged')<Math.max(1,cities.length-1)) choices.push('ranged');
   if (count('melee')<2) choices.push('melee');
   if (cities.length<3 && count('settler')===0) choices.push('settler');
-  if (city.buildings.includes('harbor')) choices.push('shipyard');
+  if (city.buildings.includes('harbor') && !survey) choices.push('shipyard');
   choices.push('workshop','walls','monument','granary');
   if (count('melee')<4) choices.push('melee');
   const enabled=new Set(getProductionOptions(state,city.id).filter(o=>o.enabled).map(o=>o.item));
@@ -1514,7 +1550,7 @@ function botProject(state,city,difficulty) {
   if (Object.hasOwn(BUILDINGS,option)) {
     const sites=getProjectSites(state,city.id,option);
     // Keep at least one vacant campus parcel while placing civic works in town.
-    const chosen=sites.length>=3 && option!=='harbor' ? sites[1] : sites[0];
+    const chosen=option==='harbor' ? sites.find(s=>s.id===preferredBerth) : sites.length>=3 ? sites[1] : sites[0];
     if (chosen) order.site=chosen.id;
   }
   return order;
@@ -1541,6 +1577,7 @@ function exploreFrontier(state,unit,moves) {
 // berth. Only look at the surveyed shoreline and plausible host sites, never
 // at a rival city's private berth or construction queue.
 function observedCoast(state,seat,id) {
+  if (Array.isArray(state.intel.visibleBerths)) return state.intel.visible.includes(id) && !state.intel.visibleBerths.includes(id);
   const map=getMap(state),seen=new Set([id]),charted=new Set(state.intel.explored),visible=new Set(state.intel.visible);
   const towns=state.cities.filter(city=>city.seat===seat);
   let ring=[id];
@@ -1583,6 +1620,9 @@ function botMovement(state,unit,options,difficulty) {
       options={...options,moves:options.moves.filter(tile=>distance(tile)<=3)};
       if(!options.moves.length)return null;
     }
+  }
+  if(UNIT_TYPES[unit.type].domain==='sea' && Array.isArray(state.intel.visibleBerths)){
+    return flotillaMove(state,unit,options.moves,map,UNIT_TYPES,hexDistance,sameTeam,id=>surveyedFishery(state,unit,id));
   }
   if (unit.type==='signals') return signalPosition(state,unit,options.moves,UNIT_TYPES,hexDistance);
   if (unit.type==='scout') return exploreFrontier(state,unit,options.moves);
@@ -1636,9 +1676,9 @@ function botDistrict(state,difficulty) {
     const [order]=getActions(state,state.turn,tile.id);
     if (!order?.enabled) continue;
     const parcel=state.board[id];
-    // An announced university can reserve a bare foreign district. A rival
-    // does not know its exact site; avoid all plausible sites equally.
-    if(order.type==='contest' && activeCharter && !parcel.improvement && !parcel.resource &&
+    // Both ordinary buildings and universities can reserve an unimproved plot.
+    // Their location is private, so treat all plausible rival sites alike.
+    if(order.type==='contest' && (state.researchPace===1 || activeCharter) && !parcel.improvement && !parcel.resource &&
       !['ocean','mountains'].includes(tile.terrain)){
       const unknown=sightFrom(state,id).some(other=>!visible.has(other));
       if(unknown || state.cities.some(city=>city.seat===parcel.owner && hexDistance(city.tile,id)<=2))continue;
@@ -1674,7 +1714,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if(view.intel?.seat!==seat)throw new Error('The active seat needs its own observations.');
   if(!validDifficulty(difficulty))throw new Error('Choose a valid AI difficulty.');
   const {visible,explored,hasFoundedCapital,teamSurveyed}=view.intel;
-  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed}};
+  const observedBerths=Array.isArray(view.intel.visibleBerths) ? {visibleBerths:view.intel.visibleBerths.filter(id=>visible.includes(id))} : {};
+  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,...observedBerths}};
   const player = state.players[seat];
   if (!state.cities.some(c=>c.seat===seat)) {
     const pioneer=state.units.find(u=>u.type==='settler' && u.seat===seat && u.moves>0);
@@ -1694,7 +1735,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if (!player.research && player.technologies.length < Object.keys(TECHS).length) {
     const threatened = state.cities.some(city => city.seat === seat && state.units.some(
       unit => !sameTeam(state,seat,unit.seat) && UNIT_TYPES[unit.type].range > 0 && hexDistance(unit.tile, city.tile) <= 2));
-    const project=nextTechnology(state,seat,threatened,TECHS);
+    const modernRival=state.victoryMode!=='science' && (view.intel.diplomacy || []).some(row=>row.delegation?.era==='modern');
+    const project=nextTechnology(state,seat,threatened || modernRival,TECHS);
     if (project) return {type: 'research', item: project};
   }
   if (!player.civic && player.civics.length < Object.keys(CIVICS).length) {
@@ -1706,6 +1748,11 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   let combinedAttack=null,bestValue=-Infinity;
   for (const [unit,options] of plans) {
     if (options.canFound) return {type:'found',unit:unit.id};
+    if(unit.type==='workboat' && Array.isArray(state.intel.visibleBerths)){
+      const task=fishingTask(state,unit,getMap(state).byId);
+      if(task && (task.type==='landCatch' || unit.charges<2 || !options.improvements.length))
+        return {type:task.type,unit:unit.id};
+    }
     if (options.improvements.length && (unit.type!=='workboat' || surveyedFishery(state,unit,unit.tile))) return {type:'improve',unit:unit.id,item:options.improvements[0]};
     if (options.attacks.length) {
       if(difficulty==='easy')return {type:'attack',unit:unit.id,tile:options.attacks[0]};
@@ -1726,6 +1773,15 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
     }
   }
   if(combinedAttack)return combinedAttack;
+  // A fully trained unit waits in its city when no legal deployment space
+  // remains. Bank that work if this government can launch from the same city.
+  if (state.researchPace===1 && allowsScience(state) && player.technologies.includes('rocketry')) {
+    const cities=state.cities.filter(city=>city.seat===seat);
+    const stalled=cities.find(city=>city.queue && Object.hasOwn(UNIT_TYPES,city.queue.item) && city.queue.progress>=city.queue.required);
+    if(stalled && !cities.some(city=>city.queue?.item===SCIENCE_PROJECT.id)) {
+      return {type:'switchProduction',city:stalled.id,item:SCIENCE_PROJECT.id,expected:revisionOf(stalled)};
+    }
+  }
   const policy=proposePolicy(state,seat,getPopulationReport);
   if (policy) return policy;
   const shipment=planShipment(state,seat);
@@ -1746,5 +1802,7 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
     const move=botMovement(state,unit,options,difficulty);
     if (move) return move;
   }
+  const envoy=proposeDelegation(view.intel.diplomacy || [],state.round,player.influence,difficulty);
+  if (envoy) return envoy;
   return botDistrict(state,difficulty) || {type:'end'};
 }

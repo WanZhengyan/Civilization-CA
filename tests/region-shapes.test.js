@@ -41,14 +41,14 @@ test('each region has a distinct playable silhouette, one land network and one s
 
 test('new saves, rooms, movement, founding and city work share the same chart mask',()=>{
   for(const id of regions){
-    const state=createGame(['Host','Guest'],id,{seed:1602}),map=getMap(id);
+    const state=createGame(['Host','Guest'],id,{seed:1602}),map=getMap(state);
     const omitted=getMap({mapId:id}).tiles.find(t=>!map.byId[t.id]).id;
     const unit=state.units[0];
-    assert.equal(getMap(state),map);
+    assert.deepEqual(map.tiles.map(t=>t.id),getMap(id).tiles.map(t=>t.id));
     assert.deepEqual(Object.keys(state.board),map.tiles.map(t=>t.id));
     for(const seat of [0,1]){
       const view=campaignView(state,seat);
-      assert.equal(getMap(view),map);
+      for(const id of view.intel.explored)assert.deepEqual(getMap(view).byId[id],map.byId[id]);
       assert.ok(view.intel.visible.every(tile=>map.byId[tile]));
       assert.deepEqual(Object.keys(view.board),Object.keys(state.board));
     }

@@ -1,10 +1,35 @@
+import {maritimeCopy} from './maritime-guide.js';
 // The English UI copy is the catalog key. The rules and network protocol keep
 // their canonical IDs in both languages.
 import {CIVILIZATIONS} from './civilizations.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
+section(`
+Choose a contacted rival.|请选择一个已经接触的对手文明。
+This civilization has been eliminated.|该文明已被淘汰。
+A delegation is already active.|使团仍在任期内。
+You need 6 influence.|需要 6 点影响力。
+Diplomatic delegation dispatched.|外交使团已派出。
+An unmet civilization ended its turn.|一个尚未接触的文明结束了回合。
+`);
+section(`
+Campaign soundtrack|战役配乐
+Pacific Light|太平洋晨光
+The Trestle|栈桥
+Night Observatory|夜间天文台
+Mute music|静音
+Enable music|开启音乐
+Music volume|音乐音量
+Silent|已静音
+Ready to play|待播放
+Loading music…|正在载入音乐…
+Playing|播放中
+Music unavailable|暂时无法播放音乐
+`);
+section(maritimeCopy);
 for (const civ of CIVILIZATIONS) {
+  catalog.set(('First contact with '+civ.name+'.').toLowerCase(),'首次接触'+civ.nameZh+'。');
   for(const [label,translation] of [[civ.name,civ.nameZh],[civ.traitName,civ.traitNameZh],[civ.description,civ.descriptionZh]]) {
     catalog.set(label.toLowerCase(),translation);
   }
@@ -503,6 +528,8 @@ You have no units in the field.|战场上没有己方单位。
 You have no cities.|你尚未拥有城市。
 Train a unit|训练单位
 Construct a building|建造建筑
+Changing research keeps your banked science.|更换研究项目会保留已积累的科研点。
+Changing debates keeps your banked culture.|更换市政议题会保留已积累的文化。
 In progress|进行中
 All research complete|所有科技已完成
 Discovered|已发现
@@ -1400,4 +1427,35 @@ Otay Ranch|奥泰牧场
 
 section(`
 The combat target has changed. Review the new forecast.|战斗目标已改变，请重新查看战斗预测。
+`);
+
+section(`
+Waterway chart|水道图
+Waterway|水道
+River channel|河道
+Lake|湖泊
+Sea or bay|海洋与海湾
+Bridge|桥梁
+Crossing|过河通道
+Ships travel along connected water. Land units cross between bridgeheads.|舰船可沿连通的水域航行。陆地单位可从一侧桥头前往另一侧。
+Explore inland water to chart its name and crossings.|探索内陆水域后，便可在这里查看水名与通道。
+Locate on map|地图定位
+Ships spend one movement per water hex.|舰船每航行一格水域消耗一点移动力。
+Ballona Creek crossing|巴洛纳溪桥
+Dominguez Channel crossing|多明格斯水道桥
+Alameda Creek crossing|阿拉米达溪桥
+Guadalupe River crossing|瓜达卢佩河桥
+San Diego River crossing|圣迭戈河桥
+Otay River crossing|奥泰河桥
+Ballona Creek|巴洛纳溪
+Ballona Basin Lake|巴洛纳盆地湖
+Dominguez Channel|多明格斯水道
+South Bay Lagoon|南湾潟湖
+Alameda Creek|阿拉米达溪
+Alameda Basin Lake|阿拉米达盆地湖
+Guadalupe River|瓜达卢佩河
+San Diego River|圣迭戈河
+Mission Valley Lake|米申谷湖
+Otay River|奥泰河
+Otay Lake|奥泰湖
 `);

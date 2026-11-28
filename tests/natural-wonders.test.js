@@ -92,7 +92,7 @@ test('only worked neighboring districts earn the bonus and room and authority yi
 });
 
 test('settlement survey previews only discovered natural-wonder districts and matches the city actually founded',()=>{
-  const raw=createGame(undefined,'la',{seed:39}),view=campaignView(raw,0);
+  const raw=createGame(undefined,'la',{seed:51}),view=campaignView(raw,0);
   const settler=view.units.find(unit=>unit.seat===0 && unit.type==='settler');
   const assessment=getSettlementAssessment(view,settler.id,settler.tile);
   assert.deepEqual(assessment.naturalWonderProspects,[{

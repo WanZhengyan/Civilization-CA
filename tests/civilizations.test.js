@@ -62,7 +62,14 @@ test('selecting human and bot civilizations leaves starts, forces, sight, deposi
     }
     for (let seat=0;seat<4;seat++) {
       const view=projectForSeat(selected,seat);
-      assert.deepEqual(view.intel,projectForSeat(random,seat).intel);
+      // The dossier reflects the selected civilization. Its sight and every
+      // other public field must remain independent of the identity assignment.
+      const {diplomacy,...sight}=view.intel;
+      const {diplomacy:randomDossier,...randomSight}=projectForSeat(random,seat).intel;
+      assert.deepEqual(sight,randomSight);
+      const observations=rows=>rows.map(({faction,...reports})=>reports);
+      assert.deepEqual(observations(diplomacy),observations(randomDossier));
+      assert(diplomacy.every(row=>row.faction===selected.players[row.seat].faction));
       assert.deepEqual(view.players.map(player=>player.faction),[0,1,2,3]);
       assert.equal(view.players[(seat+1)%4].science,undefined);
       assert.equal(view.players[(seat+1)%4].civilization,undefined);

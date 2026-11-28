@@ -1,3 +1,4 @@
+import {getResearchOptions} from '../docs/rules.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {applyAction,createGame,campaignView,getProductionOptions} from '../docs/rules.js';
@@ -40,7 +41,7 @@ test('science-only victory progress follows a real launch, respects fog, and tra
   state=applyAction(state,0,{type:'found',unit:state.units[0].id});
   const city=state.cities[0].id;
   state.players[0].technologies.push('industry','tactics','steam','ballistics','radio','motorization');
-  state.players[0].science=30;
+  state.players[0].science=getResearchOptions(state,0).find(o=>o.item==='rocketry').cost;
   state=applyAction(state,0,{type:'research',item:'rocketry'});
   const launch=getProductionOptions(state,city,{replace:true}).find(o=>o.item===SCIENCE_PROJECT.id);
   const buttons=orderButtons(launch,true);

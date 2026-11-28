@@ -28,6 +28,14 @@ The city production menu shows the units, buildings and projects your civilizati
 
 The visitor footer counts anonymous browser profiles on each site from the day the counter launched. Refreshing or opening a second tab on the same site does not add another visitor. The public totals are shared between the two hosts. Day and month follow Los Angeles time.
 
+## Rivers, delegations and the campaign soundtrack
+
+Explore the lake and river drawn for your region and seed. A port on fresh water can launch a cutter or a fishing crew. Trace connected blue hexes to sail under marked bridges. Crews can load a catch at a surveyed shoal or their own fishery. Land it at an owned harbor for 3 city food and 1 stored fish.
+
+Open a portrait at the upper right to inspect your civilization or a civilization you have met. The dossier remembers the last round your team observed each known city. Spend 6 influence to receive a rival’s current era and city count for three rounds. The councils show the remaining turns to a discovery or civic at your current income. Older campaigns keep the costs they started with.
+
+Each era has its own music. The game menu remembers your volume and mute settings on this browser.
+
 ## Choose a civilization
 
 Each trait works in the original capital while its founder controls it. All four start with a single settler, the same treasury and the same sight.
@@ -71,6 +79,10 @@ Open **Change map** to choose a different region. In **Create room**, pick two t
 Each team shares sight and explored terrain. In a new team room both allies can give orders to their own pieces during the same turn. Mark ready when finished. The next team starts once all surviving teammates are ready. Teammates keep separate treasuries and production queues. Teammates can defend each other’s cities and win together. The host sets the victory mode. Each human can choose a free civilization or draw one at random, and the host sets the computer players’ choices. Configured rooms draw the opening team and then a member of that team. Assign the same team to friends you want on your side. Players can use different languages. Use **Game menu → 简体中文** to switch, including during a match.
 
 ## 中文快速开始
+
+新地图中的河道和湖泊随开局种子变化。发现水域后可从地图图例定位。临水建港即可造巡逻舰或渔船，沿连通的水面穿过桥下。渔船在已勘探的鱼群或己方渔场装货，运回己方港口可获得 3 点城市粮食和 1 份库存鱼。
+
+点击右上角文明头像可查看特性、己方收支和影响力用途。首次接触对手后，可以查看已见城市与最后目击回合。花费 6 点影响力派遣使团，可在连续三轮内获知对方当前时代和城市总数。工业和现代的科技与市政需要更多点数，两座议会都会按当前收入显示剩余回合。三个时代各有原创配乐，游戏菜单可以调音量或静音。
 
 点击「开始单人战役」可选文明、0–3 个电脑对手和胜利方式。征服胜利要求控制各方初始首都，或淘汰所有敌队。科技胜利要求研究无线电网络和机械化，再研究火箭技术，在一座城市投入 60 产能完成轨道勘测计划。标准模式允许两条路线。零对手练习可以按自己的节奏挑战科技胜利，地图上仍有野蛮人营地。每个地区和尺寸分别存档。新地图可选大型、宏大或史诗，历史标准地图可从原存档继续。继续旧档会沿用原对手和目标，确认重开后才会替换该存档。联机地图由房主选择。建房时先选 2–4 个席位，再逐席选择真人或电脑、所属队伍和电脑难度。想和朋友合作，可以把两名真人分在同一队，给另一队安排电脑。预留的真人到齐后即可开局；房主也可以独自与电脑开战。
 
