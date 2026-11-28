@@ -1,9 +1,26 @@
+import {getVision} from './vision.js';
 // Field studies are fictional contracts played on the campaign's own terrain.
 // Each board funds a different regional question. Only the current region offers its brief.
 function terrainPair(first,second) {
   return ({tile,notes})=>!notes.length ? first.includes(tile.terrain) : second.includes(tile.terrain) && tile.id!==notes[0].tile;
 }
+// Trace only water the owner can already chart. A previously unseen distant
+// channel must never change the player's available button.
+function watershedSample({tile,map,state,unit,notes,distance}) {
+  const known=getVision(state,unit.seat).explored;
+  const banks=id=>map.neighbors(id).filter(other=>known.has(other) && ['river','lake'].includes(map.byId[other].waterway));
+  const adjacent=banks(tile.id);
+  if(!notes.length)return adjacent.length>0;
+  if(distance(notes[0].tile,tile.id)<2 || !adjacent.length)return false;
+  const water=new Set(banks(notes[0].tile));
+  for(const id of water)for(const neighbor of banks(id))water.add(neighbor);
+  return adjacent.some(id=>water.has(id));
+}
+
 export const studies = {
+  watershed:{name:['Freshwater catchment','淡水水系踏查'],fee:3,reward:{science:8,influence:2},
+    steps:[['Sample land beside a charted river or lake.','在已探明的河道或湖泊旁采样。'],['Follow the same charted freshwater network to a bank at least two hexes away.','沿同一已探明淡水水系，在至少两格外的岸边再采样。']],
+    sample:watershedSample},
   basin:{region:'la',name:['Basin to boulevard','盆地与城区'],fee:4,reward:{culture:8},
     steps:[['Survey a foothill or woodland.','踏查一处丘陵或林地。'],['Interview a different urban district.','前往另一块城市地块走访。']],
     sample:terrainPair(['hills','forest'],['urban'])},

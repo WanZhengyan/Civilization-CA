@@ -36,3 +36,12 @@ test('each regional commission uses its own landscape, field brief and actual pa
     for(const [stat,value] of Object.entries(reward))assert.equal(s.players[0][stat],old[stat]+value);
   }
 });
+
+test('a catchment joins observations through charted fresh water and rejects separate networks',()=>{
+  const s=start(),unit=scout(s),mission=order(s,'start','watershed'),spec=read(mission).spec;
+  const graph={a:['r1'],b:['r3'],c:['lake'],r1:['r2','a'],r2:['r1','r3'],r3:['r2','b'],lake:['c']};
+  const map={byId:Object.fromEntries(Object.keys(graph).map(id=>[id,{id,terrain:graph[id].length && ['a','b','c'].includes(id)?'coast':'ocean',waterway:id.startsWith('r')?'river':id==='lake'?'lake':null}])),neighbors:id=>graph[id]};
+  const probe=(id,known)=>spec.sample({state:{...mission,intel:{seat:0,visible:[],explored:known}},map,unit,tile:map.byId[id],notes:[{tile:'a'}],distance:()=>3});
+  assert.ok(probe('b',Object.keys(graph)));assert.ok(!probe('c',Object.keys(graph)));
+  assert.ok(!probe('b',Object.keys(graph).filter(id=>id!=='r2')));
+});
