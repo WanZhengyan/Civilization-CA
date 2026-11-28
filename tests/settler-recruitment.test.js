@@ -101,3 +101,21 @@ test('materials cannot fund a paused settler and the city may receive food to gr
   assert.equal(state.players[0].stockpile.stone,2);
   assert.equal(send('grain').cities[0].food,4);
 });
+
+test('the recruiting review and bilingual handbook expose the deployment cost before confirmation',async()=>{
+  const {orderReview,draftOrder}=await import('../docs/work-orders.js');
+  const {handbookRows}=await import('../docs/army-handbook.js');
+  const {translate}=await import('../docs/i18n.js');
+  const state=capital(),city=state.cities[0];
+  city.population=3;
+  const quote=option(state);
+  for (const buying of [false,true]) {
+    const markup=orderReview(draftOrder(city,quote,buying),city,quote,[],String);
+    assert.match(markup,/Current residents<\/dt><dd>3/);
+    assert.match(markup,/Residents leaving on deployment<\/dt><dd>1/);
+  }
+  const row=handbookRows('frontier').find(r=>r.id==='settler');
+  assert.ok(row.requirements.includes('City of 3 or more residents'));
+  assert.match(translate(row.note,'zh-CN'),/部署时迁出 1 名居民/);
+  assert.match(translate('Settlers need 3 residents in this city.','zh-CN'),/3 人口/);
+});

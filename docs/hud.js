@@ -64,7 +64,7 @@ const eraName=id=>ERAS[id]?.name||id;
 let updateWaterKey,cityDirectory,influencePanel;
 const councilGoals={research:"",civics:""};
 let mapRegion,councilKind="research",lastCouncilMarkup="",lastProjectsMarkup="";
-const itemDesc={settler:"Founds a new city at least three hexes from another city.",builder:"Builds farms and mines in your territory. Three charges.",melee:"Fights adjacent enemies and captures weakened cities.",ranged:"Strikes enemies up to two hexes away.",granary:"Adds 2 food per turn to help this city grow.",workshop:"Adds 2 production per turn in this city.",monument:"Adds 3 influence per turn.",walls:"Increases this city’s defenses."};
+const itemDesc={builder:"Builds farms and mines in your territory. Three charges.",melee:"Fights adjacent enemies and captures weakened cities.",ranged:"Strikes enemies up to two hexes away.",granary:"Adds 2 food per turn to help this city grow.",workshop:"Adds 2 production per turn in this city.",monument:"Adds 3 influence per turn.",walls:"Increases this city’s defenses."};
 const symbols={
   science:'<path d="M9 3h6m-5 0v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M8 15h8"/>',
   civic:'<path d="m3 9 9-6 9 6M4 10h16M6 13v5m4-5v5m4-5v5m4-5v5M3 21h18M4 19h16"/>',

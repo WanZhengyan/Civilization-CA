@@ -1,3 +1,4 @@
+import {SETTLER_RESIDENT_COST} from './population.js';
 import {illustration} from './illustrations.js';
 import {WONDERS} from './wonders.js';
 import {revisionOf} from './works.js';
@@ -25,6 +26,7 @@ function workQuote(draft,city,option) {
   const timing=purchase ? 'Immediately' : option.turns===0 && option.kind==='unit' ? 'Awaiting deployment' :
     option.turns+' '+(option.turns===1?'turn':'turns');
   let rows=row('Estimated completion',timing);
+  if (option.item==='settler') rows+=row('Current residents',city.population)+row('Residents leaving on deployment',SETTLER_RESIDENT_COST);
   if (purchase) rows+=row('Gold cost',draft.gold);
   else {
     rows+=row('Production remaining',Math.max(0,option.required-invested));

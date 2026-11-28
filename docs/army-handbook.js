@@ -4,7 +4,6 @@ import {advancementRoutes} from './unit-service.js';
 import {getSightRadius} from './vision.js';
 
 const notes = {
-  settler: 'Founds a city on a legal settlement site.',
   builder: 'Spends charges to improve land connected to a friendly city.',
   melee: 'Captures a weakened city through an adjacent attack.',
   ranged: 'Can attack from two hexes away.'
@@ -13,6 +12,7 @@ const notes = {
 export function handbookRows(era) {
   return Object.entries(UNIT_TYPES).filter(([,unit])=>unit.era===era).map(([id,unit])=>{
     const requirements = [];
+    if (id==='settler') requirements.push('City of 3 or more residents');
     if (unit.tech) requirements.push(TECHS[unit.tech].name);
     if (unit.civic) requirements.push(CIVICS[unit.civic].name);
     if (unit.domain==='sea') requirements.push('Harbor');

@@ -260,7 +260,7 @@ function isProductive(terrain) {
   return terrain === "coast" || terrain === "plains" || terrain === "urban";
 }
 export const UNIT_TYPES = {
-  settler: {name:"Settler", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:14},
+  settler: {name:"Settler", description:"Founds a new city at least three hexes from another city. Train or buy at 3 or more residents. One resident leaves when the settler deploys.", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:14},
   scout: {name:"Scout", era:"frontier", role:"Recon unit", moves:3, maxHp:65, range:1, strength:22, required:7, captures:false,
     description:"Light reconnaissance infantry. Moves three points per turn, can skirmish with units, and cannot occupy cities."},
   builder: {name:"Builder", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:9},

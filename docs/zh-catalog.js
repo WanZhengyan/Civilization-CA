@@ -763,6 +763,11 @@ Each city produces 2 more food per turn.|每座城市每回合粮食产量增加
 Each city produces 2 more production per turn.|每座城市每回合生产力增加 2。
 Military units deal 7 more attack damage and 3 more retaliation damage.|军事单位的攻击伤害增加 7，反击伤害增加 3。
 Each city earns 2 more capital and 1 more influence per turn.|每座城市每回合多获得 2 资金和 1 影响力。
+Founds a new city at least three hexes from another city. Train or buy at 3 or more residents. One resident leaves when the settler deploys.|在距离其他城市至少三格的位置建立新城。本城达到 3 人口才能训练或购买开拓者，部署时迁出 1 名居民。
+Settlers need 3 residents in this city.|本城达到 3 人口才能招募开拓者。
+Current residents|本城当前人口
+Residents leaving on deployment|部署时迁出的人口
+City of 3 or more residents|本城至少 3 人口
 Founds a new city at least three hexes from another city.|在距离其他城市至少三格的位置建立新城。
 Builds farms and mines in your territory. Three charges.|在领土内修建农场或矿场，可使用三次。
 Fights adjacent enemies and captures weakened cities.|攻击相邻敌人，占领防御薄弱的城市。
