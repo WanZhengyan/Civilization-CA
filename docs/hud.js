@@ -1,3 +1,5 @@
+import {getLanguage} from './i18n.js';
+import {mountInfluencePanel} from "./influence-panel.js";
 import {unchartedFrom,scoutingRoutes,openScoutingRoutes} from './scout-routes.js';
 import {notebookReport,notebookPanel} from './regional-atlas.js';
 import {FIELD_STATIONS,fieldStationReport,nearestKnownStation,stationInstruction} from './field-stations.js';
@@ -13,7 +15,7 @@ import {fishingTask} from './maritime.js';
 import {modeLabels} from './campaign-choices.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
 import {borderSummary} from './border-summary.js';
-import {getCityExpansions} from './rules.js';
+import {BORDER_CHARTER_COST,getCityExpansions} from './rules.js';
 import {NATURAL_WONDERS,neighboringWonders} from './natural-wonders.js';
 import {naturalWonderArt} from './natural-wonder-art.js';
 import {mountMapWorkspace, compactMap, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
@@ -56,7 +58,7 @@ const unitRole={settler:"Civilian unit",builder:"Engineering unit",melee:"Melee 
 const isSeaUnit=item=>UNIT_TYPES[item]?.domain==="sea";
 const portBuildings=new Set(["harbor","shipyard"]);
 const eraName=id=>ERAS[id]?.name||id;
-let updateWaterKey,cityDirectory;
+let updateWaterKey,cityDirectory,influencePanel;
 const councilGoals={research:"",civics:""};
 let mapRegion,councilKind="research",lastCouncilMarkup="",lastProjectsMarkup="";
 const itemDesc={settler:"Founds a new city at least three hexes from another city.",builder:"Builds farms and mines in your territory. Three charges.",melee:"Fights adjacent enemies and captures weakened cities.",ranged:"Strikes enemies up to two hexes away.",granary:"Adds 2 food per turn to help this city grow.",workshop:"Adds 2 production per turn in this city.",monument:"Adds 3 influence per turn.",walls:"Increases this city’s defenses."};
@@ -418,7 +420,12 @@ function inspect(){
     const buildings=(c.buildings||[]).map(id=>'<span>'+illustration(id)+'<span>'+esc(items[id]||id)+'</span></span>');
     if(buildings.length)info+='<div class="built-gallery">'+buildings.join('')+'</div>';
     const expansion=expansionForecasts.get(c.id);
-    info+=populationSummary(getPopulationReport(state,c.id))+borderSummary(expansion,mapRegion.byId[expansion?.tile],esc)+cityQueue(c);
+    info+=populationSummary(getPopulationReport(state,c.id))+borderSummary(expansion,mapRegion.byId[expansion?.tile],esc);
+    if(own && expansion?.tile && state.intel?.borderCharters){
+      const label=getLanguage()==='zh-CN'?'查看提前扩张 · '+BORDER_CHARTER_COST+' 影响力':'Review expansion · '+BORDER_CHARTER_COST+' influence';
+      info+='<button type="button" class="border-charter-link" data-influence-open data-influence-city="'+esc(c.id)+'" aria-haspopup="dialog" translate="no">'+esc(label)+'</button>';
+    }
+    info+=cityQueue(c);
     if(c.atlasCopies)info+='<div class="unit-sight"><span>Regional atlas collection</span><strong>+'+Number(c.atlasCopies)+' <span>influence</span></strong></div>';
     if(own && c.buildingSites) info+='<div class="works-sites">'+Object.entries(c.buildingSites).map(([item,id])=>
       '<small>'+esc(items[item]||item)+' · '+esc(mapRegion.byId[id]?.name||id)+' · '+esc(id)+'</small>').join('')+'</div>';
@@ -760,6 +767,7 @@ function paint(next){
   if(!mayOrder())order="";
   const player=state.players[seat],stats=getStats(state,seat),f=faction(seat);
   paintDiplomacy(next,stats);
+  influencePanel?.paint();
   cityDirectory?.paint();
   text("brand-region",mapRegion.shortName);text("campaign-title",mapRegion.name);
   text("chart-coordinate",mapRegion.coordinates);text("footer-region",mapRegion.shortName);
@@ -1014,6 +1022,10 @@ function mount(){
     }
   };
   mountDiplomacy(action=>Game.doAction(action));
+  influencePanel=mountInfluencePanel({
+    getView:()=>view,issue:action=>Game.doAction(action),closeLedger:()=>Game.close(),
+    showTile:tile=>{select(tile);redraw();openMapOnMobile();atlas.focus(tile,true);}
+  });
   document.querySelector('.map-messages')?.prepend(parcelBar);
   el("map-labels").onchange=e=>atlas.setLabels(e.currentTarget.checked);
   el("territory-lines").onchange=e=>atlas.setTerritories(e.currentTarget.checked);
