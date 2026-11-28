@@ -54,13 +54,13 @@ function influenceOrders(view,lang) {
     {id:'mission',title:L('Send a delegation','派遣使团'),description:L('See a rival’s era and total city count for three rounds.','在三轮内查看对方所处的时代和城市总数。'),button:L('Send delegation','派遣使团'),cost:6,
       empty:soloOnly?L('This practice campaign has no rival.','本场单人练习没有对手。'):L('Explore until you meet a rival civilization.','先探索地图，接触另一个文明。'),options:missions},
     {id:'policy',title:L('Change policy','调整政策'),description:L('Your first vote is free. Later changes cost 3 influence, once per round.','第一次颁布政策免费，此后更换需 3 点影响力，每轮限一次。'),button:L('Enact policy','颁布政策'),cost:p.policyRound == null ? 0 : 3,options:policies},
-    {id:'contest',title:L('Contest a border district','争夺边境地块'),description:L('Take an unguarded rival district beside your land. Each district level adds 2 to the influence cost.','夺取紧邻己方领土且无人守卫的对方地块。地块每升一级，费用增加 2 点影响力。'),button:L('Contest district','争夺地块'),cost:5,gold:4,minimum:true,
+    {id:'contest',title:L('Contest a border district','争夺边境地块'),description:L('Take an unguarded rival district beside your land using one district order.','花费一次地区指令，夺取紧邻己方领土且无人守卫的对方地块。'),button:L('Contest district','争夺地块'),cost:5,gold:4,
       empty:soloOnly?L('This practice campaign has no rival territory.','本场单人练习没有敌方领土。'):L('No eligible rival district is visible along your border.','当前边境视野内没有可以争夺的敌方地块。'),options:contests}
   ];
 }
 
 const sources = {
-  settlement:['Settled civilization','文明定居'],territory:['Territory size','领土规模'],development:['District development','地块开发'],
+  settlement:['Settled civilization','文明定居'],territory:['Territory size','领土规模'],development:['Settled land','已定居土地'],
   monuments:['Monuments','纪念碑'],civics:['Civics research','市政学研究'],festivals:['Festivals','节庆'],charters:['City charters','城市特许状'],
   atlases:['Published atlases','已出版的地图集'],exposition:['Exposition campuses','博览会大学园区'],portDues:['Port concessions','港口特许经营']
 };
@@ -83,8 +83,7 @@ export function influencePanelModel(view,lang,selections={}) {
 function cardHtml(card,lang,balance) {
   const L = local(lang), selected = card.selected;
   const cost = selected?.cost ?? card.cost, gold = selected?.gold ?? card.gold;
-  const minimum = !selected && card.minimum ? '+' : '';
-  const price = cost ? L(cost+minimum+' influence',cost+minimum+' 影响力') : L('Free','免费');
+  const price = cost ? L(cost+' influence',cost+' 影响力') : L('Free','免费');
   const amount = price+(gold ? L(' + '+gold+' gold',' + '+gold+' 金币') : '');
   const target = !selected ? '' : card.options.length > 1 ?
     '<select data-pick="'+card.id+'" aria-label="'+escape(card.title)+'">'+card.options.map(o=>'<option value="'+escape(o.key)+'"'+(o.key===selected.key?' selected':'')+'>'+escape(o.target)+'</option>').join('')+'</select>' :

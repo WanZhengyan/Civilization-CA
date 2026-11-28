@@ -126,33 +126,6 @@ main{max-width:1680px;margin:auto;padding:0 clamp(20px,3.2vw,55px)}.campaign-hea
 .watch-city strong { grid-column: 1/-1; color: #e1e1d7; font-size: 12px; font-weight: 560; }
 .watch-city span, .watch-city small { font-size: 11px; color: #b4bec2; line-height: 1.35; }
 .watch-city small { color: #d7c399; }
-#research-modal { width: min(680px, calc(100vw - 24px)); --agenda-accent: #a1d0ca; }
-#research-modal[data-council=civics] { --agenda-accent: #d9aec9; }
-#research-modal .modal-head { border-bottom: 0; }
-.council-switch { display: flex; gap: 18px; padding: 0 21px; flex: none; border-bottom: 1px solid #465057; }
-.council-switch button { display: inline-flex; align-items: center; gap: 6px; color: #b3bdc1; min-height: 37px; border-bottom: 2px solid transparent; font-size: 14px; }
-.council-switch button[aria-pressed=true] { color: var(--agenda-accent); border-color: currentColor; }
-.council-switch svg { width: 17px; height: 17px; }
-.council-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 11px; font-size: 12px; padding: 8px 11px; color: #bec7c7; background: #1a2229; border: 1px solid #3a454d; border-radius: 3px; }
-.council-summary strong { color: var(--agenda-accent); font-size: 14px; }
-.council-summary span:last-child { margin-left: auto; }
-.council-tier h3 { display: flex; align-items: center; gap: 9px; margin: 15px 0 7px; color: #e3d0a4; font: 19px/1.15 var(--serif); }
-.council-tier h3::after { content: ""; height: 1px; background: #465052; flex: 1; }
-.project-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
-.project-option {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; text-align: left;
-  padding: 9px 10px; background: #293439; border: 1px solid #435559; border-radius: 3px;
-}
-.project-option:enabled:hover, .project-option[data-status=active] { border-color: var(--agenda-accent); }
-.project-option:disabled { opacity: 1; }
-.project-option[data-status=locked], .project-option[data-status=complete] { background: #222a30; border-color: #3a444a; }
-.project-name { color: #f0ede1; font-size: 14px; font-weight: 600; line-height: 1.35; }
-.project-option[data-status=locked] .project-name { color: #c1c8c7; }
-.project-description, .project-prereq { font-size: 12px; line-height: 1.4; color: #c1cbcb; }
-.project-prereq { color: #d1bc96; }
-.project-meta { display: flex; align-self: stretch; justify-content: space-between; gap: 5px; margin-top: auto; padding-top: 4px; font-size: 11px; color: #a9b7bc; }
-.project-meta b { color: var(--agenda-accent); font-weight: 600; }
-.project-option[data-status=locked] .project-meta b { color: #c7b89f; }
 @media (min-width: 1520px) { .tactics .play-grid { grid-template-columns: 194px minmax(0,1fr) 250px; } }
 @media (max-width: 1090px) and (min-width: 701px) {
   .tactics .play-grid { grid-template-columns: 128px minmax(0,1fr) 218px; gap: 8px; }

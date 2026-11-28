@@ -64,7 +64,7 @@ export function renderCouncilPath(c,goal,canOrder) {
   const price=L('Additional '+resource+' needed','尚需'+resource);
   return '<section class="council-planner has-goal" translate="no">'+select+
     '<header class="route-overview"><div><small>'+L('Path to','目标')+'</small><h3 tabindex="-1" data-path-title>'+title+'</h3></div><div><small>'+price+'</small><strong>'+path.remaining+'</strong></div></header>'+
-    '<div class="route-ledger"><span>'+L('Unfinished projects','未完成项目总成本')+' <b>'+path.cost+'</b></span><span>'+L('Banked','已积累')+' <b>'+c.balance+'</b></span></div>'+
+    '<div class="route-ledger"><span>'+L('Unfinished project cost','未完成项目总成本')+' <b>'+path.cost+'</b></span><span>'+L('Banked','已积累')+' <b>'+c.balance+'</b></span></div>'+
     (!canOrder?'<p class="route-wait">'+txt(c.options.find(o=>!o.completed && !o.locked && !o.active)?.reason||'Wait for your turn.')+'</p>':'')+
     '<ol class="council-path">'+list+'</ol><button type="button" class="route-back" data-path-back>'+L('Back to tree','返回完整树')+'</button></section>';
 }
@@ -77,11 +77,4 @@ export function prerequisiteLine(option,byId) {
     return '<span class="required-project'+(known?' known':'')+'">'+(known?'✓ ':'')+txt(byId.get(id)?.label||id)+'</span>';
   }).join(' + ');
   return '<span class="project-prereq" translate="no">'+(missing.length?L('Requires ','前置条件：'):L('Requirements met · ','前置条件已满足 · '))+required+'</span>';
-}
-
-export function projectQuote(option,resource) {
-  const total=txt(option.cost+' '+resource);
-  if(option.completed || option.remaining===option.cost)return total;
-  const gap=L(option.remaining+' more needed','还差 '+option.remaining+' 点');
-  return total+' · '+gap;
 }

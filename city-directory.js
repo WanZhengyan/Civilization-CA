@@ -1,3 +1,4 @@
+import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {constructionTurns} from './harvest-forecast.js';
 import {getCityYield, getMap, getPopulationReport, BUILDINGS, UNIT_TYPES} from './rules.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
@@ -13,15 +14,16 @@ export function cityReports(state,seat) {
   return state.cities.filter(c=>c.seat===seat).map(city=>{
     const food=getPopulationReport(state,city.id), production=getCityYield(state,city.id).production;
     const idle=!city.queue, deficit=food.surplus<0, full=food.housingLimited;
-    const turns=idle?null:constructionTurns(state,city,city.queue.required-city.queue.progress,production);
+    const waitingForResidents=Boolean(settlerPopulationReason(city));
+    const turns=idle || waitingForResidents?null:constructionTurns(state,city,city.queue.required-city.queue.progress,production);
     return {id:city.id,name:city.name,custom:city.name!==map.byId[city.tile]?.name,capital:city.originalSeat!=null,
-      food,production,queue:city.queue,turns,idle,deficit,full,blocked:!idle && turns===0 && Boolean(UNIT_TYPES[city.queue.item])};
+      food,production,queue:city.queue,turns,idle,deficit,full,waitingForResidents,blocked:!idle && turns===0 && Boolean(UNIT_TYPES[city.queue.item])};
   });
 }
 
 export function compareCities(rows,filter,sort) {
   const selected=rows.filter(row=>filter==='all' || row[filter]===true);
-  const needs=row=>Number(row.deficit)*8+Number(row.blocked)*4+Number(row.idle)*2+Number(row.full);
+  const needs=row=>Number(row.deficit)*8+Number(row.blocked || row.waitingForResidents)*4+Number(row.idle)*2+Number(row.full);
   return selected.sort((a,b)=>{
     const difference=sort==='production'?b.production-a.production:sort==='slow'?a.production-b.production:
       sort==='food'?a.food.surplus-b.food.surplus:needs(b)-needs(a);
@@ -36,9 +38,9 @@ export function directoryButton() {
 function rowMarkup(row) {
   const name=esc(row.custom?row.name:translate(row.name)), time=n=>L(n+(n===1?' turn':' turns'),n+' 回合');
   const tags=[row.deficit && L('Food deficit','粮食短缺'),row.full && L('Housing full','住房已满'),
-    row.blocked && L('Deployment blocked','部署受阻'),row.idle && L('Idle production','生产空闲')].filter(Boolean);
+    row.waitingForResidents && translate(SETTLER_WAITING),row.blocked && L('Deployment blocked','部署受阻'),row.idle && L('Idle production','生产空闲')].filter(Boolean);
   const queue=row.idle?L('No project','尚无项目'):esc(nameOf(row.queue.item))+' · '+row.queue.progress+'/'+row.queue.required+
-    (row.blocked?'':' · '+time(row.turns));
+    (row.blocked || row.waitingForResidents?'':' · '+time(row.turns));
   const stat=(label,value)=>'<div><dt>'+label+'</dt><dd>'+value+'</dd></div>';
   const food=row.food;
   const outlook=food.starvationTurns? L('Population loss in ','预计人口减少：')+time(food.starvationTurns):

@@ -1,3 +1,4 @@
+import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {mountTutorialCoach} from './tutorial-coach.js';
 import {mountTurnResults} from './turn-results.js';
 import {turnButtonState,paintTurnButton,pendingTurnTasks} from './turn-button.js';
@@ -27,21 +28,22 @@ import {mountBattleReports} from './battle-history.js';
 import {constructionTurns} from './harvest-forecast.js';
 import {directoryButton,mountCityDirectory} from './city-directory.js';
 import {councilInvestments,investmentPanel} from './council-investment.js';
-import {councilStages,stageHeading,renderCouncilPath,prerequisiteLine,projectQuote} from './council-path.js';
-import {researchLinks,syncResearchLens,focusAvailableProject} from './research-catalog.js';
+import {renderCouncilPath} from './council-path.js';
+import {councilOverview,initialCouncilView,navigateCouncilButtons,renderCouncilBrowser} from './research-catalog.js';
+import {POLICIES} from './policy.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
 import {openCityHall,paintCityHall} from './city-hall.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
-import {addPolicyPanel,updateCivicAgenda} from "./policy-panel.js";
+import {addPolicyPanel} from "./policy-panel.js";
 import {draftOrder, orderButtons, orderReview, paintSiteBar, siteOrderAllowed} from './work-orders.js';
-import {getDevelopmentPreview,getProjectSites} from './rules.js';
+import {getProjectSites} from './rules.js';
 import {roomSeatTurn,teamTurnLabels} from './room-turn.js';
 import {sameTeam,teamLabel} from './teams.js';
-import {cityKind,developmentPanel,developmentReceipt,foundingLabel} from './district-command.js';
-import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
+import {cityKind,foundingLabel} from './district-command.js';
+import {WONDERS, campusStatus} from './wonders.js';
 import {captureOrderHint,cityAttackHint,forecastCounterLabel} from './attack-mode.js';
 import {militaryTraining,trainingPanel} from './combat-training.js';
 import {fieldPosition,fieldPositionPanel} from './field-position.js';
@@ -63,8 +65,14 @@ const portBuildings=new Set(["harbor","shipyard"]);
 const eraName=id=>ERAS[id]?.name||id;
 let updateWaterKey,cityDirectory,influencePanel;
 const councilGoals={research:"",civics:""};
+const councilViews={};
+const routeOrigins={};
+const councilCatalog={
+  buildings:Object.fromEntries(Object.entries(BUILDINGS).filter(([id])=>!WONDERS[id])),
+  units:UNIT_TYPES,universities:WONDERS,policies:POLICIES,projects:{[SCIENCE_PROJECT.id]:SCIENCE_PROJECT}
+};
 let mapRegion,councilKind="research",lastCouncilMarkup="",lastProjectsMarkup="";
-const itemDesc={settler:"Founds a new city at least three hexes from another city.",builder:"Builds farms and mines in your territory. Three charges.",melee:"Fights adjacent enemies and captures weakened cities.",ranged:"Strikes enemies up to two hexes away.",granary:"Adds 2 food per turn to help this city grow.",workshop:"Adds 2 production per turn in this city.",monument:"Adds 3 influence per turn.",walls:"Increases this city’s defenses."};
+const itemDesc={builder:"Builds farms and mines in your territory. Three charges.",melee:"Fights adjacent enemies and captures weakened cities.",ranged:"Strikes enemies up to two hexes away.",granary:"Adds 2 food per turn to help this city grow.",workshop:"Adds 2 production per turn in this city.",monument:"Adds 3 influence per turn.",walls:"Increases this city’s defenses."};
 const symbols={
   science:'<path d="M9 3h6m-5 0v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M8 15h8"/>',
   civic:'<path d="m3 9 9-6 9 6M4 10h16M6 13v5m4-5v5m4-5v5m4-5v5M3 21h18M4 19h16"/>',
@@ -300,11 +308,11 @@ function flash(message){
   text("map-feedback",message);el("map-feedback").hidden=false;clearTimeout(feedbackTimer);
   feedbackTimer=setTimeout(()=>el("map-feedback").hidden=true,3400);
 }
-function entityTabs(tile,selected,development){
+function entityTabs(tile,selected){
   const units=view.state.units.filter(u=>u.tile===tile);
   const choices=units.map(u=>({id:'u'+u.id,label:items[u.type]||u.type,selected:kind==="unit"&&sameId(selected?.id,u.id)}));
   if(cityAt(tile))choices.push({id:'city',label:'City',selected:kind==="city"});
-  if(choices.length)choices.push({id:"land",label:development?"District development":"District",selected:kind==="tile"});
+  if(choices.length)choices.push({id:"land",label:"District",selected:kind==="tile"});
   const bar=el("entity-tabs");
   bar.hidden=choices.length<2;
   bar.innerHTML=choices.map(x=>'<button type="button" data-entity="'+esc(x.id)+'" aria-pressed="'+x.selected+'">'+esc(x.label)+'</button>').join('');
@@ -319,7 +327,7 @@ function cityQueue(city){
   const q=city.queue;
   if(!q)return '<p class="inspect-caption idle-status"><i></i> This city is ready to produce.</p>';
   const turns=projectTurns(city);
-  const remaining=q.progress>=q.required?'Awaiting deployment':turnsText(turns)+' left';
+  const remaining=turns===null?SETTLER_WAITING:q.progress>=q.required?'Awaiting deployment':turnsText(turns)+' left';
   return '<div class="queue-info">'+illustration(q.item)+'<div class="queue-name"><strong><span>Producing</span> · <span>'+esc(items[q.item]||q.item)+'</span></strong><small>'+remaining+'</small>'+(q.site?'<small><span>Construction tile</span> · <span>'+esc(mapRegion.byId[q.site]?.name||q.site)+'</span> · '+esc(q.site)+'</small>':'')+'</div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
 }
 function depositStrip(id){
@@ -367,10 +375,9 @@ function inspect(){
     el("entity-location").innerHTML='<span>Controlled by</span> <span>'+esc(gov.name)+'</span> · <span>Original capital of</span> <span>'+esc(faction(activeCity.originalSeat).name)+'</span>';
   } else text("entity-location",activeUnit ? tile.name : activeCity ? gov.name : port?.name||surface);
   const territory=visible.has(tile.id) ? getActions(state,view.seat,tile.id)[0] : null;
-  const capped=visible.has(tile.id) && holding?.owner===view.seat && holding.level===3 && tile.terrain!=="ocean" && !nature && !campus && !port && !wildAt(state,tile.id);
-  entityTabs(tile.id,activeUnit,territory?.type==="develop" || capped);
+  entityTabs(tile.id,activeUnit);
   const disabled=!mayOrder()||!own;
-  let info="",actions="",explanation="",development="";
+  let info="",actions="",explanation="";
   selectedOptions=activeUnit?getUnitOptions(state,activeUnit.id):null;
   updateSurvey();
   if(activeUnit){
@@ -481,21 +488,11 @@ function inspect(){
       explanation="Ships launch here and repair in nearby water.";
     }else if(state.intel?.visibleBerths?.includes(tile.id)){
       text("entity-kind","Marked berth");explanation="A harbor occupies or has reserved this water tile.";
-    }else if(territory?.type==="develop"){
-      const preview=getDevelopmentPreview(state,view.seat,tile.id);
-      if(preview) {
-        development=developmentPanel(preview,getStats(state,view.seat));
-        const cost=preview.cost.capital+" capital · "+preview.cost.orders+" district order";
-        actions=actionButton("develop",territory.label,cost,"gold",!mayOrder()||!preview.enabled);
-        explanation=preview.reason || (state.actionsLeft===1 ? '1 district order remains this turn.' : state.actionsLeft+' district orders remain this turn.');
-      }
-    }else if(capped){
-      development=developmentPanel(null);
     }else if(territory){
-      const cost=[territory.cost.capital && (territory.cost.capital+" capital"),territory.cost.influence && (territory.cost.influence+" influence")].filter(Boolean).join(" · ");
+      const cost=[territory.cost.capital && (territory.cost.capital+" capital"),territory.cost.influence && (territory.cost.influence+" influence"),"1 district order"].filter(Boolean).join(" · ");
       actions=actionButton(territory.type,territory.label,cost,"gold",!mayOrder()||!territory.enabled);
-      explanation=territory.reason || state.actionsLeft+" district orders remain this turn.";
-    }else explanation=tile.waterway?"Ships spend one movement per water hex.":tile.terrain==="ocean"?"Land units cannot cross open water.":"Select a unit to give orders or a city to set production.";
+      explanation=territory.reason || (state.actionsLeft===1 ? "1 district order remains this turn." : state.actionsLeft+" district orders remain this turn.");
+    }else explanation=tile.waterway?"Ships spend one movement per water hex.":tile.terrain==="ocean"?"Land units cannot cross open water.":holding?.owner===view.seat?"Select a city to manage production or send a builder to improve nearby land.":"Select a unit to give orders or a city to set production.";
   }
   const neutral=!activeUnit && !activeCity && wildAt(state,tile.id);
   if(neutral){
@@ -518,7 +515,7 @@ function inspect(){
   }
   if(order==="attack")explanation="Select an enemy outlined in red to review the combat forecast.";
   el("entity-info").innerHTML=info;
-  el("entity-commands").innerHTML=development+'<div class="orders">'+actions+'</div>'+note(explanation);
+  el("entity-commands").innerHTML='<div class="orders">'+actions+'</div>'+note(explanation);
 }
 function currentMove(){
   const unit=getUnit();
@@ -577,7 +574,7 @@ function roster(){
     const active=unitTab ? kind==="unit"&&sameId(o.id,selectedUnit) : kind==="city"&&o.tile===selectedTile;
     const label=unitTab ? items[o.type]||o.type : o.name;
     const turns=unitTab?null:projectTurns(o);
-    const subtitle=unitTab?o.moves+' / '+o.maxMoves+' movement':o.queue?(items[o.queue.item]||o.queue.item)+' · '+(turns?turnsText(turns):'Awaiting deployment'):'Awaiting production';
+    const subtitle=unitTab?o.moves+' / '+o.maxMoves+' movement':o.queue?(items[o.queue.item]||o.queue.item)+' · '+(turns===null?SETTLER_WAITING:turns?turnsText(turns):'Awaiting deployment'):'Awaiting production';
     const skipped=unitTab && o.skippedRound===view.state.round ? ' · <span>Skipped this turn</span>' : '';
     return '<button class="roster-unit" aria-pressed="'+active+'" data-roster-id="'+esc(o.id)+'"><span class="roster-symbol">'+icon(unitTab?o.type:'city')+'</span><span><b'+(unitTab?'':cityNameAttrs(o))+'>'+esc(label)+'</b><small><span>'+esc(subtitle)+'</span>'+skipped+'</small></span></button>';
   }).join('')||'<div class="roster-empty">'+(unitTab?'You have no units in the field.':'You have no cities.')+'</div>');
@@ -585,7 +582,7 @@ function roster(){
 }
 function redraw(){inspect();updateMap();roster()}
 function projectTurns(city){
-  if(!city.queue)return null;
+  if(!city.queue || settlerPopulationReason(city))return null;
   const remaining=Math.max(0,city.queue.required-city.queue.progress);
   return constructionTurns(view.state,city,remaining,getCityYield(view.state,city.id).production);
 }
@@ -600,7 +597,7 @@ function paintProjects(){
   }
   const markup=settler ? '<div class="expedition-orders"><p>Choose a site for your first city. Surveying or founding can reveal local resources.</p><button type="button" data-founding-unit="'+esc(settler.id)+'">Locate settler</button></div>' : (cities.length?directoryButton():'')+cities.map(city=>{
     const turns=projectTurns(city);
-    const status=turns===null?"Choose production":turns===0?"Awaiting deployment":items[city.queue.item]||city.queue.item;
+    const status=!city.queue?"Choose production":turns===null?SETTLER_WAITING:turns===0?"Awaiting deployment":items[city.queue.item]||city.queue.item;
     return '<button class="watch-city" type="button" data-watch="'+esc(city.id)+'">'+illustration(city.queue?.item)+'<strong'+cityNameAttrs(city)+'>'+esc(city.name)+'</strong><span>'+esc(status)+'</span>'+(turns>0?'<small>'+esc(turnsText(turns))+'</small>':'')+'</button>';
   }).join("");
   if(markup!==lastProjectsMarkup){el("watch-cities").innerHTML=markup;lastProjectsMarkup=markup}
@@ -661,8 +658,9 @@ function productionOptions(){
     return '<h3 class="production-group">'+heading+'</h3><div class="production-grid">'+opts.map(o=>{
       const def=o.kind==="project"?SCIENCE_PROJECT:UNIT_TYPES[o.item]||BUILDINGS[o.item];
       const desc=productDescription(o.item);
+      const growth=settlerPopulationReason(c,o.item) ? getPopulationReport(view.state,c.id) : null;
       const race=WONDERS[o.item] ? '<small><span>Charter fee</span> · <span>'+def.grant+' capital</span> · <span>'+({open:'Available worldwide.',commissioned:'Under construction',complete:'Already opened'})[campusStatus(view.state,o.item)]+'</span></small>' : '';
-      return '<article class="production-item work-card">'+illustration(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+esc(turnsText(o.turns))+' · '+esc(o.required)+' production</small>'+orderButtons(o,mayOrder())+'</span></article>';
+      return '<article class="production-item work-card">'+illustration(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+(o.turns===null?'':esc(turnsText(o.turns))+' · ')+esc(o.required)+' production</small>'+orderButtons(o,mayOrder(),growth)+'</span></article>';
     }).join('')+'</div>'});
   el("production-options").innerHTML=(c.queue?cityQueue(c)+'<p class="work-rules">Changing projects saves invested production in this city. A paused university releases its land and refunds the charter fee.</p>':'')+
     '<p class="work-rules">Buy with treasury gold to finish immediately. One remaining production costs three gold.</p>'+html.join('');
@@ -692,37 +690,34 @@ function paintResearch(){
     if(id!==councilKind||!el("research-modal").open)continue;
     text("research-title",c.heading);el("research-modal").dataset.council=id;
     const council=el('research-options');
-    const oldPolicyPanel=council.previousElementSibling;
-    if(id==='civics') addPolicyPanel(council,state,seat,mayOrder(),action=>{el('research-modal').close();Game.doAction(action)});
-    else if(oldPolicyPanel?.classList.contains('civic-government')) oldPolicyPanel.remove();
-    const byId=new Map(c.options.map(o=>[o.item,o]));
-    const goal=byId.has(councilGoals[id])?councilGoals[id]:"";
-    const tiers=["frontier","industrial","modern"].filter(tier=>c.options.some(o=>o.era===tier));
-    const eraGroups=goal?[]:tiers.map(tier=>{
-      const stages=councilStages(c.options.filter(o=>o.era===tier));
-      const groups=stages.map(([stage,options])=>{
-        const cards=options.map(o=>{
-          const label=o.completed?"Complete":o.locked?"Locked":o.turns===null?turnsText(null):o.active?o.turns+(o.turns===1?" turn left":" turns left"):o.turns===0?"Ready":turnsText(o.turns);
-          const prereq=prerequisiteLine(o,byId);
-          const buildingNotes=Object.entries(BUILDINGS).filter(([item,def])=>!WONDERS[item] && (def.tech||def.civic)===o.item)
-            .map(([,def])=>'<span class="project-prereqs"><span>Unlocks building</span> · <span>'+esc(def.name)+'</span></span>').join('');
-          let researchNotes='';
-          const links=researchLinks(o.item,c.options,id==='research'?UNIT_TYPES:{});
-          for (const [label,items] of [['Trains',links.formations],[id==='research'?'Leads to':'Leads to civics',links.discoveries]]) {
-            if (items.length) researchNotes+='<span class="research-links"><span>'+esc(label)+'</span> · <span>'+items.map(name=>'<span>'+esc(name)+'</span>').join(', ')+'</span></span>';
-          }
-          return '<button class="project-option" data-project="'+esc(o.item)+'" '+(o.locked?'data-plan-item="'+esc(o.item)+'" ':'')+'data-status="'+(o.completed?'complete':o.active?'active':o.locked?'locked':'available')+'" ' +(!o.locked && (!o.enabled||!mayOrder())?'disabled':'')+'><span class="project-name">'+esc(o.label)+'</span><span class="project-description">'+esc(o.description)+'</span>'+universitiesUnlockedBy(o.item).map(name=>'<span class="project-prereqs"><span>Unlocks university</span> · <span>'+esc(name)+'</span></span>').join('')+buildingNotes+prereq+researchNotes+'<span class="project-meta"><span translate="no">'+projectQuote(o,c.resource)+'</span><b>'+esc(o.locked?"View prerequisites":label)+'</b></span></button>';
-        }).join("");
-        return '<div class="council-stage-group">'+stageHeading(stage)+'<div class="project-grid">'+cards+'</div></div>';
-      }).join("");
-      return '<section class="council-tier" data-era="'+esc(tier)+'"><h3>'+esc(eraName(tier))+'</h3>'+groups+'</section>';
-    });
-    const bankNote=active ? '<p class="modal-muted">'+(id==='research'
-      ? 'Changing research keeps your banked science.' : 'Changing debates keeps your banked culture.')+'</p>' : '';
-    const markup='<div class="council-summary"><strong>'+esc(c.balance+" "+c.resource+" banked")+'</strong><span>'+esc("+"+c.rate+" per turn")+'</span><span>'+c.completed+' / '+c.options.length+' complete</span></div>'+bankNote+investmentPanel(state,seat,c,goal,mayOrder())+renderCouncilPath(c,goal,mayOrder())+eraGroups.join("");
-    if(markup!==lastCouncilMarkup){el("research-options").innerHTML=markup;lastCouncilMarkup=markup}
-    updateCivicAgenda(council,id==='civics' && !goal,UNIT_TYPES);
-    syncResearchLens(id,el("research-options"),Boolean(goal));
+    const goal=c.options.some(o=>o.item===councilGoals[id])?councilGoals[id]:"";
+    const prefs=councilViews[id] ||= initialCouncilView(c.options);
+    const allowed=mayOrder();
+    const route=renderCouncilPath(c,goal,allowed);
+    const investments=investmentPanel(state,seat,c,goal,allowed);
+    const catalog=goal?'':renderCouncilBrowser(c,prefs,councilCatalog,allowed);
+    const picker=goal?route:'<details class="route-picker"><summary translate="no">'+(getLanguage()==='zh-CN'?'规划路线':'Plan a route')+'</summary>'+route+'</details>';
+    const tools='<div class="council-support">'+(goal?'':picker)+investments+'<div data-policy-anchor></div></div>';
+    const markup=councilOverview(c,allowed)+(goal?route:'')+tools+catalog;
+    if(markup!==lastCouncilMarkup){
+      const openDetails=Array.from(council.querySelectorAll('details[open]'),detail=>detail.className);
+      const focused=document.activeElement;
+      // A room update can repaint the same council while a keyboard user reads a card.
+      const marker=council.contains(focused) && ['project','planItem','routeOrder','councilMode','councilEra','councilGoal','policy'].find(key=>focused.dataset[key]!=null);
+      const value=marker && focused.dataset[marker];
+      const oldTrack=council.dataset.track;
+      council.innerHTML=markup;lastCouncilMarkup=markup;council.dataset.track=id;
+      if(id==='civics')addPolicyPanel(council.querySelector('[data-policy-anchor]'),state,seat,allowed,action=>{el('research-modal').close();Game.doAction(action)});
+      if(oldTrack===id){
+        for(const detail of council.querySelectorAll('details'))detail.open=openDetails.includes(detail.className);
+        if(marker){
+          const field=Array.from(council.querySelectorAll('button,select')).find(field=>field.dataset[marker]===value && !field.disabled);
+          field?.focus({preventScroll:true});
+        }
+      }
+    } else if(id==='civics'){
+      addPolicyPanel(council.querySelector('[data-policy-anchor]'),state,seat,allowed,action=>{el('research-modal').close();Game.doAction(action)});
+    }
   }
   paintProjects();
 }
@@ -734,11 +729,26 @@ function openCouncil(id){
   dialog.querySelector(".council-scroll").scrollTop=0;
 }
 function showCouncilGoal(item,focusTitle=true){
+  const previous=councilGoals[councilKind];
   councilGoals[councilKind]=item;paintResearch();
   const panel=el('research-options');
+  if(previous && !item){
+    const trigger=routeOrigins[councilKind];
+    const origin=trigger && panel.querySelector('[data-card="'+trigger.card+'"] [data-plan-item="'+trigger.target+'"]');
+    delete routeOrigins[councilKind];
+    if(origin){origin.focus();return;}
+  }
   const focus=item && focusTitle ? panel.querySelector('[data-path-title]') : panel.querySelector('[data-council-goal]');
+  const picker=focus?.closest('.route-picker');
+  if(picker)picker.open=true;
   focus?.focus({preventScroll:true});
   el('research-modal').querySelector('.council-scroll').scrollTop=0;
+}
+function showAvailableCouncil(id){
+  councilGoals[id]="";
+  councilViews[id]={mode:'available',era:''};
+  openCouncil(id);
+  el('research-options').querySelector('[data-project]:enabled')?.focus();
 }
 function forecastRow(role,label,before,after,max,damage,color){
   const percent=percentage(before,max), remaining=percentage(after,max);
@@ -789,9 +799,7 @@ function handleTurnButton(){
 function openPendingTask(task){
   if(!task || !mayOrder())return;
   if(task.kind==="research" || task.kind==="civics"){
-    councilGoals[task.kind]="";
-    openCouncil(task.kind);
-    focusAvailableProject(task.kind,el("research-options"));
+    showAvailableCouncil(task.kind);
     return;
   }
   // Resume the player's unfinished site selection when this is the same city.
@@ -826,8 +834,7 @@ function locateTutorialOrder(lesson){
   const {step,city,unit}=lesson;
   if(step==="research" || step==="civic"){
     const track=step==="research"?"research":"civics";
-    councilGoals[track]="";
-    openCouncil(track);focusAvailableProject(track,el("research-options"));
+    showAvailableCouncil(track);
     return;
   }
   if(step==="influence"){el("influence-open").click();return;}
@@ -859,13 +866,15 @@ let turnResults;
 let expansionForecasts = new Map();
 function paint(next){
   expansionForecasts=getCityExpansions(next.state,next.seat);
-  const previousKey=matchKey,previousState=view?.state;view=next;const {state,seat,mode,room}=next;
+  const previousKey=matchKey;view=next;const {state,seat,mode,room}=next;
   mapRegion=getMap(state);
   visible=new Set(state.intel?.visible??Object.keys(state.board));explored=new Set(state.intel?.explored??Object.keys(state.board));
   const regionKey=mapRegion.id+'-'+mapRegion.mapSize;
   const key=regionKey+':'+mode+':'+(room?.code||next.session||'')+':'+seat;
   const focusOpening=key!==matchKey||!selectedTile||(state.round===1&&!explored.has(selectedTile));
-  if(key!==matchKey){councilGoals.research="";councilGoals.civics="";}
+  if(key!==matchKey){
+    for(const track of Object.keys(councilGoals)){councilGoals[track]="";delete councilViews[track];delete routeOrigins[track];}
+  }
   if(focusOpening){endPlacement();matchKey=key;activeRoster="units";selectOpening()}
   if(kind==="unit"){
     const u=getUnit();if(u)selectedTile=u.tile;else select(selectedTile,null,Boolean(cityAt(selectedTile)));
@@ -899,9 +908,7 @@ function paint(next){
   const event=state.log.at(-1);text("event-turn","TURN "+String(event?.round||1).padStart(2,"0"));text("event-text",event?Game.eventText(event):"");
   el("legend").innerHTML=contacts.map(p=>'<span class="legend-item"><i class="swatch" style="--swatch:'+FACTIONS[p.faction].color+'"></i><span>'+esc(names[p.faction])+'</span>'+(state.teams?' · <span>'+teamLabel(state.teams[p.seat])+'</span>':'')+'</span>').join('');
   const eventKey=event?JSON.stringify(event):"";
-  const receipt=previousKey===key ? developmentReceipt(previousState,state,seat,mapRegion) : null;
-  if(receipt) toast(receipt);
-  else if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end","develop"].includes(event.type))flash(Game.eventText(event));
+  if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end"].includes(event.type))flash(Game.eventText(event));
   previousEvent=eventKey;
   updateWaterKey?.(mapRegion,explored);
   redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();showCampusOpening(state,seat,key);populationLedger();
@@ -959,15 +966,8 @@ function chooseOrder(key){
   }
   if(key==="supplies"){Game.open("supplies");return}
   if(key==="choose-production"){openProduction();return}
-  if(["develop","claim","contest"].includes(key)&&mayOrder()){
-    const tile=selectedTile,commands=el("entity-commands");
-    const restoreFocus=key==="develop" && commands.contains(document.activeElement);
-    const result=Game.doAction({type:key,tile});
-    if(restoreFocus) Promise.resolve(result).then(()=>{
-      if(tile!==selectedTile || kind!=="tile" || document.activeElement!==document.body)return;
-      const next=commands.querySelector('[data-order="develop"]:enabled') || commands.querySelector('.district-development');
-      next?.focus({preventScroll:true});
-    });
+  if(["claim","contest"].includes(key)&&mayOrder()){
+    Game.doAction({type:key,tile:selectedTile});
     return;
   }
   const u=getUnit();if(!u||u.seat!==view.seat)return;
@@ -1199,8 +1199,25 @@ function mount(){
   el("close-research").onclick=()=>el("research-modal").close();
   el("research-modal").onclick=e=>{if(e.target===el("research-modal"))el("research-modal").close()};
   const councilPanel=el("research-options");
-  councilPanel.onchange=e=>{if(e.target.matches("[data-council-goal]"))showCouncilGoal(e.target.value,false)};
+  el('research-modal').addEventListener('keydown',event=>{
+    const group=event.target.closest('.council-switch,.council-filterbar [role=group]');
+    if(group)navigateCouncilButtons(event,Array.from(group.querySelectorAll('button')));
+  });
+  councilPanel.onchange=e=>{
+    if(e.target.matches("[data-council-goal]"))showCouncilGoal(e.target.value,false);
+    if(e.target.matches("[data-council-era]")){
+      councilViews[councilKind].era=e.target.value;paintResearch();
+      councilPanel.querySelector('[data-council-era]').focus({preventScroll:true});
+    }
+  };
   councilPanel.onclick=e=>{
+    const filter=e.target.closest('[data-council-mode],[data-council-reset]');
+    if(filter){
+      const mode=filter.dataset.councilMode || 'all';
+      const era=filter.hasAttribute('data-council-reset')?'':councilViews[councilKind].era;
+      councilViews[councilKind]={mode,era};paintResearch();
+      councilPanel.querySelector('[data-council-mode="'+mode+'"]').focus({preventScroll:true});return;
+    }
     const investment=e.target.closest('[data-invest-city]');
     if(investment){
       if(!mayOrder())return;
@@ -1213,7 +1230,11 @@ function mount(){
       return;
     }
     const plan=e.target.closest("[data-plan-item],[data-path-back]");
-    if(plan){showCouncilGoal(plan.dataset.planItem || "");return;}
+    if(plan){
+      const card=plan.closest('[data-card]');
+      if(card)routeOrigins[councilKind]={card:card.dataset.card,target:plan.dataset.planItem};
+      showCouncilGoal(plan.dataset.planItem || "");return;
+    }
     const b=e.target.closest("[data-project],[data-route-order]");
     if(!b || b.disabled || !mayOrder())return;
     const item=b.dataset.routeOrder || b.dataset.project;
@@ -1223,7 +1244,7 @@ function mount(){
   document.addEventListener('civitas-plan-research',e=>{
     const item=e.detail?.item;
     if(!view || !getResearchOptions(view.state,view.seat).some(o=>o.item===item))return;
-    openCouncil('research');showCouncilGoal(item);
+    delete routeOrigins.research;openCouncil('research');showCouncilGoal(item);
   });
   document.addEventListener('civitas-language',()=>{if(!view)return;paintTurnButton(el('end-turn'),view);roster();inspect();if(el('research-modal').open)paintResearch();else paintProjects()});
   el("close-combat").onclick=closeCombat;el("cancel-combat").onclick=closeCombat;

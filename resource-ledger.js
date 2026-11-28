@@ -1,3 +1,4 @@
+import {settlerPopulationReason} from './population.js';
 import {illustration} from './illustrations.js';
 import {RESOURCES,isProduce,materialShipmentGain,SHIPMENT} from './resources.js';
 import {BUILDINGS,UNIT_TYPES,getCityYield} from './rules.js';
@@ -23,7 +24,8 @@ function cityQuote(state,city,available,L,esc) {
       rows+=line(L('Earliest finish (harvests)','最早完工（收获回合）'),harvests(left)+' → '+harvests(left-gain));
       if (gain<SHIPMENT.yield) rows+='<p>'+L('Only '+gain+' of the '+SHIPMENT.yield+' production fits this project.',
         '该项目只需 '+gain+' 点，本批货物的 '+SHIPMENT.yield+' 点生产力只能用上 '+gain+' 点。')+'</p>';
-    } else if (!gain) rows+='<p>'+L('Production is full. The city checks completion at harvest.','生产进度已满，城市将在收获时结算项目。')+'</p>';
+    } else if (settlerPopulationReason(city)) rows+='<p>'+esc(translate(settlerPopulationReason(city)))+'</p>';
+    else if (!gain) rows+='<p>'+L('Production is full. The city checks completion at harvest.','生产进度已满，城市将在收获时结算项目。')+'</p>';
   } else rows+='<p>'+L('Choose a production project before sending materials.','为这座城市选择生产项目后即可运送材料。')+'</p>';
   return '<section class="shipment-quote" aria-live="polite">'+rows+'</section>';
 }
@@ -51,7 +53,7 @@ export function ledgerBody(state, seat, accounts, selectedCity, busy, esc, stats
     return '<div class="cargo-row">'+illustration(key)+'<div class="cargo-balance"><strong>'+resource.name+'</strong><small><span>Stored</span> '+stock+' · <span>Harvest</span> +'+income+'</small></div><div class="cargo-actions">'+
       dispatch('sell',L('Sell for 5 gold','出售得 5 金币'),blocked)+dispatch('city',delivery,blocked||!city||!gain)+'</div></div>';
   });
-  return '<section class="budget-guide">'+budget('Treasury',player.capital,stats?.capitalIncome)+'<p>Spend gold to buy eligible city projects, upgrade units and develop owned land.</p>'+budget('Influence',player.influence,stats?.influenceIncome)+
+  return '<section class="budget-guide">'+budget('Treasury',player.capital,stats?.capitalIncome)+'<p>Use gold to buy eligible city projects, upgrade units or claim a neutral border tile.</p>'+budget('Influence',player.influence,stats?.influenceIncome)+
     '<p>'+L('Spend 6 influence to expand a city into its next eligible parcel.','花 6 点影响力可让城市立即取得下一格可扩张地块。')+'</p>'+
     '<button type="button" class="modal-secondary" data-influence-open>'+L('Spend influence','使用影响力')+'</button></section>'+
     '<p class="modal-desc">Each worked deposit adds one good at the end of your turn. Dispatch two of the same good once per turn.</p>'+destination+

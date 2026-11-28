@@ -25,7 +25,7 @@ import { assignWorkforce, CITY_FOCUS } from "./workforce.js";
 import {councilAgenda,proposePolicy} from './assembly-plan.js';
 import {ratifyPolicy} from "./policy.js";
 import {extraHousing} from "./civic-agenda.js";
-import { foodForecast, feedCity } from "./population.js";
+import { foodForecast, feedCity, settlerPopulationReason, SETTLER_RESIDENT_COST, SETTLER_MIN_POPULATION } from "./population.js";
 // Shared rules for the browser and the authoritative room service.
 import {campaignSeed, selectStarts, seededRandom} from './opening.js';
 import {CIVILIZATIONS, allocateCivilizations, capitalBonus} from './civilizations.js';
@@ -260,7 +260,7 @@ function isProductive(terrain) {
   return terrain === "coast" || terrain === "plains" || terrain === "urban";
 }
 export const UNIT_TYPES = {
-  settler: {name:"Settler", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:14},
+  settler: {name:"Settler", description:"Founds a new city at least three hexes from another city. Train or buy at 3 or more residents. One resident leaves when the settler deploys.", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:14},
   scout: {name:"Scout", era:"frontier", role:"Recon unit", moves:3, maxHp:65, range:1, strength:22, required:7, captures:false,
     description:"Light reconnaissance infantry. Moves three points per turn, can skirmish with units, and cannot occupy cities."},
   builder: {name:"Builder", era:"frontier", maxHp:60, moves:2, range:0, strength:0, required:9},
@@ -275,9 +275,19 @@ export const BUILDINGS = {
   ...PORT_BUILDINGS,
   granary: {name:"Granary", required:10, description:"Provides 2 food and housing for 2 more citizens."},
   neighborhood: {name:"Residential quarter", era:"frontier", civic:"publicWorks", required:16, description:"Provides housing for 3 more citizens."},
-  workshop: {name:"Workshop", required:13},
+  workshop: {name:"Workshop", tech:"industry", era:"frontier", required:13, description:"Adds 2 production per turn in this city."},
+  shop: {name:'Shop', era:'frontier', tech:'civics', required:12, yields:{capital:3},
+    description:'Earns 3 gold per turn for the treasury.'},
+  academy: {name:'Academy', era:'industrial', tech:'cartography', required:22, yields:{science:2},
+    description:'Generates 2 science per turn for research.'},
+  grainMill: {name:'Grain mill', era:'industrial', tech:'agriculturalScience', required:21, yields:{food:2,production:1},
+    description:'Supplies 2 food and 1 production per turn to this city.'},
+  foundry: {name:'Foundry', era:'industrial', tech:'metallurgy', building:'workshop', required:27, yields:{production:3},
+    description:'Adds 3 production per turn to a city with a workshop.'},
+  printingHouse: {name:'Printing house', era:'industrial', tech:'electricity', required:26, yields:{culture:3},
+    description:'Generates 3 culture per turn for civics.'},
   monument: {name:"Monument", required:10},
-  walls: {name:"City walls", required:14}
+  walls: {name:"City walls", tech:"tactics", era:"frontier", required:14, description:"Adds 50 city health, reduces incoming damage by 7 and strengthens retaliation."}
 };
 export const IMPROVEMENTS = {
   ...SPECIAL_IMPROVEMENTS,
@@ -448,6 +458,8 @@ export function getWonderSites(state,cityId,item) {
 export function getProjectSites(state,cityId,item) {
   const city=cityOrNull(state,cityId),map=getMap(state);
   if (!city || !Object.hasOwn(BUILDINGS,item) || (state.intel && state.intel.seat!==city.seat)) return [];
+  const definition=BUILDINGS[item];
+  if (!cityProjectUnlocked(state,city,item,definition) || (definition.building && !city.buildings.includes(definition.building))) return [];
   if (WONDERS[item]) return getWonderSites(state,cityId,item);
   const describe=id=>({...map.byId[id],range:hexDistance(city.tile,id),favored:false});
   if (item==='harbor') {
@@ -533,6 +545,13 @@ export function getCityYield(state,cityId) {
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
+  for (const item of city.buildings) {
+    const yields=BUILDINGS[item]?.yields;
+    if (!yields) continue;
+    result.food+=yields.food || 0;
+    result.production+=yields.production || 0;
+    result.capital+=yields.capital || 0;
+  }
   const festival=festivalBenefit(state,city);
   if (festival) {
     result.production+=festival.production || 0;
@@ -604,6 +623,13 @@ function calculateStats(state,seat,includeSources=false) {
       +2*cities.filter(c=>tradesBySea(state,c)).length,
     influenceIncome:0};
   for (const city of cities) {
+    for (const item of city.buildings) {
+      const yields=BUILDINGS[item]?.yields;
+      if (!yields) continue;
+      stats.capitalIncome+=yields.capital || 0;
+      stats.scienceIncome+=yields.science || 0;
+      stats.cultureIncome+=yields.culture || 0;
+    }
     const festival=festivalBenefit(state,city);
     stats.cultureIncome+=festival?.culture || 0;
     stats.capitalIncome+=festival?.capital || 0;
@@ -647,13 +673,12 @@ function record(state,seat,type,text,tile,detail={}) {
 const DISTRICT_ORDER_COST=1;
 function territoryOrder(state,seat,tile) {
   if (tile.terrain==='ocean' || wildAt(state,tile.id)) return null;
-  const {owner,level}=state.board[tile.id];
+  const {owner}=state.board[tile.id];
   if (state.board[tile.id].facility || state.board[tile.id].wonder || state.board[tile.id].naturalWonder || state.cities.some(c=>c.queue?.site===tile.id)) return null;
-  if (owner===seat) return level<3 ? {type:'develop',label:'Develop district',cost:{capital:5+level*3,influence:0}} : null;
-  if (sameTeam(state,owner,seat)) return null;
+  if (owner===seat || sameTeam(state,owner,seat)) return null;
   if (state.cities.some(c=>c.tile===tile.id) || state.units.some(u=>u.tile===tile.id && u.seat!==seat)) return null;
   if (owner===null) return {type:'claim',label:'Claim district',cost:{capital:4,influence:0}};
-  return {type:'contest',label:'Contest district',cost:{capital:4,influence:5+level*2}};
+  return {type:'contest',label:'Contest district',cost:{capital:4,influence:5}};
 }
 export function getActions(state,seat,id,visible) {
   state=actingPerspective(state,seat);
@@ -667,29 +692,11 @@ export function getActions(state,seat,id,visible) {
   if (state.phase!=='playing') reason='The campaign has ended.';
   else if (state.turn!==seat) reason='Wait for your turn.';
   else if (state.actionsLeft<DISTRICT_ORDER_COST) reason='You have used all district orders this turn.';
-  else if (order.type!=='develop' && !getMap(state).neighbors(id).some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
+  else if (!getMap(state).neighbors(id).some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
   else if (player.capital<order.cost.capital) reason='You need '+order.cost.capital+' capital.';
   else if (player.influence<order.cost.influence) reason='You need '+order.cost.influence+' influence.';
   if (!reason && state.intel?.districtChoices && !state.intel.districtChoices.includes(id)) return [];
   return [{...order,enabled:!reason,reason}];
-}
-
-// Inspect one owned district without issuing an order. Revalue just the
-// changed holding through the same economy used at the end of the turn:
-// Port concessions can absorb an extra point of influence at the zero floor.
-export function getDevelopmentPreview(state,seat,id) {
-  if (!Number.isInteger(seat) || state?.board?.[id]?.owner!==seat || (state.intel && state.intel.seat!==seat)) return null;
-  const [order]=getActions(state,seat,id);
-  if (order?.type!=='develop') return null;
-  const holding=state.board[id], nextLevel=holding.level+1;
-  const proposed={...state,board:{...state.board,[id]:{...holding,level:nextLevel}}};
-  const before=getStats(state,seat), after=getStats(proposed,seat);
-  return {
-    currentLevel:holding.level, nextLevel,
-    cost:{...order.cost,orders:DISTRICT_ORDER_COST}, enabled:order.enabled, reason:order.reason,
-    delta:{capitalIncome:after.capitalIncome-before.capitalIncome,
-      influenceIncome:after.influenceIncome-before.influenceIncome, score:after.score-before.score}
-  };
 }
 
 function movementCost(state,unit, tileId) {
@@ -938,6 +945,13 @@ function productionUnlocked(state,seat,definition,era=getEra(state,seat)) {
     && (!definition.civic || adopted(state,seat,definition.civic));
 }
 
+// Workshops and walls ordered before they had prerequisites keep their invested work.
+function cityProjectUnlocked(state,city,item,definition,era) {
+  if ((item==='workshop' || item==='walls') &&
+      (city.queue?.item===item || parkedProduction(city,item)>0)) return true;
+  return productionUnlocked(state,city.seat,definition,era);
+}
+
 export function getProductionOptions(state,cityId,{replace=false}={}) {
   const city=cityOrNull(state,cityId);
   if (!city || (state.intel && state.intel.seat!==city.seat)) return [];
@@ -947,15 +961,18 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
   const hasCoast=city.buildings.includes('harbor') || berth || findPortSite(
     state,city,map.byId,map.neighbors,getVision(state,city.seat).explored,true);
   const available=Object.entries(PRODUCTS).filter(([item,def])=>
-    (item!==SCIENCE_PROJECT.id || allowsScience(state)) && productionUnlocked(state,city.seat,def,era) &&
+    (item!==SCIENCE_PROJECT.id || allowsScience(state)) && cityProjectUnlocked(state,city,item,def,era) &&
     (hasCoast || !(Object.hasOwn(PORT_BUILDINGS,item) || def.domain==='sea')));
   return available.map(([item,def])=>{
     const kind=item===SCIENCE_PROJECT.id ? 'project' : Object.hasOwn(UNIT_TYPES,item) ? 'unit':'building';
+    const populationReason=settlerPopulationReason(city,item);
     let reason='';
     if (state.phase!=='playing') reason='The campaign has ended.';
     else if (!seatMayOrder(state,city.seat)) reason='Wait for the city owner’s turn.';
+    else if (populationReason) reason=populationReason;
     else if (city.queue && (!replace || city.queue.item===item)) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
+    else if (def.building && !city.buildings.includes(def.building)) reason='Build a workshop in this city first.';
     else if (WONDERS[item] && campusStatus(state,item)==='complete') reason='This university has already opened.';
     else if (WONDERS[item] && state.cities.some(c=>c.seat===city.seat && c.queue?.item===item)) reason='One of your cities already holds this charter.';
     else if (item==='harbor' && !berth) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
@@ -966,11 +983,11 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
     const gold=purchasePrice(city,item,def.required);
     const current=city.queue?.item===item;
     const buyReason=kind==='project' ? 'Orbital Survey requires city production.' : WONDERS[item] ? 'University wonders require city production.' :
-      (current && state.phase==='playing' && seatMayOrder(state,city.seat) ? '' : reason) ||
+      (current && state.phase==='playing' && seatMayOrder(state,city.seat) ? populationReason : reason) ||
       (!gold ? 'This project is ready for completion.' : '') ||
       (state.players[city.seat].capital+(replace && !current ? city.queue?.grant || 0 : 0)<gold ? 'Not enough gold.' : '') ||
       (kind==='unit' && !deploymentTile(state,city,item) ? 'No deployment tile is available. Move a unit before buying.' : '');
-    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,era:def.era || null,saved:parkedProduction(city,item),turns:constructionTurns(state,city,def.required-(current?city.queue.progress:parkedProduction(city,item)),rate),required:def.required,enabled:!reason,reason};
+    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,era:def.era || null,saved:parkedProduction(city,item),turns:populationReason?null:constructionTurns(state,city,def.required-(current?city.queue.progress:parkedProduction(city,item)),rate),required:def.required,enabled:!reason,reason};
   });
 }
 const SCIENCE = {bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
@@ -1081,7 +1098,7 @@ function produceCityTurn(state,city) {
     record(state,city.seat,'population',city.name+verb+city.population+' residents.',city.tile,{city:city.id});
   }
   const queue=city.queue;
-  if (!queue) return;
+  if (!queue || settlerPopulationReason(city)) return;
   queue.progress=Math.min(queue.required,queue.progress+yieldNow.production);
   if (queue.progress>=queue.required) completeCityProject(state,city);
 }
@@ -1124,8 +1141,9 @@ function completeCityProject(state,city) {
   const queue=city.queue,map=getMap(state);
   if (Object.hasOwn(UNIT_TYPES,queue.item)) {
     const spawnTile=deploymentTile(state,city,queue.item);
-    if (!spawnTile) return;
+    if (!spawnTile || settlerPopulationReason(city)) return;
     const recruit=spawn(state,city.seat,queue.item,spawnTile);
+    if (queue.item==='settler') city.population-=SETTLER_RESIDENT_COST;
     recruit.moves=0;
     if(UNIT_TYPES[queue.item].domain==='sea' && state.waterways)recruit.launchedFrom=city.id;
   } else {
@@ -1150,7 +1168,9 @@ function completeCityProject(state,city) {
     city.buildings.push(queue.item);
     if (queue.item==='walls') {city.maxHp+=50; city.hp=Math.min(city.maxHp,city.hp+50);}
   }
-  record(state,city.seat,'complete',city.name+' completed '+PRODUCTS[queue.item].name+'.',city.tile,{item:queue.item,city:city.id});
+  const departure=queue.item==='settler';
+  const message=departure ? city.name+' sent out a settler. One resident left the city.' : city.name+' completed '+PRODUCTS[queue.item].name+'.';
+  record(state,city.seat,'complete',message,city.tile,{item:queue.item,city:city.id,...(departure?{residentsDeparted:SETTLER_RESIDENT_COST}:{})});
   city.queue=null;
   advanceProduction(city);
 }
@@ -1655,9 +1675,9 @@ function resolveOrder(source,seat,action) {
     if (!order.enabled) throw new Error(order.reason);
     const tile=getMap(state).byId[action.tile],prior=next.board[tile.id],player=next.players[seat];
     player.capital-=order.cost.capital;player.influence-=order.cost.influence;
-    next.board[tile.id]={...prior,owner:seat,level:order.type==='develop' ? prior.level+1:prior.level};
+    next.board[tile.id]={...prior,owner:seat};
     next.actionsLeft-=DISTRICT_ORDER_COST;
-    const verb={develop:'developed',contest:'took control of',claim:'claimed'}[order.type];
+    const verb=order.type==='contest' ? 'took control of' : 'claimed';
     record(next,seat,order.type,FACTIONS[state.players[seat].faction].name+' '+verb+' '+tile.name+'.',tile.id);
   }
   refreshScores(next);
@@ -1703,7 +1723,7 @@ function botProject(state,city,difficulty) {
       state.barbarians?.parties.some(p=>p.type==='raider' && hexDistance(p.tile,city.tile)<=3);
     if(near && !count('melee'))choices.push('melee');
     if(near && !count('ranged'))choices.push('ranged');
-    if(cities.length<2 && !count('settler') && (count('melee') || count('ranged'))) {
+    if(city.population>=SETTLER_MIN_POPULATION && cities.length<2 && !count('settler') && (count('melee') || count('ranged'))) {
       const map=getMap(state),charted=new Set(state.intel.explored);
       const site=state.intel.visible.some(id=>hexDistance(city.tile,id)<=5 && canSettle(state,city.seat,id) &&
         !rivals.some(unit=>UNIT_TYPES[unit.type].strength && hexDistance(unit.tile,id)<=2) &&
@@ -1753,6 +1773,17 @@ function botProject(state,city,difficulty) {
       if (!count('frigate')) choices.push('frigate');
     } else if (knows(state,city.seat,'steam') && (!basin || basin.tiles.size>=8)) choices.push('shipyard');
   }
+  if (defensible) {
+    if (forecast.surplus<=1 && !forecast.housingLimited) choices.push('grainMill');
+    if (state.players[city.seat].capital<3*BUILDINGS.shop.required) choices.push('shop');
+    if (pursuingOrbitalResearch(state,city.seat)) {
+      choices.push('academy');
+      if (knows(state,city.seat,'metallurgy') && !city.buildings.includes('foundry')) {
+        choices.push(city.buildings.includes('workshop') ? 'foundry' : 'workshop');
+      }
+    }
+    if (state.players[city.seat].civic) choices.push('printingHouse');
+  }
   if (count('builder')===0) choices.push('builder');
   const charted=new Set(state.intel.explored),map=getMap(state);
   const nearby=map.neighbors(city.tile).filter(id=>charted.has(id)).map(id=>map.byId[id].terrain);
@@ -1764,7 +1795,7 @@ function botProject(state,city,difficulty) {
   if (count('melee')<2) choices.push('melee');
   if (cities.length<3 && count('settler')===0) choices.push('settler');
   if (city.buildings.includes('harbor') && !survey) choices.push('shipyard');
-  choices.push('workshop','walls','monument','granary');
+  choices.push('workshop','walls','monument','granary','foundry','academy','shop','grainMill','printingHouse');
   if (count('melee')<4) choices.push('melee');
   const enabled=new Set(getProductionOptions(state,city.id).filter(o=>o.enabled).map(o=>o.item));
   const option=choices.find(key=>enabled.has(key));
@@ -1983,6 +2014,7 @@ function botDistrict(state,difficulty) {
     const tile=map.byId[id];
     const [order]=getActions(state,state.turn,tile.id);
     if (!order?.enabled) continue;
+    if(order.type==='contest' && difficulty==='easy') continue;
     const parcel=state.board[id];
     // Both ordinary buildings and universities can reserve an unimproved plot.
     // Their location is private, so treat all plausible rival sites alike.
@@ -1993,9 +2025,8 @@ function botDistrict(state,difficulty) {
     }
     const frontier=map.neighbors(tile.id).filter(id=>explored.has(id) && terrainCost[map.byId[id].terrain] && state.board[id].owner===null).length;
     const variety=((tile.q*67+tile.r*31+state.round*19+state.turn*11+state.actionsLeft*7)%29)/29;
-    let value=order.type==='develop' ? 0.5 : 2+Number(Boolean(tile.landmark))*3+frontier*0.1+(order.type==='contest'?1.5:0);
-    if(difficulty==='easy' && order.type==='develop' && state.board[id].level===0)value+=2.8;
-    if(difficulty==='hard' && order.type!=='develop'){
+    let value=2+Number(Boolean(tile.landmark))*3+frontier*0.1+(order.type==='contest'?1.5:0);
+    if(difficulty==='hard'){
       value+=Number(Boolean(state.board[id].resource))*2;
       if(order.type==='contest')value+=2+state.board[id].level;
     }
@@ -2131,7 +2162,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   for (const city of state.cities) if (city.seat===seat && city.focusRound!==state.round) {
     const food=getPopulationReport(state,city.id);
     const focusResearch=player.research && pursuingOrbitalResearch(state,seat);
-    const focus=food.surplus<0 ? 'food' : food.housingLimited && !focusResearch ? 'industry' :
+    const formingSettler=city.queue?.item==='settler' && city.population<=SETTLER_MIN_POPULATION;
+    const focus=food.surplus<0 || formingSettler ? 'food' : food.housingLimited && !focusResearch ? 'industry' :
       (city.population>=3 && player.research ? 'science' : 'balanced');
     if ((city.focus || 'balanced')!==focus) return {type:'focus',city:city.id,item:focus};
   }

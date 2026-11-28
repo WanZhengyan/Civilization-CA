@@ -1,5 +1,5 @@
 import {councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
-import {getMap, getProductionOptions, getProjectSites, getStats} from './rules.js';
+import {BUILDINGS, getMap, getProductionOptions, getProjectSites, getStats} from './rules.js';
 import {councilCourse} from './council-path.js';
 import {WONDERS} from './wonders.js';
 import {getLanguage, translate} from './i18n.js';
@@ -20,7 +20,9 @@ export function councilInvestments(state,seat) {
     for (const option of getProductionOptions(state,city.id,{replace:true})) {
       if (option.kind!=='building' || !option.enabled) continue;
       const school=WONDERS[option.item];
-      if (!school && !['monument','workshop'].includes(option.item)) continue;
+      const income=BUILDINGS[option.item].yields;
+      // Workshops and monuments can gain council income from technology or civics.
+      if (!school && !income?.science && !income?.culture && !['monument','workshop'].includes(option.item)) continue;
       const site=getProjectSites(state,city.id,option.item)[0];
       if (!site) continue;
       const proposed={...city,buildings:[...city.buildings,option.item]};

@@ -21,7 +21,7 @@ import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
 import {changeRoomSetup,difficultyField,difficultyLabel,newRoomSetup,roomSetupFields,teamLabel,validRoomTeams} from './room-setup.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
 
-import {ERAS, getEra, getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
+import {councilTree, ERAS, getEra, getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
 
 const SEATS_KEY = 'angel-basin.room-seats.v1';
 const LAST_ROOM_KEY = 'angel-basin.active-room.v1';
@@ -722,20 +722,19 @@ const guideSections = {
   start: {label:'First turn', entries:[
     ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
     ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
+    ['Train your next settler', 'Your starting settler is free. Use a scout to explore while your capital grows. A city can train or buy another settler at 3 residents. One resident leaves on deployment. If the city falls below 3, it keeps its work until it grows again.'],
     ['Read city markers', 'City markers use the owner’s color. A crown marks the first capital and stays with that city after capture. The green hex beside your city name estimates turns to the next district at its current population. Select the city to see the target and expansion progress. Zoom in when names overlap.'],
     ['Explore the fog', 'Each unit sees two hexes in every direction. Dark tiles are uncharted. Shaded tiles keep the terrain you explored, but enemies there are hidden.'],
     ['Survey for deposits', 'Resources are hidden at the start. Choose Survey resources on your settler to spend one movement point and reveal deposits in sight. Founding your first city also unlocks surveying. Deposits you have seen remain marked as your units move on.'],
     ['Choose your map', 'Each region and size has its own solo save. Choose a victory condition, a civilization and up to three opponents. In multiplayer the host sets the map and the victory condition.'],
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
     ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
-    ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.'],
-    ['Plan your turn', 'Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
+    ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Select Full tree to see which civics unlock future policies and universities.'],
+    ['Plan your turn', 'Start with two district orders per turn to claim neutral land or contest a rival border. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
   ]},
   influence: {label:'Influence', entries:[]},
   city: {label:'City growth', entries:[
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
-    ['Develop a district', 'Select visible land you own. If a unit or city shares the hex, open District development in Field command. Each upgrade spends one district order and raises the level by one. Levels 1, 2 and 3 cost 5, 8 and 11 capital respectively. Level 3 is the maximum.'],
-    ['Compare development returns', 'Each new level adds 1 civic point. Coast, lowland and urban districts also earn 1 more capital per turn. Woodland, foothills and mountains add 1 to base influence income. Check the preview for the change under your current policy.'],
     ['Grow city borders', 'Each resident adds one border point at the end of your turn. A city starts at eight points per district. Each new district raises the next cost by two, up to sixteen. Only visible, unclaimed land within three connected land steps qualifies. If the frontier is blocked, explore or secure a clear route. Progress pauses until a parcel opens.'],
     ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
     ['Use stored goods', 'Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.'],
@@ -743,7 +742,7 @@ const guideSections = {
     ['Assign citizens', 'Select your city and open Manage citizens. Food, industry and science priorities change which controlled districts are worked. Each citizen works one district or a specialist job in town. The same district cannot support two cities.'],
     ['Choose a construction tile', 'Choose a building in City production, then select one of the outlined map tiles and confirm. Municipal buildings can share the city center. Campuses need their own empty parcel. A harbor reserves a shore berth.'],
     ['Change production or buy', 'You can change the current project. This city keeps its invested production until you resume the same item. Buying an ordinary project uses treasury gold and credits work already done. Universities must use city production.'],
-    ['Choose a building', 'A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.'],
+    ['Choose a building', 'Build a Granary for food or a Monument for influence from the start. Research Workshop Engineering for a Workshop, Land Surveying for a Shop or Topographic Mapping for an Academy. Each city can build one of each.'],
     ['Make room for recruits', 'Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.']
   ]},
   formations: {label:'Unit handbook'},
@@ -788,7 +787,7 @@ const guideSections = {
       if(state?.practice)return 'Reach the civic target to complete practice. At round 30, practice ends with your final score.';
       return `If a faction reaches ${getScoreTarget(state)} civic points, finish the current round and compare scores. The same scoring applies after round ${MAX_ROUNDS}. The highest score wins, and a tie shares victory.`;
     }],
-    ['Count civic points', 'Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.']
+    ['Count civic points', 'Score 2 per district and 2 per landmark. A city earns 3 points and its center adds 1. Each resident adds 1, each finished building adds 2 and each land improvement adds 1. Older districts keep the settlement points they have earned.']
   ]}
 };
 function guideTopics(chapter, language, state) {
@@ -806,9 +805,24 @@ function guideTopics(chapter, language, state) {
     if(!state || state.victoryMode!=='conquest') entries.push(['Science victory',
       '<span>Research Radio Networks and Motorization, then Rocketry. In City production, choose Orbital Survey. Finish it in one city to win for your entire side.</span> <strong>Production required</strong> · '+SCIENCE_PROJECT.required]);
   }
-  return [...orders, ...entries].map(([title,detail],i)=>({
+  const topics=[...orders, ...entries].map(([title,detail],i)=>({
     key:'topic-'+i, title, body:typeof detail==='function'?detail(state):detail
   }));
+  if(chapter==='city') {
+    const tree=councilTree(state || {researchPace:2},'research');
+    const name=value=>translate(value,language);
+    for(const [item,building] of Object.entries(BUILDINGS)) {
+      if(!building.tech || !tree[building.tech] || !(building.yields || item==='workshop' || item==='walls'))continue;
+      const tech=name(tree[building.tech].name);
+      const facility=building.building ? name(BUILDINGS[building.building].name) : '';
+      const cost=building.required;
+      const requirement=language==='zh-CN'
+        ? '研究「'+tech+'」'+(facility?'，并在本城建成'+facility:'')+'后可建。需要 '+cost+' 生产力。'
+        : 'Research '+tech+(facility?' and build a '+facility+' in this city':'')+' to unlock. Costs '+cost+' production. ';
+      topics.push({key:'building-'+item,title:name(building.name),body:requirement+name(building.description)});
+    }
+  }
+  return topics;
 }
 
 export function gameGuideIndex(state) {

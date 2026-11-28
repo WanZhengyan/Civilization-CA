@@ -256,7 +256,7 @@ Unlocks policy|解锁方针
 Unlocks unit|解锁单位
 Unlocks building|解锁建筑
 Fund a government program|推行施政方针
-In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.|在市政面板中打开施政方针。市政宪章解锁公众讲堂，公共工程解锁公共建设合同。比较各城市得到和付出的产出，再表决推行。打开完整市政树可查看后续方针和大学奇观。
+In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Select Full tree to see which civics unlock future policies and universities.|在市政面板中打开施政方针。市政宪章解锁公众讲堂，公共工程解锁公共建设合同。比较各城市得到和付出的产出，再表决推行。选择「完整树」可查看各项施政方针和大学奇观所需的市政。
 Government policy|施政方针
 Balanced budget|平衡预算
 Standard city yields with no program funded.|维持城市的标准产出。
@@ -327,7 +327,7 @@ Team A|A 队
 Team B|B 队
 Team C|C 队
 Team D|D 队
-Easy develops home districts first and patrols within three hexes of its cities.|简单电脑优先开发本土地块，在距己方城市三格以内巡逻。
+Easy claims neutral land and keeps military patrols within three hexes of its cities.|简单电脑只认领中立地块，军事巡逻范围限于己方城市周围三格。
 Normal balances scouting, growth and production, and compares targets for each unit.|一般难度的电脑兼顾侦察、城市发展与生产，并为每支部队比较攻击目标。
 Hard expands earlier and compares attacks across its units before committing one.|困难电脑会更早扩张，比较多支部队的进攻机会再选择出手的单位。
 Invite up to three friends. The host can start once two people have joined.|最多可邀请三名好友。至少两名真人入座后，房主即可开局。
@@ -763,6 +763,14 @@ Each city produces 2 more food per turn.|每座城市每回合粮食产量增加
 Each city produces 2 more production per turn.|每座城市每回合生产力增加 2。
 Military units deal 7 more attack damage and 3 more retaliation damage.|军事单位的攻击伤害增加 7，反击伤害增加 3。
 Each city earns 2 more capital and 1 more influence per turn.|每座城市每回合多获得 2 资金和 1 影响力。
+Founds a new city at least three hexes from another city. Train or buy at 3 or more residents. One resident leaves when the settler deploys.|在距离其他城市至少三格的位置建立新城。本城达到 3 人口才能训练或购买开拓者，部署时迁出 1 名居民。
+Settlers need 3 residents in this city.|本城达到 3 人口才能招募开拓者。
+Waiting for 3 residents|等待本城达到 3 人口
+Train your next settler|训练下一名开拓者
+Your starting settler is free. Use a scout to explore while your capital grows. A city can train or buy another settler at 3 residents. One resident leaves on deployment. If the city falls below 3, it keeps its work until it grows again.|开局会获得一名开拓者。首都发展初期可以派侦察兵探路。本城达到 3 人口便可训练或购买新的开拓者，部署时迁出 1 名居民。若人口降到 3 以下，训练暂停，已有进度会保留到人口恢复。
+Current residents|本城当前人口
+Residents leaving on deployment|部署时迁出的人口
+City of 3 or more residents|本城至少 3 人口
 Founds a new city at least three hexes from another city.|在距离其他城市至少三格的位置建立新城。
 Builds farms and mines in your territory. Three charges.|在领土内修建农场或矿场，可使用三次。
 Fights adjacent enemies and captures weakened cities.|攻击相邻敌人，占领防御薄弱的城市。
@@ -771,19 +779,16 @@ Adds 2 food per turn to help this city grow.|每回合增加 2 粮食，帮助�
 Adds 2 production per turn in this city.|这座城市每回合增加 2 生产力。
 Adds 3 influence per turn.|每回合增加 3 影响力。
 Increases this city’s defenses.|提高城市防御能力。
-Develop district|开发地区
-District development|地区开发
-District level|开发等级
-Maximum district level|已达最高开发等级
 Capital per turn|每回合资金收入
 Influence per turn|每回合影响力收入
 1 district order|1 次地区指令
+1 district order remains this turn.|本回合还可下达 1 次地区指令。
+Select a city to manage production or send a builder to improve nearby land.|选择一座城市安排生产，或派建造者改良城市附近的土地。
 Your capital city|己方首府
 Rival capital city|敌方首府
 Captured original capital|已易主的初始首府
 Controlled by|当前控制方
 Original capital of|建都阵营
-District developed|地区已开发
 Claim district|拓展领土
 Contest district|争夺地区
 The campaign has ended.|战役已结束。
@@ -854,18 +859,13 @@ Give your capital a project|安排首府生产
 Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.|在名册中打开「城市」，选择首府并指定生产项目。结束回合时，城市会积累粮食与生产力。
 Open the Research council and select a project. Your cities generate science each turn. Completed research gives the whole faction a lasting benefit.|打开科技议会并选择项目。城市每回合产出科研点；完成研究后，全阵营都会获得长期收益。
 Plan your turn|规划回合
-Each faction also gets two district actions to claim land, develop a district or contest a neighbor. Units use their own movement points. End turn collects income and passes play to the next faction.|每个阵营每回合有两次地区行动，可用于拓展、开发或争夺领土。单位独立消耗移动力。结束回合后结算收入，轮到下一个阵营行动。
 City growth|城市发展
 Food and production|粮食与生产
 Food grows your population. Production completes the unit or building in a city’s queue. More residents contribute capital and can raise production.|粮食推动人口增长，生产力用于完成队列中的单位或建筑。更多居民能增加收入，也能提高生产力。
-Develop a district|开发己方地区
-Select visible land you own. If a unit or city shares the hex, open District development in Field command. Each upgrade spends one district order and raises the level by one. Levels 1, 2 and 3 cost 5, 8 and 11 capital respectively. Level 3 is the maximum.|选中视野内的己方陆地。地块上若有单位或城市，可在战场指挥面板打开「地区开发」。每次升级消耗一次地区指令。升到 1、2、3 级分别花费 5、8、11 资金，最高为 3 级。
-Compare development returns|比较开发收益
-Each new level adds 1 civic point. Coast, lowland and urban districts also earn 1 more capital per turn. Woodland, foothills and mountains add 1 to base influence income. Check the preview for the change under your current policy.|每升一级增加 1 市政积分。海岸、低地和城区每回合额外获得 1 资金。林地、丘陵和山地则使每回合的基础影响力收入增加 1。升级前可预览当前施政方针下的实际变化。
 Improve nearby land|改良周边土地
 A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.|建设者可以施工三次。选择能经己方陆地在两步内连通己方城市的地块，并按资源选择设施。谷物需要农场，柑橘需要果园，木材需要伐木场，石料需要采石场，铁矿需要矿场。
 Choose a building|选择建筑
-A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.|粮仓提供粮食，工坊提高生产力，纪念碑增加影响力，城墙强化防御。每座城市可各建一座。
+Build a Granary for food or a Monument for influence from the start. Research Workshop Engineering for a Workshop, Land Surveying for a Shop or Topographic Mapping for an Academy. Each city can build one of each.|开局可以建粮仓增加粮食，或建纪念碑增加影响力。研究工坊工程可建工坊，土地测绘解锁商店，地形测绘解锁学院。每种建筑每座城市限建一座。
 Make room for recruits|留出部署空间
 A new unit deploys in the city or on an adjacent open, passable hex in friendly or neutral territory. If all those hexes are occupied, clear one and end the turn to deploy it.|新单位部署在城内或相邻的己方、中立可通行空地。如果地块已满，先腾出一个位置，再结束回合完成部署。
 Field tactics|野战战术
@@ -887,7 +887,7 @@ Control every participating faction’s original capital to win immediately.|控
 Win on civic points|积分胜利
 If a faction reaches 100 civic points, finish the current round and compare scores. The same scoring applies after round 30. The highest score wins, and a tie shares victory.|当任一阵营达到 100 分，在当前轮结束后比较积分。第 30 轮结束后也按此规则结算。最高分获胜，同分者共享胜利。
 Count civic points|积分计算
-Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.|每块领土 2 分，每级开发 1 分，每个地标 2 分。每座城市 3 分，另加每名居民 1 分、每座建筑 2 分、每项土地改良 1 分。
+Score 2 per district and 2 per landmark. A city earns 3 points and its center adds 1. Each resident adds 1, each finished building adds 2 and each land improvement adds 1. Older districts keep the settlement points they have earned.|每块领地和每处地标各得 2 分。每座城市得 3 分，市中心另加 1 分。每名居民加 1 分，每座竣工建筑加 2 分，每项土地改良加 1 分。旧地块保留已有的定居分数。
 `);
 
 // The same place names are used in map labels, order hints and campaign history.
@@ -1166,7 +1166,7 @@ No field upgrade is available.|当前没有可用的战场升级。
 Choose your map|选择地图
 Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.|选择「切换地图」可前往洛杉矶、旧金山或圣迭戈。每个地区的单人进度独立保存。多人联机时由房主在建房时选择地图。
 Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.|打开地图旁的「科技」和「市政」，分别选择一项议程。建立首都后，你的文明每回合分别积累科研点和文化。
-Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.|初始每回合有两次地区指令，可用于拓展、开发或争夺领土。通过「郡县联邦」后增加为三次。各单位单独消耗移动力。结束回合后结算收入，轮到下一个阵营行动。
+Start with two district orders per turn to claim neutral land or contest a rival border. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.|初始每回合有两次地区指令，可用于认领中立地块或争夺敌方边境地块。通过「郡县联邦」后增加为三次。各单位单独消耗移动力。结束回合后结算收入，轮到下一个阵营行动。
 Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.|先查看所选单位的移动力。陆地单位进入海岸、低地或城区耗一点，进入林地或丘陵耗两点。船只在水面航行。已被其他单位占据的地块无法通行。
 Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.|陆地单位部署在城内或相邻的己方、中立可通行空地。舰船从港口或相邻空水域下水。结束回合前请留出部署空间。
 Upgrade in the field|战场升级
@@ -1447,12 +1447,11 @@ Waiting for allies…|等待队友…
 `);
 
 section(`
-Spend gold to buy eligible city projects, upgrade units and develop owned land.|金币可用于购买符合条件的城市项目、升级部队和开发己方地块。
+Use gold to buy eligible city projects, upgrade units or claim a neutral border tile.|金币可用于购买已开放的城市项目、升级单位或认领边境上的中立地块。
 `);
 
 section(`
 Changing an enacted policy costs 3 influence. The first policy is free.|首次采用政策免费，之后每次更换需要 3 点影响力。
-Contest an eligible rival border district for 4 gold and 5 influence, plus 2 influence per district level.|争夺符合条件的敌方边境地块需要 4 金币和 5 点影响力；该地块每升一级，费用再增加 2 点影响力。
 `);
 
 section(`
@@ -1588,4 +1587,22 @@ San Diego River|圣迭戈河
 Mission Valley Lake|米申谷湖
 Otay River|奥泰河
 Otay Lake|奥泰湖
+`);
+
+section(`
+Adds 50 city health, reduces incoming damage by 7 and strengthens retaliation.|城市生命上限增加 50，受击伤害减少 7，并强化城市反击。
+`);
+
+section(`
+Shop|商店
+Academy|学院
+Grain mill|磨坊
+Foundry|铸造厂
+Printing house|印刷所
+Earns 3 gold per turn for the treasury.|每回合为国库增加 3 金币。
+Generates 2 science per turn for research.|每回合为科技研究增加 2 点科研。
+Supplies 2 food and 1 production per turn to this city.|本城每回合增加 2 粮食和 1 生产力。
+Adds 3 production per turn to a city with a workshop.|拥有工坊的城市每回合增加 3 生产力。
+Generates 3 culture per turn for civics.|每回合为市政研究增加 3 点文化。
+Build a workshop in this city first.|请先在这座城市建造工坊。
 `);
