@@ -1,5 +1,11 @@
 # Campaign updates
 
+## v7.3.1 — Read the next turn order at a glance
+
+- The turn button leaves room for its action label, decision count and border. Both “Unit needs orders” and “给单位下令” remain legible when a unit is waiting.
+- The homepage guide opens on the turn prompt. English and Chinese examples show how to find the next unit, move it or skip its turn. Both README guides use the same campaign captures.
+- Updated the Mission Gorge construction, technology tree, civics tree and solo setup screenshots in both languages. The research walkthrough remains available with its original recording version.
+
 ## v7.3.0 — Build beside California’s natural wonders
 
 - Discover Ballona Wetlands in Los Angeles, Muir Woods in Marin and Mission Gorge in San Diego. Citizens working their neighboring districts earn food and science, science, or production and science respectively. New campaigns have three natural wonders per region. Existing saves retain their recorded sites.

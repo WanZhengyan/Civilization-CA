@@ -4,7 +4,7 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 **[Play the Pasadena tutorial](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Start a solo campaign](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Play with friends](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.3.0 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
+[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.3.1 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
 
 ## Design inspiration and trademarks
 
@@ -12,15 +12,29 @@ Civilization CA is an independent, unofficial browser game set in California. We
 
 This project has no affiliation with, sponsorship from, or endorsement by Firaxis Games, 2K, or Take-Two Interactive. *Civilization* and *Sid Meier’s Civilization* are registered trademarks of Take-Two Interactive Software, Inc.
 
+## Your first campaign
+
+The tutorial opens on the Los Angeles map with a settler at Pasadena and no rival civilizations. Found your capital, then make your first technology, civic and production choices with the same controls used in a regular campaign. The tutorial has its own save. Come back to the tutorial link to resume, or keep playing after the last lesson.
+
+Three decisions will get you through the opening.
+
+1. **What does the city need?** Start with a Scout to explore. Open **City production** to see the Settler card, your current population and the requirement of 3 residents to train or buy one. One resident leaves when the unit deploys, so a city of 3 goes back to 2. Choose Agronomy for food or Workshop Engineering to unlock the Workshop and speed up construction.
+2. **Do you need the next hex now?** Open **Influence** to see which parcel your city will gain from natural growth. You can wait, or spend 6 influence to take that parcel immediately. The panel shows the location, time saved and balance after purchase.
+3. **Who still needs orders?** Check the button at the lower right. Its number counts all remaining decisions, including technology, civics and city production. When it reads **Unit needs orders**, click it to select the unit on the map. Move it, or choose **Skip this turn** to leave it in place. You can select it again and use its remaining movement before ending the turn. Once you’ve handled every decision in a solo game, the button reads **End turn**.
+
+[![Close-up of the Unit needs orders button and its count of remaining decisions. Open the full campaign map.](./docs/art/turn-orders-detail-v731.webp)](./docs/art/turn-orders-v731.webp)
+
+The left production drawer names the city and centers it on the exposed map. Pick a highlighted parcel for buildings such as the Academy. Walls always use the city center. After Motorization, a city with walls can build Modern fortifications and fire once per round at a visible enemy field formation within two hexes.
+
 ## Build beside a natural wonder
 
 Scout the coast of Los Angeles for the **Ballona Wetlands**. A citizen working land next to the marsh earns an extra food and science each harvest. Adopt **Irrigation Districts** and a city near the wetlands can build a boardwalk for another 2 food and 2 culture per turn. All three regions have three discoverable landscapes, each with its own project.
 
 Open **Wonders** to check a discovery and its research requirement. From a nearby city, open **City production → Natural wonder projects**. Pick a highlighted parcel that you own next to the landmark, within two hexes of the city. Keep it clear of resources and other construction. The first city to commission the work reserves it while building. Its recurring yields start at completion, and the landscape keeps its original worker bonus.
 
-On turn 11 in San Diego, the city of North Park lowlands can build the Mission Gorge Geology Trail on the highlighted foothill hex between the city and the gorge.
+On turn 11 in San Diego, North Park lowlands has two places to build the Mission Gorge Geology Trail. Both green hexes touch the gorge. Choose one on the map, then select **Confirm site** in the production panel.
 
-![North Park’s production drawer beside the highlighted parcel for the Mission Gorge Geology Trail](./docs/art/scenic-construction-v730.webp)
+![The production panel at left and two green parcels beside Mission Gorge where North Park can build its geology trail](./docs/art/scenic-construction-v731.webp)
 
 | Region | Project | Technology or civic | Cost in production | Yield per turn |
 | --- | --- | --- | ---: | --- |
@@ -42,25 +56,13 @@ Open **Technology** or **Civics** on the left of the map and scroll down through
 
 **How do you reach Ballistics?** Both **Field Tactics** and **Applied Mechanics** lead into it. In the screenshot, Field Tactics is available and Applied Mechanics is still locked. Select Applied Mechanics to find its own prerequisite, **Workshop Engineering**. Once you complete both branches, you can research Ballistics and train a Rifle Company.
 
-![Ballistics selected in the technology tree, with incoming lines from Field Tactics and Applied Mechanics](./docs/art/technology-tree-v721.webp)
+![Ballistics selected in the technology tree, with incoming lines from Field Tactics and Applied Mechanics](./docs/art/technology-tree-v731.webp)
 
 **How can a port city earn more gold?** Find **Harbor Commissions** in the civics tree. It requires both **Public Works** and **County Federation**. Trace County Federation back to **Land Registry**. Adopting Harbor Commissions raises income in each city with a harbor.
 
-![Harbor Commissions selected in the civics tree, with Public Works and County Federation as its immediate prerequisites](./docs/art/civics-tree-v721.webp)
+![Harbor Commissions selected in the civics tree, with Public Works and County Federation as its immediate prerequisites](./docs/art/civics-tree-v731.webp)
 
 [Watch the 27-second research walkthrough from v7.2.1 (MP4)](https://wanzhengyan.github.io/Civilization-CA/film/councils-v721.mp4)
-
-## Your first campaign
-
-The tutorial opens on the Los Angeles map with a settler at Pasadena and no rival civilizations. Found your capital, then make your first technology, civic and production choices with the same controls used in a regular campaign. The tutorial has its own save. Come back to the tutorial link to resume, or keep playing after the last lesson.
-
-Three decisions will get you through the opening.
-
-1. **What does the city need?** Start with a Scout to explore. Open **City production** to see the Settler card, your current population and the requirement of 3 residents to train or buy one. One resident leaves when the unit deploys, so a city of 3 goes back to 2. Choose Agronomy for food or Workshop Engineering to unlock the Workshop and speed up construction.
-2. **Do you need the next hex now?** Open **Influence** to see which parcel your city will gain from natural growth. You can wait, or spend 6 influence to take that parcel immediately. The panel shows the location, time saved and balance after purchase.
-3. **Who still needs orders?** The button at the lower right opens the next unfinished decision. It will take you to an idle city or a unit with movement left. **Skip this turn** keeps the unit in place and preserves its remaining movement if you change your mind. With all decisions resolved, the button becomes **End turn**.
-
-The left production drawer names the city and centers it on the exposed map. Pick a highlighted parcel for buildings such as the Academy. Walls always use the city center. After Motorization, a city with walls can build Modern fortifications and fire once per round at a visible enemy field formation within two hexes.
 
 ## Armies and rivals
 
@@ -87,7 +89,7 @@ The gazetteer covers **3 counties, 9 cities and 6 field sites or coastal works**
 
 Pick a region on the homepage to carry it into setup. The setup page shows the landscape for that region and keeps the homepage navigation and language controls while you choose opponents and victory rules.
 
-![Los Angeles single-player setup from v7.2.1 with one Easy computer opponent](./docs/art/campaign-setup-v721.webp)
+![Los Angeles single-player setup with one Easy computer opponent](./docs/art/campaign-setup-v731.webp)
 
 | Mode | How it works |
 | --- | --- |

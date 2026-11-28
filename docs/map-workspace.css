@@ -62,9 +62,19 @@ body:not(.on-title) .map-workspace {
 .map-workspace .command-inspector {display:block;right:var(--gutter);width:var(--field);min-height:0}
 .map-workspace .command-inspector .panel-head {height:35px}
 .map-workspace .inspector-art {height:103px;min-height:0;max-height:none}
-.map-workspace .turn-panel {display:flex;right:var(--gutter);bottom:max(29px,env(safe-area-inset-bottom));width:var(--field);min-height:50px;padding:8px 10px;flex-direction:row;align-items:center;justify-content:space-between;gap:6px;margin:0}
+.map-workspace .turn-panel {
+  display:flex;right:max(var(--gutter),env(safe-area-inset-right));bottom:max(29px,env(safe-area-inset-bottom));
+  min-height:50px;padding:8px 10px;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;margin:0;
+}
+@media (min-width:821px) and (min-height:511px) {
+  /* Match the inspector for short orders; allow longer orders room beside the central dock. */
+  .map-workspace .turn-panel {width:max-content;min-width:var(--field);max-width:min(24rem,calc(50% - 7rem - var(--gutter)))}
+}
+.map-workspace .turn-top,.map-workspace .turn-top>div:last-child {min-width:0}
+.map-workspace #turn-owner,.map-workspace #end-label {min-width:0;white-space:normal;overflow-wrap:anywhere}
+.map-workspace #end-turn:focus-visible {outline:2px solid #f1d398;outline-offset:2px}
 .map-workspace .turn-top h2 {font-size:20px;white-space:nowrap}
-.map-workspace .turn-panel .end-turn {width:auto;margin:0;min-width:85px;min-height:35px;padding:5px 9px}
+.map-workspace .turn-panel .end-turn {flex:0 1 auto;width:auto;max-width:100%;margin:0;min-width:85px;min-height:35px;padding:5px 9px}
 .map-workspace .map-dock {bottom:max(20px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;gap:3px;align-items:center;padding:3px}
 .map-workspace .dock-button {display:flex;align-items:center;gap:5px;padding:7px 11px;min-height:32px;color:#e1d4b5;border-radius:3px;font-size:12px}
 .map-workspace .dock-button svg {width:17px;height:17px}
@@ -106,7 +116,7 @@ body:not(.on-title):has(.map-workspace) #visitor-counts {z-index:4}
   .map-workspace .map-dock{left:max(5px,env(safe-area-inset-left));right:auto;bottom:max(24px,env(safe-area-inset-bottom));transform:none;padding:2px;gap:1px;border-radius:5px}
   .map-workspace .dock-button{flex-direction:column;justify-content:center;gap:2px;padding:3px 4px;min-height:42px;min-width:43px;font-size:10px;line-height:1.05}
   .map-workspace .dock-button svg{width:15px;height:15px}
-  .map-workspace .turn-panel{display:flex;right:max(5px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));width:auto;max-width:calc(100% - 208px);min-height:48px;padding:3px 5px;gap:4px;flex-wrap:nowrap}
+  .map-workspace .turn-panel{display:flex;right:max(5px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));width:auto;max-width:calc(100% - 216px - env(safe-area-inset-left) - env(safe-area-inset-right));min-height:48px;padding:5px 7px;gap:6px;flex-wrap:nowrap}
   .map-workspace .turn-panel .turn-top{gap:0}
   .map-workspace .turn-top h2{font-size:14px}
   .map-workspace .turn-top .eyebrow,.map-workspace .turn-icon{display:none}
@@ -147,7 +157,8 @@ body:not(.on-title):has(.map-workspace) #visitor-counts {z-index:4}
 @media(max-width:365px){
   .map-workspace .brand-mark{display:none}
   .map-workspace .dock-button{min-width:38px;font-size:9px}
-  .map-workspace .turn-panel{max-width:calc(100% - 174px)}
+  .map-workspace .turn-panel{max-width:calc(100% - 198px - env(safe-area-inset-left) - env(safe-area-inset-right));flex-direction:column;align-items:stretch}
+  .map-workspace .turn-panel .turn-top h2{font-size:12px;line-height:1.1}
 }
 @media(max-height:510px) and (min-width:600px){
   .map-workspace .map-heading{left:auto;right:8px;transform:none}
@@ -205,7 +216,7 @@ body:not(.on-title):has(.map-workspace) #visitor-counts {z-index:4}
   border-radius:12px;background:#c7daca;color:#203b33;font:600 11px/1 system-ui,sans-serif;
 }
 @media(max-width:540px) {
-  .map-workspace .turn-panel:has([data-turn-count]:not([hidden])) {flex-direction:column;align-items:stretch;gap:1px}
+  .map-workspace .turn-panel:has([data-turn-count]:not([hidden])) {flex-direction:column;align-items:stretch;gap:6px}
   .map-workspace .turn-panel:has([data-turn-count]:not([hidden])) .turn-top h2 {font-size:12px;line-height:1.1}
   .map-workspace #end-turn:has([data-turn-count]:not([hidden])) {min-height:32px}
 }
