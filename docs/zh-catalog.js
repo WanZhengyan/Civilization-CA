@@ -506,6 +506,7 @@ Regional campaign|地区战役
 Campaign map|战役地图
 Game navigation|游戏导航
 Map room|地图
+Map explorer|地图探索器
 Field guide|游戏指南
 Chronicle|战史
 Multiplayer|多人联机

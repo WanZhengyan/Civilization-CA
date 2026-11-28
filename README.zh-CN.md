@@ -4,7 +4,9 @@
 
 **[开始帕萨迪纳新手教程](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [开始单人战役](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [创建联机房间](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[游戏主页](https://wanzhengyan.github.io/Civilization-CA/) · [v6.7.0 更新记录](./CHANGELOG.md) · [English](./README.md)
+[游戏主页](https://wanzhengyan.github.io/Civilization-CA/) · [v7.0.1 更新记录](./CHANGELOG.md) · [English](./README.md)
+
+[地图系列版本记录](./VERSIONS.md)
 
 ![洛杉矶战役实机画面，左侧显示城市研究，右侧显示侦察兵的可用指令](./docs/art/relief-gameplay.webp)
 

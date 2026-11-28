@@ -1,3 +1,4 @@
+import {mountCampaignExplorer} from './campaign-explorer.js';
 import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {mountTutorialCoach} from './tutorial-coach.js';
 import {mountTurnResults} from './turn-results.js';
@@ -152,6 +153,7 @@ function customCity(city){return Boolean(city && city.name!==mapRegion.byId[city
 function cityNameAttrs(city){return customCity(city)?' translate="no"':''}
 function lobby(){return view.mode==="online"&&view.room?.phase==="lobby"}
 function mayOrder(){return roomSeatTurn(view.state,view.seat)==="active"&&!lobby()&&!view.busy}
+let updateExplorer;
 let view,atlas,battleReports,selectedTile,selectedUnit,kind="tile",order="",matchKey="",activeRoster="units",timer,productionCity=null;
 let moveBar,moveDraft=null,freightBar,freightTarget=null;
 let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEvent="";
@@ -914,6 +916,7 @@ function paint(next){
   redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();showCampusOpening(state,seat,key);populationLedger();
   if(el("production-modal").open)productionOptions();
   if(el("combat-modal").open)drawCombat();
+  updateExplorer?.(key);
   battleReports.update(next,key,mapRegion);
   tutorialCoach?.paint();
 }
@@ -1285,6 +1288,7 @@ function mount(){
     openMapOnMobile();
     el("atlas").querySelector("canvas")?.focus({preventScroll:true});
   }
+  updateExplorer=mountCampaignExplorer({button:el('open-explorer'),getView:()=>view,locate:locateDistrict});
   Game.init({render:paint,locate:locateDistrict,toast}).catch(error=>{console.error(error);toast("The game could not load. Refresh to try again.")});
 }
 mount();

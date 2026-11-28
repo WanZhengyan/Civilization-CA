@@ -1,5 +1,9 @@
 # Campaign updates
 
+## v7.0 atlas series
+
+The [version ledger](./VERSIONS.md) records the player-facing change in every playable build. Each version is available from the main branch history.
+
 ## v6.7.0 — Grow a city before sending settlers
 
 Cities need **3 residents** to train or buy a Settler. One resident leaves when the unit deploys. A size-three city therefore becomes size two. The starting Settler is still free, and a newly founded capital can train a Scout immediately. If a city falls below three while training, its work waits for the population to recover. A blocked deployment hex also preserves the resident.
