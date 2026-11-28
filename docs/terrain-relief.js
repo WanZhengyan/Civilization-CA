@@ -48,8 +48,9 @@ function path(g,vertices){
   vertices.forEach((p,i)=>g[i?'lineTo':'moveTo'](...reliefProject(p)));
   g.closePath();
 }
-function facet(g,points,rgb,boost=1){
-  path(g,points);g.fillStyle=color(rgb,reliefFacetLight(...points)*boost);g.fill();
+function facet(g,points,rgb,boost=1,softness=0){
+  const light=reliefFacetLight(...points),ambient=.56+LIGHT[2]/LIGHT_LENGTH*.54;
+  path(g,points);g.fillStyle=color(rgb,(light+(ambient-light)*softness)*boost);g.fill();
   // Match the fill at subpixel boundaries instead of exposing white seams.
   g.strokeStyle=g.fillStyle;g.lineWidth=.34;g.lineJoin='round';g.stroke();
 }
@@ -77,7 +78,8 @@ function reliefProfile(tile){
 }
 function elevation(tile,dx,dy){
   if(tile.terrain==='ocean'||tile.waterway)return 0;
-  const boundary=Math.min((W/2-Math.abs(dx))/9,(H/2-Math.abs(dy)-Math.abs(dx)*H/(2*W))/8);
+  const rocky=tile.terrain==='mountains';
+  const boundary=Math.min((W/2-Math.abs(dx))/(rocky?9:17),(H/2-Math.abs(dy)-Math.abs(dx)*H/(2*W))/(rocky?8:17));
   const edge=ease(boundary),pad=ease((Math.hypot(dx,dy)-8)/9),profile=reliefProfile(tile);
   const x=(dx*profile.cos-dy*profile.sin)*profile.mirror,y=dx*profile.sin+dy*profile.cos;
   let z;
@@ -89,14 +91,17 @@ function elevation(tile,dx,dy){
     z*=.93+.10*Math.abs(Math.sin(x*.21+y*.085+profile.crag));
   }else if(tile.terrain==='hills'){
     const [a,b]=profile.peaks;
-    z=(a[4]*.51)*gaussian(x,y,a[0],a[1],a[2]*1.65,a[3]*1.5)+
-      (b[4]*.46)*gaussian(x,y,b[0],b[1],b[2]*1.7,b[3]*1.6);
+    z=(a[4]*.24)*gaussian(x,y,-19,a[1]-13,a[2]*1.8,a[3]*1.9)+
+      (b[4]*.045)*gaussian(x,y,21,b[1]-7,b[2]*1.8,b[3]*1.8);
+    // Broad side shoulders leave a valley through the center. A radial cutout
+    // in a high plateau creates a crater, so rolling hills use a gentle saddle.
+    return z*edge*ease((Math.abs(x)-5)/13)*profile.amplitude;
   }else if(tile.terrain==='forest'){
-    z=7*gaussian(x,y,-16,13+profile.offset,23,23)+5*gaussian(x,y,20,2,17,21);
+    z=1.5*gaussian(x,y,-16,13+profile.offset,27,27)+.8*gaussian(x,y,20,2,23,24);
   }else if(tile.terrain==='coast'){
-    z=1.4*gaussian(x,y,10,9,23,24);
+    z=.35*gaussian(x,y,10,9,23,24);
   }else{
-    z=2.8*gaussian(x,y,-18,11,19,24)+1.7*gaussian(x,y,20,-2,15,20);
+    z=0;
   }
   return z*edge*pad*profile.amplitude;
 }
@@ -127,7 +132,8 @@ function groundFaces(tile,region){
     const z=points.reduce((sum,p)=>sum+p[2],0)/3;
     const stone=tile.terrain==='mountains'?clamp((z-7)/25,0,1):tile.terrain==='hills'?clamp((z-20)/45,0,.16):0;
     const material=mix(base,region==='sf'?[178,185,167]:[196,185,157],stone);
-    return {points,material,boost:.985+rng()*.025,depth:faceDepth(points)};
+    return {points,material,boost:tile.terrain==='mountains'?.99+rng()*.016:1,
+      softness:tile.terrain==='mountains'?0:tile.terrain==='hills'?.55:.8,depth:faceDepth(points)};
   });
 }
 function groundMarks(g,tile){
@@ -181,16 +187,31 @@ function boulder(g,x,y,z,width,height){
   const peak=[x-width*.15,y-width*.03,z+height];
   for(const i of [2,1,3,0,4,5])facet(g,[points[i],points[(i+1)%6],peak],[164,163,133]);
 }
-function urbanBuilding(g,x,y,z,height,width,rng){
-  const depth=3+rng()*4;
-  const warm=rng()>.45,wall=warm?[223,211,171]:[186,204,188],roof=warm?[172,120,76]:[126,163,157];
-  const {D,C}=cuboid(g,x,y,z,width,depth,height,wall,roof);
-  for(let floor=2.6;floor<height-1;floor+=3.5){
-    const y1=y+depth/2+.1;
-    for(const dx of [-width*.22,width*.22])line(g,[[x+dx,y1,z+floor],[x+dx,y1,z+floor+1.2]],'#486f6c',.65);
-  }
-  line(g,[D,C],'#f5e6be',.6);
+function pitchedRoof(g,x,y,z,width,depth,height,roof){
+  const a=[x-width/2,y-depth/2,z],b=[x+width/2,y-depth/2,z],c=[x+width/2,y+depth/2,z],d=[x-width/2,y+depth/2,z];
+  const back=[x,y-depth/2,z+height],front=[x,y+depth/2,z+height];
+  flat(g,[a,d,front,back],color(roof,1.13));flat(g,[b,c,front,back],color(roof,.74));
+  flat(g,[d,c,front],color(roof,.90));line(g,[back,front],color(roof,1.32),.4);
 }
+function urbanBuilding(g,x,y,z,height,width,rng){
+  const warm=rng()>.28,wall=warm?[223,211,171]:[191,205,188],roof=warm?[169,112,71]:[118,156,145];
+  const depth=4.5+rng()*3,mainWidth=width*.72,wallHeight=height*.76,roofHeight=height-wallHeight;
+  cuboid(g,x-width*.23,y-1,z,mainWidth,depth,wallHeight,wall,roof);
+  pitchedRoof(g,x-width*.23,y-1,z+wallHeight,mainWidth+.6,depth+.6,roofHeight,roof);
+  // A small attached house and courtyard make a readable neighborhood rather
+  // than an evenly spaced skyline of single narrow towers.
+  const annexX=x+width*.36,annexY=y+depth*.36,annexWidth=width*.55,annexDepth=depth*.74;
+  const annexHeight=Math.min(4,height*.62);
+  cuboid(g,annexX,annexY,z,annexWidth,annexDepth,annexHeight,wall,roof);
+  pitchedRoof(g,annexX,annexY,z+annexHeight,annexWidth+.5,annexDepth+.5,1.2,roof);
+  for(let floor=1.6;floor<wallHeight-.4;floor+=2.7){
+    const yy=y-1+depth/2+.1;
+    for(const dx of [-mainWidth*.27,mainWidth*.1])line(g,[[x-width*.23+dx,yy,z+floor],[x-width*.23+dx,yy,z+floor+.8]],'#4b6860',.7);
+  }
+  const doorX=annexX-annexWidth*.16,doorY=annexY+annexDepth/2+.1;
+  line(g,[[doorX,doorY,z+.2],[doorX,doorY,z+1.5]],'#6b7557',.85);
+}
+
 export function reliefScenery(tile,region='la',isLandmark=false){
   if(tile.terrain==='ocean'||tile.waterway)return [];
   const [x,y]=pos(tile.q,tile.r),rng=randomFor(tile,171),features=[],style=regionStyle(region);
@@ -198,9 +219,9 @@ export function reliefScenery(tile,region='la',isLandmark=false){
   const add=(a,b,kind,index)=>{
     const dx=a+(rng()-.5)*6,dy=b+(rng()-.5)*5,z=elevation(tile,dx,dy),variation=rng();
     const forest=tile.terrain==='forest';
-    const height=kind==='rock'?2.4+variation*4:kind==='building'?4+variation*14:
+    const height=kind==='rock'?2.4+variation*4:kind==='building'?(index===0&&variation>.4?8.5+variation*3.5:3.8+variation*3):
       (forest?style.height[0]:7)+variation*(forest?style.height[1]-style.height[0]:8);
-    const width=kind==='rock'?2+variation*2.7:kind==='building'?4+variation*3.8:
+    const width=kind==='rock'?2+variation*2.7:kind==='building'?7.5+variation*2.5:
       (kind==='pine'?3.3:forest?4.1:3)+variation*2.1;
     // Keep the projected center, not merely the ground anchor, free for a
     // unit's feet and selection ring. A southern canopy can otherwise hide it.
@@ -341,9 +362,16 @@ export function renderReliefAtlas(tiles,map,landmarkTiles=[],paintLandmark){
     flat(g,hexPoints(tile),color(water,.97+hash(tile.q,tile.r,8)*.04));
     seaDetails(g,tile,known);
   }
+  // Opaque soil underneath every triangle prevents antialiased mesh seams
+  // from appearing as a dense triangular grid on otherwise level ground.
+  const flatLight=reliefFacetLight([0,0,0],[1,0,0],[0,1,0]);
+  for(const tile of ordered)if(tile.terrain!=='ocean'&&!tile.waterway){
+    const base=regionStyle(map.id).colors[tile.terrain]||COLORS[tile.terrain]||COLORS.plains;
+    flat(g,hexPoints(tile),color(base,flatLight));
+  }
   const faces=ordered.flatMap(tile=>groundFaces(tile,map.id));
   faces.sort((a,b)=>a.depth-b.depth);
-  for(const face of faces)facet(g,face.points,face.material,face.boost);
+  for(const face of faces)facet(g,face.points,face.material,face.boost,face.softness);
   for(const tile of ordered)groundMarks(g,tile);
   coastBanks(g,ordered,known);roads(g,map,known);
   const scene=ordered.flatMap(tile=>reliefScenery(tile,map.id,landmarks.has(tile.id)));

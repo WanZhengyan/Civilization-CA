@@ -104,3 +104,20 @@ test('regional groves vary density and height while every projected unit clearin
   assert.deepEqual(reliefProject([3,10,7]),reliefProject([3,20,14]));
   assert.ok(reliefDepth([3,20,14])>reliefDepth([3,10,7]));
 });
+
+test('grassland remains level, wooded ground stays low and foothills do not become mesas',()=>{
+  const maximum={plains:0,forest:0,hills:0,mountains:0};
+  let lowHomes=0,homes=0;
+  for(let q=0;q<8;q++)for(let r=0;r<4;r++){
+    for(const terrain of Object.keys(maximum)){
+      maximum[terrain]=Math.max(maximum[terrain],...terrainReliefMesh({q,r,id:q+','+r,terrain}).flat().map(p=>p[2]));
+    }
+    for(const building of reliefScenery({q,r,id:q+','+r,terrain:'urban'}))if(building.kind==='building'){
+      homes++;if(building.height<7)lowHomes++;
+    }
+  }
+  assert.equal(maximum.plains,0,'level ground must not reveal a repeating height mesh');
+  assert.ok(maximum.forest<2.2,'woodland is distinguished by trees rather than raised ground shelves');
+  assert.ok(maximum.hills<15&&maximum.mountains>40,'rolling foothills remain visibly lower than rocky peaks');
+  assert.ok(lowHomes/homes>.85,'urban scenery is primarily low homes, with a few taller buildings');
+});
