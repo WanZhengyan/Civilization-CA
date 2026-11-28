@@ -17,6 +17,14 @@ Return a ship with movement to your own berth and pay 6 gold to provision it.|�
 Voyage supplies stowed for the next sailing turn.|已为下回合远航装载物资。
 ${freightGuide[0]}|沿岸运送粮食
 ${freightGuide[1]}|渔船队在自己的港口装载 4 粮食，需要先探明通往另一友方港口的水路。驶入己方或盟友的另一泊位，可以卸下粮食并赚取 2 金币加两泊位间直线格数的运费，最多 8 金币。装卸会耗尽剩余移动力，原港退货只退还粮食。
+Chart course|查看航线
+Earliest unloading|最早可卸货
+Load the crate at its departure harbor.|先在始发港装货。
+Unload with movement remaining.|船只尚有移动力时可以卸货。
+Unloading needs movement after arrival.|抵达后须有剩余移动力才能卸货。
+The charted channel is occupied.|已探明的航道被占用。
+Close chart|关闭航线
+Review sailing leg|查看本段航程
 Coastal freight|沿海货运
 Crate aboard|已装货
 Empty hold|空舱

@@ -1,3 +1,4 @@
+import {unchartedFrom,scoutingRoutes,openScoutingRoutes} from './scout-routes.js';
 import {notebookReport,notebookPanel} from './regional-atlas.js';
 import {FIELD_STATIONS,fieldStationReport,nearestKnownStation,stationInstruction} from './field-stations.js';
 import {hexDistance} from './rules.js';
@@ -6,7 +7,8 @@ import {mountDiplomacy,paintDiplomacy,publicContacts} from './diplomacy-ui.js';
 import {chartedWaterSites,knownCrossings,mountWaterKey,waterKind} from './water-key.js';
 import {getFreightManifest} from './rules.js';
 import {voyageQuote,voyageAllowance} from './voyage-stores.js';
-import {freightPanel,voyagePanel} from './harbor-ledger-ui.js';
+import {freightCourse} from './freight-course.js';
+import {freightPanel,freightCoursePanel,voyagePanel} from './harbor-ledger-ui.js';
 import {fishingTask} from './maritime.js';
 import {modeLabels} from './campaign-choices.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
@@ -26,7 +28,7 @@ import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
 import {openCityHall,paintCityHall} from './city-hall.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
-import {getPopulationReport,getCitizenWorkforce} from "./rules.js";
+import {getPopulationReport} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
 import {addPolicyPanel,updateCivicAgenda} from "./policy-panel.js";
 import {draftOrder, orderButtons, orderReview, paintSiteBar, siteOrderAllowed} from './work-orders.js';
@@ -119,7 +121,7 @@ function cityNameAttrs(city){return customCity(city)?' translate="no"':''}
 function lobby(){return view.mode==="online"&&view.room?.phase==="lobby"}
 function mayOrder(){return roomSeatTurn(view.state,view.seat)==="active"&&!lobby()&&!view.busy}
 let view,atlas,battleReports,selectedTile,selectedUnit,kind="tile",order="",matchKey="",activeRoster="units",timer,productionCity=null;
-let moveBar,moveDraft=null;
+let moveBar,moveDraft=null,freightBar,freightTarget=null;
 let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEvent="";
 const unavailableArt=new Set();
 let surveyUnitId=null;
@@ -134,7 +136,7 @@ function toast(message){
 }
 function select(tile,unit=null,city=false){
   if(!mapRegion.byId[tile])return;
-  moveDraft=null;order="";selectedTile=tile;
+  moveDraft=null;freightTarget=null;order="";selectedTile=tile;
   const candidates=view.state.units.filter(u=>u.tile===tile);
   const piece=candidates.find(u=>sameId(u.id,unit)) || (city ? null : candidates.find(u=>u.seat===view.seat)||candidates[0]);
   const place=cityAt(tile);
@@ -168,7 +170,7 @@ function onMapSelect(tileId,unitId,cityPlate=false,pointer="keyboard"){
     const options=getUnitOptions(view.state,unit.id);
     if(options.attacks.includes(tileId)){moveDraft=null;openCombat(unit.id,tileId);return}
     if(options.moves.includes(tileId) && order!=="attack"){
-      if(reviewPointerMove(pointer,compactMap())){
+      if(freightTarget || reviewPointerMove(pointer,compactMap())){
         moveDraft=previewMove(view.state,unit,tileId);
         openMapOnMobile();
         updateMap();
@@ -242,6 +244,7 @@ function updateHint(id){
       const route=getRouteDetail(view.state,u.id,id);
       const left=u.moves-route.cost;
       hint+=" · Move costs "+route.cost+(route.cost===1?" point":" points")+" · "+left+(left===1?" point left":" points left");
+      if(u.type==="scout" && view.state.intel)hint+=" · Newly charted hexes · "+unchartedFrom(view.state,id,explored).length;
       if(route.crossings.length)hint+=" · "+route.crossings.join(", ");
     }
   }
@@ -293,7 +296,7 @@ function cityQueue(city){
   if(!q)return '<p class="inspect-caption idle-status"><i></i> This city is ready to produce.</p>';
   const turns=projectTurns(city);
   const remaining=q.progress>=q.required?'Awaiting deployment':turnsText(turns)+' left';
-  return '<div class="queue-info">'+illustration(q.item)+'<div class="queue-name"><strong><span>Producing</span> · <span>'+esc(items[q.item]||q.item)+'</span></strong><small>'+remaining+'</small>'+(q.site?'<small><span>Construction tile</span> · '+esc(mapRegion.byId[q.site]?.name||q.site)+' · '+esc(q.site)+'</small>':'')+'</div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
+  return '<div class="queue-info">'+illustration(q.item)+'<div class="queue-name"><strong><span>Producing</span> · <span>'+esc(items[q.item]||q.item)+'</span></strong><small>'+remaining+'</small>'+(q.site?'<small><span>Construction tile</span> · <span>'+esc(mapRegion.byId[q.site]?.name||q.site)+'</span> · '+esc(q.site)+'</small>':'')+'</div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
 }
 function depositStrip(id){
   return RESOURCES[id] ? '<div class="deposit-strip">'+illustration(id)+'<small>Resource</small><strong>'+esc(RESOURCES[id].name)+'</strong></div>' : '';
@@ -358,6 +361,7 @@ function inspect(){
     if(own){
       const moving=o.moves.length>0 && order!=="inspect" && order!=="attack";
       actions+=actionButton("move",moving?"Move unit":"Show moves",moving?o.moves.length+" hexes":u.moves?"Select":"Spent","green",disabled||!o.moves.length,moving);
+      if(u.type==='scout' && state.intel && o.moves.length)actions+=actionButton('scout-routes','Scouting routes','Compare new ground','',disabled);
       if(u.type==="settler"){
         actions+=actionButton("found",foundingLabel(state,view.seat),o.canFound?"Settle here":"Unavailable","gold",disabled||!o.canFound);
         const assessment=survey.get(u.tile);
@@ -490,6 +494,7 @@ function currentMove(){
   const unit=getUnit();
   if(!moveDraft || unit?.seat!==view.seat || !mayOrder())return null;
   if(order==="inspect" || order==="attack" || parcelOrder || battle)return null;
+  if(moveDraft.freightBerth && currentFreightCourse()?.leg!==moveDraft.tile)return null;
   return previewMove(view.state,unit,moveDraft.tile);
 }
 function paintMove(){
@@ -504,7 +509,13 @@ function paintMove(){
   text("move-place",tile.name);
   text("move-coord",tile.q+" / "+tile.r);
   text("move-cost",moveDraft.cost);
-  text("move-left",moveDraft.left+" / "+getUnit().maxMoves);
+  text("move-left",moveDraft.left+" / "+voyageAllowance(getUnit()));
+  el('move-frontier').hidden=!moveDraft.frontier;
+  if(moveDraft.frontier)text('move-new',moveDraft.frontier.length);
+}
+function currentFreightCourse(){
+  const unit=getUnit();
+  return freightTarget && unit?.seat===view.seat ? freightCourse(view.state,unit,freightTarget,selectedOptions?.moves || []) : null;
 }
 function updateMap(){
   paintMove();
@@ -516,7 +527,16 @@ function updateMap(){
     if(assessment.status==="now")settlementSites.now.push(id);
     else if(assessment.status==="next-turn")settlementSites.nextTurn.push(id);
   }
-  atlas.update({reviewPath:moveDraft?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  const course=currentFreightCourse();
+  if(!course)freightTarget=null;
+  if(freightBar){
+    freightBar.hidden=!course || Boolean(moveDraft);
+    if(course && !moveDraft) {
+      const html=freightCoursePanel(course,esc,mayOrder());
+      if(freightBar._markup!==html){freightBar.innerHTML=html;freightBar._markup=html;}
+    }
+  }
+  atlas.update({frontierHexes:moveDraft?.frontier,reviewPath:moveDraft?.path ?? course?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -791,9 +811,13 @@ function showCampusOpening(state,seat,key){
 }
 function populationLedger() {
   paintCityHall(view.state,view.seat,mayOrder());
-  paintCitizenLedger(view.state,view.seat,mayOrder(),city=>({
-    population:getPopulationReport(view.state,city.id),workforce:getCitizenWorkforce(view.state,city.id),projects:getProductionOptions(view.state,city.id)
-  }));
+  paintCitizenLedger(view.state,view.seat,mayOrder(),city=>getProductionOptions(view.state,city.id,{replace:true}));
+}
+function reviewHousing(cityId,item) {
+  const city=ownCities().find(c=>c.id===cityId);
+  if(!city || !mayOrder())return;
+  const option=getProductionOptions(view.state,city.id,{replace:true}).find(o=>o.item===item && o.enabled);
+  if(option) startPlacement(draftOrder(city,option,false),city);
 }
 function chooseOrder(key){
   if(moveDraft){moveDraft=null;updateMap();}
@@ -804,7 +828,7 @@ function chooseOrder(key){
   }
   if(key==="citizens"){
     const c=cityAt(selectedTile);
-    if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}),(city,item)=>Game.doAction({type:"produce",city,item}));populationLedger()}
+    if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}),reviewHousing);populationLedger()}
     return;
   }
   if(key==="works-host"){
@@ -834,6 +858,15 @@ function chooseOrder(key){
   if(mayOrder() && ['record-terrain','file-atlas'].includes(key)){
     Game.doAction({type:key==='record-terrain'?'recordTransect':'fileTransect',unit:u.id});return;
   }
+  if(key.startsWith("freight-course:")){
+    freightTarget=key.slice("freight-course:".length);
+    const course=currentFreightCourse();
+    if(course){
+      order="";openMapOnMobile();updateMap();atlas.focus(course.port.berth);
+      freightBar.querySelector("button")?.focus({preventScroll:true});
+    }
+    return;
+  }
   if(key==="locate-station"){
     const station=nearestKnownStation(view.state,u,explored,hexDistance);
     if(station){atlas.focus(station);openMapOnMobile()}
@@ -850,6 +883,18 @@ function chooseOrder(key){
   if(key==="fortify"){order="";Game.doAction({type:"fortify",unit:u.id});return}
   if(["provisionVoyage","loadFreight","landFreight","returnFreight","landCatch","haulFish"].includes(key)){order="";Game.doAction({type:key,unit:u.id});return}
   if(key==="recover"){order="";Game.doAction({type:"recover",unit:u.id});return}
+  if(key==='scout-routes'){
+    const origin=matchKey,unitId=u.id,round=view.state.round;
+    openScoutingRoutes(scoutingRoutes(view.state,u,selectedOptions.moves),mapRegion,esc,target=>{
+      const unit=getUnit();
+      if(!mayOrder() || matchKey!==origin || view.state.round!==round || unit?.id!==unitId || unit.seat!==view.seat)return;
+      const draft=previewMove(view.state,unit,target);
+      if(!draft){toast('The route has changed. Choose a destination again.');return}
+      moveDraft=draft;order="";openMapOnMobile();updateMap();atlas.focus(target);
+      moveBar.querySelector('[data-move-confirm]').focus({preventScroll:true});
+    });
+    return;
+  }
   if(key==="move"){
     order="";redraw();openMapOnMobile();return;
   }
@@ -918,7 +963,8 @@ function mount(){
   moveBar.className="move-review";moveBar.hidden=true;moveBar.setAttribute("aria-label","Movement preview");
   moveBar.innerHTML=`<div class="move-place"><strong id="move-place"></strong> <small id="move-coord"></small></div>
     <div class="move-budget" aria-live="polite"><span>Move cost</span> <b id="move-cost"></b>
-    <span>Remaining movement</span> <b id="move-left"></b></div>
+    <span>Remaining movement</span> <b id="move-left"></b>
+    <span id="move-frontier" hidden><span>Newly charted hexes</span> <b id="move-new"></b></span></div>
     <div class="move-controls"><button data-move-cancel type="button">Cancel</button>
     <button data-move-confirm type="button">Confirm move</button></div>`;
   document.querySelector(".map-messages").prepend(moveBar);
@@ -931,6 +977,25 @@ function mount(){
     el("atlas").querySelector("canvas")?.focus({preventScroll:true});
     if(valid)Game.doAction({type:"move",unit:draft.unit,tile:draft.tile});
     else if(commit)toast("The route has changed. Choose a destination again.");
+  };
+  freightBar=document.createElement("section");
+  freightBar.className="move-review freight-chart";freightBar.hidden=true;
+  document.querySelector(".map-messages").prepend(freightBar);
+  freightBar.onclick=e=>{
+    if(e.target.closest("[data-course-close]")){
+      const source="freight-course:"+freightTarget;
+      freightTarget=null;updateMap();atlas.focus(getUnit().tile);inspectMapOnMobile();
+      const button=[...el("entity-commands").querySelectorAll("[data-order]")].find(item=>item.dataset.order===source);
+      button?.focus({preventScroll:true});
+    } else if(e.target.closest("[data-course-leg]") && mayOrder()){
+      const course=currentFreightCourse();
+      if(course?.leg){
+        const leg=previewMove(view.state,getUnit(),course.leg);
+        if(!leg)return;
+        moveDraft={...leg,freightBerth:course.port.berth};updateMap();atlas.focus(course.leg);
+        moveBar.querySelector("[data-move-confirm]")?.focus({preventScroll:true});
+      }
+    }
   };
   mountDiplomacy(action=>Game.doAction(action));
   document.querySelector('.map-messages')?.prepend(parcelBar);

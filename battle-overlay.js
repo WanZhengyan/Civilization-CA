@@ -23,7 +23,7 @@ function ring(g,x,y,r,color,width) {
 
 export function paintBattleReport(g,replay,scale,now) {
   const f=Math.min(1,Math.max(0,(now-replay.start)/replay.duration));
-  if(f>=1)return false;
+  if(f>=1 && !replay.pinned)return false;
   const {report,to,from,still,color}=replay,[tx,ty]=to;
   const screen=Math.max(.72,Math.min(1.85,1/scale));
   g.save();g.lineCap='round';g.lineJoin='round';
@@ -72,5 +72,5 @@ export function paintBattleReport(g,replay,scale,now) {
       g.fillStyle=ranged?'#c5f2d6':'#ffe2bb';g.fillText(label,xx,yy);
     }
   }
-  g.restore();return !still;
+  g.restore();return !still && f<1;
 }

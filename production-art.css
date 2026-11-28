@@ -102,3 +102,8 @@
 .item-illustration[data-art="walls"] {background-position:66.6667% 100%}
 .item-illustration[data-art="workboat"] {background-position:83.3333% 100%}
 .item-illustration[data-art="workshop"] {background-position:100% 100%}
+
+.shipment-quote { margin: .65rem 0 1rem; padding: .65rem .8rem; border-left: 2px solid #c8a768; background: #20292c; }
+.shipment-quote div { display: flex; justify-content: space-between; align-items: baseline; gap: .8rem; }
+.shipment-quote strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.shipment-quote p { margin: .35rem 0 0; line-height: 1.4; color: #e2d5b9; }

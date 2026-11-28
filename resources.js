@@ -104,19 +104,26 @@ export function bankHarvest(state, seat, byId, neighbors) {
   const balances=resourceAccounts(state,seat,byId,neighbors);
   state.players[seat].stockpile=Object.fromEntries(Object.entries(balances).map(([key,b])=>[key,b.stock+b.income]));
 }
+export const SHIPMENT = {goods:2, gold:5, yield:4};
+
+export function materialShipmentGain(city) {
+  const project=city?.queue;
+  return project ? Math.min(SHIPMENT.yield,Math.max(0,project.required-project.progress)) : 0;
+}
+
 export function shipGoods(state, seat, order) {
   const player=state.players[seat];
   const {resource,market}=order;
-  if (!Object.hasOwn(RESOURCES,resource) || (player.stockpile?.[resource]||0)<2) throw new Error('This shipment requires two stored goods.');
+  if (!Object.hasOwn(RESOURCES,resource) || (player.stockpile?.[resource]||0)<SHIPMENT.goods) throw new Error('This shipment requires two stored goods.');
   if (player.lastShipment===state.round) throw new Error('Your shipment for this turn has already left.');
   const city=state.cities.find(c=>c.id===order.city && c.seat===seat);
-  if (market==='sell') player.capital+=5;
+  if (market==='sell') player.capital+=SHIPMENT.gold;
   else if (city && market==='city') {
-    if (isProduce(resource)) city.food+=4;
-    else if (city.queue && city.queue.required>city.queue.progress) city.queue.progress=Math.min(city.queue.required,city.queue.progress+4);
+    if (isProduce(resource)) city.food+=SHIPMENT.yield;
+    else if (materialShipmentGain(city)) city.queue.progress+=materialShipmentGain(city);
     else throw new Error('Select a city with an unfinished production project.');
   } else throw new Error('Choose one of your cities to receive goods.');
-  player.stockpile={...player.stockpile,[resource]:player.stockpile[resource]-2};
+  player.stockpile={...player.stockpile,[resource]:player.stockpile[resource]-SHIPMENT.goods};
   player.lastShipment=state.round;
 }
 export function planShipment(state,seat) {

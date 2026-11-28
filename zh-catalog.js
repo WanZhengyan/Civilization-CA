@@ -7,6 +7,14 @@ import {positionTranslations} from './field-position.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
+section(`
+Scouting routes|侦察路线
+Compare new ground|比较探图范围
+Newly charted hexes|新增已探索地块
+new hex|格新地块
+new hexes|格新地块
+Select a destination to preview it on the map. Each dotted hex will be added to your chart when the scout arrives.|选择目的地可在地图上预览。侦察兵抵达后，虚线标出的地块将加入你的已探索地图。
+`);
 section(positionTranslations);
 import {stationCopy} from './field-stations.js';
 section(stationCopy);
@@ -429,6 +437,13 @@ Base sight radius|基础视野半径
 section(`
 Manage citizens|管理居民
 City planning|城市规划
+Current → proposed|当前 → 调整后
+City production per turn|城市每回合生产力
+Civilization science per turn|文明每回合科研
+Apply focus|采用工作重心
+Current focus|当前工作重心
+Proposed work assignments|调整后的工作地块
+Choose site on map|在地图上选址
 Citizen focus|居民工作重心
 Worked districts|居民工作地块
 Food / production / science per worker|每名居民的粮食 / 生产力 / 科研点
@@ -446,6 +461,7 @@ Residents / housing|居民 / 住房
 Completed|已建成
 Housing full|住房已满
 Residential quarter|住宅区
+Housing capacity|住房容量
 Housing investments|住房建设
 Plan housing|规划住房
 Under construction|正在建设

@@ -809,6 +809,13 @@ import {drawBarbarians} from "./barbarian-art.js";
 
 function paintHexFocus(g,model,scale) {
   const {selectedId,hoverId,byId:lookup}=model;
+  if(model.frontierHexes?.length){
+    g.save();g.strokeStyle='#9bcac3';g.lineWidth=1.4/scale;g.setLineDash([2/scale,3/scale]);
+    for(const id of model.frontierHexes){
+      const tile=lookup.get(id);if(tile)g.stroke(hexPath(tile.q,tile.r));
+    }
+    g.restore();
+  }
   for(const [id,hover] of [[model.targetId||hoverId,true],[selectedId,false]]){
     const t=lookup.get(id);if(!t || (hover && id===selectedId))continue;
     const p=hexPath(t.q,t.r);g.save();
@@ -1288,6 +1295,7 @@ export function createAtlas(host, options = {}) {
         const sites=o.settlementSurvey||[];
         model.settlementSites={now:sites.filter(s=>s.timing==='now').map(s=>s.tile),nextTurn:sites.filter(s=>s.timing==='next'||s.timing==='next-turn').map(s=>s.tile)};
       }
+      if(Object.hasOwn(o,'frontierHexes'))model.frontierHexes=o.frontierHexes;
       if(Object.hasOwn(o,'reviewPath'))model.reviewPath=o.reviewPath;
       if(Object.hasOwn(o,'previewPath'))model.previewPath=o.previewPath||[];
       if(Object.hasOwn(o,'workSites')){model.workSites=o.workSites;model.workSelection=o.workSelection;}
@@ -1303,10 +1311,11 @@ export function createAtlas(host, options = {}) {
       const points=battleMarkers(report,model.byId);if(!points)return;
       const still=Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
       const player=model.players[report.attacker.seat];
-      replay={report,...points,still,color:player?.color || FACTION[player?.faction] || '#d58a6c',start:performance.now(),duration};
+      if(manual && !replay?.pinned && !returnCamera)returnCamera=[cx,cy];
+      replay={report,...points,still,pinned:manual,color:player?.color || FACTION[player?.faction] || '#d58a6c',start:performance.now(),duration};
       const [x,y]=points.to;
       const outside=obscured(x,y,48);
-      if(manual){manualCamera();centerAt(x,y);}
+      if(manual){cancelAnimationFrame(tween);centerAt(x,y);}
       else if(outside && !still && !gesture && performance.now()-lastCameraInput>2600){
         if(!returnCamera)returnCamera=[cx,cy];
         centerAt(x,y);

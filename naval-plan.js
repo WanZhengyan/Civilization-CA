@@ -55,6 +55,13 @@ export function flotillaMove(state,unit,moves,map,defs,distance,allied,fisheryOr
     }
   }else{
     const targets=[...state.units,...state.cities].filter(o=>!allied(state,unit.seat,o.seat));
+    const plan=unit.voyageUnderway && unit.voyagePlan;
+    if (plan && (!state.intel.visible.includes(plan.target) || targets.some(target=>target.tile===plan.target))) {
+      // A moving lookout can lose sight between turns. Sail only to the
+      // firing station charted when we bought stores. Firing needs live sight.
+      const move=course([plan.station]);
+      if(move)return move;
+    }
     if(targets.length){
       const range=defs[unit.type].range;
       const approach=water.filter(id=>!occupied.has(id) && targets.some(t=>distance(id,t.tile)<=range));

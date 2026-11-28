@@ -11,7 +11,7 @@ import {advancementRoutes,promotionOutcome,recoveryAt,nearestServiceStation} fro
 import {fleetBasin,flotillaMove} from './naval-plan.js';
 import {waterKind} from './water-navigation.js';
 import {freightManifest,carryFreight} from './coastal-freight.js';
-import {buyVoyageStores,beginVoyageTurn,navalStoresOrder} from './voyage-stores.js';
+import {buyVoyageStores,beginVoyageTurn,navalStoresOrder,chartSortie} from './voyage-stores.js';
 import {sailTo} from './naval-plan.js';
 import {harborSites,fishingTask,runFishingTask} from './maritime.js';
 import {revisionOf, advanceProduction, verifyProduction, parkedProduction, parkProject, resumeWork, purchasePrice} from './works.js';
@@ -371,7 +371,7 @@ function drawOpeningSeat(seed,teams,count) {
   const pick=options=>options[Math.floor(random()*options.length)];
   return pick(pick([...members.values()]));
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2, campaignVariety=!legacyVictory && researchPace===2} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2, campaignVariety=!legacyVictory && researchPace===2, fieldCommandRevision=campaignVariety ? 1 : 0} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!validVictoryMode(victoryMode)) throw new Error('Choose a valid victory mode.');
   if (!legacyVictory && practice && victoryMode==='conquest') throw new Error('Conquest requires a rival civilization.');
@@ -398,7 +398,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const waterPlan=waterways ? planWaterways(base,seed) : null;
   const map=waterwayChart(base,waterPlan);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, ...(campaignVariety ? {campaignVariety:1} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
+  const next = {seed, mapId, ...(campaignVariety ? {campaignVariety:1} : {}), ...(campaignVariety && fieldCommandRevision===1 ? {fieldCommandRevision} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
     ...(teams ? {teams:[...teams]} : {}), ...(difficulty!=='normal' ? {difficulty} : {}),
     ...(drawInitiative===true ? {firstSeat} : {}), ...(!legacyVictory || scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:firstSeat,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
@@ -1400,6 +1400,11 @@ function unitOrder(state,seat,action) {
     state.players[seat].surveyEnabled=true;
     record(state,seat,'survey','Resource survey completed.',id,{unit:unit.id});
   } else if (action.type==='provisionVoyage') {
+    if (state.fieldCommandRevision===1 && action.chartSortie===true) {
+      const view=projectForSeat(state,seat);
+      const route=chartSortie(view,unit,getMap(view),UNIT_TYPES,hexDistance);
+      if(route)unit.voyagePlan=route;
+    }
     buyVoyageStores(state,unit,UNIT_TYPES[unit.type]);
     record(state,seat,action.type,'Voyage supplies stowed for the next sailing turn.',id,{unit:unit.id});
   } else if (freightOrders.includes(action.type)) {
@@ -1946,7 +1951,7 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
         return {type:task.type,unit:unit.id};
     }
     if(difficulty!=='easy' && !options.attacks.length && unit.moves===1 && UNIT_TYPES[unit.type].domain==='sea'){
-      const supplies=navalStoresOrder(state,unit,UNIT_TYPES[unit.type],getMap(state).byId,hexDistance);
+      const supplies=navalStoresOrder(state,unit,UNIT_TYPES,getMap(state),hexDistance);
       if(supplies)return supplies;
     }
     if (options.improvements.length && (unit.type!=='workboat' || surveyedFishery(state,unit,unit.tile))) return {type:'improve',unit:unit.id,item:options.improvements[0]};
