@@ -232,6 +232,27 @@ export function getCityExpansions(state, seat) {
   return planCityBorders(state,seat,getMap(state),getVisibleTiles(state,seat));
 }
 
+export const BORDER_CHARTER_COST = 6;
+
+export function getBorderCharter(state, seat, cityId, expansions) {
+  const city = cityOrNull(state, cityId);
+  const owned = city && city.seat === seat && (!state.intel || state.intel.seat === seat);
+  const report = owned ? (expansions || getCityExpansions(state, seat)).get(cityId) : null;
+  let reason = '';
+  if (!owned) reason = 'Choose one of your cities.';
+  else if (state.intel && !state.intel.borderCharters) reason = 'This room does not support border charters.';
+  else if (state.phase !== 'playing') reason = 'The campaign has ended.';
+  else if (!seatMayOrder(state, seat) || state.players[seat].eliminated) reason = 'Wait for your turn.';
+  else if (city.borderCharterRound === state.round) reason = 'This city already expanded by charter this round.';
+  else if (!report?.tile) reason = 'No visible neutral district is available.';
+  else if (state.players[seat].influence < BORDER_CHARTER_COST) reason = 'You need 6 influence.';
+  return {
+    cost: BORDER_CHARTER_COST, enabled: !reason, reason,
+    tile: report?.tile ?? null, progress: report?.progress ?? 0,
+    required: report?.required ?? 0, turns: report?.turns ?? null
+  };
+}
+
 export function neighbors(id,stateOrId) {
   return [...(stateOrId ? getMap(stateOrId).neighbors(id) : adjacent[id] || [])];
 }
@@ -1236,7 +1257,7 @@ export function campaignView(state, seat) {
       }
     }
   }
-  return {...view,intel:{...view.intel,forecasts,unavailableSites,portSites,harborSites:harborChoices,workSites,districtChoices}};
+  return {...view,intel:{...view.intel,borderCharters:true,forecasts,unavailableSites,portSites,harborSites:harborChoices,workSites,districtChoices}};
 }
 
 export function combatPreview(state, unitId, target) {
@@ -1484,6 +1505,17 @@ function resolveOrder(source,seat,action) {
   } else if (action.type==='visitStation') {
     const visit=visitFieldStation(next,seat,action);
     record(next,seat,'visitStation',visit.text,visit.tile,{unit:action.unit});
+  } else if (action.type==='charterBorder') {
+    const offer = getBorderCharter(next, seat, action.city);
+    if (!offer.enabled) throw new Error(offer.reason);
+    if (action.tile !== offer.tile) throw new Error('The next district changed. Review the border charter again.');
+    const city = cityOrNull(next, action.city);
+    next.players[seat].influence -= offer.cost;
+    next.board[offer.tile] = {...next.board[offer.tile], owner:seat};
+    city.borderCharterRound = next.round;
+    city.borderProgress = 0;
+    city.borderClaims = (city.borderClaims || 0) + 1;
+    record(next, seat, 'charterBorder', 'The city spent 6 influence to incorporate its next district.', offer.tile, {city:city.id});
   } else if (action.type==='delegation') {
     sendDelegation(next,seat,action.target,getVisibleTiles(next,seat));
     record(next,seat,'delegation','Diplomatic delegation dispatched.',null,{target:action.target});

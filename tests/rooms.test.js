@@ -964,3 +964,25 @@ test('the lobby creation date sets campaign rules for both seats even if the gam
     }
   }
 });
+
+test("a founding player can spend the displayed influence once through the room protocol", async t => {
+  const seats = await twoPlayers(roomFixture(t));
+  const start = await seats.start();
+  const settler = start.game.units.find(unit=>unit.seat===0 && unit.type==="settler");
+  const founded = (await seats.act(seats.host,start.revision,{type:"found",unit:settler.id})).room;
+  const city = founded.game.cities.find(city=>city.seat===0);
+  const charter = rules.getBorderCharter(founded.game,0,city.id);
+  assert.ok(charter.enabled);
+  const order = {type:"charterBorder",city:city.id,tile:charter.tile};
+  const after = (await seats.act(seats.host,founded.revision,order)).room;
+  assert.equal(after.game.board[charter.tile].owner,0);
+  assert.equal(after.game.players[0].influence,founded.game.players[0].influence-charter.cost);
+  await seats.act(seats.host,founded.revision,order,409);
+  await seats.act(seats.host,after.revision,order,422);
+  const recovered = await seats.read(seats.host);
+  assert.equal(recovered.revision,after.revision);
+  assert.equal(recovered.game.players[0].influence,after.game.players[0].influence);
+  const guest = await seats.read(seats.guest);
+  assert.equal(guest.game.players[0].influence,undefined);
+  assert.ok(!guest.game.log.some(entry=>entry.type==="charterBorder"));
+});

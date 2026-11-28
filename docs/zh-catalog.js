@@ -8,6 +8,11 @@ import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
 section(`
+This room does not support border charters.|当前房间版本暂不支持使用影响力扩地。
+This city already expanded by charter this round.|本轮这座城市已用影响力扩过一次领土。
+No visible neutral district is available.|当前视野内没有可供扩张的中立地块。
+The next district changed. Review the border charter again.|候选地块已改变，请重新查看扩地选项。
+The city spent 6 influence to incorporate its next district.|城市花费了 6 点影响力，将下一块候选地纳入领土。
 Scouting routes|侦察路线
 Compare new ground|比较探图范围
 Newly charted hexes|新增已探索地块
