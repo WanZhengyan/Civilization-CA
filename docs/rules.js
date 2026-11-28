@@ -29,9 +29,9 @@ import {ratifyPolicy} from "./policy.js";
 import {extraHousing} from "./civic-agenda.js";
 import { foodForecast, feedCity, settlerPopulationReason, SETTLER_RESIDENT_COST, SETTLER_MIN_POPULATION } from "./population.js";
 // Shared rules for the browser and the authoritative room service.
-import {campaignSeed, selectStarts, seededRandom} from './opening.js';
+import {campaignSeed, selectStarts, seededRandom, planGovernorTowns} from './opening.js';
 import {CIVILIZATIONS, allocateCivilizations, capitalBonus} from './civilizations.js';
-import {validDifficulty} from './ai-levels.js';
+import {validDifficulty,AI_STARTING_CITIES} from './ai-levels.js';
 import {actingPerspective,activeTeamSeats,newTeamPhase,nextTeamPhase,seatMayOrder} from './team-turns.js';
 import {getTeamId,sameTeam,teamLabel} from './teams.js';
 export {getTeamId,sameTeam,teamLabel};
@@ -412,7 +412,8 @@ function drawOpeningSeat(seed,teams,count) {
   const pick=options=>options[Math.floor(random()*options.length)];
   return pick(pick([...members.values()]));
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2, campaignVariety=!legacyVictory && researchPace===2, fieldCommandRevision=campaignVariety ? 1 : 0, influencePlanning=fieldCommandRevision===1} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", options = {}) {
+  const {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2, campaignVariety=!legacyVictory && researchPace===2, fieldCommandRevision=campaignVariety ? 1 : 0, influencePlanning=fieldCommandRevision===1} = options;
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!validVictoryMode(victoryMode)) throw new Error('Choose a valid victory mode.');
   if (!legacyVictory && practice && victoryMode==='conquest') throw new Error('Conquest requires a rival civilization.');
@@ -426,6 +427,12 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
     throw new Error('A campaign needs two to four factions.');
   }
   if (!validDifficulty(difficulty)) throw new Error('Choose a valid AI difficulty.');
+  const quotas=players.map(player=>{
+    if(player?.bot!==true)return 0;
+    const level=player.difficulty===undefined ? difficulty : player.difficulty;
+    if(!validDifficulty(level))throw new Error('Choose a valid AI difficulty.');
+    return AI_STARTING_CITIES[level];
+  });
   if (teams!==undefined) {
     if (!Array.isArray(teams) || teams.length!==players.length || !Array.from(teams).every(id=>Number.isInteger(id) && id>=0 && id<4)) {
       throw new Error('Choose a team for every seat.');
@@ -445,17 +452,33 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
     players:players.map((player,seat)=>({
       name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[allocation[seat]].name,
-      bot:player?.bot===true,faction:allocation[seat],color:FACTIONS[allocation[seat]].color,capital:12,influence:6,score:0
+      bot:player?.bot===true,...(player?.bot===true && player.difficulty ? {difficulty:player.difficulty} : {}),faction:allocation[seat],color:FACTIONS[allocation[seat]].color,capital:12,influence:6,score:0
     })),log:[{round:1,seat:firstSeat,type:'start',text:'The campaign has begun.'}]};
   if (simultaneousTeams && teams && new Set(teams).size<teams.length) {
     next.teamPhase=newTeamPhase(next,teams[firstSeat],()=>ACTIONS_PER_TURN);
   }
   starts.forEach(([site],seat)=>spawn(next,seat,'settler',site));
   placeNaturalWonders(next,map);
+  const homes=starts.map(([tile])=>tile);
+  const protectedHexes=new Set(map.tiles.filter(tile=>next.board[tile.id].naturalWonder).map(tile=>tile.id));
+  const towns=planGovernorTowns(map,homes,quotas,seed,hexDistance,protectedHexes);
+  if(!towns){
+    // Standard remains available to legacy callers but is smaller than every
+    // size offered in game setup. A crowded new match uses the next footprint.
+    if(mapSize==='standard')return createGame(players,mapId,{...options,seed,mapSize:'large'});
+    throw new Error('This region has too few separate settlement sites.');
+  }
+  for(const [seat,quota] of quotas.entries()){
+    next.players[seat].surveyEnabled=quota>0;
+    if(quota){
+      establish(next,seat,homes[seat],true);
+      for(const tile of towns[seat])establish(next,seat,tile);
+    }
+  }
+  next.units=next.units.filter(unit=>!quotas[unit.seat]);
   seedCamps(next,map,map.neighbors,hexDistance);
   refreshScores(next);
-  for (const player of next.players) player.surveyEnabled=false;
-  populateDeposits(next,map,seed,map.neighbors);
+  populateDeposits(next,map,seed,map.neighbors,homes);
   placeFieldStations(next,map,hexDistance);
   return rememberVision(addResearch(next));
 }
@@ -2073,7 +2096,8 @@ function botDistrict(state,difficulty) {
   }
   return choice;
 }
-export function chooseBotAction(source,difficulty=source.difficulty || 'normal',seat=source.turn) {
+export function chooseBotAction(source,difficulty,seat=source.turn) {
+  if(difficulty===undefined)difficulty=source.players[seat]?.difficulty || source.difficulty || 'normal';
   if(source.intel)return chooseBotActionFromView(source,difficulty);
   const current=migrateGame(source);
   if (!seatMayOrder(current,seat)) throw new Error('Wait for your turn.');
@@ -2083,7 +2107,7 @@ export function chooseBotAction(source,difficulty=source.difficulty || 'normal',
 // Score orders from the observations themselves. The presentation projection
 // also contains authority-generated legal-site lists and precise forecasts,
 // which can depend on a rival's unobserved queue, berth or military research.
-export function chooseBotActionFromView(view,difficulty=view.difficulty || 'normal') {
+export function chooseBotActionFromView(view,difficulty=view.players[view.turn]?.difficulty || view.difficulty || 'normal') {
   const seat=view.turn;
   if(view.phase!=='playing')throw new Error('The campaign has ended.');
   if(view.intel?.seat!==seat)throw new Error('The active seat needs its own observations.');

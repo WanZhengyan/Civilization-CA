@@ -4,9 +4,9 @@ import {civilizationPicker,compareCivilizations,validCivilization} from './campa
 export {teamLabel};
 const levels=Object.fromEntries(AI_LEVELS.map(id=>[id,id[0].toUpperCase()+id.slice(1)]));
 export const difficultyNotes={
-  easy:'Easy claims neutral land and keeps military patrols within three hexes of its cities.',
-  normal:'Normal balances scouting, growth and production, and compares targets for each unit.',
-  hard:'Hard expands earlier and compares attacks across its units before committing one.'
+  easy:'Easy starts with 1 city and keeps military patrols within three hexes of its cities.',
+  normal:'Normal starts with 3 cities and balances scouting, growth and production.',
+  hard:'Hard starts with 5 cities, expands early and coordinates attacks across its units.'
 };
 const presetLabels={
   open:'Open lobby for 2–4 people',duel:'You vs. computer',coop:'Two friends vs. two computers',

@@ -5,8 +5,8 @@ test('seeded starts vary, have food and neighbors, and stay separated on all thr
   for(const mapId of ['la','sf','sd']){
     const seen=new Set();
     for(let seed=0;seed<40;seed++){
-      const game=createGame(undefined,mapId,{seed});
-      assert.deepEqual(game,createGame(undefined,mapId,{seed}));
+      const players=['A','B','C','D'],game=createGame(players,mapId,{seed});
+      assert.deepEqual(game,createGame(players,mapId,{seed}));
       const homes=game.units.filter(u=>u.type==='settler').map(u=>u.tile);
       seen.add(homes[0]);
       for(const id of homes){
@@ -108,4 +108,56 @@ test('a first city can train a Scout; it travels farther than militia and cannot
 
  const rival=state.cities[1]; scout.tile=neighbors(rival.tile,state).find(id=>getMap(state).byId[id].terrain==='urban')||neighbors(rival.tile,state)[0];
  assert.ok(!getUnitOptions(state,scout.id).attacks.includes(rival.tile));
+});
+
+test('governors start with sovereign cities at their chosen difficulty while humans retain real founding choices',async()=>{
+  const {campaignView,getStats,getSettlementAssessment,applyAction,migrateGame}=await import('../docs/rules.js');
+  for(const region of ['la','sf','sd']){
+    const players=[{name:'You'},{bot:true,difficulty:'easy'},{bot:true},{bot:true,difficulty:'hard'}];
+    const options={seed:417003,mapSize:'large',difficulty:'normal',teams:[0,1,2,3]};
+    const s=createGame(players,region,options),map=getMap(s);
+    assert.equal(s.round,1);assert.equal(s.phase,'playing');
+    assert.equal(s.mapSize,'large');
+    assert.deepEqual(players.map((_,seat)=>s.cities.filter(c=>c.seat===seat).length),[0,1,3,5]);
+    assert.deepEqual(s.units.map(u=>[u.seat,u.type]),[[0,'settler']]);
+    const home=s.units[0],seen=campaignView(s,0);
+    assert.deepEqual(seen.cities,[]);
+    assert.equal(s.players[0].surveyEnabled,false);assert.equal(getStats(s,0).capitalIncome,0);
+    assert.equal(getSettlementAssessment(seen,home.id,home.tile).status,'now');
+    for(const tile of [home.tile,...map.neighbors(home.tile)]){
+      assert.ok(s.cities.every(city=>hexDistance(tile,city.tile)>=3));
+      assert.equal(s.board[tile].owner,null);
+    }
+    assert.equal(applyAction(s,0,{type:'found',unit:home.id}).phase,'playing');
+    for(const city of s.cities) {
+      const capital=s.cities.find(c=>c.originalSeat===city.seat);
+      assert.ok(capital);
+      assert.equal(s.cities.filter(c=>c.originalSeat===city.seat).length,1);
+      assert.equal(s.board[city.tile].owner,city.seat);
+      assert.equal(s.board[city.tile].naturalWonder ?? null,null);
+      assert.equal(s.board[city.tile].resource ?? null,null);
+      assert.equal(s.board[city.tile].fieldStation ?? null,null);
+      assert.ok(s.cities.every(c=>c.id===city.id || hexDistance(c.tile,city.tile)>=3));
+      assert.equal(city.population,1);assert.equal(city.queue,null);
+      assert.equal(s.players[city.seat].surveyEnabled,true);
+      assert.ok(getStats(s,city.seat).scienceIncome>0);
+      assert.ok(map.neighbors(capital.tile).some(tile=>s.board[tile].resource));
+    }
+    assert.deepEqual(migrateGame(JSON.parse(JSON.stringify(s))),s);
+    const old=createGame(['First','Second'],region,{seed:options.seed,mapSize:options.mapSize});
+    old.players[1].bot=true;
+    assert.deepEqual(migrateGame(JSON.parse(JSON.stringify(old))),old);
+  }
+});
+
+test('four hard governors receive twenty legal cities even on crowded archived charts',()=>{
+  for(const region of ['la','sf','sd']){
+    const players=Array.from({length:4},()=>({bot:true}));
+    const options={seed:13,mapSize:'standard',difficulty:'hard'};
+    const s=createGame(players,region,options);
+    assert.deepEqual(s,createGame(players,region,options));
+    assert.deepEqual(s.players.map((_,seat)=>s.cities.filter(c=>c.seat===seat).length),[5,5,5,5]);
+    assert.equal(s.units.length,0);
+    for(const c of s.cities)assert.ok(s.cities.every(other=>c===other || hexDistance(c.tile,other.tile)>=3));
+  }
 });

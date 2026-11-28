@@ -18,7 +18,7 @@ function roll(seed, tile, salt) {
   n = Math.imul(n ^ n >>> 15, 2221713035);
   return ((n ^ n >>> 16) >>> 0) / 4294967296;
 }
-export function populateDeposits(state, region, seed, adjacent) {
+export function populateDeposits(state, region, seed, adjacent, homes) {
   const assigned = new Set();
   for (const [i,[key, item]] of Object.entries(RESOURCES).entries()) {
     const sites = region.tiles.filter(tile => item.terrains.includes(tile.terrain) && !assigned.has(tile.id) && !state.board[tile.id].naturalWonder
@@ -33,11 +33,10 @@ export function populateDeposits(state, region, seed, adjacent) {
     }
   }
   // Viable first settlements should not depend on winning a resource lottery.
-  // Reserve a workable deposit beside each undecided starting settler. Its
-  // location is still private until that player's first survey or founding.
-  if (adjacent) for (const unit of state.units || []) {
-    if (unit.type!=='settler') continue;
-    const ring=adjacent(unit.tile).map(id=>region.byId[id]).filter(tile=>
+  // Reserve a workable deposit near each starting home. Migration keeps its
+  // original fallback of undecided settlers when no opening layout is supplied.
+  if (adjacent) for (const home of homes ?? (state.units || []).filter(u=>u.type==='settler').map(u=>u.tile)) {
+    const ring=adjacent(home).map(id=>region.byId[id]).filter(tile=>
       tile && !state.board[tile.id].naturalWonder && !['mountains','ocean'].includes(tile.terrain) && !state.cities.some(c=>c.tile===tile.id));
     if (ring.some(tile=>RESOURCES[state.board[tile.id]?.resource])) continue;
     ring.sort((a,b)=>roll(seed,a,0x3da7)-roll(seed,b,0x3da7));

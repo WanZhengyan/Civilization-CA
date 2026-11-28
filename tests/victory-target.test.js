@@ -21,7 +21,7 @@ const end=state=>applyAction(state,state.turn,{type:'end'});
 test('each civic target resolves only after every seat has played, precisely at the chosen score',()=>{
   assert.deepEqual(SCORE_TARGETS,[100,125,150]);
   for(const scoreTarget of SCORE_TARGETS) for(const score of [scoreTarget-1,scoreTarget]) {
-    const state=createGame(seats,'sf',{seed:714,mapSize:'large',scoreTarget});
+    const state=createGame(['West','East'],'sf',{seed:714,mapSize:'large',scoreTarget});
     stageDistricts(state,1,score);
     const afterPlayer=end(state);
     assert.equal(afterPlayer.phase,'playing');
@@ -38,7 +38,7 @@ test('each civic target resolves only after every seat has played, precisely at 
 });
 
 test('tie resolution, the last round and hidden rival scores are independent of the chosen threshold',()=>{
-  const state=createGame(seats,'sd',{seed:74,scoreTarget:150,mapSize:'large'});
+  const state=createGame(['West','East'],'sd',{seed:74,scoreTarget:150,mapSize:'large'});
   state.round=MAX_ROUNDS;
   for(const seat of [0,1]) stageDistricts(state,seat,72);
   assert.equal(campaignView(state,0).players[1].score,undefined);

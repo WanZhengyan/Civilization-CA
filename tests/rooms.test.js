@@ -431,6 +431,9 @@ test('server computers execute exactly one authoritative order sequence despite 
   await f.call('POST',{op:'join',code,name:'Intruder'},null,409);
   let room=(await f.call('POST',{op:'start',code,revision:host.room.revision},host.token)).room;
   assert.equal(room.players[3].difficulty,'normal');
+  const initial=JSON.parse(getRow().game);
+  assert.deepEqual(seats.map((_,seat)=>initial.cities.filter(c=>c.seat===seat).length),[0,1,5,3]);
+  assert.deepEqual(initial.units.filter(u=>u.type==='settler').map(u=>u.seat),[0]);
   for(let n=0;n<32 && room.game.turn!==0;n++){
     room=(await f.call('GET',{code,revision:room.revision},host.token)).room;
   }

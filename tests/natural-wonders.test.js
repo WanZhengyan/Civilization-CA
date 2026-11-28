@@ -107,7 +107,7 @@ test('settlement survey previews only discovered natural-wonder districts and ma
   assert.equal(eligible.length,assessment.naturalWonderProspects[0].districts);
 
   for(const region of ['la','sf','sd'])for(let seed=0;seed<80;seed++) {
-    const game=createGame(undefined,region,{seed});
+    const game=createGame(['A','B','C','D'],region,{seed});
     for(let seat=0;seat<game.players.length;seat++) {
       const privateView=campaignView(game,seat),unit=privateView.units.find(candidate=>candidate.seat===seat && candidate.type==='settler');
       const known=new Set(discoveredNaturalWonders(privateView).map(wonder=>wonder.id));

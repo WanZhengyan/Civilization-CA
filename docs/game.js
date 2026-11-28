@@ -723,7 +723,7 @@ function savedCampaignCard(saved,resumable) {
 
 const guideSections = {
   start: {label:'First turn', entries:[
-    ['Choose your first city site', 'Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.'],
+    ['Choose your first city site', 'You begin with a settler. Found your capital here or explore first. Each computer starts with 1 city on Easy, 3 on Normal or 5 on Hard. All cities use the same growth and production rules.'],
     ['Found a city', 'With movement remaining, a settler can found a city on friendly or neutral land at least three hexes from any city. Choose Found capital for your first city or Found city for a later settlement. Nearby open land joins your territory.'],
     ['Train your next settler', 'Your starting settler is free. Use a scout to explore while your capital grows. A city can train or buy another settler at 3 residents. One resident leaves on deployment. If the city falls below 3, it keeps its work until it grows again.'],
     ['Read city markers', 'City markers use the owner’s color. A crown marks the first capital and stays with that city after capture. The green hex beside your city name estimates turns to the next district at its current population. Select the city to see the target and expansion progress. Zoom in when names overlap.'],

@@ -20,9 +20,11 @@ test('all difficulties pay identical costs and have identical fog, moves and inc
   const players=[{bot:true},{bot:true}];
   let expected;
   for(const difficulty of AI_LEVELS) {
-    let game=createGame(players,'sd',{seed:417007,difficulty});
+    // Equalize starting cities to isolate difficulty's ongoing economics.
+    let game={...createGame(players,'sd',{seed:417007,difficulty:'easy'}),difficulty};
     for(const seat of [0,1]) {
-      game=applyAction(game,seat,{type:'found',unit:game.units.find(u=>u.seat===seat).id});
+      const city=game.cities.find(c=>c.seat===seat);
+      game=applyAction(game,seat,{type:'produce',city:city.id,item:'scout'});
       game=applyAction(game,seat,{type:'end'});
     }
     const {difficulty:level,...result}=game;

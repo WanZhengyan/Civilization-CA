@@ -18,7 +18,9 @@ const siteSpacing=3;
 
 export function placeFieldStations(state,map,distance) {
   if(state.campaignVariety!==1)return;
-  const homes=state.units.filter(u=>u.type==='settler').map(u=>u.tile);
+  const homes=state.units.filter(u=>u.type==='settler').map(u=>u.tile)
+    .concat(state.cities.filter(city=>city.originalSeat!=null).map(city=>city.tile));
+  const citySites=new Set(state.cities.map(city=>city.tile));
   const blocked=new Set([...(state.barbarians?.parties || []),...(state.barbarians?.camps || [])].map(piece=>piece.tile));
   const reachable=new Set(homes);
   for(const tile of reachable){
@@ -28,7 +30,7 @@ export function placeFieldStations(state,map,distance) {
     }
   }
   const random=seededRandom(state.seed,map.id+'/field-stations');
-  const order=shuffled([...reachable].filter(tile=>!blocked.has(tile) && !state.board[tile].naturalWonder &&
+  const order=shuffled([...reachable].filter(tile=>!blocked.has(tile) && !citySites.has(tile) && !state.board[tile].naturalWonder &&
     !state.board[tile].resource && !map.byId[tile].landmark && homes.every(home=>distance(home,tile)>=2)),random);
   const types=shuffled(Object.keys(FIELD_STATIONS),random);
   const stations=[];

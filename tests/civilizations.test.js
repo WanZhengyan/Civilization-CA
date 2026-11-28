@@ -122,7 +122,7 @@ for (const civilization of ids) {
 
 test('losing the original capital pauses the trait, recapturing restores it and additional cities never multiply it',()=>{
   for (const civilization of ids) {
-    let game=createGame([{civilization},{bot:true},{bot:true}],'sd',{seed:42,teams:[0,0,1]});
+    let game=createGame([{civilization},{name:'Ally'},{name:'Rival'}],'sd',{seed:42,teams:[0,0,1]});
     game=applyAction(game,0,{type:'found',unit:game.units[0].id});
     const city=game.cities[0];
     for (const [holder,founder] of [[0,0],[1,0],[2,0],[0,1],[0,null],[0,0]]) {

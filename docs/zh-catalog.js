@@ -343,9 +343,9 @@ Team A|A 队
 Team B|B 队
 Team C|C 队
 Team D|D 队
-Easy claims neutral land and keeps military patrols within three hexes of its cities.|简单电脑只认领中立地块，军事巡逻范围限于己方城市周围三格。
-Normal balances scouting, growth and production, and compares targets for each unit.|一般难度的电脑兼顾侦察、城市发展与生产，并为每支部队比较攻击目标。
-Hard expands earlier and compares attacks across its units before committing one.|困难电脑会更早扩张，比较多支部队的进攻机会再选择出手的单位。
+Easy starts with 1 city and keeps military patrols within three hexes of its cities.|简单电脑以 1 座城市开局，军队在己方城市三格范围内巡逻。
+Normal starts with 3 cities and balances scouting, growth and production.|普通电脑以 3 座城市开局，兼顾侦察、城市发展和生产。
+Hard starts with 5 cities, expands early and coordinates attacks across its units.|困难电脑以 5 座城市开局，较早扩张，并协调多支部队发动进攻。
 Invite up to three friends. The host can start once two people have joined.|最多可邀请三名好友。至少两名真人入座后，房主即可开局。
 Teammates combine civic scores and share victory. Each player keeps their own units, treasury and vision.|队友的市政积分相加，全队共享胜利。部队、金库和地图视野由各自掌握。
 The starting team is drawn at random.|开局随机抽取先手队伍。
@@ -513,7 +513,7 @@ Light reconnaissance infantry. Moves three points per turn, can skirmish with un
 Train a scout|训练侦察兵
 Train a Scout after founding a city. It has three movement points to a Militia unit’s two. Move again after revealing new ground. Topographic Mapping makes foothills cost only one point for scouts and mounted scouts.|建城后可以训练侦察兵。侦察兵每回合有三点移动力，民兵有两点。发现新地块后，还可使用剩余移动力继续前进。研究地形测绘后，侦察兵和骑乘侦察兵进入丘陵只需一点移动力。
 Choose your first city site|选择首都的位置
-Every civilization starts with one settler on a different shore or valley. Found your capital here, or explore first. Your cities begin earning income and training units after you settle.|每个文明都从一名开拓者起步。你可以就地建都，也可以先去探索。建城后可获得收入并训练单位。
+You begin with a settler. Found your capital here or explore first. Each computer starts with 1 city on Easy, 3 on Normal or 5 on Hard. All cities use the same growth and production rules.|你以一名开拓者开局，可以就地建都，也可以先探索。每个电脑文明按难度拥有起始城市：简单 1 座、普通 3 座、困难 5 座。所有城市遵循相同的增长和生产规则。
 Found capital|建立首都
 Civilization drawn at start|开局随机分配文明
 Los Angeles|洛杉矶
