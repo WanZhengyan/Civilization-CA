@@ -57,3 +57,12 @@ test('city frontier marks the authoritative next annexation and quotes influence
   assert.equal(row.band,quote.enabled?2:1);assert.ok(row.en.includes(report.turns+' turns'));
   assert.ok(row.en.includes(quote.cost+' influence'));
 });
+
+test('reconnaissance maps real scout destinations with the exact new-hex count',async()=>{
+  const {getUnitOptions}=await import('../docs/rules.js'),{scoutingRoutes}=await import('../docs/scout-routes.js');
+  let raw=capital();raw=applyAction(raw,0,{type:'produce',city:raw.cities[0].id,item:'scout'});
+  while(!raw.units.some(u=>u.type==='scout') && raw.round<12)raw=applyAction(raw,0,{type:'end'});
+  const s=campaignView(raw,0),u=s.units.find(u=>u.type==='scout'),routes=scoutingRoutes(s,u,getUnitOptions(s,u.id).moves),rows=surveyLayer(s,0,'recon');
+  assert.ok(routes.length);assert.equal(rows.size,routes.length);
+  routes.forEach(r=>assert.equal(rows.get(r.tile).rank,r.newHexes));
+});

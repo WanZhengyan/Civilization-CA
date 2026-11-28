@@ -35,3 +35,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.25 | Preview citywide reassignment and the net yield of three workforce priorities |
 | 7.0.26 | Trace resource deposits to working supply chains and missing improvements |
 | 7.0.27 | Map natural border growth, alternate frontier parcels and immediate influence charters |
+| 7.0.28 | Map legal scouting destinations with movement cost and exact new survey coverage |

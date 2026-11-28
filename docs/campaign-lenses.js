@@ -1,3 +1,5 @@
+import {getUnitOptions} from './rules.js';
+import {scoutingRoutes} from './scout-routes.js';
 import {getCityExpansions,getBorderCharter} from './rules.js';
 import {borderParcels} from './city-expansion.js';
 import {RESOURCES,connectedDeposit,serviceCity,canSeeDeposits} from './resources.js';
@@ -113,6 +115,21 @@ const lenses=[
       if(!report.tile)continue;
       rows.set(report.tile,reading(quote.enabled?2:1,city.name+' · joins in '+report.turns+' turns. Charter for '+quote.cost+' influence. '+quote.reason,
         translate(city.name,'zh-CN')+' · '+report.turns+' 回合后并入。特许状消耗 '+quote.cost+' 影响力。'+translate(quote.reason,'zh-CN'),4));
+    }
+    return rows;
+  }),
+  definition('recon','Reconnaissance routes','侦察路线','Inspect a destination to see which scout can reach it and how much previously uncharted land it would reveal this turn.','点选目的地，查看哪名侦察兵能在本回合抵达，以及预计新探明的地块数量。',[
+    ['Already charted','无新增视野'],['Reveals 1–3 hexes','新探明 1–3 格'],['Reveals 4+ hexes','新探明 4 格以上']
+  ],({state,seat})=>{
+    const rows=new Map(),bestCost=new Map();
+    for(const scout of state.units.filter(u=>u.seat===seat && u.type==='scout' && u.moves>0)){
+      for(const route of scoutingRoutes(state,scout,getUnitOptions(state,scout.id).moves)){
+        if((bestCost.get(route.tile)??Infinity)<=route.cost)continue;
+        bestCost.set(route.tile,route.cost);
+        rows.set(route.tile,reading(route.newHexes===0?0:route.newHexes<=3?1:2,
+          'Scout at '+scout.tile+' · reveals '+route.newHexes+' new hexes. Move cost '+route.cost+', '+route.left+' movement left.',
+          '位于 '+scout.tile+' 的侦察兵 · 可新探明 '+route.newHexes+' 格。消耗 '+route.cost+' 移动力，剩余 '+route.left+'。',route.newHexes));
+      }
     }
     return rows;
   }),
