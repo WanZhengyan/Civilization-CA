@@ -988,3 +988,52 @@ test("a founding player can spend the displayed influence once through the room 
   assert.equal(guest.game.players[0].influence,undefined);
   assert.ok(!guest.game.log.some(entry=>entry.type==="charterBorder"));
 });
+
+test('reconnected allies resolve their own turn reminders and mark ready independently', async t=>{
+  const f=roomFixture(t);
+  const slots=[0,0,1].map(team=>({kind:'human',team}));
+  const host=await f.call('POST',{op:'create',name:'Host',seats:slots},null,201);
+  const code=host.room.code;
+  const ally=await f.call('POST',{op:'join',code,name:'Ally'});
+  const rival=await f.call('POST',{op:'join',code,name:'Rival'});
+  const read=async actor=>(await f.call('GET',{code},actor.token)).room;
+  const act=async (actor,action,expected=200)=>{
+    const room=await read(actor);
+    return f.call('POST',{op:'action',code,revision:room.revision,orderKey:room.game.teamPhase.orderKey,action},actor.token,expected);
+  };
+  const tasks=room=>rules.getPendingTurnTasks(room.game,room.you);
+  const skipFounder=async actor=>{
+    const opening=await read(actor);
+    const [task]=tasks(opening);
+    assert.equal(task.kind,'unit');
+    await act(actor,{type:'skipUnit',unit:task.id});
+    assert.deepEqual(tasks(await read(actor)),[]);
+    return task.id;
+  };
+  const end={type:'end',requireReady:true};
+  const start=(await f.call('POST',{op:'start',code,revision:rival.room.revision},host.token)).room;
+  if(start.game.teamPhase.team===1) {
+    await skipFounder(rival);
+    await act(rival,end);
+  }
+  const waiting=await read(rival);
+  assert.deepEqual(tasks(waiting),[]);
+  const allyUnit=await skipFounder(ally);
+  await act(ally,end);
+  const ready=await read(ally);
+  assert.ok(ready.game.teamPhase.readySeats.includes(ready.you));
+  assert.deepEqual(tasks(ready),[]);
+  const hostUnit=await skipFounder(host);
+  assert.notEqual(hostUnit,allyUnit);
+  await act(host,end);
+  const rivalTurn=await read(rival);
+  assert.equal(rivalTurn.game.teamPhase.team,1);
+  await skipFounder(rival);
+  await act(rival,end);
+  const next=await read(ally);
+  assert.ok(next.game.round>ready.game.round);
+  assert.deepEqual(tasks(next).map(task=>task.id),[allyUnit]);
+  const before=next.revision;
+  await act(ally,end,422);
+  assert.equal((await read(ally)).revision,before);
+});
