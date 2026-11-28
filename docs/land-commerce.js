@@ -4,7 +4,10 @@ export function tradeCorridors(state,seat,originId,map,explored) {
   const cities=state.cities.filter(c=>c.seat===seat);
   const origin=cities.find(c=>c.id===originId);
   if (!origin || cities.length<2) return [];
-  return roadsFrom(origin.tile,origin.id,cities,map,explored);
+  return roadsFrom(origin.tile,origin.id,cities,map,explored).map(route=>{
+    const graded=state.players[seat].wagonRoads?.includes(roadKey(origin.id,route.destination)) || false;
+    return {...route,graded,turns:Math.ceil(route.steps/(graded?5:3))};
+  });
 }
 function roadsFrom(start,originId,cities,map,explored) {
   const parents=new Map([[start,null]]), queue=[start];
@@ -45,7 +48,7 @@ export function freightOffer(state,seat,route,item,service='standard') {
   const [q,r]=destination.tile.split(',').map(Number);
   const resource=item==='fair'?['grain','citrus','timber'][(season+q+r)%3]:cargo.resource;
   const gold=(cargo.freight ? Math.min(9,2+Math.floor(route.steps/2)) : 0)+(cargo.market || 0);
-  const speed=service==='express'?6:3,turns=Math.ceil(route.steps/speed);
+  const speed=(service==='express'?6:3)+(route.graded?2:0),turns=Math.ceil(route.steps/speed);
   if(service==='express' && turns>=route.turns)return null;
   const fare=(cargo.fare || 0)+(service==='express'?3:0);
   const capacity=tradeCapacity(state,seat);
@@ -118,9 +121,10 @@ export function diversionRoads(state,seat,id,map,explored) {
   const current=wagon?.path?.[wagon.cursor];
   if(!current || wagon.returning)return [];
   const cargo=CARGO[wagon.item];
+  const speed=wagon.service==='express'?6:3;
   const towns=state.cities.filter(c=>c.seat===seat && c.id!==wagon.destination &&
     (!cargo.atDestination || c.buildings.includes(cargo.atDestination)));
-  return roadsFrom(current,wagon.origin,towns,map,explored).map(route=>({...route,turns:Math.max(1,Math.ceil(route.steps/wagon.speed))}));
+  return roadsFrom(current,wagon.origin,towns,map,explored).map(route=>({...route,speed,turns:Math.max(1,Math.ceil(route.steps/speed))}));
 }
 export function divertWagon(state,seat,order,routes) {
   const player=state.players[seat],wagon=player.caravans?.find(w=>w.id===order.wagon);
@@ -128,7 +132,7 @@ export function divertWagon(state,seat,order,routes) {
   if(!wagon || !route || wagon.diverted===state.round || player.capital<2)throw new Error('Review the alternate destination and its two-gold diversion fee.');
   player.capital-=2;
   player.caravans=player.caravans.map(w=>w!==wagon ? w : {...w,destination:route.destination,
-    gold:w.item==='fair'?5:w.gold,path:route.path,cursor:0,remaining:route.turns,diverted:state.round,returnPath:[...(w.returnPath || []),...w.path.slice(0,w.cursor)]});
+    gold:w.item==='fair'?5:w.gold,speed:route.speed,path:route.path,cursor:0,remaining:route.turns,diverted:state.round,returnPath:[...(w.returnPath || []),...w.path.slice(0,w.cursor)]});
 }
 
 export function tradeCapacity(state,seat) {
@@ -140,4 +144,14 @@ export function establishDepot(state,seat,id) {
     throw new Error('A wagon depot needs a local Shop, 18 gold and an unassigned depot charter.');
   state.players[seat].capital-=18;
   city.wagonDepot=true;
+}
+
+const roadKey=(a,b)=>JSON.stringify([a,b].sort());
+export const roadCost=route=>4+2*route.steps;
+export function gradeRoad(state,seat,order,routes) {
+  const route=routes.find(r=>r.destination===order.destination),player=state.players[seat];
+  if(!route || route.graded || !player.civics.includes('publicWorks') || player.capital<roadCost(route))
+    throw new Error('Grading needs Public Works, the quoted gold and an ungraded corridor.');
+  player.capital-=roadCost(route);
+  player.wagonRoads=[...(player.wagonRoads || []),roadKey(route.origin,route.destination)];
 }

@@ -122,3 +122,15 @@ test('a depot buys a second crew and allows two distinct cities to ship on the s
   next=run(next,home,dest);assert.throws(()=>run(next,home,dest));next=run(next,dest,home);
   assert.equal(new Set(next.players[0].caravans.map(w=>w.id)).size,2);
 });
+test('Public Works grades both directions once and shortens an actual standard voyage',()=>{
+  const {state,home,dest}=market(),order={type:'gradeRoad',origin:home,destination:dest};
+  state.players[0].capital=40;
+  assert.throws(()=>applyAction(state,0,order));
+  state.players[0].civics.push('publicWorks');
+  let next=applyAction(state,0,order);
+  assert.equal(next.players[0].capital,26);
+  assert.throws(()=>applyAction(next,0,{...order,origin:dest,destination:home}));
+  assert.equal(getLandRoutes(next,0,dest)[0].turns,1);
+  next=applyAction(next,0,{type:'dispatchCaravan',origin:home,destination:dest,item:'provisions'});
+  next=applyAction(next,0,{type:'end'});assert.equal(next.players[0].tradeReceipt.paid,4);
+});

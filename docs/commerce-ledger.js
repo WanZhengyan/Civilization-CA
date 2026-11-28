@@ -1,5 +1,5 @@
 import {getLandRoutes,getTradeDiversions} from './rules.js';
-import {CARGO,freightOffer,tradeCapacity} from './land-commerce.js';
+import {CARGO,freightOffer,tradeCapacity,roadCost} from './land-commerce.js';
 import {RESOURCES} from './resources.js';
 import {seatMayOrder} from './team-turns.js';
 import {getLanguage,translate} from './i18n.js';
@@ -30,7 +30,7 @@ const reasons={booked:['Already reserved for this fair.','本期集市订单已�
 function dispatchButton(offer,enabled,esc) {
   const reason=reasons[offer.reason];
   const window=offer.item==='fair'?' · '+L('book by round ','签约截止回合 ')+(offer.season+1)*3:'';
-  return '<div class="commerce-offer"><strong>'+cargoText(offer.item)+'</strong><span>'+costText(offer)+' → '+rewardText(offer)+'</span>'+
+  return '<div class="commerce-offer"><strong>'+cargoText(offer.item)+'</strong><span>'+costText(offer)+' → '+rewardText(offer)+window+'</span>'+
     '<button type="button" class="cargo-order" data-caravan-order="dispatchCaravan" data-origin="'+esc(offer.origin)+'" data-destination="'+esc(offer.destination)+'" data-item="'+esc(offer.item)+'" data-season="'+(offer.season??'')+'" data-service="'+esc(offer.service)+'"'+
     (!enabled || reason?' disabled':'')+'>'+(offer.service==='express'?L('Express','加急'):L('Dispatch','发运'))+' · '+offer.turns+L(' harvests',' 次收获')+'</button>'+(reason?'<small>'+L(...reason)+'</small>':'')+'</div>';
 }
@@ -40,8 +40,11 @@ export function commerceLedger(state,seat,city,busy,esc) {
   const enabled=!busy && state.phase==='playing' && seatMayOrder(state,seat);
   const rows=routes.map(route=>{
     const offers=Object.keys(CARGO).flatMap(item=>['standard','express'].map(service=>freightOffer(state,seat,route,item,service))).filter(Boolean);
+    const upgrade=route.graded?L('Graded road','已整修道路'):player.civics.includes('publicWorks')?
+      '<button type="button" class="cargo-order" data-caravan-order="gradeRoad" data-origin="'+esc(route.origin)+'" data-destination="'+esc(route.destination)+'"'+(!enabled || player.capital<roadCost(route)?' disabled':'')+'>'+
+      L('Grade road for both directions · ','双向整修道路 · ')+roadCost(route)+L(' gold · standard wagon travels 5 hexes per harvest',' 金币 · 普通商队每次收获可行 5 格')+'</button>':'';
     return '<li><strong>'+cityText(state,route.destination,esc)+'</strong> · '+route.steps+L(' land hexes',' 格陆路')+' · '+route.turns+L(' harvests',' 次收获')+
-      offers.map(o=>dispatchButton(o,enabled,esc)).join('')+'</li>';
+      upgrade+offers.map(o=>dispatchButton(o,enabled,esc)).join('')+'</li>';
   }).join('');
   const active=(player.caravans || []).map(w=>'<p>'+cargoText(w.item)+' · '+cityText(state,w.destination,esc)+' · '+
     (w.returning?L('Returning cargo','原货返程')+' · ':'')+(w.remaining?w.remaining+L(' harvests left',' 次收获后抵达'):L('Awaiting a friendly destination','等待己方收货城市'))+

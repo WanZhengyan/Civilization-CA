@@ -55,3 +55,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.45 | Divert stranded or outbound cargo from its present hex to another friendly market |
 | 7.0.46 | Reserve rotating county fair contracts with a guaranteed arrival price |
 | 7.0.47 | Open a shop depot and schedule two independent city-origin crews |
+| 7.0.48 | Grade two-way wagon roads with Public Works to accelerate deliveries |
