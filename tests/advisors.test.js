@@ -47,3 +47,9 @@ test('the housing advisor prices a legal city project only when housing caps a p
   const card=read(s).find(r=>r.desk==='housing' && r.link.item==='granary');assert.ok(card);assert.match(card.detail,/from 3 to 5/);
   c.buildings.push('granary');assert.ok(!read(s).some(r=>r.desk==='housing'));
 });
+
+test('the industrial desk waits for the correct research and quotes the paid workshop output',()=>{
+  const s=capital();assert.ok(!read(s).some(r=>r.desk==='industry'));
+  s.players[0].technologies=['industry'];
+  const card=read(s).find(r=>r.desk==='industry');assert.equal(card.link.item,'workshop');assert.match(card.detail,/after 7 producing turns/);
+});

@@ -1,7 +1,7 @@
 import {housingCapacity} from "./population.js";
 import {scoutingRoutes} from "./scout-routes.js";
 // Advisors read only the seat's projected chart. They never issue orders.
-import {getMap,getPopulationReport,getCitizenWorkforce,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
+import {getMap,getPopulationReport,getCitizenWorkforce,getCityYield,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
 import {roomSeatTurn} from './room-turn.js';
 import {translate} from './i18n.js';
 
@@ -91,7 +91,29 @@ function housingDesk({state,cities,L,t,name,add,options}){
   }
 }
 
-const desks=[housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function industryDesk({state,cities,L,t,name,options,add}){
+  for(const city of cities.filter(c=>!c.queue)){
+    const initial=getCityYield(state,city.id).production;
+    const candidates=[];
+    for(const p of options(city).filter(p=>p.enabled && ['workshop','foundry','grainMill'].includes(p.item))){
+      const completed={...city,buildings:[...city.buildings,p.item]};
+      const projected={...state,cities:state.cities.map(c=>c.id===city.id?completed:c)};
+      const gain=getCityYield(projected,city.id).production-initial;
+      if(gain<=0)continue;
+      const after=Math.ceil((p.required-(p.saved||0))/gain);
+      candidates.push({p,gain,after});
+    }
+    candidates.sort((a,b)=>a.p.turns+a.after-b.p.turns-b.after || b.gain-a.gain);
+    const best=candidates[0];if(!best)continue;
+    const {p,gain,after}=best;
+    add('industry',L('Reinvest production at ','投资生产力 · ')+name(city),
+      L(t(p.label)+' opens in '+p.turns+' turns. Holding other output fixed, local production rises from '+initial+' to '+(initial+gain)+'/turn. The extra output repays remaining construction work after '+after+' producing turns.',
+        t(p.label)+'预计 '+p.turns+' 回合建成。保持其他产出不变，城市生产力由每回合 '+initial+' 升至 '+(initial+gain)+'。投产后约 '+after+' 回合可用新增产出收回剩余建造投入。'),
+      58,{kind:'production',city:city.id,item:p.item});
+  }
+}
+
+const desks=[industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;
