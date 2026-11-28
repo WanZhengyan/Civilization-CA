@@ -51,3 +51,13 @@ test('a lumber train leaves six stored production at an idle destination; the ya
   city.queue={item:'granary',progress:8,required:10};workTimber(city);
   assert.equal(city.freightTimber,4);assert.equal(city.queue.progress,10);
 });
+test('shops open wholesale citrus markets and pay the quoted premium on arrival',()=>{
+  const {state,home,dest}=market(),order={type:'dispatchCaravan',item:'citrusMarket',origin:home,destination:dest};
+  state.players[0].stockpile={citrus:2};
+  assert.throws(()=>applyAction(state,0,order));
+  state.cities[1].buildings.push('shop');
+  let next=applyAction(state,0,order);const quote=next.players[0].caravans[0].gold;
+  assert.ok(quote>=10);assert.equal(next.players[0].stockpile.citrus,0);
+  while(next.players[0].caravans.length)next=applyAction(next,0,{type:'end'});
+  assert.equal(next.players[0].tradeReceipt.paid,quote);
+});

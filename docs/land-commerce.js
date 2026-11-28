@@ -23,6 +23,7 @@ export function tradeCorridors(state,seat,originId,map,explored) {
 }
 
 export const CARGO={
+  citrusMarket:{en:'Citrus market consignment',zh:'柑橘批销',resource:'citrus',stock:2,atDestination:'shop',market:8,freight:true},
   lumber:{en:'Lumber train',zh:'木材运输队',resource:'timber',stock:2,production:6},
   provisions:{en:'Food wagon',zh:'粮食马车',food:4,deliverFood:4,freight:true}
 };
@@ -32,8 +33,9 @@ export function freightOffer(state,seat,route,item,service='standard') {
   const origin=state.cities.find(c=>c.id===route.origin && c.seat===seat);
   const destination=state.cities.find(c=>c.id===route.destination && c.seat===seat);
   if (!cargo || !origin || !destination || service!=='standard') return null;
+  if(cargo.atDestination && !destination.buildings.includes(cargo.atDestination))return null;
   const player=state.players[seat], fleet=player.caravans || [];
-  const gold=cargo.freight ? Math.min(9,2+Math.floor(route.steps/2)) : 0;
+  const gold=(cargo.freight ? Math.min(9,2+Math.floor(route.steps/2)) : 0)+(cargo.market || 0);
   const reason=player.lastCaravan===state.round?'departure':fleet.length>=1?'crew':
     (origin.food || 0)<(cargo.food || 0)?'food':
     cargo.resource && (player.stockpile?.[cargo.resource] || 0)<cargo.stock?'stock':'';
