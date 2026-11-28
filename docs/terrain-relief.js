@@ -126,7 +126,9 @@ export function terrainReliefMesh(tile,sort=true){
   return sort?triangles.sort((a,b)=>faceDepth(a)-faceDepth(b)):triangles;
 }
 function groundFaces(tile,region){
-  if(tile.terrain==='ocean'||tile.waterway)return [];
+  // Plains and urban ground have z=0 at every vertex. The opaque soil pass
+  // already paints their exact material and light, so no mesh is necessary.
+  if(tile.terrain==='ocean'||tile.waterway||tile.terrain==='plains'||tile.terrain==='urban')return [];
   const rng=randomFor(tile,91),base=regionStyle(region).colors[tile.terrain]||COLORS[tile.terrain]||COLORS.plains;
   return terrainReliefMesh(tile,false).map(points=>{
     const z=points.reduce((sum,p)=>sum+p[2],0)/3;
