@@ -35,3 +35,9 @@ test('workforce comparisons open a preview for each alternative while leaving th
   assert.equal((html.match(/data-study-command="focus"/g)||[]).length,3);
   assert.equal(c.focus||'balanced','balanced');
 });
+import {nextHire} from '../docs/city-profile-land.js';
+test('the next workforce forecast identifies an actual additional employee',()=>{
+  const state=capital(),c=state.cities[0],draft=nextHire(state,c);
+  assert.ok(draft.job.workers>(draft.current.workedTiles.find(j=>j.id===draft.job.id)?.workers||0));
+  assert.equal(draft.next.workedTiles.reduce((n,j)=>n+j.workers,0),c.population+1);
+});
