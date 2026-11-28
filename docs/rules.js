@@ -1,4 +1,5 @@
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
+import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
 import {sendDelegation,proposeDelegation} from './diplomacy.js';
 import {councilProjectCost} from './council-costs.js';
@@ -931,7 +932,7 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
       (!gold ? 'This project is ready for completion.' : '') ||
       (state.players[city.seat].capital+(replace && !current ? city.queue?.grant || 0 : 0)<gold ? 'Not enough gold.' : '') ||
       (kind==='unit' && !deploymentTile(state,city,item) ? 'No deployment tile is available. Move a unit before buying.' : '');
-    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,era:def.era || null,saved:parkedProduction(city,item),turns:Math.ceil((def.required-parkedProduction(city,item))/rate),required:def.required,enabled:!reason,reason};
+    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,era:def.era || null,saved:parkedProduction(city,item),turns:constructionTurns(state,city,def.required-(current?city.queue.progress:parkedProduction(city,item)),rate),required:def.required,enabled:!reason,reason};
   });
 }
 const SCIENCE = {bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
@@ -945,6 +946,7 @@ function councilOptions(state, seat, track) {
   const known = player[track.known] || [];
   const bank = player[track.bank] || 0;
   const income = getStats(state, seat)[track.income];
+  const bonuses=councilFestivalIncome(state,seat,track.bank);
   const tree=councilTree(state,track.focus);
   return Object.entries(tree).filter(([item])=>item!=='rocketry' || allowsScience(state)).map(([item, project]) => {
     const completed = known.includes(item);
@@ -958,7 +960,7 @@ function councilOptions(state, seat, track) {
     else if (missing.length) reason = "Requires " + missing.map(key=>tree[key].name).join(" + ") + ".";
     const cost=councilProjectCost(state,track.focus,tree,item);
     const remaining = Math.max(0, cost - bank);
-    const turns = completed || remaining === 0 ? 0 : income > 0 ? Math.ceil(remaining / income) : null;
+    const turns = completed ? 0 : incomeHorizon(remaining,income,0,0,bonuses);
     return {item, label: project.name, description: project.description, cost, remaining, era: project.era,
       requires: project.requires, ...(project.tier ? {tier:project.tier} : {}), locked: missing.length>0, completed, active, turns, enabled: !reason, reason};
   });

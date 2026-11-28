@@ -1,3 +1,4 @@
+import {constructionTurns} from './harvest-forecast.js';
 import {getCityYield, getMap, getPopulationReport, BUILDINGS, UNIT_TYPES} from './rules.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
 import {getLanguage, translate} from './i18n.js';
@@ -12,7 +13,7 @@ export function cityReports(state,seat) {
   return state.cities.filter(c=>c.seat===seat).map(city=>{
     const food=getPopulationReport(state,city.id), production=getCityYield(state,city.id).production;
     const idle=!city.queue, deficit=food.surplus<0, full=food.housingLimited;
-    const turns=idle?null:Math.ceil(Math.max(0,city.queue.required-city.queue.progress)/Math.max(1,production));
+    const turns=idle?null:constructionTurns(state,city,city.queue.required-city.queue.progress,production);
     return {id:city.id,name:city.name,custom:city.name!==map.byId[city.tile]?.name,capital:city.originalSeat!=null,
       food,production,queue:city.queue,turns,idle,deficit,full,blocked:!idle && turns===0 && Boolean(UNIT_TYPES[city.queue.item])};
   });

@@ -17,6 +17,7 @@ import {naturalWonderArt} from './natural-wonder-art.js';
 import {mountMapWorkspace, compactMap, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
 import {illustration, illustrationPath} from './illustrations.js';
 import {mountBattleReports} from './battle-history.js';
+import {constructionTurns} from './harvest-forecast.js';
 import {directoryButton,mountCityDirectory} from './city-directory.js';
 import {councilInvestments,investmentPanel} from './council-investment.js';
 import {councilStages,stageHeading,renderCouncilPath,prerequisiteLine,projectQuote} from './council-path.js';
@@ -290,8 +291,7 @@ function artFor(tile,city){
 function cityQueue(city){
   const q=city.queue;
   if(!q)return '<p class="inspect-caption idle-status"><i></i> This city is ready to produce.</p>';
-  const production=getCityYield(view.state,city.id).production;
-  const turns=Math.ceil(Math.max(0,q.required-q.progress)/Math.max(1,production));
+  const turns=projectTurns(city);
   const remaining=q.progress>=q.required?'Awaiting deployment':turnsText(turns)+' left';
   return '<div class="queue-info">'+illustration(q.item)+'<div class="queue-name"><strong><span>Producing</span> · <span>'+esc(items[q.item]||q.item)+'</span></strong><small>'+remaining+'</small>'+(q.site?'<small><span>Construction tile</span> · '+esc(mapRegion.byId[q.site]?.name||q.site)+' · '+esc(q.site)+'</small>':'')+'</div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
 }
@@ -536,7 +536,7 @@ function redraw(){inspect();updateMap();roster()}
 function projectTurns(city){
   if(!city.queue)return null;
   const remaining=Math.max(0,city.queue.required-city.queue.progress);
-  return Math.ceil(remaining / Math.max(1,getCityYield(view.state,city.id).production));
+  return constructionTurns(view.state,city,remaining,getCityYield(view.state,city.id).production);
 }
 function paintProjects(){
   const cities=ownCities();

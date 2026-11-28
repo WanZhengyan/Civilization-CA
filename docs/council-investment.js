@@ -1,3 +1,4 @@
+import {councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {getMap, getProductionOptions, getProjectSites, getStats} from './rules.js';
 import {councilCourse} from './council-path.js';
 import {WONDERS} from './wonders.js';
@@ -34,13 +35,6 @@ export function councilInvestments(state,seat) {
   return quotes;
 }
 
-export function incomeHorizon(points,rate,gain=0,construction=0) {
-  if (points<=0) return 0;
-  const normal=rate>0 ? Math.ceil(points/rate) : null;
-  if (normal!==null && normal<=construction) return normal;
-  const remaining=points-rate*construction;
-  return rate+gain>0 ? construction+Math.ceil(remaining/(rate+gain)) : null;
-}
 const turns=n=>n==null?L('no income','暂无收入'):L(n+(n===1?' turn':' turns'),n+' 回合');
 
 export function investmentPanel(state,seat,council,goal,canOrder) {
@@ -49,17 +43,21 @@ export function investmentPanel(state,seat,council,goal,canOrder) {
   const path=goal ? councilCourse(council.options,goal,council.balance) : null;
   const points=path?.remaining ?? council.active?.remaining;
   const target=path ? council.options.find(o=>o.item===goal) : council.active;
-  const horizon=points==null?null:incomeHorizon(points,council.rate);
+  const bonuses=councilFestivalIncome(state,seat,resource);
+  const horizon=points==null?null:incomeHorizon(points,council.rate,0,0,bonuses);
   const quotes=councilInvestments(state,seat).filter(q=>q[resource]>0).map(q=>({...q,
-    estimate:points==null?null:incomeHorizon(points,council.rate,q[resource],q.turns)}));
+    estimate:points==null?null:incomeHorizon(points,council.rate,q[resource],q.turns,bonuses)}));
   quotes.sort((a,b)=>(a.estimate??Infinity)-(b.estimate??Infinity) || b[resource]-a[resource] || a.turns-b.turns);
   const title=L('City investments','城市投资');
   const explanation=target && points>0 ?
-    '<p>'+escape(translate(target.label))+L(' · time to earn the remaining ',' · 按当前收入积累剩余 ')+points+' '+unit+L(' at current income: ','所需时间：')+turns(horizon)+'</p>' : '';
+    '<p>'+escape(translate(target.label))+L(' · time to earn the remaining ',' · 积累剩余 ')+points+' '+unit+L(' without a new building: ','的时间（不建新建筑）：')+turns(horizon)+'</p>' : '';
   if (!canOrder || !quotes.length) return '<details class="income-plan" translate="no"><summary>'+title+'</summary>'+explanation+'<p>'+
     (!canOrder?L('Review available city investments on your turn.','在你的回合可查看可建项目。'):L('No available city building would increase '+unit+' income right now.','当前可建的城市项目不会直接增加'+unit+'收入。'))+'</p></details>';
   const cards=quotes.slice(0,3).map(q=>{
-    const gain='+'+council.rate+' → +'+(council.rate+q[resource])+' '+unit+L('/turn','／回合');
+    const expired=bonuses.filter(b=>b.turns<=q.turns).reduce((n,b)=>n+b.amount,0);
+    const newRate=council.rate+q[resource]-expired;
+    const gain='+'+council.rate+' → +'+newRate+' '+unit+L('/turn','／回合')+
+      (expired?' · '+L('Building adds ','建筑提供 ')+q[resource]+' '+unit+L('/turn','／回合'):'');
     const project=escape(translate(q.label)),city=escape(q.customName?q.cityName:translate(q.cityName));
     return '<article><div><strong>'+project+'</strong> · '+city+'<small>'+gain+' · '+L('Build in ','建造 ')+turns(q.turns)+
       (q.fee?' · '+q.fee+L(' gold charter',' 金币特许费'):'')+'</small>'+
@@ -68,5 +66,5 @@ export function investmentPanel(state,seat,council,goal,canOrder) {
       '</div><button type="button" data-invest-city="'+escape(q.city)+'" data-invest-item="'+escape(q.item)+'">'+L('Review site','查看选址')+'</button></article>';
   }).join('');
   return '<details class="income-plan" translate="no"><summary>'+title+' · '+L('Compare income','比较收入')+'</summary>'+explanation+cards+
-    '<p>'+L('Uses current production and income. The higher rate starts after the building opens.','按当前生产与收入估算。建筑完工后才会提高每回合收入。')+'</p></details>';
+    '<p>'+L('Festival income ends on schedule. The building pays from the next harvest after completion. Other rates are held constant.','节庆加成按期结束。建筑完工后的下一次收获开始提供收入。其余产出按当前水平估算。')+'</p></details>';
 }
