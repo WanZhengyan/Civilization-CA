@@ -1,4 +1,4 @@
-import {newGazetteer,gazetteerContent,gazetteerAction,bindGazetteer} from './gazetteer.js';
+import {newGazetteer,gazetteerContent,gazetteerAction,bindGazetteer,districtProfiles} from './gazetteer.js';
 import {fieldGuideOrders} from './campaign-field-guide.js';
 import {installSoundtrack,soundtrackControls} from './music-controls.js';
 import {fishingGuide,inlandGuide,freightGuide,voyageGuide} from './maritime-guide.js';
@@ -1229,5 +1229,12 @@ async function init({ render, locate, toast: showToast }) {
   if (mode === 'solo') runBots();
   if (!modal && mode !== 'home') checkFinished();
 }
-export const Game = {init, doAction, setTutorialProgress, eventText, endTurn:()=>doAction('end'), open, close};
+function openDistrictNotes(tileId) {
+  if(mode==='home' || !districtProfiles(getState(),tileId).length)return;
+  gazetteer=newGazetteer(getMap(getState()).id);
+  gazetteer.section='district';
+  gazetteer.district=tileId;
+  open('gazetteer');
+}
+export const Game = {openDistrictNotes,init, doAction, setTutorialProgress, eventText, endTurn:()=>doAction('end'), open, close};
 window.Game = Game;

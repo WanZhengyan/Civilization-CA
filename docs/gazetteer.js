@@ -9,6 +9,19 @@ export function knownAnchor(place,campaign) {
   return surveyed.find(tile=>tile.name===place.anchor || tile.locality===place.anchor)?.id ||
     surveyed.find(tile=>tile.district===place.anchor)?.id || null;
 }
+export function districtProfiles(campaign,tileId) {
+  if(!campaign?.intel?.explored?.includes(tileId))return [];
+  const tile=getMap(campaign).byId[tileId];
+  if(!tile)return [];
+  return catalogue.filter(p=>p.region===(campaign.mapId||'la') && p.anchor &&
+    (p.anchor===tile.name || p.anchor===tile.district || p.anchor===tile.locality));
+}
+function districtNotes(view,lang,campaign) {
+  const records=districtProfiles(campaign,view.district);
+  if(!records.length)return '<p>'+tr(['No charted district selected.','尚未选择已探索地区。'],lang)+'</p>';
+  const tile=getMap(campaign).byId[view.district];
+  return '<h3>'+esc(tile.name)+'</h3><p>'+tr(['These real places correspond to the selected campaign district. Choose a record to inspect its geographic coverage and public source.','这些现实地点与选中的战役地区相对应。选择档案可查看地理范围与公开来源。'],lang)+'</p>'+indexRows(records,lang);
+}
 function mapControl(place,lang,campaign) {
   if(!place.anchor)return '';
   const anchor=knownAnchor(place,campaign);
@@ -189,7 +202,7 @@ export function gazetteerContent(view,lang,campaign) {
   const more=Object.keys(labels).filter(id=>!primary.includes(id));
   const modes=primary.map(sectionButton).join('')+'<details class="gaz-more"'+(more.includes(view.section)?' open':'')+
     '><summary>'+tr(['Field tools','实地工具'],lang)+'</summary><div class="gaz-switch">'+more.map(sectionButton).join('')+'</div></details>';
-  let body=view.section==='approach'?approach(view,lang,campaign):view.section==='trips'?trip(view,lang,campaign):view.section==='survey'?survey(view,lang,campaign):view.section==='saved'?notebook(view,lang):view.section==='search'?search(view,lang):view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
+  let body=view.section==='district'?districtNotes(view,lang,campaign):view.section==='approach'?approach(view,lang,campaign):view.section==='trips'?trip(view,lang,campaign):view.section==='survey'?survey(view,lang,campaign):view.section==='saved'?notebook(view,lang):view.section==='search'?search(view,lang):view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
   return {kicker:tr(['Field guide','游戏指南'],lang),title:tr(['California gazetteer','加州地名志'],lang),body:'<section class="gaz" translate="no"><p class="gaz-intro">'+
     tr(['Real places and public measurements. Campaign hexes represent approximate locations and have their own game yields.','查阅现实地点与公开数据。战役地块是近似位置，产出按游戏规则计算。'],lang)+'</p>'+
     (Object.keys(labels).length>1?'<nav class="gaz-nav" aria-label="'+tr(['Gazetteer sections','地名志栏目'],lang)+'">'+modes+'</nav>':'')+body+'</section>'};

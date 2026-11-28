@@ -6,6 +6,7 @@ import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {mountTutorialCoach} from './tutorial-coach.js';
 import {mountTurnResults} from './turn-results.js';
 import {turnButtonState,paintTurnButton,pendingTurnTasks} from './turn-button.js';
+import {districtProfiles} from './gazetteer.js';
 import {getLanguage} from './i18n.js';
 import {mountInfluencePanel} from "./influence-panel.js";
 import {unchartedFrom,scoutingRoutes,openScoutingRoutes} from './scout-routes.js';
@@ -515,6 +516,10 @@ function inspect(){
     }
   }
   for(const bridge of knownCrossings(mapRegion,tile.id,explored))info+=stat("Crossing",bridge.name);
+  if(!activeUnit && !activeCity && districtProfiles(state,tile.id).length){
+    const zh=getLanguage()==='zh-CN';
+    actions+=actionButton('atlas-fieldnotes',zh?'阅读地区档案':'Read district field notes',zh?'地理数据与历史资料':'Geography and history');
+  }
   info+=depositStrip(depositId);
   if(deposit){
     const site=state.board[tile.id], supplier=getWorkingCity(state,tile.id);
@@ -991,6 +996,7 @@ function reviewHousing(cityId,item) {
 function chooseOrder(key){
   if(moveDraft){moveDraft=null;updateMap();}
   if(key==='city-profile'){cityProfile?.open(cityAt(selectedTile)?.id);return;}
+  if(key==='atlas-fieldnotes'){Game.openDistrictNotes(selectedTile);return;}
   if(key==="city-hall"){
     const c=cityAt(selectedTile);
     if(c?.seat===view.seat){openCityHall(c.id,action=>Game.doAction(action));paintCityHall(view.state,view.seat,mayOrder());}

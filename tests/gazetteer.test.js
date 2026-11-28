@@ -107,3 +107,12 @@ test('scout approach planner uses engine routes for the current player and reche
   assert.equal(gazetteerAction(v,'scout-foreign',campaign),null);
   campaign.intel.explored=[];assert.equal(gazetteerAction(v,'scout-'+source.id,campaign),null);
 });
+import {districtProfiles} from '../docs/gazetteer.js';
+test('district inspectors can open every related real place and never provide notes for an uncharted hex',()=>{
+  const campaign={mapId:'sd',intel:{explored:['7,8']}};
+  assert.deepEqual(districtProfiles(campaign,'7,8').map(p=>p.id),['coronado','coronado-bridge']);
+  assert.deepEqual(districtProfiles(campaign,'10,6'),[]);
+  const v={...newGazetteer('sd'),section:'district',district:'7,8'};
+  const body=gazetteerContent(v,'zh-CN',campaign).body;
+  assert.match(body,/data-act="gaz-work-coronado-bridge"/);assert.match(body,/data-act="gaz-place-coronado"/);
+});
