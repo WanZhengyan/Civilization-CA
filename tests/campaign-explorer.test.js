@@ -35,3 +35,11 @@ test('the frontier index lists only visible bordering land with the current auth
  const chosen=options.find(r=>r.info.startsWith('Claim'));
  assert.equal(applyAction(s,0,{type:'claim',tile:chosen.id}).board[chosen.id].owner,0);
 });
+
+test('the work crew directory respects the owning seat and remaining charges',()=>{
+ const s=capital(),v=view(s),id=v.state.cities[0].tile;
+ v.state.units.push({id:'crew',seat:0,tile:id,type:'builder',charges:2});
+ v.state.intel.workSites={crew:{[id]:'farm'}};
+ assert.match(explorerRows(v,'crews')[0].info,/Farm.*2 charges/);
+ v.state.units.at(-1).charges=0;assert.equal(explorerRows(v,'crews').length,0);
+});

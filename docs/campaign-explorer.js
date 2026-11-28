@@ -1,6 +1,6 @@
 import {RESOURCES} from './resources.js';
 import {WONDERS} from './wonders.js';
-import {getUnitOptions,getSettlementAssessment,IMPROVEMENTS,getActions,getMap,TERRAIN_NAMES} from './rules.js';
+import {getUnitOptions,getSettlementAssessment,IMPROVEMENTS,getActions,getRouteDetail,getMap,TERRAIN_NAMES} from './rules.js';
 import {getLanguage,translate} from './i18n.js';
 
 const L=(en,zh)=>getLanguage()==='zh-CN'?zh:en;
@@ -11,6 +11,7 @@ const modes={
   deposits:['Surveyed deposits','已勘测资源'],
   founding:['Settlement survey','建城选址'],
   borders:['Border proposals','边界提案'],
+  crews:['Worker assignments','建设者工作地点'],
 };
 
 function describe(row,info){return {...row,info,search:row.search+' '+info};}
@@ -57,6 +58,21 @@ export function explorerRows(view,mode='places'){
       L(' gold',' 金币')+' · '+action.cost.influence+L(' influence',' 影响力')+' · '+
       (action.enabled?L('Ready to order','可下达指令'):tr(action.reason))));
   });
+  if(mode==='crews'){
+    const assignments=new Map();
+    for(const unit of state.units.filter(u=>u.seat===seat && u.charges>0)){
+      for(const [id,item] of Object.entries(state.intel.workSites?.[unit.id]||{})){
+        if(!IMPROVEMENTS[item])continue;
+        const trip=id===unit.tile?0:getRouteDetail(state,unit.id,id)?.cost;
+        if(trip==null)continue;
+        const notes=assignments.get(id)||[];
+        notes.push(tr(IMPROVEMENTS[item].name)+' · '+tr(map.byId[unit.tile].name)+' · '+L('Movement ','移动 ')+trip+
+          ' · '+unit.charges+L(' charges',' 次建造次数'));
+        assignments.set(id,notes);
+      }
+    }
+    return rows.filter(row=>assignments.has(row.id)).map(row=>describe(row,assignments.get(row.id).join(' / ')));
+  }
   return rows;
 }
 
