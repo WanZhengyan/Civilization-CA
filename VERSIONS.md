@@ -32,3 +32,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.22 | Read live sight and remembered terrain through a bilingual map lens |
 | 7.0.23 | Compare workable terrain and nearby natural bonuses on the land-potential map |
 | 7.0.24 | Trace each worked hex to its home city and distinguish unfilled jobs |
+| 7.0.25 | Preview citywide reassignment and the net yield of three workforce priorities |

@@ -51,6 +51,28 @@ const lenses=[
     }
     return rows;
   }),
+  ...[['food','Food focus preview','预览粮食优先'],['industry','Industry focus preview','预览生产优先'],['science','Science focus preview','预览科研优先']].map(([focus,en,zh])=>
+    definition('focus-'+focus,en,zh,'Compare current assignments with the proposed city focus before changing citizen orders.',
+      '在改变市民分配前查看新方案与现状的差别。',[
+        ['City totals','城市总量'],['Leaves assignment','撤出居民'],['Gains worker','增加居民'],['Keeps worker','保持工作']
+      ],({state,own})=>{
+        const rows=new Map();
+        for(const city of own){
+          const current=getCitizenWorkforce(state,city.id),after=getCitizenWorkforce(state,city.id,focus);
+          const oldJobs=new Set(current.workedTiles.filter(j=>!j.specialist).map(j=>j.id));
+          const nextJobs=new Set(after.workedTiles.filter(j=>!j.specialist).map(j=>j.id));
+          const delta=['food','production','science'].map(k=>after.yields[k]-current.yields[k]);
+          const figures=delta.map(n=>(n>0?'+':'')+n).join(' / ');
+          rows.set(city.tile,reading(0,city.name+' · change in worker income (food / production / science) '+figures+'.',
+            translate(city.name,'zh-CN')+' · 居民产出变化（粮食／生产力／科研）'+figures+'。',Math.abs(delta[0])+Math.abs(delta[1])+Math.abs(delta[2])));
+          for(const id of new Set([...oldJobs,...nextJobs])){
+            const band=oldJobs.has(id)?(nextJobs.has(id)?3:1):2;
+            rows.set(id,reading(band,[null,'This worker would move elsewhere.','One citizen would start working here.','The worker would stay here.'][band],
+              [null,'这名居民将转往其他岗位。','将会有一名居民到这里工作。','这名居民仍会在此工作。'][band],band===2?2:1));
+          }
+        }
+        return rows;
+      })),
 ];
 export const campaignLenses=lenses;
 export function surveyLayer(state,seat,id) {
