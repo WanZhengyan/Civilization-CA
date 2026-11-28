@@ -33,3 +33,11 @@
 .council-path button,.route-back{font:600 13px/1.35 var(--sans);color:var(--agenda-accent);border:1px solid #586b6a;padding:6px 12px;border-radius:4px;background:#28373a}
 .council-planner :is(select,button):focus-visible{outline:2px solid #edca86;outline-offset:2px}
 @media(max-width:540px){.council-goal-label{flex-wrap:wrap;gap:4px}.council-goal-label select{min-width:0;flex:1 1 12rem;min-height:42px}.council-path button,.route-back{min-height:40px}}
+
+.income-plan { padding:10px 12px;margin:10px 0;color:#dde8e2;background:#243331;border-left:3px solid #82bba2;font:14px/1.45 var(--sans) }
+.income-plan summary { cursor:pointer;margin:0;font:normal 19px/1.2 var(--serif);color:#e4eddd }
+.income-plan p { margin:5px 0;font-size:13px;color:#c2d3c9 }
+.income-plan article { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;padding:8px 0;border-top:1px solid #476259 }
+.income-plan small { display:block;color:#d1ddd3;font-size:13px }
+.income-plan button { white-space:normal;min-height:38px;padding:5px 9px;border:1px solid #6d897b;border-radius:4px;color:#e0eddb;background:#30443c;font:600 14px var(--sans) }
+.income-plan button:focus-visible { outline:2px solid #edca86;outline-offset:2px }

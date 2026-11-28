@@ -15,6 +15,7 @@ import {naturalWonderArt} from './natural-wonder-art.js';
 import {mountMapWorkspace, compactMap, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
 import {illustration, illustrationPath} from './illustrations.js';
 import {mountBattleReports} from './battle-history.js';
+import {councilInvestments,investmentPanel} from './council-investment.js';
 import {councilStages,stageHeading,renderCouncilPath,prerequisiteLine,projectQuote} from './council-path.js';
 import {researchLinks,syncResearchLens} from './research-catalog.js';
 import {getSightRadius} from './vision.js';
@@ -660,7 +661,7 @@ function paintResearch(){
     });
     const bankNote=active ? '<p class="modal-muted">'+(id==='research'
       ? 'Changing research keeps your banked science.' : 'Changing debates keeps your banked culture.')+'</p>' : '';
-    const markup='<div class="council-summary"><strong>'+esc(c.balance+" "+c.resource+" banked")+'</strong><span>'+esc("+"+c.rate+" per turn")+'</span><span>'+c.completed+' / '+c.options.length+' complete</span></div>'+bankNote+renderCouncilPath(c,goal,mayOrder())+eraGroups.join("");
+    const markup='<div class="council-summary"><strong>'+esc(c.balance+" "+c.resource+" banked")+'</strong><span>'+esc("+"+c.rate+" per turn")+'</span><span>'+c.completed+' / '+c.options.length+' complete</span></div>'+bankNote+investmentPanel(state,seat,c,goal,mayOrder())+renderCouncilPath(c,goal,mayOrder())+eraGroups.join("");
     if(markup!==lastCouncilMarkup){el("research-options").innerHTML=markup;lastCouncilMarkup=markup}
     updateCivicAgenda(council,id==='civics' && !goal,UNIT_TYPES);
     syncResearchLens(id,el("research-options"),Boolean(goal));
@@ -966,6 +967,17 @@ function mount(){
   const councilPanel=el("research-options");
   councilPanel.onchange=e=>{if(e.target.matches("[data-council-goal]"))showCouncilGoal(e.target.value,false)};
   councilPanel.onclick=e=>{
+    const investment=e.target.closest('[data-invest-city]');
+    if(investment){
+      if(!mayOrder())return;
+      const quote=councilInvestments(view.state,view.seat).find(q=>q.city===investment.dataset.investCity && q.item===investment.dataset.investItem && q[councilTypes[councilKind].resource]>0);
+      const city=quote && ownCities().find(c=>c.id===quote.city);
+      const option=city && getProductionOptions(view.state,city.id,{replace:true}).find(o=>o.item===quote.item && o.enabled);
+      if(!option)return;
+      el("research-modal").close();
+      startPlacement({...draftOrder(city,option,false),site:quote.site},city);
+      return;
+    }
     const plan=e.target.closest("[data-plan-item],[data-path-back]");
     if(plan){showCouncilGoal(plan.dataset.planItem || "");return;}
     const b=e.target.closest("[data-project],[data-route-order]");
