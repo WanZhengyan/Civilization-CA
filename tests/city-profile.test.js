@@ -107,3 +107,13 @@ test('charters plan prerequisite buildings before signing and show only the perm
   const result=cityProfilePage(next,0,c.id,'civic');
   assert.match(result,/In force/);assert.doesNotMatch(result,/Machinists/);assert.equal(next.players[0].capital,22);
 });
+import {municipalHistory} from '../docs/city-profile-records.js';
+test('the city journal includes its founding and purchase receipt without exposing other owners or cities',()=>{
+  const state=capital(),c=state.cities[0];
+  state.log.push({round:2,seat:1,type:'produce',city:c.id,text:'secret rival'},
+    {round:2,seat:0,type:'found',city:'another',tile:c.tile,text:'another city'},
+    {round:2,seat:0,type:'purchase',city:c.id,item:'scout',gold:12,text:'<receipt>'});
+  assert.deepEqual(municipalHistory(state,c).map(r=>r.type),['purchase','found']);
+  const html=cityProfilePage(state,0,c.id,'history');
+  assert.match(html,/12 gold spent/);assert.match(html,/&lt;receipt&gt;/);assert.doesNotMatch(html,/secret rival|another city/);
+});

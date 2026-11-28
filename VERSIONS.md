@@ -84,3 +84,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.74 | Compare natural expansion with an immediate influence charter for the nominated parcel |
 | 7.0.75 | Compare full festival budgets and remaining receipts before confirming a city celebration |
 | 7.0.76 | Follow permanent charter investments through prerequisite planning, signing and active returns |
+| 7.0.77 | Reconstruct each city’s dated municipal decisions, purchase receipts and acquired districts |

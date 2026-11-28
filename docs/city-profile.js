@@ -1,3 +1,4 @@
+import {historyPage} from './city-profile-records.js';
 import {civicPage} from './city-profile-civic.js';
 import {worksPage} from './city-profile-works.js';
 import {landPage} from './city-profile-land.js';
@@ -22,6 +23,7 @@ const pages={overview:{name:()=>local('Overview','总览'),render:overview},
   people:{name:()=>local('Workforce','劳动力'),render:workforcePage},
   growth:{name:()=>local('Food and housing','粮食与住房'),render:growthPage},
   land:{name:()=>local('Hinterland','周边土地'),render:landPage},
+  history:{name:()=>local('Chronicle','编年史'),render:historyPage},
   civic:{name:()=>local('City government','城市政务'),render:civicPage},
   works:{name:()=>local('Construction','建设'),render:worksPage}};
 
