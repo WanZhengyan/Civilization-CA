@@ -17,7 +17,11 @@ function mapControl(place,lang,campaign) {
     ['Explore the corresponding district to view it on the map.','探索对应地区后，可以在地图上定位。']:
     ['Map navigation is available in the corresponding campaign.','进入对应战役后可以使用地图定位。'],lang)+'</p>';
 }
-const labels = {profile:['Places','地点档案'],compare:['Compare','横向对比'],sites:['Field sites','实地档案'],coast:['Coastal timeline','海岸建设年表']};
+const catalogue=[...places,...landmarks,...coastalWorks];
+function entryAction(p) {
+  return (p.slug?'place-':p.year?'work-':'site-')+p.id;
+}
+const labels = {search:['Search atlas','搜索地名志'],profile:['Places','地点档案'],compare:['Compare','横向对比'],sites:['Field sites','实地档案'],coast:['Coastal timeline','海岸建设年表']};
 const esc = value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tr = (pair,lang)=>pair[lang==='zh-CN'?1:0];
 const number = (value,lang)=>new Intl.NumberFormat(lang,{maximumFractionDigits:2}).format(value);
@@ -64,6 +68,34 @@ function comparison(view,lang) {
     tr(['Place','地点'],lang)+'</th><th scope="col">'+tr(metric.label,lang)+'</th></tr></thead><tbody>'+
     sorted.map(p=>'<tr><th scope="row">'+choice('place-'+p.id,tr(p.name,lang))+'</th><td>'+number(metric.value(p,view.unit),lang)+'</td></tr>').join('')+'</tbody></table>';
 }
+const normalize=value=>String(value||'').normalize('NFKD').toLowerCase().replace(/[\u0300-\u036f]/g,'').trim();
+export function searchPlaces(query) {
+  const words=normalize(query).split(/\s+/).filter(Boolean);
+  return catalogue.filter(p=>{
+    const text=normalize([...p.name,...regions[p.region],p.anchor].filter(Boolean).join(' '));
+    return words.every(word=>text.includes(word));
+  });
+}
+function indexRows(records,lang) {
+  return '<ul class="gaz-index">'+records.map(p=>'<li>'+choice(entryAction(p),tr(p.name,lang))+' <span>'+
+    esc(tr(regions[p.region],lang))+'</span></li>').join('')+'</ul>';
+}
+function searchResults(query,lang) {
+  const matches=searchPlaces(query);
+  return '<p role="status">'+tr(['Matching places','匹配地点'],lang)+' · '+matches.length+'</p>'+indexRows(matches,lang);
+}
+function search(view,lang) {
+  return '<label class="gaz-label">'+tr(['Search a place or region in English or Chinese','用中文或英文搜索地点或地区'],lang)+
+    '<input type="search" data-gaz-query maxlength="80" value="'+esc(view.query||'')+'"></label><div data-gaz-results>'+searchResults(view.query,lang)+'</div>';
+}
+export function bindGazetteer(dialog,view,lang) {
+  const input=dialog.querySelector('[data-gaz-query]');
+  if(!input)return;
+  input.addEventListener('input',()=>{
+    view.query=input.value.slice(0,80);
+    dialog.querySelector('[data-gaz-results]').innerHTML=searchResults(view.query,lang);
+  });
+}
 function coast(view,lang,campaign) {
   const index=Math.max(0,coastalWorks.findIndex(p=>p.id===view.work || !view.work && p.region===view.region));
   const p=coastalWorks[index],previous=coastalWorks[index-1];
@@ -82,13 +114,13 @@ function sites(view,lang,campaign) {
 }
 export function gazetteerContent(view,lang,campaign) {
   const modes=Object.entries(labels).map(([id,names])=>choice('section-'+id,tr(names,lang),id===view.section)).join('');
-  let body=view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
+  let body=view.section==='search'?search(view,lang):view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
   return {kicker:tr(['Field guide','游戏指南'],lang),title:tr(['California gazetteer','加州地名志'],lang),body:'<section class="gaz" translate="no"><p class="gaz-intro">'+
     tr(['Real places and public measurements. Campaign hexes represent approximate locations and have their own game yields.','查阅现实地点与公开数据。战役地块是近似位置，产出按游戏规则计算。'],lang)+'</p>'+
     (Object.keys(labels).length>1?'<nav class="gaz-nav" aria-label="'+tr(['Gazetteer sections','地名志栏目'],lang)+'">'+modes+'</nav>':'')+body+'</section>'};
 }
 export function gazetteerAction(view,action,campaign) {
-  if(action.startsWith('locate-'))return knownAnchor([...places,...landmarks,...coastalWorks].find(p=>p.id===action.slice(7)),campaign);
+  if(action.startsWith('locate-'))return knownAnchor(catalogue.find(p=>p.id===action.slice(7)),campaign);
   if(['unit-mi','unit-km'].includes(action))view.unit=action.slice(5);
   if(action.startsWith('metric-') && (Object.hasOwn(metrics,action.slice(7)) || view.scale==='county' && Object.hasOwn(regionalEconomy,action.slice(7))))view.metric=action.slice(7);
   if(action==='cities' || action==='counties'){

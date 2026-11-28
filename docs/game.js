@@ -1,4 +1,4 @@
-import {newGazetteer,gazetteerContent,gazetteerAction} from './gazetteer.js';
+import {newGazetteer,gazetteerContent,gazetteerAction,bindGazetteer} from './gazetteer.js';
 import {fieldGuideOrders} from './campaign-field-guide.js';
 import {installSoundtrack,soundtrackControls} from './music-controls.js';
 import {fishingGuide,inlandGuide,freightGuide,voyageGuide} from './maritime-guide.js';
@@ -957,6 +957,7 @@ function drawDialog() {
   const scrolled = dialog.querySelector('.modal-body')?.scrollTop || 0;
   const { kicker, title, body } = content();
   dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl()+soundtrackControls(soundtrack?.music) : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  if(modal==='gazetteer')bindGazetteer(dialog,gazetteer,getLanguage());
   if(modal==='help'){
     const state=mode==='home'?null:getState();
     bindGuideSearch(dialog,getLanguage(),

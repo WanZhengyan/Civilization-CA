@@ -59,3 +59,11 @@ test('county economies compare four separately dated measures and prevent applyi
   gazetteerAction(v,'cities');assert.equal(v.metric,'population');
   gazetteerAction(v,'place-sd-county');assert.match(gazetteerContent(v,'zh-CN').body,/1,391,721/);
 });
+import {searchPlaces} from '../docs/gazetteer.js';
+test('a bilingual index supports multi-word region matching and safe empty results',()=>{
+  assert.deepEqual(searchPlaces('GOLDEN BAY').map(p=>p.id),['golden-gate']);
+  assert.deepEqual(searchPlaces('要塞').map(p=>p.id),['fort-point']);
+  assert.equal(searchPlaces('<script>').length,0);
+  const v=newGazetteer();gazetteerAction(v,'section-search');v.query='"<x>';
+  assert.match(gazetteerContent(v,'en').body,/&quot;&lt;x&gt;/);
+});
