@@ -26,6 +26,7 @@ function roadsFrom(start,originId,cities,map,explored) {
 }
 
 export const CARGO={
+  fair:{en:'County fair contract',zh:'地区集市订单',stock:2,market:11},
   scholars:{en:'Traveling scholars',zh:'学者交流团',atOrigin:'academy',fare:6,science:7},
   citrusMarket:{en:'Citrus market consignment',zh:'柑橘批销',resource:'citrus',stock:2,atDestination:'shop',market:8,freight:true},
   lumber:{en:'Lumber train',zh:'木材运输队',resource:'timber',stock:2,production:6},
@@ -40,23 +41,27 @@ export function freightOffer(state,seat,route,item,service='standard') {
   if(cargo.atOrigin && !origin.buildings.includes(cargo.atOrigin))return null;
   if(cargo.atDestination && !destination.buildings.includes(cargo.atDestination))return null;
   const player=state.players[seat], fleet=player.caravans || [];
+  const season=Math.floor((state.round-1)/3);
+  const [q,r]=destination.tile.split(',').map(Number);
+  const resource=item==='fair'?['grain','citrus','timber'][(season+q+r)%3]:cargo.resource;
   const gold=(cargo.freight ? Math.min(9,2+Math.floor(route.steps/2)) : 0)+(cargo.market || 0);
   const speed=service==='express'?6:3,turns=Math.ceil(route.steps/speed);
   if(service==='express' && turns>=route.turns)return null;
   const fare=(cargo.fare || 0)+(service==='express'?3:0);
-  const reason=player.lastCaravan===state.round?'departure':fleet.length>=1?'crew':
+  const reason=item==='fair' && player.fairBookings?.[destination.id]===season?'booked':player.lastCaravan===state.round?'departure':fleet.length>=1?'crew':
     player.capital<fare?'fare':(origin.food || 0)<(cargo.food || 0)?'food':
-    cargo.resource && (player.stockpile?.[cargo.resource] || 0)<cargo.stock?'stock':'';
-  return {origin:origin.id,destination:destination.id,item,service,speed,turns,fare,gold,reason};
+    resource && (player.stockpile?.[resource] || 0)<cargo.stock?'stock':'';
+  return {origin:origin.id,destination:destination.id,item,service,speed,turns,fare,gold,reason,resource,...(item==='fair'?{season}: {})};
 }
 export function dispatchCaravan(state,seat,order,routes) {
   const route=routes.find(r=>r.destination===order.destination);
   const offer=route && freightOffer(state,seat,route,order.item,order.service);
-  if (!offer || offer.reason) throw new Error('Review the available wagon, cargo and charted trade route.');
+  if (!offer || offer.reason || order.item==='fair' && order.season!==offer.season) throw new Error('Review the available wagon, cargo and charted trade route.');
   const cargo=CARGO[order.item],player=state.players[seat],origin=state.cities.find(c=>c.id===route.origin);
   player.capital-=offer.fare;
   origin.food-=(cargo.food || 0);
-  if(cargo.resource)player.stockpile={...player.stockpile,[cargo.resource]:player.stockpile[cargo.resource]-cargo.stock};
+  if(offer.resource)player.stockpile={...player.stockpile,[offer.resource]:player.stockpile[offer.resource]-cargo.stock};
+  if(order.item==='fair')player.fairBookings={...player.fairBookings,[route.destination]:offer.season};
   player.caravans=[...(player.caravans || []),{...offer,id:'wagon-'+state.round+'-'+seat,path:route.path,cursor:0,remaining:offer.turns,launched:state.round}];
   player.lastCaravan=state.round;
 }
@@ -72,7 +77,8 @@ export function harvestCaravans(state,seat) {
     const cargo=CARGO[wagon.item];
     if(wagon.returning){
       city.food=(city.food || 0)+(cargo.food || 0);
-      if(cargo.resource)player.stockpile={...player.stockpile,[cargo.resource]:(player.stockpile?.[cargo.resource] || 0)+cargo.stock};
+      const resource=wagon.resource || cargo.resource;
+      if(resource)player.stockpile={...player.stockpile,[resource]:(player.stockpile?.[resource] || 0)+cargo.stock};
       player.tradeReceipt={...wagon,arrived:state.round,paid:0};
       continue;
     }
@@ -117,5 +123,5 @@ export function divertWagon(state,seat,order,routes) {
   if(!wagon || !route || wagon.diverted===state.round || player.capital<2)throw new Error('Review the alternate destination and its two-gold diversion fee.');
   player.capital-=2;
   player.caravans=player.caravans.map(w=>w!==wagon ? w : {...w,destination:route.destination,
-    path:route.path,cursor:0,remaining:route.turns,diverted:state.round,returnPath:[...(w.returnPath || []),...w.path.slice(0,w.cursor)]});
+    gold:w.item==='fair'?5:w.gold,path:route.path,cursor:0,remaining:route.turns,diverted:state.round,returnPath:[...(w.returnPath || []),...w.path.slice(0,w.cursor)]});
 }

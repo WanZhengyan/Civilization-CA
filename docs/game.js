@@ -1092,8 +1092,8 @@ async function init({ render, locate, toast: showToast }) {
   dialog.addEventListener('click', e=>{
     const button=e.target.closest('[data-caravan-order]');
     if (!button || button.disabled || modal!=='supplies')return;
-    const {caravanOrder:type,origin,destination,item,service,wagon}=button.dataset;
-    doAction({type,origin,destination,item,service,wagon});
+    const {caravanOrder:type,origin,destination,item,service,wagon,season}=button.dataset;
+    doAction({type,origin,destination,item,service,wagon,...(season?{season:Number(season)}:{})});
   });
   dialog.addEventListener('change', e => {
     const {name,value} = e.target;

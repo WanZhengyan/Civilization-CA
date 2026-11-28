@@ -53,3 +53,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.43 | Quote and operate an express wagon when a faster service saves a harvest |
 | 7.0.44 | Recall an in-transit wagon along its traveled road to recover the original cargo |
 | 7.0.45 | Divert stranded or outbound cargo from its present hex to another friendly market |
+| 7.0.46 | Reserve rotating county fair contracts with a guaranteed arrival price |

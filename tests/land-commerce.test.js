@@ -99,3 +99,16 @@ test('a lost destination holds payment until the owner diverts the stranded carg
   while(next.players[0].caravans.length)next=applyAction(next,0,{type:'end'});
   assert.equal(next.players[0].tradeReceipt.destination,'rescue');
 });
+import {freightOffer} from '../docs/land-commerce.js';
+test('county fair books the quoted seasonal commodity and locks the price until delivery',()=>{
+  const {state,home,dest}=market(),route=getLandRoutes(state,0,home)[0];state.round=3;
+  const offer=freightOffer(state,0,route,'fair');
+  state.players[0].stockpile={[offer.resource]:2};
+  const order={type:'dispatchCaravan',origin:home,destination:dest,item:'fair',season:offer.season};
+  assert.throws(()=>applyAction(state,0,{...order,season:100}));
+  let next=applyAction(state,0,order);assert.equal(next.players[0].stockpile[offer.resource],0);
+  assert.equal(freightOffer(next,0,route,'fair').reason,'booked');
+  while(next.players[0].caravans.length)next=applyAction(next,0,{type:'end'});
+  assert.equal(next.players[0].tradeReceipt.paid,11);
+  assert.notEqual(freightOffer(next,0,route,'fair').resource,offer.resource);
+});

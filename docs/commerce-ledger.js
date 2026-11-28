@@ -14,7 +14,7 @@ function costText(offer) {
   const c=CARGO[offer.item];
   const parts=[];
   if(offer.fare)parts.push(offer.fare+L(' gold',' 金币'));
-  if(c.resource)parts.push(c.stock+' '+translate(RESOURCES[c.resource].name));
+  if(offer.resource)parts.push(c.stock+' '+translate(RESOURCES[offer.resource].name));
   if(c.food)parts.push(c.food+L(' food',' 储粮'));
   return parts.join(' + ');
 }
@@ -26,11 +26,12 @@ function rewardText(offer) {
   if(offer.gold)parts.push('+'+offer.gold+L(' gold',' 金币'));
   return parts.join(' · ');
 }
-const reasons={fare:['Not enough treasury gold for the fare.','国库金币不足以支付旅费。'],stock:['Insufficient goods in the stockpile.','库存物资不足。'],departure:['A wagon has left this turn.','本回合已发车。'],crew:['Crew in transit.','商队正在途中。'],food:['Not enough stored food at the origin.','起点城市储粮不足。']};
+const reasons={booked:['Already reserved for this fair.','本期集市订单已被承接。'],fare:['Not enough treasury gold for the fare.','国库金币不足以支付旅费。'],stock:['Insufficient goods in the stockpile.','库存物资不足。'],departure:['A wagon has left this turn.','本回合已发车。'],crew:['Crew in transit.','商队正在途中。'],food:['Not enough stored food at the origin.','起点城市储粮不足。']};
 function dispatchButton(offer,enabled,esc) {
   const reason=reasons[offer.reason];
+  const window=offer.item==='fair'?' · '+L('book by round ','签约截止回合 ')+(offer.season+1)*3:'';
   return '<div class="commerce-offer"><strong>'+cargoText(offer.item)+'</strong><span>'+costText(offer)+' → '+rewardText(offer)+'</span>'+
-    '<button type="button" class="cargo-order" data-caravan-order="dispatchCaravan" data-origin="'+esc(offer.origin)+'" data-destination="'+esc(offer.destination)+'" data-item="'+esc(offer.item)+'" data-service="'+esc(offer.service)+'"'+
+    '<button type="button" class="cargo-order" data-caravan-order="dispatchCaravan" data-origin="'+esc(offer.origin)+'" data-destination="'+esc(offer.destination)+'" data-item="'+esc(offer.item)+'" data-season="'+(offer.season??'')+'" data-service="'+esc(offer.service)+'"'+
     (!enabled || reason?' disabled':'')+'>'+(offer.service==='express'?L('Express','加急'):L('Dispatch','发运'))+' · '+offer.turns+L(' harvests',' 次收获')+'</button>'+(reason?'<small>'+L(...reason)+'</small>':'')+'</div>';
 }
 export function commerceLedger(state,seat,city,busy,esc) {
@@ -46,7 +47,7 @@ export function commerceLedger(state,seat,city,busy,esc) {
     (w.returning?L('Returning cargo','原货返程')+' · ':'')+(w.remaining?w.remaining+L(' harvests left',' 次收获后抵达'):L('Awaiting a friendly destination','等待己方收货城市'))+
     (!w.returning && state.cities.some(c=>c.id===w.origin && c.seat===seat)?'<button type="button" class="cargo-order" data-caravan-order="recallWagon" data-wagon="'+esc(w.id)+'"'+(!enabled?' disabled':'')+'>'+L('Recall cargo','召回原货')+'</button>':'')+
     getTradeDiversions(state,seat,w.id).map(route=>'<button type="button" class="cargo-order" data-caravan-order="divertWagon" data-wagon="'+esc(w.id)+'" data-destination="'+esc(route.destination)+'"'+
-      (!enabled || player.capital<2 || w.diverted===state.round?' disabled':'')+'>'+L('Divert to ','改送')+cityText(state,route.destination,esc)+' · 2 '+L('gold','金币')+' · '+route.turns+L(' harvests',' 次收获')+'</button>').join('')+'</p>').join('');
+      (!enabled || player.capital<2 || w.diverted===state.round?' disabled':'')+'>'+L('Divert to ','改送')+cityText(state,route.destination,esc)+(w.item==='fair'?L(' (5 gold resale)','（改售得 5 金币）'):'')+' · 2 '+L('gold','金币')+' · '+route.turns+L(' harvests',' 次收获')+'</button>').join('')+'</p>').join('');
   const receipt=player.tradeReceipt;
   return '<section class="commerce-ledger" translate="no"><h3>'+L('Overland trade','陆路贸易')+'</h3><p>'+
     L('Wagon routes from ','商队起点：')+cityText(state,city.id,esc)+ '</p>'+(city.freightTimber?'<p>'+L('Lumber yard reserve','木料库存产能')+' · '+city.freightTimber+'</p>':'')+active+
