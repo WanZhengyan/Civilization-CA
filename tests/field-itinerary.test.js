@@ -1,0 +1,48 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createGame,campaignView,hexDistance} from '../docs/rules.js';
+import {createFieldItinerary,itineraryLegs} from '../docs/field-itinerary.js';
+import {explorerRows,mountCampaignExplorer} from '../docs/campaign-explorer.js';
+
+const raw=createGame(['North','South'],'la',{seed:7237});
+const viewFor=seat=>({seat,state:campaignView(raw,seat)});
+const storage=()=>{const values=new Map();return {getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};};
+test('itinerary is device-persistent per campaign/seat and rejects fogged or foreign parcels',()=>{
+  let view=viewFor(0);const db=storage(),route=createFieldItinerary(()=>view,db);
+  route.sync('room-A');const [a,b,c]=view.state.intel.explored;
+  for(const id of [a,b,c])assert.equal(route.edit('add',id),true);
+  assert.equal(route.edit('add',a),false);assert.equal(route.edit('add','concealed'),false);
+  const restored=createFieldItinerary(()=>view,db);restored.sync('room-A');assert.deepEqual(restored.stops(),[a,b,c]);
+  restored.edit('up',c);assert.deepEqual(restored.stops(),[a,c,b]);
+  restored.edit('down',a);assert.deepEqual(restored.stops(),[c,a,b]);
+  const rows=itineraryLegs(restored.stops(),explorerRows(view));
+  assert.deepEqual(rows.map(r=>r.leg),[0,hexDistance(c,a),hexDistance(a,b)]);
+  assert.equal(rows[2].total,hexDistance(c,a)+hexDistance(a,b));
+  restored.edit('remove',a);assert.deepEqual(restored.stops(),[c,b]);
+  restored.sync('room-B');assert.deepEqual(restored.stops(),[]);
+  restored.sync('room-A');assert.deepEqual(restored.stops(),[c,b]);
+  view=viewFor(1);restored.sync('room-A');assert.deepEqual(restored.stops(),[]);
+  view={seat:1,state:viewFor(0).state};restored.sync('room-A');assert.deepEqual(restored.stops(),[]);
+  assert.equal(restored.edit('add',a),false);
+});
+test('Campaign Explorer can add searched or selected hexes, reorder legs and show a chosen destination on the map',t=>{
+  const view=viewFor(0),[a,b]=view.state.intel.explored,db=storage(),nodes=new Map();let destination;
+  const node=key=>{if(!nodes.has(key))nodes.set(key,{focus(){},textContent:'',innerHTML:''});return nodes.get(key);};
+  const dialog={setAttribute(){},querySelector:node,querySelectorAll(){return [];},showModal(){this.open=true;},close(){this.open=false;}};
+  const previous=globalThis.document;globalThis.document={createElement:()=>dialog,body:{append(){}},addEventListener(){}};
+  t.after(()=>{if(previous)globalThis.document=previous;else delete globalThis.document;});
+  const button={},update=mountCampaignExplorer({button,getView:()=>view,getSelected:()=>a,locate:id=>{destination=id;},storage:db});
+  const click=(attribute,dataset={})=>dialog.onclick({target:{closest:()=>({hasAttribute:k=>k===attribute,dataset})}});
+  update('active');button.onclick();assert.equal(dialog.open,true);
+  dialog.oninput({target:{value:b,hasAttribute:k=>k==='data-query'}});
+  assert.ok(node('[data-sites]').innerHTML.includes('data-site="'+b+'"'));click('data-route-action',{routeAction:'add',site:b});
+  click('data-itinerary');assert.ok(node('[data-itinerary-summary]').innerHTML.includes('Add selected hex'));
+  click('data-route-action',{routeAction:'add',site:a});
+  assert.match(node('[data-sites]').innerHTML,/Stop 2.*Leg from/);
+  click('data-route-action',{routeAction:'up',site:a});
+  assert.ok(node('[data-sites]').innerHTML.indexOf('data-locate="'+a+'"')<node('[data-sites]').innerHTML.indexOf('data-locate="'+b+'"'));
+  click('data-locate',{locate:'concealed'});assert.equal(destination,undefined);assert.equal(dialog.open,true);
+  click('data-locate',{locate:b});assert.equal(destination,b);assert.equal(dialog.open,false);
+  button.onclick();click('data-route-action',{routeAction:'remove',site:a});
+  assert.ok(!node('[data-sites]').innerHTML.includes('data-locate="'+a+'"'));
+});

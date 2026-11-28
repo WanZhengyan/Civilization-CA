@@ -1382,7 +1382,7 @@ function mount(){
     openMapOnMobile();
     el("atlas").querySelector("canvas")?.focus({preventScroll:true});
   }
-  updateExplorer=mountCampaignExplorer({button:el('open-explorer'),getView:()=>view,locate:locateDistrict});
+  updateExplorer=mountCampaignExplorer({button:el('open-explorer'),getView:()=>view,getSelected:()=>selectedTile,locate:locateDistrict});
   Game.init({render:paint,locate:locateDistrict,toast}).catch(error=>{console.error(error);toast("The game could not load. Refresh to try again.")});
 }
 mount();
