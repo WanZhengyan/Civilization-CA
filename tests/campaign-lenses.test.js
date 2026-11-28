@@ -16,3 +16,10 @@ test('a survey paints only projected memories, separating current sight and unch
   const memory={...state,intel:{...state.intel,visible:[]}};
   assert.equal(surveyLayer(memory,0,'survey').get(tile).band,1);
 });
+
+test('potential quotes the food, production and science of a real eligible job',async()=>{
+  const {getCitizenWorkforce}=await import('../docs/rules.js'),s=campaignView(capital(),0);
+  const rows=surveyLayer(s,0,'land'),work=getCitizenWorkforce(s,s.cities[0].id);
+  assert.ok(work.eligibleTiles.length);
+  for(const job of work.eligibleTiles)assert.equal(rows.get(job.id).rank,job.output.reduce((a,b)=>a+b,0));
+});

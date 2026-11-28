@@ -1,3 +1,5 @@
+import {assignWorkforce} from './workforce.js';
+import {neighboringWonders} from './natural-wonders.js';
 // Every thematic layer is built from a seat projection. Unknown parcels never enter the layer.
 import {getMap} from './rules.js';
 import {getLanguage,translate} from './i18n.js';
@@ -15,6 +17,24 @@ const lenses=[
         : reading(1,'Charted terrain. Units and current ownership need fresh sight.','已探索地形。查看当前单位和归属需要重新获得视野。'));
       return rows;
     }),
+  definition('land','Land potential','地块潜力','Compare the food, production and science one citizen could earn here if this land can be worked.','比较居民在可工作地块上能够获得的粮食、生产力和科研。',[
+    ['Food','粮食'],['Production','生产力'],['Science','科研'],['Mixed yield','综合产出']
+  ],({state,map,known})=>{
+    const rows=new Map();
+    for(const id of known){
+      const tile=map.byId[id];
+      if(!tile || state.board[id]?.naturalWonder)continue;
+      const wonders=neighboringWonders(state.board,map,id,n=>known.has(n));
+      const job=assignWorkforce({population:1},[{...tile,naturalWonders:wonders}]).eligibleTiles[0];
+      if(!job)continue;
+      const [food,production,science]=job.output,peak=Math.max(...job.output);
+      const tied=job.output.filter(n=>n===peak).length>1;
+      rows.set(id,reading(tied?3:job.output.indexOf(peak),
+        'One worker · '+food+' food, '+production+' production, '+science+' science.',
+        '每名居民 · '+food+' 粮食、'+production+' 生产力、'+science+' 科研。',food+production+science));
+    }
+    return rows;
+  }),
 ];
 export const campaignLenses=lenses;
 export function surveyLayer(state,seat,id) {
