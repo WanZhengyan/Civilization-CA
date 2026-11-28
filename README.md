@@ -147,7 +147,9 @@ Run `npm run playtest` to replay 18 campaigns twice across all three maps. See t
 
 ## Publish the frontend on GitHub Pages
 
-This repository publishes the contents of `docs/` at the root of its `gh-pages` branch. For a fork, you can instead select **Deploy from a branch → main → /docs** in **Settings → Pages**. GitHub displays the published URL after deployment. Asset paths are relative, so the game works under the repository path selected by GitHub Pages. [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+For this project, GitHub Pages serves the root of `gh-pages`. After pushing a game update to `main`, run `node scripts/publish-pages.mjs --check` to compare the two file trees. If they differ, `node scripts/publish-pages.mjs --publish` publishes the contents of `origin/main:docs` in a new commit on `gh-pages`. Check the Pages deployment and visit the public homepage to verify the release.
+
+For a fork, you can instead select **Deploy from a branch → main → /docs** in **Settings → Pages**. GitHub displays the published URL after deployment. Asset paths are relative, so the game works under the repository path selected by GitHub Pages. [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
 Solo play runs entirely in the browser. Set the `civitas-api-origin` meta tag in both `docs/game.html` and `docs/index.html` to connect the game rooms and website visitor counts to the same service. The maintained service allows the project's GitHub Pages origin, `https://wanzhengyan.github.io`. For a fork under a different account or a custom domain, configure the room service for that origin using the steps below.
 
