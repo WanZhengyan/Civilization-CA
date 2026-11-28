@@ -130,3 +130,30 @@ test('city comparisons use the selected baseline and exclude rivals, including f
   assert.match(html,/data-study-command="compare-city" data-study-value="other"/);
   assert.match(html,/Another &lt;city&gt;/);assert.doesNotMatch(html,/Hidden camp|enemy/);
 });
+import {productionCard,settlerPopulationCard} from '../docs/settler-population-card.js';
+import {orderButtons} from '../docs/work-orders.js';
+import {getProductionOptions} from '../docs/rules.js';
+test('production lists a named bilingual city-specific lock and two disabled buttons at one and two residents',()=>{
+  const state=capital(),c=state.cities[0];c.name='Oak <Park>';state.players[0].capital=200;
+  for(const population of [1,2,3]){
+    c.population=population;
+    const quote=getProductionOptions(state,c.id,{replace:true}).find(o=>o.item==='settler');
+    const en=settlerPopulationCard(state,c,'settler','en'),zh=settlerPopulationCard(state,c,'settler','zh-CN');
+    const controls=orderButtons(quote,true,getPopulationReport(state,c.id));
+    const rendered=productionCard({item:quote.item,icon:'',name:quote.label,description:'',timing:'',controls,lock:en});
+    if(population<3){
+      assert.match(rendered,/data-project="settler" data-population-locked/);
+      assert.ok(rendered.indexOf('Locked · population requirement')<rendered.indexOf('data-produce="settler"'));
+      assert.ok(en.includes('Oak &lt;Park&gt; has '+population+' of 3 residents'));
+      assert.ok(zh.includes('已锁定'));assert.ok(zh.includes('再增加 '+(3-population)+' 名居民'));
+      assert.equal(quote.enabled,false);assert.equal(quote.buyEnabled,false);
+      assert.equal((orderButtons(quote,true,getPopulationReport(state,c.id)).match(/ disabled /g)||[]).length,2);
+    }else{
+      assert.doesNotMatch(rendered,/data-population-locked/);
+      assert.equal(en,'');assert.equal(zh,'');assert.equal(quote.enabled,true);assert.equal(quote.buyEnabled,true);
+      const next=applyAction(state,0,{type:'buyProduction',item:'settler',city:c.id,gold:quote.gold,expected:0});
+      assert.equal(next.cities[0].population,2);
+      assert.ok(cityProfilePage(state,0,c.id,'growth').includes('After deployment</th><td>2</td><td>'+getPopulationReport(next,c.id).surplus));
+    }
+  }
+});

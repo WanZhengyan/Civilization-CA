@@ -2,6 +2,7 @@ import {mountCampaignExplorer} from './campaign-explorer.js';
 import {mountAdvisors} from './advisors-ui.js';
 import {mountCampaignLenses} from './campaign-lenses.js';
 import {openFieldDesk} from './field-expedition-ui.js';
+import {productionCard,settlerPopulationCard} from './settler-population-card.js';
 import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {mountTutorialCoach} from './tutorial-coach.js';
 import {mountTurnResults} from './turn-results.js';
@@ -674,8 +675,11 @@ function productionOptions(){
       const def=o.kind==="project"?SCIENCE_PROJECT:UNIT_TYPES[o.item]||BUILDINGS[o.item];
       const desc=productDescription(o.item);
       const growth=settlerPopulationReason(c,o.item) ? getPopulationReport(view.state,c.id) : null;
+      const lock=settlerPopulationCard(view.state,c,o.item);
       const race=WONDERS[o.item] ? '<small><span>Charter fee</span> · <span>'+def.grant+' capital</span> · <span>'+({open:'Available worldwide.',commissioned:'Under construction',complete:'Already opened'})[campusStatus(view.state,o.item)]+'</span></small>' : '';
-      return '<article class="production-item work-card">'+illustration(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+(o.turns===null?'':esc(turnsText(o.turns))+' · ')+esc(o.required)+' production</small>'+orderButtons(o,mayOrder(),growth)+'</span></article>';
+      const timing=(def.era?esc(eraName(def.era))+' · ':'')+(o.turns===null?'':esc(turnsText(o.turns))+' · ')+esc(o.required)+' production';
+      return productionCard({item:o.item,icon:illustration(o.item),name:items[o.item]||o.label,description:desc,
+        race,timing,controls:orderButtons(o,mayOrder(),growth),lock});
     }).join('')+'</div>'});
   el("production-options").innerHTML=(c.queue?cityQueue(c)+'<p class="work-rules">Changing projects saves invested production in this city. A paused university releases its land and refunds the charter fee.</p>':'')+
     '<p class="work-rules">Buy with treasury gold to finish immediately. One remaining production costs three gold.</p>'+html.join('');
@@ -1336,7 +1340,7 @@ function mount(){
     if(!view || !getResearchOptions(view.state,view.seat).some(o=>o.item===item))return;
     delete routeOrigins.research;openCouncil('research');showCouncilGoal(item);
   });
-  document.addEventListener('civitas-language',()=>{if(!view)return;paintTurnButton(el('end-turn'),view);roster();inspect();if(el('research-modal').open)paintResearch();else paintProjects()});
+  document.addEventListener('civitas-language',()=>{if(!view)return;if(el('production-modal').open)productionOptions();paintTurnButton(el('end-turn'),view);roster();inspect();if(el('research-modal').open)paintResearch();else paintProjects()});
   el("close-combat").onclick=closeCombat;el("cancel-combat").onclick=closeCombat;
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};
@@ -1349,6 +1353,9 @@ function mount(){
   el("production-options").onclick=e=>{
     const b=e.target.closest("button");
     if(!b||b.disabled||!productionCity)return;
+    if(b.hasAttribute('data-work-population')){
+      const id=productionCity;closeProduction();cityProfile?.open(id,'growth');return;
+    }
     if (b.hasAttribute('data-work-back')) {productionDraft=null;productionOptions();return;}
     if (b.hasAttribute('data-work-confirm')) {
       if (!productionDraft || !mayOrder()) return;

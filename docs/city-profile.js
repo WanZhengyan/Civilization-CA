@@ -62,7 +62,7 @@ export function mountCityProfile(getView,inspect){
     }
     dialog.querySelector('.modal-body').scrollTop=scroll;
   }
-  function open(id){
+  function open(id,initialPage='overview'){
     if(!dialog){
       dialog=document.createElement('dialog');dialog.className='order-dialog city-profile';
       dialog.setAttribute('translate','no');dialog.setAttribute('aria-labelledby','city-profile-title');
@@ -84,7 +84,7 @@ export function mountCityProfile(getView,inspect){
       }};
       document.addEventListener('civitas-language',paint);
     }
-    selected=id;page='overview';last='';if(!dialog.open)dialog.showModal();paint();
+    selected=id;page=Object.hasOwn(pages,initialPage)?initialPage:'overview';last='';if(!dialog.open)dialog.showModal();paint();
     if(dialog.open)dialog.querySelector('[data-study-close]').focus();
   }
   return {open,paint};
