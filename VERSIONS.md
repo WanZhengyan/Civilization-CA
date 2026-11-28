@@ -77,3 +77,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.67 | Project five harvests of food and housing with changing populations and assignments |
 | 7.0.68 | Compare all four labor plans side by side and preview assignments before ratifying |
 | 7.0.69 | Survey unworked districts and predict the job taken by the next resident |
+| 7.0.70 | Compare expected building returns and survey a legal site from the investment table |

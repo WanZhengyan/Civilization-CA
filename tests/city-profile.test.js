@@ -41,3 +41,11 @@ test('the next workforce forecast identifies an actual additional employee',()=>
   assert.ok(draft.job.workers>(draft.current.workedTiles.find(j=>j.id===draft.job.id)?.workers||0));
   assert.equal(draft.next.workedTiles.reduce((n,j)=>n+j.workers,0),c.population+1);
 });
+import {buildingReturns} from '../docs/city-profile-works.js';
+test('a prospective granary agrees with the actual food and housing after construction',()=>{
+  let state=capital();const c=state.cities[0],quote=buildingReturns(campaignView(state,0),c).find(r=>r.item==='granary');
+  assert.equal(quote.changes.housing,2);assert.equal(quote.changes.food,2);
+  const control={...state,cities:state.cities.map(c=>({...c,buildings:[...c.buildings,'granary']}))};
+  assert.equal(getCityYield(control,c.id).food-getCityYield(state,c.id).food,quote.changes.food);
+  assert.ok(!buildingReturns(state,c).some(r=>r.item==='academy'));
+});

@@ -1120,6 +1120,7 @@ function mount(){
     }
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
     if(command==='production')openProduction();
+    else if(command==='building')reviewHousing(city.id,value);
     else if(command==='focus'){
       openCitizenLedger(city.id,(id,item)=>Game.doAction({type:'focus',city:id,item}),reviewHousing,value);
       populationLedger();
