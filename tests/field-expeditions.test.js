@@ -53,3 +53,12 @@ test('an agricultural trial compares a friendly working site, credits the receiv
   s=order(s,'sample','fieldTrial');s=order(travel(s,b),'sample','fieldTrial');const food=s.cities[0].food;
   s=order(travel(s,a),'file','fieldTrial');assert.equal(s.cities[0].food,food+7);assert.equal(s.players[0].food,undefined);
 });
+
+test('a tide staff requires a coastal sea site and a later reading at that same location',()=>{
+  let s=start('sd');const map=getMap(s);
+  const shore=map.tiles.filter(t=>t.terrain==='coast' && map.neighbors(t.id).some(id=>map.byId[id].terrain==='ocean' && !map.byId[id].waterway));
+  s=order(s,'start','tideWatch');s=order(travel(s,shore[0].id),'sample','tideWatch');
+  assert.throws(()=>order(s,'sample','tideWatch'));s.round++;
+  assert.throws(()=>order(travel(s,shore[1].id),'sample','tideWatch'));s=order(s,'sample','tideWatch');
+  assert.deepEqual(read(s).mission.notes.map(n=>n.round),[1,2]);
+});

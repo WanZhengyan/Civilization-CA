@@ -90,3 +90,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.80 | Commission a different basin, working bay or headland field program in each region |
 | 7.0.81 | Trace two riverbanks through the same charted freshwater network |
 | 7.0.82 | Run crop-control trials and return new food stores to the receiving city |
+| 7.0.83 | Leave a coastal tide staff and compare a later reading at the same location |

@@ -18,6 +18,10 @@ function watershedSample({tile,map,state,unit,notes,distance}) {
 }
 
 export const studies = {
+  tideWatch:{name:['Two-day tide watch','两日潮汐观测'],fee:2,reward:{science:5,capital:5},
+    steps:[['Set a tide staff on coastal land next to open sea or bay water.','在紧邻海洋或海湾的海岸地块设立潮尺。'],['Return to the same staff on a later turn for a second reading.','下一回合或更晚回到原地读取第二次潮位。']],
+    sample:({tile,map,notes,state})=>notes.length ? tile.id===notes[0].tile && state.round>notes[0].round :
+      tile.terrain==='coast' && map.neighbors(tile.id).some(id=>map.byId[id].terrain==='ocean' && !map.byId[id].waterway)},
   fieldTrial:{name:['Farm comparison trial','农田对照试验'],fee:3,reward:{food:7,science:3},
     steps:[['Visit a working farm or orchard you control.','前往己方尚在生产的农田或果园。'],['Compare an unimproved land hex no more than two hexes from that farm.','到与该农场相距不超过两格的未改良陆地进行对照。']],
     sample:({state,unit,tile,notes,distance})=>{
