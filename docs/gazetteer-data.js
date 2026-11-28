@@ -22,3 +22,10 @@ export const cities=[
   scope:['Incorporated city boundary','建制市行政范围']
 }));
 export const places=[...counties,...cities];
+
+// April 1 counts from the 2010 decennial census, keyed to the same named geographies.
+export const census2010={
+  'la-county':9818605,'sf-county':805235,'sd-county':3095313,'los-angeles':3792621,pasadena:137122,
+  'santa-monica':89736,'san-francisco':805235,oakland:390724,berkeley:112580,'san-diego':1307402,
+  coronado:18912,'chula-vista':243916
+};

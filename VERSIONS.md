@@ -62,3 +62,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.52 | Open a bilingual California gazetteer with three dated county profiles |
 | 7.0.53 | Explore municipal Census profiles for nine real campaign cities |
 | 7.0.54 | Rank cities and counties in separate comparison tables with drill-down |
+| 7.0.55 | Trace 2010–2020 population changes and compare rates from their original bases |

@@ -21,3 +21,8 @@ test('comparison ranks cities and counties separately and a row opens its underl
   gazetteerAction(v,'counties');body=gazetteerContent(v,'en').body;assert.match(body,/10,014,009/);
   gazetteerAction(v,'place-sd-county');assert.equal(v.section,'profile');assert.equal(v.region,'sd');
 });
+test('decadal comparison uses the 2010 base and exposes both original counts',()=>{
+  const v=newGazetteer();gazetteerAction(v,'section-compare');gazetteerAction(v,'metric-growth');
+  assert.match(gazetteerContent(v,'en').body,/12\.78/);
+  gazetteerAction(v,'place-oakland');assert.match(gazetteerContent(v,'en').body,/390,724/);
+});
