@@ -5,7 +5,8 @@ import {previewMove,sameMove,reviewPointerMove} from './move-review.js';
 import {mountDiplomacy,paintDiplomacy,publicContacts} from './diplomacy-ui.js';
 import {chartedWaterSites,knownCrossings,mountWaterKey,waterKind} from './water-key.js';
 import {getFreightManifest} from './rules.js';
-import {freightPanel} from './harbor-ledger-ui.js';
+import {voyageQuote,voyageAllowance} from './voyage-stores.js';
+import {freightPanel,voyagePanel} from './harbor-ledger-ui.js';
 import {fishingTask} from './maritime.js';
 import {modeLabels} from './campaign-choices.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
@@ -347,7 +348,7 @@ function inspect(){
   updateSurvey();
   if(activeUnit){
     const u=activeUnit,o=selectedOptions;
-    info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,u.maxMoves)+(["builder","workboat"].includes(u.type)?stat("Charges",u.charges):(UNIT_TYPES[u.type].range?stat("Range",UNIT_TYPES[u.type].range):stat("Terrain",surface)))+'</div>'+healthBar(u.hp,u.maxHp);
+    info='<div class="entity-stats">'+stat("Health",u.hp,u.maxHp)+stat("Movement",u.moves,voyageAllowance(u))+(["builder","workboat"].includes(u.type)?stat("Charges",u.charges):(UNIT_TYPES[u.type].range?stat("Range",UNIT_TYPES[u.type].range):stat("Terrain",surface)))+'</div>'+healthBar(u.hp,u.maxHp);
     const position=fieldPosition(state,u,UNIT_TYPES[u.type],tile.terrain);
     info+=fieldPositionPanel(position,u,false,disabled);
     const training=militaryTraining(state,u,UNIT_TYPES[u.type]);
@@ -376,7 +377,7 @@ function inspect(){
           if(u.fishCargo) info+='<div class="unit-sight"><span>Catch aboard</span><strong>1</strong></div>';
           if(task)actions+=actionButton(task.type,task.type==="landCatch"?"Land the catch":"Load a catch",task.type==="landCatch"?"1 stored fish and 3 city food":"Spends all remaining movement","gold",disabled||!u.moves);
         }
-        explanation=water?(u.fishCargo?"Return to an owned harbor berth to land this catch.":"Load a catch at a fish shoal or fishery, or build a fishery on suitable water."):"Work an owned site connected to a city within two land steps.";
+        explanation=water?(u.freight?"Unload at another friendly berth for food and gold, or return the crate to its origin.":u.fishCargo?"Return to an owned harbor berth to land this catch.":"Load a catch at a fish shoal or fishery, or build a fishery on suitable water."):"Work an owned site connected to a city within two land steps.";
       }else{
         actions+=actionButton("attack","Preview attack",o.attacks.length+' '+(o.attacks.length===1?'target':'targets'),"red",disabled||!o.attacks.length,order==="attack");
         const definition=UNIT_TYPES[u.type];
@@ -397,6 +398,7 @@ function inspect(){
       if (!training?.drill) actions+=trainingPanel(training,true,disabled || !u.moves);
       if (!u.fortified) actions+=fieldPositionPanel(position,u,true,disabled);
       const previous=el("entity-commands").querySelector("[data-service-plans]");
+      actions+=voyagePanel(voyageQuote(state,u,UNIT_TYPES[u.type]),esc,actionButton,disabled);
       actions+=recoveryPanel(u,getRecoveryForecast(state,u.id,view.seat),disabled);
       actions+=advancementPanel(plans,previous?.open && previous.dataset.unit===String(u.id),disabled,u.id);
     }else explanation=allied?"Your teammate commands this unit.":"Select a friendly unit to give orders.";
@@ -846,7 +848,7 @@ function chooseOrder(key){
   if(!mayOrder())return;
   if(key.startsWith("train:")){order="";Game.doAction({type:"train",unit:u.id,item:key.slice(6)});return}
   if(key==="fortify"){order="";Game.doAction({type:"fortify",unit:u.id});return}
-  if(["loadFreight","landFreight","returnFreight","landCatch","haulFish"].includes(key)){order="";Game.doAction({type:key,unit:u.id});return}
+  if(["provisionVoyage","loadFreight","landFreight","returnFreight","landCatch","haulFish"].includes(key)){order="";Game.doAction({type:key,unit:u.id});return}
   if(key==="recover"){order="";Game.doAction({type:"recover",unit:u.id});return}
   if(key==="move"){
     order="";redraw();openMapOnMobile();return;

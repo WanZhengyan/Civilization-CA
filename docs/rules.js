@@ -10,6 +10,7 @@ import {advancementRoutes,promotionOutcome,recoveryAt,nearestServiceStation} fro
 import {fleetBasin,flotillaMove} from './naval-plan.js';
 import {waterKind} from './water-navigation.js';
 import {freightManifest,carryFreight} from './coastal-freight.js';
+import {buyVoyageStores,beginVoyageTurn,navalStoresOrder} from './voyage-stores.js';
 import {sailTo} from './naval-plan.js';
 import {harborSites,fishingTask,runFishingTask} from './maritime.js';
 import {revisionOf, advanceProduction, verifyProduction, parkedProduction, parkProject, resumeWork, purchasePrice} from './works.js';
@@ -1160,6 +1161,7 @@ function refreshSeat(state,next) {
     const def=UNIT_TYPES[unit.type];
     if (def.domain==='sea' && knows(state,next,'hydrography')) unit.maxMoves=def.moves+1;
     unit.moves=unit.maxMoves;
+    if(state.campaignVariety===1 && def.domain==='sea')beginVoyageTurn(unit);
     unit.hp=recoveryAt(state,unit,def,hexDistance).hpAfter;
     if (unit.resting) delete unit.resting;
   }
@@ -1395,6 +1397,9 @@ function unitOrder(state,seat,action) {
     unit.moves--;
     state.players[seat].surveyEnabled=true;
     record(state,seat,'survey','Resource survey completed.',id,{unit:unit.id});
+  } else if (action.type==='provisionVoyage') {
+    buyVoyageStores(state,unit,UNIT_TYPES[unit.type]);
+    record(state,seat,action.type,'Voyage supplies stowed for the next sailing turn.',id,{unit:unit.id});
   } else if (freightOrders.includes(action.type)) {
     const manifest=getFreightManifest(state,unit);
     carryFreight(state,unit,action,manifest);
@@ -1528,7 +1533,7 @@ function resolveOrder(source,seat,action) {
       advanceProduction(city);
       record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
     }
-  } else if (['move','attack','found','improve','upgrade','survey','recover','haulFish','landCatch','fortify','train',...freightOrders].includes(action.type)) {
+  } else if (['move','attack','found','improve','upgrade','survey','recover','haulFish','landCatch','fortify','train','provisionVoyage',...freightOrders].includes(action.type)) {
     unitOrder(next,seat,action);
   } else {
     if (typeof action.tile!=='string') throw new Error('Choose a district.');
@@ -1930,6 +1935,10 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
       const task=fishingTask(state,unit,getMap(state).byId);
       if(task && (task.type==='landCatch' || unit.charges<2 || !options.improvements.length))
         return {type:task.type,unit:unit.id};
+    }
+    if(difficulty!=='easy' && !options.attacks.length && unit.moves===1 && UNIT_TYPES[unit.type].domain==='sea'){
+      const supplies=navalStoresOrder(state,unit,UNIT_TYPES[unit.type],getMap(state).byId,hexDistance);
+      if(supplies)return supplies;
     }
     if (options.improvements.length && (unit.type!=='workboat' || surveyedFishery(state,unit,unit.tile))) return {type:'improve',unit:unit.id,item:options.improvements[0]};
     if (options.attacks.length) {

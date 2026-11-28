@@ -1,7 +1,20 @@
 export const fishingGuide=['Fish and deliver a catch','Train a Fishing crew at a harbor. Build a fishery within two connected water steps at sea, or three on a charted river or lake. A working fishery supplies 2 food and 1 gold per turn. To carry fish, load a catch on a surveyed fish shoal or at your own fishery. Return to the berth of any harbor you own and land the catch for 3 food and 1 stored fish. Loading and landing each spend the remaining movement.'];
 export const inlandGuide=['Sail inland','Build a harbor on visible sea, river or lake water beside your city or a connected shore district. Ships can follow contiguous water under a marked crossing, one movement point per hex. A lake cut off by land needs its own harbor. Ports launch fishing crews and armed cutters without a technology prerequisite.'];
 export const freightGuide=['Carry coastal freight','A fishing crew at your harbor can load 4 city food once it has charted a water route to a second friendly harbor. Sail to another owned or allied berth to deliver the food and earn 2 gold plus the distance between berths, up to 8 gold. Loading and unloading spend the remaining movement. Returning the crate to its origin refunds the food.'];
+export const voyageGuide=['Outfit a ship for longer sailing','At the berth of your own harbor a ship with movement left can pay 6 gold for voyage supplies. It spends its remaining movement now and gains 2 additional movement on its next turn only. Ships can split the longer voyage into several moves to explore or choose where to attack.'];
 export const maritimeCopy=`
+${voyageGuide[0]}|为船只补给远航物资
+${voyageGuide[1]}|在己方港口泊位，仍有移动力的船只可支付 6 金币补给远航物资。本回合剩余移动力耗尽，仅在下一回合额外获得 2 点移动力。船只可以分段航行、探索或选择攻击位置。
+Voyage supplies|远航物资
+Supplies stowed|物资已装船
+Extended sailing turn|本回合远航
+Harbor outfitter|港口补给站
+Movement next turn|下回合移动力
+Movement this turn|本回合移动力
+Normal range next turn|下回合恢复通常航程
+Outfit for a long voyage|补给远航物资
+Return a ship with movement to your own berth and pay 6 gold to provision it.|请将仍有移动力的船只驶入己方泊位，支付 6 金币补给远航物资。
+Voyage supplies stowed for the next sailing turn.|已为下回合远航装载物资。
 ${freightGuide[0]}|沿岸运送粮食
 ${freightGuide[1]}|渔船队在自己的港口装载 4 粮食，需要先探明通往另一友方港口的水路。驶入己方或盟友的另一泊位，可以卸下粮食并赚取 2 金币加两泊位间直线格数的运费，最多 8 金币。装卸会耗尽剩余移动力，原港退货只退还粮食。
 Coastal freight|沿海货运

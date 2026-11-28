@@ -14,3 +14,15 @@ export function freightPanel(manifest,esc,button,locked) {
     (delivery?'<div>+4 '+label('Food')+' · +'+delivery.gold+' '+label('Gold')+'</div>':'')+
     (title?button(type,title,'Spends all remaining movement','gold',locked||!ready):'')+'</section>';
 }
+
+export function voyagePanel(quote,esc,button,locked) {
+  if(!quote)return '';
+  const {harbor,stocked,underway,price,budget,base,after,ready}=quote;
+  return '<section class="recovery-panel"><header>'+label('Voyage supplies')+
+    '<b>'+label(stocked?'Supplies stowed':underway?'Extended sailing turn':'Harbor outfitter')+'</b></header>'+
+    (harbor?'<div>'+esc(harbor)+'</div>':'')+
+    (stocked?'<div>'+label('Movement next turn')+' · '+after+'</div>':
+      underway?'<div>'+label('Movement this turn')+' · '+after+' · '+label('Normal range next turn')+' · '+base+'</div>':'')+
+    (harbor && !stocked?'<div>'+label('Movement next turn')+' · '+base+' → '+after+'</div><div>'+label('Price in gold')+' · '+price+' · '+label('Treasury')+' · '+budget+'</div>'+
+      button('provisionVoyage','Outfit for a long voyage','Spends all remaining movement','gold',locked||!ready):'')+'</section>';
+}
