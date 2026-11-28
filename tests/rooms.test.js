@@ -942,3 +942,23 @@ test('a reconnecting seat receives only its own order receipts and a duplicate c
   assert.equal(reloaded.game.turn,1);
   assert.deepEqual(reloaded.orderReceipts,[found.actionId,second.actionId]);
 });
+
+test('the lobby creation date sets campaign rules for both seats even if the game starts after release', async t => {
+  const fixture = roomFixture(t);
+  for (const fresh of [false, true]) {
+    const seats = await twoPlayers(fixture);
+    if (!fresh) {
+      const record = fixture.sqlite.prepare('SELECT members FROM game_rooms WHERE code=?').get(seats.code);
+      const members = JSON.parse(record.members);
+      delete members[0].campaignVariety;
+      fixture.sqlite.prepare('UPDATE game_rooms SET members=? WHERE code=?').run(JSON.stringify(members), seats.code);
+    }
+    const host = await seats.start();
+    const guest = await seats.read(seats.guest);
+    for (const room of [host,guest]) {
+      assert.equal(room.game.campaignVariety, fresh ? 1 : undefined);
+      assert.equal(room.game.researchPace, 2);
+      assert.equal(room.game.units.filter(unit => unit.seat===room.you && unit.type==='settler').length, 1);
+    }
+  }
+});

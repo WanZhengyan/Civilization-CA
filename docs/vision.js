@@ -172,7 +172,7 @@ export function projectForSeat(state,seat) {
   // Campaigns predating the settler opening began with a capital for every seat.
   const hasFoundedCapital=state.opening!=='settlers' || state.cities.some(city=>city.originalSeat===seat);
   const diplomacy=diplomacyView(state,seat,visible),knownSeats=new Set(diplomacy.map(record=>record.seat));
-  const view={...publicShape(state,['rulesVersion','researchPace','civilizationTraits','opening','mapId','mapShape','mapSize','scoreTarget','victoryMode','practice','difficulty','firstSeat','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
+  const view={...publicShape(state,['rulesVersion','campaignVariety','researchPace','civilizationTraits','opening','mapId','mapShape','mapSize','scoreTarget','victoryMode','practice','difficulty','firstSeat','naturalWonderVersion','round','turn','phase','victoryReason','winners','wonderRegistry']),
     ...(state.teams ? {teams:[...state.teams]} : {}),
     ...(state.teamPhase ? {teamPhase:publicTeamPhase(state,seat)} : {}),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
