@@ -1019,10 +1019,13 @@ function chooseOrder(key){
   }
   const u=getUnit();if(!u||u.seat!==view.seat)return;
   if(key==='field-desk'){
-    const session=matchKey,id=u.id;
+    const session=matchKey,id=u.id,round=view.state.round;
     const read=()=>{const unit=view.state.units.find(piece=>piece.id===id && piece.seat===view.seat);
-      return matchKey===session && unit ? {state:view.state,unit,map:mapRegion,distance:hexDistance,mayOrder:mayOrder()} : null;};
-    openFieldDesk(read,action=>{if(read()?.mayOrder) Game.doAction(action);});return;
+      return matchKey===session && view.state.round===round && unit ? {state:view.state,unit,map:mapRegion,distance:hexDistance,mayOrder:mayOrder(),
+        targets:getUnitOptions(view.state,id).moves,routeTo:target=>getRouteDetail(view.state,id,target)} : null;};
+    openFieldDesk(read,action=>{if(read()?.mayOrder) Game.doAction(action);},target=>{
+      const ctx=read();if(ctx?.mayOrder && getUnit()?.id===id)reviewScoutDestination(ctx.unit,target);
+    });return;
   }
   if(mayOrder() && ['record-terrain','file-atlas'].includes(key)){
     Game.doAction({type:key==='record-terrain'?'recordTransect':'fileTransect',unit:u.id});return;

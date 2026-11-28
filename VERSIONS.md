@@ -97,3 +97,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.87 | Assemble a natural-wonder collection from two independently reached viewpoints |
 | 7.0.88 | Equip remote scouts with a relocatable field camp and city-sponsored commissions |
 | 7.0.89 | Hand a commissioned study and its original notes between adjacent scout teams |
+| 7.0.90 | Preview reachable observation and filing sites with movement left to work |

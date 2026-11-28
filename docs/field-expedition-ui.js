@@ -1,4 +1,4 @@
-import {fieldReport,studies,corridorIncome} from './field-expeditions.js';
+import {fieldReport,studies,corridorIncome,fieldRoutes} from './field-expeditions.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
 import {getLanguage,translate} from './i18n.js';
 
@@ -10,7 +10,7 @@ const currencies={food:['city food','交付城市的粮食'],capital:['gold','�
 const rewardText=reward=>Object.entries(reward).map(([key,n])=>'+'+n+' '+label(currencies[key])).join(' · ');
 const button=(cmd,text,enabled,target)=>'<button type="button" class="btn" data-do="'+cmd+'"'+(target?' data-target="'+esc(target)+'"':'')+(enabled?'':' disabled')+'>'+text+'</button>';
 
-export function openFieldDesk(read,act) {
+export function openFieldDesk(read,act,preview) {
   const dialog=document.createElement('dialog');dialog.className='order-dialog field-desk';dialog.setAttribute('aria-labelledby','field-desk-title');
   dialog.innerHTML='<div class="modal-shell"><header class="modal-head"><h2 class="modal-title" id="field-desk-title">'+local('Field expeditions','野外考察')+'</h2><button type="button" data-close class="modal-close" aria-label="'+local('Close','关闭')+'">×</button></header><div class="modal-body"></div></div>';
   let selected;
@@ -48,6 +48,10 @@ export function openFieldDesk(read,act) {
       }
       else html+=button('sample',local('Record observation','记录观察'),ready && r.canSample);
     }
+    if(active && ready){
+      const routes=fieldRoutes(r,ctx.targets,ctx.routeTo);
+      if(routes.length)html+='<details><summary>'+local('Preview field destinations','预览考察路线')+'</summary><p>'+local('Visible sites reachable this turn, ordered by travel cost. Arrive with spare movement to work immediately.','按移动消耗排序，仅列出本回合可抵达的可见地点。到达后若还有移动力，可立即执行考察。')+'</p>'+routes.slice(0,6).map(({id,cost,left})=>button('preview',esc(translate(map.byId[id].name))+' ('+esc(id)+') · '+cost+' '+local('move','移动')+' · '+left+' '+local('left','剩余'),true,id)).join('')+'</details>';
+    }
     if(active && r.relay.length)html+='<details><summary>'+local('Hand off this study','移交本课题')+'</summary><p>'+local('An adjacent scout takes all notes and the commission. Each scout spends one movement. Only one handoff per study this turn.','将课题及笔记交给相邻侦察兵，双方各花费 1 移动力。每个课题每回合可移交一次。')+'</p>'+r.relay.map(u=>button('relay',local('Hand to scout at ','交给侦察兵，位置 ')+esc(u.tile),ready,u.id)).join('')+'</details>';
     html+='<details><summary>'+local('Field camp','野外营地')+'</summary><p>'+local('Spend 7 gold and all remaining movement to establish your field office here. It replaces your previous camp. Choose neutral or friendly ground at least two hexes from your cities.','花费 7 金币和全部剩余移动力，就地设立营地以领取课题。新营地取代旧营地，须位于距己方城市至少两格的中立或己方领土。')+'</p>';
     if(r.player.fieldCamp)html+='<p>'+local('Current camp','现有营地')+' · '+esc(r.player.fieldCamp.tile)+'</p>';
@@ -58,6 +62,7 @@ export function openFieldDesk(read,act) {
     body.querySelector('select[data-study]')?.addEventListener('change',e=>{selected=e.target.value;paint();});
     body.querySelectorAll('[data-do]').forEach(b=>b.onclick=()=>{
       dialog.close();
+      if(b.dataset.do==='preview'){preview(b.dataset.target);return;}
       act({type:'fieldStudy',unit:unit.id,item:b.dataset.do,target:b.dataset.target,study:key,step:active?.notes.length||0});
     });
   }

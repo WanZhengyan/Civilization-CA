@@ -107,6 +107,26 @@ export function fieldReport(state,unit,map,distance) {
   return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,relay,open,spec,complete,canSample,context};
 }
 
+// Only recommend currently visible endpoints. Dynamic plot conditions and archive
+// access are deliberately never inferred across fog.
+export function fieldRoutes(report,targets,routeTo) {
+  if(!report?.mission)return [];
+  const {state,unit,map,distance}=report.context;
+  const visible=getVision(state,unit.seat).visible;
+  const rows=[];
+  for(const id of targets){
+    if(!visible.has(id))continue;
+    const tile=map.byId[id];
+    const eligible=report.complete ? state.cities.some(c=>c.seat===unit.seat && distance(c.tile,id)<=1) ||
+      (report.sponsor && state.board[id]?.fieldStation==='archive' && !report.spec.reward.food && report.player.influence>=2)
+      : report.spec.sample({...report.context,tile});
+    if(!eligible)continue;
+    const route=routeTo(id);
+    if(route)rows.push({id,cost:route.cost,left:unit.moves-route.cost});
+  }
+  return rows.sort((a,b)=>a.cost-b.cost || a.id.localeCompare(b.id));
+}
+
 function storeCrew(player,id,mission) {
   const crews={...player.fieldCrews};
   if(mission)crews[id]=mission;

@@ -4,7 +4,7 @@
 
 **[开始帕萨迪纳新手教程](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [开始单人战役](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [创建联机房间](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[游戏主页](https://wanzhengyan.github.io/Civilization-CA/) · [v7.0.89 更新记录](./CHANGELOG.md) · [English](./README.md)
+[游戏主页](https://wanzhengyan.github.io/Civilization-CA/) · [v7.0.90 更新记录](./CHANGELOG.md) · [English](./README.md)
 
 [地图系列版本记录](./VERSIONS.md)
 

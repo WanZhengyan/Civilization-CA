@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGame,applyAction,campaignView,getMap,getStats,hexDistance} from '../docs/rules.js';
-import {fieldReport} from '../docs/field-expeditions.js';
+import {fieldReport,fieldRoutes} from '../docs/field-expeditions.js';
 
 function start(map='la'){
   let s=createGame([{name:'West'},{name:'East'}],map,{seed:624101,mapSize:'large'});
@@ -121,4 +121,13 @@ test('two adjacent friendly scouts relay one notebook and each contributes movem
   assert.equal(next.units.find(u=>u.id==='relay-scout').moves,1);assert.equal(scout(next).moves,0);assert.throws(()=>carry(next,'relay-scout'));
   const receiver=next.units.find(u=>u.id==='relay-scout');scout(next).moves=1;
   assert.equal(fieldReport(next,receiver,getMap(next),hexDistance).relay.length,0);
+});
+
+test('the scout route menu ranks visible reachable sampling sites and never previews hidden endpoints',()=>{
+  let s=start();s=order(s,'start');const r=read(s),id=scout(s).tile,neighbors=getMap(s).neighbors(id);
+  const targets=[neighbors[0],neighbors[1],'fogged'];
+  const costs={[neighbors[0]]:2,[neighbors[1]]:1};const touched=[];
+  const rows=fieldRoutes(r,targets,t=>{touched.push(t);return {cost:costs[t]};});
+  assert.deepEqual(rows.map(x=>x.id),[neighbors[1],neighbors[0]]);assert.deepEqual(rows.map(x=>x.left),[1,0]);
+  assert.ok(!touched.includes('fogged'));assert.equal(fieldRoutes(null,targets,()=>null).length,0);
 });
