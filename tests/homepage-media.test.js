@@ -26,7 +26,6 @@ function checkLocalizedCaptures(urls) {
     return bytes;
   });
   assert.ok(!captures[0].equals(captures[1]), 'Expected separate English and Chinese captures');
-  return captures;
 }
 
 test('the homepage, campaign setup and README guides identify the same release', () => {
@@ -44,7 +43,10 @@ test('the homepage, campaign setup and README guides identify the same release',
 test('each homepage screen opens its full capture and matches the README in the selected language', () => {
   const panels = homepage.match(/<article\b[^>]*data-screen="[^"]+"[^>]*>[\s\S]*?<\/article>/g);
   assert.ok(panels?.length >= 3);
-  assert.ok(panels.some(panel => panel.includes('data-screen="orders"')));
+  const initialScreen = homepage.match(/<input\b[^>]*name="screen"[^>]*\bchecked[^>]*>/)[0];
+  const openingId = attribute(initialScreen, 'aria-controls');
+  assert.equal(attribute(initialScreen, 'value'), 'opening');
+  assert.equal(attribute(panels[0], 'id'), openingId);
   for (const panel of panels) {
     const image = panel.match(/<img\b[^>]*>/)[0];
     const links = panel.match(/<a\b[^>]*href="[^"]+\.webp"[^>]*>/g);
@@ -54,19 +56,16 @@ test('each homepage screen opens its full capture and matches the README in the 
     for (const link of links) {
       assert.deepEqual([attribute(link, 'href'), attribute(link, 'data-zh-href')], full);
     }
-    const fullImages = checkLocalizedCaptures(full);
-    if (panel.includes('data-screen="orders"')) {
+    checkLocalizedCaptures(full);
+    assert.deepEqual(previews, full);
+    if (attribute(panel, 'id') === openingId) {
       assert.match(full[0], /^\.\/art\/turn-orders-v\d+\.webp$/);
-      assert.deepEqual(previews, full.map(url => url.replace('turn-orders-v', 'turn-orders-detail-v')));
-      const details = checkLocalizedCaptures(previews);
-      for (const [language, bytes] of details.entries()) {
-        assert.ok(!bytes.equals(fullImages[language]), 'Expected a close-up of the turn button');
-        const imagePath = './docs/' + previews[language].slice(2);
-        const linkPath = './docs/' + full[language].slice(2);
-        assert.ok(readmes[language].includes('](' + imagePath + ')](' + linkPath + ')'));
+      for (const [language, url] of full.entries()) {
+        const map = './docs/' + url.slice(2);
+        const detail = map.replace('turn-orders-v', 'turn-orders-detail-v');
+        assert.ok(readmes[language].includes('](' + detail + ')](' + map + ')'));
+        assert.ok(existsSync(new URL(url.replace('turn-orders-v', 'turn-orders-detail-v'), site)));
       }
-    } else {
-      assert.deepEqual(previews, full);
     }
   }
 });
