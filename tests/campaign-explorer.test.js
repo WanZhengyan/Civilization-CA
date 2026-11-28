@@ -20,3 +20,10 @@ test('resource inventory pairs charted deposits with their proper works and omit
  v.state.board[id].resource=undefined;
  assert.ok(!explorerRows(v,'deposits').some(r=>r.id===id));
 });
+
+test('settlement comparisons use a real settler and disappear once it founds a city',()=>{
+ const s=start(),v=view(s),sites=explorerRows(v,'founding');
+ assert.ok(sites.some(r=>r.id===s.units[0].tile && /this turn/.test(r.info)));
+ assert.ok(sites.every(r=>v.state.intel.explored.includes(r.id)));
+ assert.equal(explorerRows(view(capital()),'founding').length,0);
+});

@@ -1,6 +1,6 @@
 import {RESOURCES} from './resources.js';
 import {WONDERS} from './wonders.js';
-import {IMPROVEMENTS,getMap,TERRAIN_NAMES} from './rules.js';
+import {getUnitOptions,getSettlementAssessment,IMPROVEMENTS,getMap,TERRAIN_NAMES} from './rules.js';
 import {getLanguage,translate} from './i18n.js';
 
 const L=(en,zh)=>getLanguage()==='zh-CN'?zh:en;
@@ -9,6 +9,7 @@ const tr=value=>translate(value,getLanguage());
 const modes={
   places:['Charted places','已探明地点'],
   deposits:['Surveyed deposits','已勘测资源'],
+  founding:['Settlement survey','建城选址'],
 };
 
 function describe(row,info){return {...row,info,search:row.search+' '+info};}
@@ -32,6 +33,23 @@ export function explorerRows(view,mode='places'){
       cell.improvement===deposit.improvement?L('Improved','已改良'):L('Needs','需要');
     return [describe(row,tr(deposit.name)+' · '+condition+(row.visible?' · '+improvement:''))];
   });
+  if(mode==='founding'){
+    const candidates=new Map();
+    for(const unit of state.units.filter(u=>u.seat===seat && u.type==='settler')){
+      for(const id of [unit.tile,...getUnitOptions(state,unit.id).moves]){
+        const report=getSettlementAssessment(state,unit.id,id);
+        if(!report.canFoundThisTurn && !report.canFoundNextTurn)continue;
+        const old=candidates.get(id);
+        if(!old || report.movesAfter>old.movesAfter)candidates.set(id,report);
+      }
+    }
+    return rows.filter(row=>candidates.has(row.id)).map(row=>{
+      const r=candidates.get(row.id);
+      return describe(row,(r.canFoundThisTurn?L('Found this turn','本回合可建城'):L('Found next turn','下回合可建城'))+
+        ' · '+L('Movement cost ','移动消耗 ')+r.moveCost+' · '+L('Remaining ','剩余移动力 ')+r.movesAfter);
+    }).sort((a,b)=>Number(candidates.get(b.id).canFoundThisTurn)-Number(candidates.get(a.id).canFoundThisTurn)||
+      candidates.get(a.id).moveCost-candidates.get(b.id).moveCost);
+  }
   return rows;
 }
 
