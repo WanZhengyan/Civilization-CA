@@ -275,9 +275,9 @@ export const BUILDINGS = {
   ...PORT_BUILDINGS,
   granary: {name:"Granary", required:10, description:"Provides 2 food and housing for 2 more citizens."},
   neighborhood: {name:"Residential quarter", era:"frontier", civic:"publicWorks", required:16, description:"Provides housing for 3 more citizens."},
-  workshop: {name:"Workshop", required:13},
+  workshop: {name:"Workshop", tech:"industry", era:"frontier", required:13, description:"Adds 2 production per turn in this city."},
   monument: {name:"Monument", required:10},
-  walls: {name:"City walls", required:14}
+  walls: {name:"City walls", tech:"tactics", era:"frontier", required:14, description:"Adds 50 city health, reduces incoming damage by 7 and strengthens retaliation."}
 };
 export const IMPROVEMENTS = {
   ...SPECIAL_IMPROVEMENTS,
@@ -448,6 +448,7 @@ export function getWonderSites(state,cityId,item) {
 export function getProjectSites(state,cityId,item) {
   const city=cityOrNull(state,cityId),map=getMap(state);
   if (!city || !Object.hasOwn(BUILDINGS,item) || (state.intel && state.intel.seat!==city.seat)) return [];
+  if (!cityProjectUnlocked(state,city,item,BUILDINGS[item])) return [];
   if (WONDERS[item]) return getWonderSites(state,cityId,item);
   const describe=id=>({...map.byId[id],range:hexDistance(city.tile,id),favored:false});
   if (item==='harbor') {
@@ -938,6 +939,13 @@ function productionUnlocked(state,seat,definition,era=getEra(state,seat)) {
     && (!definition.civic || adopted(state,seat,definition.civic));
 }
 
+// Workshops and walls ordered before they had prerequisites keep their invested work.
+function cityProjectUnlocked(state,city,item,definition,era) {
+  if ((item==='workshop' || item==='walls') &&
+      (city.queue?.item===item || parkedProduction(city,item)>0)) return true;
+  return productionUnlocked(state,city.seat,definition,era);
+}
+
 export function getProductionOptions(state,cityId,{replace=false}={}) {
   const city=cityOrNull(state,cityId);
   if (!city || (state.intel && state.intel.seat!==city.seat)) return [];
@@ -947,7 +955,7 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
   const hasCoast=city.buildings.includes('harbor') || berth || findPortSite(
     state,city,map.byId,map.neighbors,getVision(state,city.seat).explored,true);
   const available=Object.entries(PRODUCTS).filter(([item,def])=>
-    (item!==SCIENCE_PROJECT.id || allowsScience(state)) && productionUnlocked(state,city.seat,def,era) &&
+    (item!==SCIENCE_PROJECT.id || allowsScience(state)) && cityProjectUnlocked(state,city,item,def,era) &&
     (hasCoast || !(Object.hasOwn(PORT_BUILDINGS,item) || def.domain==='sea')));
   return available.map(([item,def])=>{
     const kind=item===SCIENCE_PROJECT.id ? 'project' : Object.hasOwn(UNIT_TYPES,item) ? 'unit':'building';

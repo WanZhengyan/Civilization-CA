@@ -1589,3 +1589,7 @@ Mission Valley Lake|米申谷湖
 Otay River|奥泰河
 Otay Lake|奥泰湖
 `);
+
+section(`
+Adds 50 city health, reduces incoming damage by 7 and strengthens retaliation.|城市生命上限增加 50，受击伤害减少 7，并强化城市反击。
+`);
