@@ -100,3 +100,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.90 | Preview reachable observation and filing sites with movement left to work |
 | 7.0.91 | Recover a lost expedition at the crew’s last recorded observation site |
 | 7.0.92 | Carry filed exhibits between friendly cities to open one-time touring exhibitions |
+| 7.0.93 | Plan field visits with real scout ranges, route costs and validated map focus |

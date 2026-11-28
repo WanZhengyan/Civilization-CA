@@ -1,6 +1,6 @@
 import {counties,cities,places,regions,sourceOf,census2010,landArea,landmarks,coastalWorks,regionalEconomy,fieldTrips} from './gazetteer-data.js';
 
-import {getMap} from './rules.js';
+import {getMap,hexDistance,getRouteDetail} from './rules.js';
 
 export function knownAnchor(place,campaign) {
   if (!place?.anchor || !campaign?.intel || place.region!==(campaign.mapId||'la')) return null;
@@ -12,7 +12,7 @@ export function knownAnchor(place,campaign) {
 function mapControl(place,lang,campaign) {
   if(!place.anchor)return '';
   const anchor=knownAnchor(place,campaign);
-  if(anchor)return '<div class="gaz-switch">'+choice('locate-'+place.id,tr(['Show charted district on map','在地图上查看已探索的地区'],lang))+'</div>';
+  if(anchor)return '<div class="gaz-switch">'+choice('locate-'+place.id,tr(['Show charted district on map','在地图上查看已探索的地区'],lang))+choice('plan-'+place.id,tr(['Plan a scout visit','规划侦察兵到访'],lang))+'</div>';
   return '<p>'+tr(campaign && place.region===(campaign.mapId||'la')?
     ['Explore the corresponding district to view it on the map.','探索对应地区后，可以在地图上定位。']:
     ['Map navigation is available in the corresponding campaign.','进入对应战役后可以使用地图定位。'],lang)+'</p>';
@@ -50,6 +50,30 @@ export function surveyProgress(campaign) {
   }
   const known=[...areas.values()].filter(a=>a.tile);
   return {region,total:areas.size,known};
+}
+export function scoutApproaches(place,campaign) {
+  const target=knownAnchor(place,campaign);
+  if(!target)return [];
+  const charted=new Set(campaign.intel.explored);
+  return (campaign.units||[]).filter(u=>u.seat===campaign.intel.seat && u.type==='scout' && charted.has(u.tile)).map(u=>{
+    const distance=hexDistance(u.tile,target);
+    const route=distance?getRouteDetail(campaign,u.id,target):null;
+    const cost=route?.path.every(id=>charted.has(id))?route.cost:null;
+    return {id:u.id,tile:u.tile,distance,cost,arrived:distance===0};
+  }).sort((a,b)=>Number(b.arrived)-Number(a.arrived) || Number(b.cost!==null)-Number(a.cost!==null) ||
+    a.distance-b.distance || String(a.id).localeCompare(String(b.id)));
+}
+function approach(view,lang,campaign) {
+  const place=catalogue.find(p=>p.id===view.plan);
+  if(!place || !knownAnchor(place,campaign))return '<p>'+tr(['Chart the destination to plan a visit.','探索目的地后可规划到访。'],lang)+'</p>';
+  const scouts=scoutApproaches(place,campaign);
+  return '<h3>'+tr(['Scout visit','侦察兵到访'],lang)+' · '+esc(tr(place.name,lang))+'</h3>'+choice(entryAction(place),tr(['Open place profile','打开地点档案'],lang))+
+    (scouts.length?'<p>'+tr(['Direct distance counts hexes. Movement cost is shown when the campaign allows a route this turn.','直线距离按地块计算。本回合有可行路线时会显示移动力消耗。'],lang)+'</p>'+
+      scouts.map(s=>'<article class="gaz-place"><h4>'+tr(['Scout','侦察兵'],lang)+' '+esc(s.id)+'</h4><dl class="gaz-facts">'+
+        fact(tr(['Direct distance (hexes)','直线距离（格）'],lang),s.distance)+
+        fact(tr(['This turn','本回合'],lang),s.arrived?tr(['On site','已到达'],lang):s.cost!==null?number(s.cost,lang)+' '+tr(['movement','移动力'],lang):tr(['No route in current allowance','当前行动条件下无法到达'],lang))+
+        '</dl>'+choice('scout-'+s.id,tr(['Show this scout on map','在地图上查看这名侦察兵'],lang))+'</article>').join(''):
+      '<p>'+tr(['Your campaign has no charted scout to assign. Train a scout in a city to plan its visit.','当前没有可用的已探索位置上的侦察兵。在城市训练侦察兵后可规划到访。'],lang)+'</p>');
 }
 function survey(view,lang,campaign) {
   const progress=surveyProgress(campaign);
@@ -165,12 +189,21 @@ export function gazetteerContent(view,lang,campaign) {
   const more=Object.keys(labels).filter(id=>!primary.includes(id));
   const modes=primary.map(sectionButton).join('')+'<details class="gaz-more"'+(more.includes(view.section)?' open':'')+
     '><summary>'+tr(['Field tools','实地工具'],lang)+'</summary><div class="gaz-switch">'+more.map(sectionButton).join('')+'</div></details>';
-  let body=view.section==='trips'?trip(view,lang,campaign):view.section==='survey'?survey(view,lang,campaign):view.section==='saved'?notebook(view,lang):view.section==='search'?search(view,lang):view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
+  let body=view.section==='approach'?approach(view,lang,campaign):view.section==='trips'?trip(view,lang,campaign):view.section==='survey'?survey(view,lang,campaign):view.section==='saved'?notebook(view,lang):view.section==='search'?search(view,lang):view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
   return {kicker:tr(['Field guide','游戏指南'],lang),title:tr(['California gazetteer','加州地名志'],lang),body:'<section class="gaz" translate="no"><p class="gaz-intro">'+
     tr(['Real places and public measurements. Campaign hexes represent approximate locations and have their own game yields.','查阅现实地点与公开数据。战役地块是近似位置，产出按游戏规则计算。'],lang)+'</p>'+
     (Object.keys(labels).length>1?'<nav class="gaz-nav" aria-label="'+tr(['Gazetteer sections','地名志栏目'],lang)+'">'+modes+'</nav>':'')+body+'</section>'};
 }
 export function gazetteerAction(view,action,campaign) {
+  if(action.startsWith('plan-')){
+    const place=catalogue.find(p=>p.id===action.slice(5));
+    if(knownAnchor(place,campaign)){view.plan=place.id;view.section='approach';}
+    return;
+  }
+  if(action.startsWith('scout-')){
+    const place=catalogue.find(p=>p.id===view.plan);
+    return scoutApproaches(place,campaign).find(s=>String(s.id)===action.slice(6))?.tile || null;
+  }
   if(action==='save-trip'){
     view.pins=[...new Set([...view.pins,...fieldTrips[view.region].stops.map(([id])=>id)])];
     try {globalThis.localStorage?.setItem(bookmarksKey,JSON.stringify(view.pins));} catch {}

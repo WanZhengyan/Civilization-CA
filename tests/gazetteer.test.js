@@ -92,3 +92,18 @@ test('three-stop regional field trips offer context, adapt next objectives to ex
   assert.deepEqual(v.pins,['topanga','municipal-pier','los-angeles']);gazetteerAction(v,'region-sd');
   assert.match(gazetteerContent(v,'zh-CN').body,/寻访圣迭戈湾/);
 });
+import {createGame,campaignView,getMap} from '../docs/rules.js';
+import {scoutApproaches} from '../docs/gazetteer.js';
+import {cities} from '../docs/gazetteer-data.js';
+test('scout approach planner uses engine routes for the current player and rechecks map focus',()=>{
+  const raw=createGame(undefined,'la',{seed:1}),source=raw.units.find(u=>u.seat===0);
+  Object.assign(source,{type:'scout',tile:'4,6',moves:4,maxMoves:4});
+  const campaign=campaignView(raw,0),place=cities.find(p=>p.id==='santa-monica');
+  assert.equal(getMap(campaign).byId['4,7'].name,'Santa Monica');
+  const [scout]=scoutApproaches(place,campaign);assert.equal(scout.distance,1);assert.equal(scout.cost,1);
+  const v=newGazetteer();gazetteerAction(v,'plan-santa-monica',campaign);
+  assert.match(gazetteerContent(v,'zh-CN',campaign).body,/1 移动力/);
+  assert.equal(gazetteerAction(v,'scout-'+source.id,campaign),source.tile);
+  assert.equal(gazetteerAction(v,'scout-foreign',campaign),null);
+  campaign.intel.explored=[];assert.equal(gazetteerAction(v,'scout-'+source.id,campaign),null);
+});
