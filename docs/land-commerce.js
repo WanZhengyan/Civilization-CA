@@ -48,7 +48,10 @@ export function freightOffer(state,seat,route,item,service='standard') {
   const speed=service==='express'?6:3,turns=Math.ceil(route.steps/speed);
   if(service==='express' && turns>=route.turns)return null;
   const fare=(cargo.fare || 0)+(service==='express'?3:0);
-  const reason=item==='fair' && player.fairBookings?.[destination.id]===season?'booked':player.lastCaravan===state.round?'departure':fleet.length>=1?'crew':
+  const capacity=tradeCapacity(state,seat);
+  const departures=player.caravanDay?.round===state.round ? player.caravanDay.origins :
+    player.lastCaravan===state.round ? ['legacy'] : [];
+  const reason=item==='fair' && player.fairBookings?.[destination.id]===season?'booked':(departures.length>=capacity || departures.includes(origin.id))?'departure':fleet.length>=capacity?'crew':
     player.capital<fare?'fare':(origin.food || 0)<(cargo.food || 0)?'food':
     resource && (player.stockpile?.[resource] || 0)<cargo.stock?'stock':'';
   return {origin:origin.id,destination:destination.id,item,service,speed,turns,fare,gold,reason,resource,...(item==='fair'?{season}: {})};
@@ -62,7 +65,9 @@ export function dispatchCaravan(state,seat,order,routes) {
   origin.food-=(cargo.food || 0);
   if(offer.resource)player.stockpile={...player.stockpile,[offer.resource]:player.stockpile[offer.resource]-cargo.stock};
   if(order.item==='fair')player.fairBookings={...player.fairBookings,[route.destination]:offer.season};
-  player.caravans=[...(player.caravans || []),{...offer,id:'wagon-'+state.round+'-'+seat,path:route.path,cursor:0,remaining:offer.turns,launched:state.round}];
+  player.caravans=[...(player.caravans || []),{...offer,id:'wagon-'+state.round+'-'+seat+'-'+origin.id,path:route.path,cursor:0,remaining:offer.turns,launched:state.round}];
+  const origins=player.caravanDay?.round===state.round?player.caravanDay.origins:[];
+  player.caravanDay={round:state.round,origins:[...origins,origin.id]};
   player.lastCaravan=state.round;
 }
 export function harvestCaravans(state,seat) {
@@ -124,4 +129,15 @@ export function divertWagon(state,seat,order,routes) {
   player.capital-=2;
   player.caravans=player.caravans.map(w=>w!==wagon ? w : {...w,destination:route.destination,
     gold:w.item==='fair'?5:w.gold,path:route.path,cursor:0,remaining:route.turns,diverted:state.round,returnPath:[...(w.returnPath || []),...w.path.slice(0,w.cursor)]});
+}
+
+export function tradeCapacity(state,seat) {
+  return state.cities.some(c=>c.seat===seat && c.wagonDepot)?2:1;
+}
+export function establishDepot(state,seat,id) {
+  const city=state.cities.find(c=>c.id===id && c.seat===seat);
+  if(!city || !city.buildings.includes('shop') || tradeCapacity(state,seat)>1 || state.players[seat].capital<18)
+    throw new Error('A wagon depot needs a local Shop, 18 gold and an unassigned depot charter.');
+  state.players[seat].capital-=18;
+  city.wagonDepot=true;
 }

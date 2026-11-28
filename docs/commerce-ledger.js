@@ -1,5 +1,5 @@
 import {getLandRoutes,getTradeDiversions} from './rules.js';
-import {CARGO,freightOffer} from './land-commerce.js';
+import {CARGO,freightOffer,tradeCapacity} from './land-commerce.js';
 import {RESOURCES} from './resources.js';
 import {seatMayOrder} from './team-turns.js';
 import {getLanguage,translate} from './i18n.js';
@@ -48,9 +48,12 @@ export function commerceLedger(state,seat,city,busy,esc) {
     (!w.returning && state.cities.some(c=>c.id===w.origin && c.seat===seat)?'<button type="button" class="cargo-order" data-caravan-order="recallWagon" data-wagon="'+esc(w.id)+'"'+(!enabled?' disabled':'')+'>'+L('Recall cargo','召回原货')+'</button>':'')+
     getTradeDiversions(state,seat,w.id).map(route=>'<button type="button" class="cargo-order" data-caravan-order="divertWagon" data-wagon="'+esc(w.id)+'" data-destination="'+esc(route.destination)+'"'+
       (!enabled || player.capital<2 || w.diverted===state.round?' disabled':'')+'>'+L('Divert to ','改送')+cityText(state,route.destination,esc)+(w.item==='fair'?L(' (5 gold resale)','（改售得 5 金币）'):'')+' · 2 '+L('gold','金币')+' · '+route.turns+L(' harvests',' 次收获')+'</button>').join('')+'</p>').join('');
+  const capacity=tradeCapacity(state,seat);
+  const depot=city.buildings?.includes('shop') && capacity===1 ? '<button class="cargo-order" type="button" data-caravan-order="establishDepot" data-origin="'+esc(city.id)+'"'+
+    (!enabled || player.capital<18?' disabled':'')+'>'+L('Open wagon depot · 18 gold · second crew','设立商队货栈 · 18 金币 · 增加第二支商队')+'</button>' : '';
   const receipt=player.tradeReceipt;
   return '<section class="commerce-ledger" translate="no"><h3>'+L('Overland trade','陆路贸易')+'</h3><p>'+
-    L('Wagon routes from ','商队起点：')+cityText(state,city.id,esc)+ '</p>'+(city.freightTimber?'<p>'+L('Lumber yard reserve','木料库存产能')+' · '+city.freightTimber+'</p>':'')+active+
+    L('Wagon routes from ','商队起点：')+cityText(state,city.id,esc)+' · '+L('Crews on the road ','在途商队 ')+(player.caravans?.length || 0)+' / '+capacity+'</p>'+depot+(city.freightTimber?'<p>'+L('Lumber yard reserve','木料库存产能')+' · '+city.freightTimber+'</p>':'')+active+
     (receipt?'<p>'+L('Last delivery','上次到货')+' · '+cargoText(receipt.item)+' · '+cityText(state,receipt.destination,esc)+' · '+(receipt.returning?L('Cargo returned; no freight paid','原货已退还，无运费收益'):rewardText(receipt))+'</p>':'')+
     (rows?'<ul>'+rows+'</ul>':'<p>'+L('Found a second city and explore a land corridor between them to open a wagon route.','建立第二座城市，并探明两城之间的陆路，便可开通商队路线。')+'</p>')+'</section>';
 }

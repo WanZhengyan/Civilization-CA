@@ -112,3 +112,13 @@ test('county fair books the quoted seasonal commodity and locks the price until 
   assert.equal(next.players[0].tradeReceipt.paid,11);
   assert.notEqual(freightOffer(next,0,route,'fair').resource,offer.resource);
 });
+test('a depot buys a second crew and allows two distinct cities to ship on the same day',()=>{
+  const {state,home,dest}=market();state.players[0].capital=20;
+  state.cities[0].buildings.push('shop');state.cities[1].food=8;
+  let next=applyAction(state,0,{type:'establishDepot',origin:home});
+  assert.equal(next.players[0].capital,2);
+  assert.throws(()=>applyAction(next,0,{type:'establishDepot',origin:home}));
+  const run=(s,o,d)=>applyAction(s,0,{type:'dispatchCaravan',origin:o,destination:d,item:'provisions'});
+  next=run(next,home,dest);assert.throws(()=>run(next,home,dest));next=run(next,dest,home);
+  assert.equal(new Set(next.players[0].caravans.map(w=>w.id)).size,2);
+});

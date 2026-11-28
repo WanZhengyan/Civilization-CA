@@ -1,4 +1,4 @@
-import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon} from './land-commerce.js';
+import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon,establishDepot} from './land-commerce.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
@@ -1624,6 +1624,8 @@ function resolveOrder(source,seat,action) {
   } else if (action.type==='delegation') {
     sendDelegation(next,seat,action.target,getVisibleTiles(next,seat));
     record(next,seat,'delegation','Diplomatic delegation dispatched.',null,{target:action.target});
+  } else if (action.type==='establishDepot') {
+    establishDepot(next,seat,action.origin);
   } else if (action.type==='divertWagon') {
     divertWagon(next,seat,action,getTradeDiversions(next,seat,action.wagon));
   } else if (action.type==='recallWagon') {
