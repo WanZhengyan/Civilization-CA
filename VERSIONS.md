@@ -65,3 +65,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.55 | Trace 2010–2020 population changes and compare rates from their original bases |
 | 7.0.56 | Compare population concentration by measured land area in metric or US units |
 | 7.0.57 | Locate real municipalities on charted campaign districts without exposing fog |
+| 7.0.58 | Open agency field dossiers for canyon trails, bay defenses and coastal navigation |

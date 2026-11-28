@@ -41,3 +41,9 @@ test('locating a place requires a previously charted district on the matching ca
   assert.match(gazetteerContent(v,'en',campaign).body,/Show charted district/);
   assert.equal(gazetteerAction(v,'locate-berkeley',campaign),null);
 });
+test('three public-agency field sites present region-specific measures and map links',()=>{
+  const v=newGazetteer('sd');gazetteerAction(v,'section-sites');
+  assert.match(gazetteerContent(v,'en').body,/1855–1891/);
+  gazetteerAction(v,'site-topanga');assert.match(gazetteerContent(v,'zh-CN').body,/36 英里步道/);
+  gazetteerAction(v,'site-fort-point');assert.match(gazetteerContent(v,'en').body,/nps.gov\/places\/fort-point/);
+});

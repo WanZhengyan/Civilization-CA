@@ -36,3 +36,15 @@ export const landArea={
   'santa-monica':8.41,'san-francisco':46.91,oakland:55.93,berkeley:10.43,'san-diego':325.88,
   coronado:7.81,'chula-vista':49.64
 };
+
+export const landmarks=[
+  {id:'topanga',region:'la',anchor:'Topanga Canyon',name:['Topanga State Park','托潘加州立公园'],
+    measure:['36 miles of trails','36 英里步道'],context:['California State Parks reports the trail network for the whole park. A single campaign district represents the canyon area.','加州州立公园公布的是全园步道总长。战役地块代表峡谷一带。'],
+    date:['Park facilities inventory · undated','公园设施资料 · 未标注年份'],publisher:['California State Parks','加州州立公园'],url:'https://parks.ca.gov/AccessibleFeatures/Details/629'},
+  {id:'fort-point',region:'sf',anchor:'Presidio',name:['Fort Point','堡垒角要塞'],measure:['1853–1861','1853–1861 年'],
+    context:['The fort was built at the entrance to San Francisco Bay. The campaign anchor is the surrounding Presidio district.','要塞建在旧金山湾的入口。战役中的对应地区是普雷西迪奥。'],
+    date:['Construction period','建造时期'],publisher:['National Park Service','美国国家公园管理局'],url:'https://www.nps.gov/places/fort-point.htm'},
+  {id:'lighthouse',region:'sd',anchor:'Cabrillo Point',name:['Old Point Loma Lighthouse','洛马角旧灯塔'],measure:['1855–1891','1855–1891 年'],
+    context:['The original light guided ships approaching San Diego. Its campaign anchor is the Cabrillo headland.','这座旧灯塔曾为驶近圣迭戈的船只导航。在战役中对应卡布里约岬角。'],
+    date:['Original light in service','原灯塔服役时期'],publisher:['National Park Service','美国国家公园管理局'],url:'https://www.nps.gov/articles/cabrillo.htm'}
+];

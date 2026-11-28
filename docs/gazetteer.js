@@ -1,4 +1,4 @@
-import {counties,cities,places,regions,sourceOf,census2010,landArea} from './gazetteer-data.js';
+import {counties,cities,places,regions,sourceOf,census2010,landArea,landmarks} from './gazetteer-data.js';
 
 import {getMap} from './rules.js';
 
@@ -17,7 +17,7 @@ function mapControl(place,lang,campaign) {
     ['Explore the corresponding district to view it on the map.','探索对应地区后，可以在地图上定位。']:
     ['Map navigation is available in the corresponding campaign.','进入对应战役后可以使用地图定位。'],lang)+'</p>';
 }
-const labels = {profile:['Places','地点档案'],compare:['Compare','横向对比']};
+const labels = {profile:['Places','地点档案'],compare:['Compare','横向对比'],sites:['Field sites','实地档案']};
 const esc = value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tr = (pair,lang)=>pair[lang==='zh-CN'?1:0];
 const number = (value,lang)=>new Intl.NumberFormat(lang,{maximumFractionDigits:2}).format(value);
@@ -60,21 +60,33 @@ function comparison(view,lang) {
     tr(['Place','地点'],lang)+'</th><th scope="col">'+tr(metric.label,lang)+'</th></tr></thead><tbody>'+
     sorted.map(p=>'<tr><th scope="row">'+choice('place-'+p.id,tr(p.name,lang))+'</th><td>'+number(metric.value(p,view.unit),lang)+'</td></tr>').join('')+'</tbody></table>';
 }
+function sites(view,lang,campaign) {
+  const selected=landmarks.find(p=>p.id===view.site) || landmarks.find(p=>p.region===view.region);
+  const list=landmarks.map(p=>choice('site-'+p.id,tr(p.name,lang),p===selected)).join('');
+  return '<div class="gaz-places">'+list+'</div><article class="gaz-place"><h3>'+esc(tr(selected.name,lang))+
+    '</h3><p>'+esc(tr(regions[selected.region],lang))+'</p><dl class="gaz-facts">'+
+    fact(tr(selected.date,lang),tr(selected.measure,lang))+'</dl><p>'+esc(tr(selected.context,lang))+'</p>'+
+    link(selected.url,tr(selected.publisher,lang))+mapControl(selected,lang,campaign)+'</article>';
+}
 export function gazetteerContent(view,lang,campaign) {
   const modes=Object.entries(labels).map(([id,names])=>choice('section-'+id,tr(names,lang),id===view.section)).join('');
-  let body=view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
+  let body=view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
   return {kicker:tr(['Field guide','游戏指南'],lang),title:tr(['California gazetteer','加州地名志'],lang),body:'<section class="gaz" translate="no"><p class="gaz-intro">'+
     tr(['Real places and public measurements. Campaign hexes represent approximate locations and have their own game yields.','查阅现实地点与公开数据。战役地块是近似位置，产出按游戏规则计算。'],lang)+'</p>'+
     (Object.keys(labels).length>1?'<nav class="gaz-nav" aria-label="'+tr(['Gazetteer sections','地名志栏目'],lang)+'">'+modes+'</nav>':'')+body+'</section>'};
 }
 export function gazetteerAction(view,action,campaign) {
-  if(action.startsWith('locate-'))return knownAnchor(places.find(p=>p.id===action.slice(7)),campaign);
+  if(action.startsWith('locate-'))return knownAnchor([...places,...landmarks].find(p=>p.id===action.slice(7)),campaign);
   if(['unit-mi','unit-km'].includes(action))view.unit=action.slice(5);
   if(action.startsWith('metric-') && Object.hasOwn(metrics,action.slice(7)))view.metric=action.slice(7);
   if(action==='cities' || action==='counties')view.scale=action==='cities'?'city':'county';
   if(action.startsWith('place-')){
     const place=places.find(p=>p.id===action.slice(6));
     if(place){view.region=place.region;view.place=place.id;view.section='profile';}
+  }
+  if(action.startsWith('site-')){
+    const site=landmarks.find(p=>p.id===action.slice(5));
+    if(site){view.site=site.id;view.region=site.region;view.section='sites';}
   }
   if(action.startsWith('section-') && Object.hasOwn(labels,action.slice(8)))view.section=action.slice(8);
   if(action.startsWith('region-') && Object.hasOwn(regions,action.slice(7)))view.region=action.slice(7);
