@@ -131,3 +131,44 @@ test('lens finder ranks actionable records, filters bilingual text, and orders b
   assert.deepEqual(findLensSites(rows,map,'','distance',first).map(s=>s.id),[first,second]);
   assert.deepEqual(findLensSites(rows,map,'nonsense'),[]);
 });
+
+test('pinned parcels cannot reveal concealed names or a different seat’s records',async()=>{
+  const {lensParcel}=await import('../docs/campaign-lenses.js'),s=campaignView(capital(),0),rows=surveyLayer(s,0,'survey');
+  const known=s.intel.explored[0],unknown=getMap(s).tiles.find(t=>!s.intel.explored.includes(t.id)).id;
+  rows.set(unknown,{en:'concealed name'});assert.equal(lensParcel(s,0,rows,unknown),null);
+  assert.equal(lensParcel(s,1,rows,known),null);assert.equal(lensParcel(s,0,rows,known).row,rows.get(known));
+  assert.equal(lensParcel(s,0,new Map(),known).row,null);
+});
+
+test('HUD lens controls locate a charted site, compare two observations, and clear private pins on seat changes',async()=>{
+  const {mountCampaignLenses}=await import('../docs/campaign-lenses.js');
+  class Control {
+    constructor(tag){this.tag=tag;this.children=[];this.attrs={};this.style={};this.classList={toggle(){}};this.value='';}
+    append(...nodes){this.children.push(...nodes);}
+    prepend(node){this.children.unshift(node);}
+    after(node){this.sibling=node;}
+    replaceChildren(...nodes){this.children=nodes;}
+    setAttribute(key,value){this.attrs[key]=value;}
+    get all(){return this.children.filter(c=>typeof c==='object').flatMap(c=>[c,...c.all]);}
+  }
+  const previous=globalThis.document;globalThis.document={createElement:tag=>new Control(tag)};
+  try{
+    let state=campaignView(capital(),0),seat=0,selection=state.intel.visible[0],model,inspections=0;
+    const menu=new Control('div'),details=new Control('div');
+    const draw=()=>{model=update(state,seat,selection,'room');},locate=id=>{selection=id;draw();};
+    const update=mountCampaignLenses(menu,details,draw,locate,()=>inspections++);draw();
+    const picker=menu.all.find(c=>c.tag==='select');picker.value='survey';picker.onchange();
+    assert.equal(inspections,1);assert.ok(model.rows.size);
+    const actions=details.sibling.all.filter(c=>c.tag==='button');
+    actions[0].onclick();assert.equal(model.anchor,selection);
+    const finder=menu.all.find(c=>c.tag==='details');finder.open=true;finder.ontoggle();
+    const match=menu.all.find(c=>c.className==='lens-matches');assert.ok(match.children.length>1);
+    const old=selection;
+    match.children.find(c=>!c.children[0].textContent.endsWith(' · '+old)).onclick();
+    assert.notEqual(selection,old);assert.equal(model.anchor,old);
+    const columns=details.sibling.all.find(c=>c.className==='lens-comparison');assert.equal(columns.children.length,2);
+    actions[1].onclick();assert.equal(model.anchor,null);assert.equal(columns.children.length,1);
+    actions[0].onclick();seat=1;state={...state,intel:{...state.intel,seat:1}};draw();assert.equal(model,null);
+    picker.value='survey';picker.onchange();assert.equal(model.anchor,null);
+  } finally {if(previous)globalThis.document=previous;else delete globalThis.document;}
+});

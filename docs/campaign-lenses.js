@@ -1,3 +1,4 @@
+import {pos,W,H} from './hex-survey.js';
 import {mountLensFinder} from './lens-finder.js';
 import {FIELD_STATIONS,fieldStationReport} from './field-stations.js';
 import {seatMayOrder} from './team-turns.js';
@@ -292,22 +293,37 @@ export function surveyLayer(state,seat,id) {
   return rows;
 }
 
-export function paintCampaignLens(ctx,rows,model,path,viewport,scale) {
-  if(!rows?.size)return;
+export function lensParcel(state,seat,rows,id) {
+  if(!id || state?.intel?.seat!==seat || !state.intel.explored.includes(id))return null;
+  const tile=getMap(state).byId[id];
+  return tile?{name:tile.name,id,row:rows.get(id)||null}:null;
+}
+
+export function paintCampaignLens(ctx,layer,model,path,viewport,scale) {
+  if(!layer)return;
+  const {rows,anchor}=layer;
   ctx.save();
   for(const [id,row] of rows){
     const tile=model.byId.get(id);
     if(!tile || !model.fog?.explored.has(id))continue;
-    const x=36+(tile.q+(tile.r&1)*.5)*72,y=38+tile.r*57;
-    if(x+36<viewport.left || x-36>viewport.right || y+38<viewport.top || y-38>viewport.bottom)continue;
+    const [x,y]=pos(tile.q,tile.r);
+    if(x+W/2<viewport.left || x-W/2>viewport.right || y+H/2<viewport.top || y-H/2>viewport.bottom)continue;
     const p=path(tile.q,tile.r);
     ctx.fillStyle=ink[row.band];ctx.globalAlpha=.34;ctx.fill(p);
     ctx.strokeStyle=ink[row.band];ctx.lineWidth=1.4/scale;ctx.globalAlpha=.8;ctx.stroke(p);
   }
+  const pin=anchor && model.fog?.explored.has(anchor) && model.byId.get(anchor);
+  if(pin){
+    const p=path(pin.q,pin.r),[x,y]=pos(pin.q,pin.r);
+    ctx.globalAlpha=1;ctx.strokeStyle='#202d2f';ctx.lineWidth=6/scale;ctx.stroke(p);
+    ctx.strokeStyle='#f7e4a2';ctx.lineWidth=2.6/scale;ctx.setLineDash([7/scale,4/scale]);ctx.stroke(p);ctx.setLineDash([]);
+    ctx.beginPath();ctx.arc(x,y-H*.32,7,0,2*Math.PI);ctx.fillStyle='#243230';ctx.fill();
+    ctx.fillStyle='#fff0b9';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('A',x,y-H*.32);
+  }
   ctx.restore();
 }
 
-export function mountCampaignLenses(menu,inspect,redraw,locate) {
+export function mountCampaignLenses(menu,inspect,redraw,locate,beginInspection) {
   const box=document.createElement('section'); box.className='campaign-lens';box.translate=false;
   const element=(tag,parent)=>{const node=document.createElement(tag);parent.append(node);return node;};
   const label=element('label',box),caption=element('span',label),picker=element('select',label);
@@ -315,9 +331,16 @@ export function mountCampaignLenses(menu,inspect,redraw,locate) {
   key.className='lens-legend';
   const updateFinder=mountLensFinder(box,locate);
   const detail=document.createElement('section');detail.className='lens-inspection';detail.translate=false;
+  const heading=element('strong',detail),columns=element('div',detail),actions=element('div',detail);
+  columns.className='lens-comparison';actions.className='lens-pin-actions';
+  const pin=element('button',actions),clear=element('button',actions);
+  pin.type=clear.type='button';
   inspect.after(detail);menu.prepend(box);
-  let language,entry=null,lastState,lastSeat,lastLens,lastSelection,campaign,rows;
-  picker.onchange=()=>{entry=lenses.find(l=>l.id===picker.value)||null;redraw();};
+  let language,entry=null,lastState,lastSeat,lastLens,lastSelection,campaign,rows,anchor=null,layer=null;
+  picker.onchange=()=>{entry=lenses.find(l=>l.id===picker.value)||null;if(entry)beginInspection?.();redraw();};
+  function changeAnchor(id){anchor=id;lastLens=undefined;redraw();}
+  pin.onclick=()=>{if(lensParcel(lastState,lastSeat,rows,lastSelection))changeAnchor(lastSelection);};
+  clear.onclick=()=>changeAnchor(null);
   function localize(){
     language=getLanguage();caption.textContent=t('Map lens','专题地图');
     picker.replaceChildren();
@@ -328,15 +351,19 @@ export function mountCampaignLenses(menu,inspect,redraw,locate) {
   }
   localize();key.hidden=guide.hidden=detail.hidden=true;
   return (state,seat,selection,match)=>{
-    if(match!==campaign){campaign=match;entry=null;picker.value='';lastState=null;}
+    if(match!==campaign || (lastState && seat!==lastSeat)){campaign=match;entry=null;anchor=null;picker.value='';lastState=null;}
     const translated=language!==getLanguage();if(translated)localize();
-    if(lastState===state && lastLens===entry && lastSelection===selection && lastSeat===seat && !translated)return rows;
+    if(lastState===state && lastLens===entry && lastSelection===selection && lastSeat===seat && !translated)return layer;
     const changed=lastState!==state || lastLens!==entry || lastSeat!==seat;
-    if(changed)rows=entry?surveyLayer(state,seat,entry.id):null;
+    if(changed){
+      rows=entry?surveyLayer(state,seat,entry.id):null;
+      if(anchor && (state.intel?.seat!==seat || !state.intel.explored.includes(anchor)))anchor=null;
+      layer=rows?{rows,anchor}:null;
+    }
     lastState=state;lastLens=entry;lastSelection=selection;lastSeat=seat;
     key.hidden=guide.hidden=detail.hidden=!entry;
     updateFinder(entry,rows,entry?getMap(state):null,selection);
-    if(!entry)return rows;
+    if(!entry)return layer;
     if(changed || translated){
       guide.textContent=t(entry.guide,entry.guideZh);
       key.replaceChildren();
@@ -345,12 +372,23 @@ export function mountCampaignLenses(menu,inspect,redraw,locate) {
         swatch.style.backgroundColor=ink[i];item.append(t(en,zh));
       });
     }
-    const row=rows.get(selection);
-    detail.replaceChildren();
-    const title=element('strong',detail);title.textContent=t(entry.en,entry.zh);
-    element('p',detail).textContent=row?t(row.en,row.zh):state.intel?.explored.includes(selection)?
-      t('No matching observation on this parcel.','此地块没有符合条件的记录。'):
-      t('Uncharted. Explore this hex to inspect it.','尚未探索，探明后可查看此处。');
-    return rows;
+    heading.textContent=t(entry.en,entry.zh);
+    columns.replaceChildren();columns.classList.toggle('has-anchor',Boolean(anchor && anchor!==selection));
+    function show(id,label){
+      const parcel=lensParcel(state,seat,rows,id),cell=element('div',columns);
+      if(label){
+        const name=element('b',cell);
+        name.textContent=label+(parcel?' · '+translate(parcel.name)+' ('+id+')':'');
+      }
+      element('p',cell).textContent=parcel?.row?t(parcel.row.en,parcel.row.zh):parcel?
+        t('No matching observation on this parcel.','此地块没有符合条件的记录。'):
+        t('Uncharted. Explore this hex to inspect it.','尚未探索，探明后可查看此处。');
+    }
+    if(anchor && anchor!==selection)show(anchor,t('A · Pinned','A · 固定'));
+    show(selection,anchor?(anchor===selection?t('A · Pinned','A · 固定'):t('B · Selected','B · 当前')):'');
+    pin.disabled=!lensParcel(state,seat,rows,selection) || anchor===selection;
+    clear.hidden=!anchor;clear.textContent=t('Clear pin','取消固定');
+    pin.textContent=anchor?t('Use as A','设为 A 点'):t('Pin for comparison','固定地块以比较');
+    return layer;
   };
 }
