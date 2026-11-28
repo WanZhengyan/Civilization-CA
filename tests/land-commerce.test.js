@@ -39,3 +39,15 @@ test('food is reserved at departure and paid only once when the wagon arrives',(
   assert.equal(next.players[0].tradeReceipt.destination,dest);
   assert.equal(next.players[0].tradeReceipt.paid,2+Math.floor(route.steps/2));
 });
+import {workTimber} from '../docs/land-commerce.js';
+test('a lumber train leaves six stored production at an idle destination; the yard releases up to three per harvest',()=>{
+  const {state,home,dest}=market();state.players[0].stockpile={timber:2};
+  let next=applyAction(state,0,{type:'dispatchCaravan',origin:home,destination:dest,item:'lumber'});
+  assert.equal(next.players[0].stockpile.timber,0);
+  while(next.players[0].caravans.length)next=applyAction(next,0,{type:'end'});
+  const city=next.cities.find(c=>c.id===dest);assert.equal(city.freightTimber,6);
+  city.queue={item:'settler',progress:0,required:14};city.population=2;workTimber(city);
+  assert.equal(city.freightTimber,6);
+  city.queue={item:'granary',progress:8,required:10};workTimber(city);
+  assert.equal(city.freightTimber,4);assert.equal(city.queue.progress,10);
+});

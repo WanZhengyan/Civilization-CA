@@ -47,3 +47,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.37 | Triage the three leading decisions and drill into accessible departmental briefings |
 | 7.0.38 | Survey charted land corridors between friendly cities from the supply ledger |
 | 7.0.39 | Dispatch food wagons with reserved cargo, dated arrivals and private receipts |
+| 7.0.40 | Deliver lumber to city yards and meter stored production into eligible projects |

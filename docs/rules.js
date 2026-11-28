@@ -1,4 +1,4 @@
-import {tradeCorridors,dispatchCaravan,harvestCaravans} from './land-commerce.js';
+import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber} from './land-commerce.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
@@ -1235,6 +1235,7 @@ function settleSeatEconomy(state,seat) {
   for (const city of state.cities) if (city.seat===seat) {
     const parcel=advanceCityBorder(state,city,borders.get(city.id));
     if (parcel) record(state,seat,'border','The city incorporated a district.',parcel,{city:city.id});
+    workTimber(city);
     produceCityTurn(state,city);
     endFestivalHarvest(state,city);
     if (state.phase==='finished') {refreshScores(state); return;}
