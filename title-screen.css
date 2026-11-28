@@ -19,6 +19,8 @@ body.on-title { background: #172b2c; }
 .title-screen button:focus-visible { outline: 3px solid #fff0bd; outline-offset: 4px; }
 .title-screen .title-primary { background: #f1cf8a; border-color: #f5dca3; color: #262d2a; font-size: 1.03rem; min-height: 52px; box-shadow: 0 4px 16px #08151965; }
 .title-screen .title-primary:hover { color: #1c2726; background: #ffe0a1; }
+.title-host { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.title-host small { color: #f1d79d; font-weight: 500; }
 .title-online { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
 .title-regions { display: flex; justify-content: flex-end; align-items: center; color: #f6e9cf; font: 500 .73rem/1.4 "DM Sans",system-ui,sans-serif; gap: 12px; }
 .title-regions i { height: 1px; width: 18px; background: #d8be8c; }

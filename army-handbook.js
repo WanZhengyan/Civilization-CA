@@ -18,7 +18,7 @@ export function handbookRows(era) {
     if (unit.domain==='sea') requirements.push('Harbor');
     if (unit.shipyard || id==='frigate') requirements.push('Shipyard');
     return {
-      name:unit.name, moves:unit.moves, sight:getSightRadius(), range:unit.range, cost:unit.required,
+      id, name:unit.name, moves:unit.moves, sight:getSightRadius(), range:unit.range, cost:unit.required,
       requirements, note:unit.description || notes[id] || '', upgrade:UNIT_TYPES[unit.upgrade]?.name,
       routes:advancementRoutes(id,UNIT_TYPES).map(r=>({name:UNIT_TYPES[r.to].name,cost:r.cost}))
     };
@@ -37,7 +37,7 @@ export function armyHandbook(escapeHTML) {
       const description = unit.note ? '<p>'+safe(unit.note)+'</p>' : '';
       const upgrade = unit.routes.length ? '<p class="manual-unlocks"><b>Upgrades to</b>'+unit.routes.map(r=>
         '<span class="manual-tag"><span>'+safe(r.name)+'</span> · <span>'+safe(r.cost)+' <span>gold</span></span></span>').join('')+'</p>' : '';
-      const info = '<details><summary>'+safe(unit.name)+'</summary>'+description+
+      const info = '<details><summary data-guide-target="unit-'+safe(unit.id)+'">'+safe(unit.name)+'</summary>'+description+
         '<p class="manual-unlocks"><b>Train with</b>'+badges(unit.requirements.length ? unit.requirements : ['City center'])+'</p>'+upgrade+'</details>';
       return '<tr><th scope="row">'+info+'</th><td>'+unit.moves+'</td><td>'+unit.sight+'</td><td>'+unit.range+'</td><td>'+unit.cost+'</td></tr>';
     }).join('');

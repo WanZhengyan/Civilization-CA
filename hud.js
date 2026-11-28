@@ -194,7 +194,7 @@ function onMapSelect(tileId,unitId,cityPlate=false,pointer="keyboard"){
     const options=getUnitOptions(view.state,unit.id);
     if(options.attacks.includes(tileId)){moveDraft=null;openCombat(unit.id,tileId);return}
     if(options.moves.includes(tileId) && order!=="attack"){
-      if(freightTarget || reviewPointerMove(pointer,compactMap())){
+      if(freightTarget || reviewPointerMove(pointer,compactMap(),view.tutorial && !view.tutorialProgress?.completed)){
         moveDraft=previewMove(view.state,unit,tileId);
         openMapOnMobile();
         updateMap();
@@ -814,6 +814,12 @@ function openPendingTask(task){
     el("production-options").querySelector("[data-produce]:enabled")?.focus();
   }
 }
+function reviewScoutDestination(unit,target){
+  const draft=previewMove(view.state,unit,target);
+  if(!draft){toast('The route has changed. Choose a destination again.');return;}
+  moveDraft=draft;order="";openMapOnMobile();updateMap();atlas.focus(target);
+  moveBar.querySelector('[data-move-confirm]').focus({preventScroll:true});
+}
 let tutorialCoach;
 function locateTutorialOrder(lesson){
   if(!view?.tutorial)return;
@@ -838,6 +844,9 @@ function locateTutorialOrder(lesson){
     (list.querySelector('[data-produce="scout"]:enabled') || list.querySelector('[data-produce]:enabled'))?.focus({preventScroll:true});
   }else if(unit){
     select(unit.tile,unit.id);atlas.focus(unit.tile);redraw();
+    if(step==="explore" && lesson.route && mayOrder()){
+      reviewScoutDestination(unit,lesson.route.tile);return;
+    }
     if(step==="found"){
       inspectMapOnMobile();
       const found=el("entity-commands").querySelector('[data-order="found"]:enabled');
@@ -1006,10 +1015,7 @@ function chooseOrder(key){
     openScoutingRoutes(scoutingRoutes(view.state,u,selectedOptions.moves),mapRegion,esc,target=>{
       const unit=getUnit();
       if(!mayOrder() || matchKey!==origin || view.state.round!==round || unit?.id!==unitId || unit.seat!==view.seat)return;
-      const draft=previewMove(view.state,unit,target);
-      if(!draft){toast('The route has changed. Choose a destination again.');return}
-      moveDraft=draft;order="";openMapOnMobile();updateMap();atlas.focus(target);
-      moveBar.querySelector('[data-move-confirm]').focus({preventScroll:true});
+      reviewScoutDestination(unit,target);
     });
     return;
   }

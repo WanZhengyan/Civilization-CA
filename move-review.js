@@ -16,6 +16,6 @@ export function sameMove(a,b) {
     a.cost===b.cost && a.left===b.left && a.path.length===b.path.length && a.path.every((id,i)=>id===b.path[i]));
 }
 
-export function reviewPointerMove(pointer,compact) {
-  return pointer==='touch' || pointer==='pen' || (pointer==='mouse' && compact);
+export function reviewPointerMove(pointer,compact,guided=false) {
+  return guided || pointer==='touch' || pointer==='pen' || (pointer==='mouse' && compact);
 }

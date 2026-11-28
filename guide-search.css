@@ -1,0 +1,14 @@
+.guide-search { margin:0 0 12px; }
+.guide-search label { display:block; margin-bottom:5px; color:#e7d6b2; font-weight:600; }
+.guide-search>div { display:flex; gap:6px; }
+.guide-search input,.guide-search button,.guide-match { border:1px solid #62706f; border-radius:4px; color:#ebefe9; background:#1b292d; }
+.guide-search input { flex:1; min-width:0; min-height:40px; padding:6px 10px; font:inherit; font-size:16px; }
+.guide-search input::placeholder { color:#aab6b3; }
+.guide-search button { padding:0 12px; }
+.guide-result-count { margin:0 0 8px; color:#d5c29c; font-size:.85rem; }
+.guide-result-count:empty { display:none; }
+.guide-match { display:grid; width:100%; gap:4px; margin:0 0 6px; padding:9px 11px; text-align:start; cursor:pointer; }
+.guide-match small { color:#dbc48f; }
+.guide-match span { color:#ced7d0; font-size:.83rem; line-height:1.4; }
+.guide-match strong { font-size:.95rem; }
+.guide-match:focus-visible,[data-guide-target]:focus-visible,.guide-search :focus-visible { outline:2px solid #e8be73; outline-offset:1px; }
