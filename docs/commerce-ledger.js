@@ -13,18 +13,20 @@ function cityText(state,id,esc) {
 function costText(item) {
   const c=CARGO[item];
   const parts=[];
+  if(c.fare)parts.push(c.fare+L(' gold',' 金币'));
   if(c.resource)parts.push(c.stock+' '+translate(RESOURCES[c.resource].name));
   if(c.food)parts.push(c.food+L(' food',' 储粮'));
   return parts.join(' + ');
 }
 function rewardText(offer) {
   const c=CARGO[offer.item],parts=[];
+  if(c.science)parts.push('+'+c.science+L(' science',' 科研'));
   if(c.production)parts.push('+'+c.production+L(' yard production (up to 3 per harvest)',' 库存产能（每次收获最多用 3）'));
   if(c.deliverFood)parts.push('+'+c.deliverFood+L(' food',' 储粮'));
   if(offer.gold)parts.push('+'+offer.gold+L(' gold',' 金币'));
   return parts.join(' · ');
 }
-const reasons={stock:['Insufficient goods in the stockpile.','库存物资不足。'],departure:['A wagon has left this turn.','本回合已发车。'],crew:['Crew in transit.','商队正在途中。'],food:['Not enough stored food at the origin.','起点城市储粮不足。']};
+const reasons={fare:['Not enough treasury gold for the fare.','国库金币不足以支付旅费。'],stock:['Insufficient goods in the stockpile.','库存物资不足。'],departure:['A wagon has left this turn.','本回合已发车。'],crew:['Crew in transit.','商队正在途中。'],food:['Not enough stored food at the origin.','起点城市储粮不足。']};
 function dispatchButton(offer,enabled,esc) {
   const reason=reasons[offer.reason];
   return '<div class="commerce-offer"><strong>'+cargoText(offer.item)+'</strong><span>'+costText(offer.item)+' → '+rewardText(offer)+'</span>'+

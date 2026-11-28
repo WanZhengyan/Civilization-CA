@@ -61,3 +61,12 @@ test('shops open wholesale citrus markets and pay the quoted premium on arrival'
   while(next.players[0].caravans.length)next=applyAction(next,0,{type:'end'});
   assert.equal(next.players[0].tradeReceipt.paid,quote);
 });
+test('a sending academy can finance scholars who deliver seven science into the bank at arrival',()=>{
+  const {state,home,dest}=market();state.players[0].capital=6;
+  const order={type:'dispatchCaravan',origin:home,destination:dest,item:'scholars'};
+  assert.throws(()=>applyAction(state,0,order));
+  state.cities[0].buildings=['academy'];let control=structuredClone(state),next=applyAction(state,0,order);
+  assert.equal(next.players[0].capital,0);
+  while(next.players[0].caravans.length){next=applyAction(next,0,{type:'end'});control=applyAction(control,0,{type:'end'});}
+  assert.equal(next.players[0].science-control.players[0].science,7);
+});

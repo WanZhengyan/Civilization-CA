@@ -49,3 +49,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.39 | Dispatch food wagons with reserved cargo, dated arrivals and private receipts |
 | 7.0.40 | Deliver lumber to city yards and meter stored production into eligible projects |
 | 7.0.41 | Commission profitable wholesale citrus runs to cities with open shops |
+| 7.0.42 | Sponsor academy exchanges that return research when scholars reach the host city |
