@@ -29,12 +29,35 @@ function restoreLanguage() {
   }
 }
 restoreLanguage();
-// Browser Back can restore the same home page after the player changed language in the game.
+
+function refreshReturnLinks() {
+  function read(key) {
+    try { return JSON.parse(localStorage.getItem(key)); }
+    catch { return null; }
+  }
+  const solo = read('angel-basin.solo.v1');
+  const hasCampaign = Array.isArray(solo?.players) && solo.board && Array.isArray(solo.log) &&
+    ['playing', 'finished'].includes(solo.phase);
+  const code = read('angel-basin.active-room.v1');
+  const seats = read('angel-basin.room-seats.v1');
+  const hasRoom = typeof code === 'string' && /^[A-Z0-9]{6}$/.test(code) && Boolean(seats?.[code]);
+  document.querySelector('#continue-campaign').hidden = !hasCampaign;
+  const rejoin = document.querySelector('#rejoin-room');
+  if (hasRoom) rejoin.href = './game.html?room=' + code;
+  else rejoin.removeAttribute('href');
+  rejoin.hidden = !hasRoom;
+  document.querySelector('.return-actions').hidden = !hasCampaign && !hasRoom;
+}
+refreshReturnLinks();
 window.addEventListener('pageshow', event => {
-  if (event.persisted) restoreLanguage();
+  if (event.persisted) {
+    restoreLanguage();
+    refreshReturnLinks();
+  }
 });
 window.addEventListener('storage', event => {
-  if (event.key === languageKey) restoreLanguage();
+  if (!event.key || event.key === languageKey) restoreLanguage();
+  if (!event.key || ['angel-basin.solo.v1', 'angel-basin.active-room.v1', 'angel-basin.room-seats.v1'].includes(event.key)) refreshReturnLinks();
 });
 
 for (const button of document.querySelectorAll('[data-language]')) {
@@ -44,13 +67,14 @@ for (const button of document.querySelectorAll('[data-language]')) {
   });
 }
 
-const selector = document.querySelector('.region-switch');
-function showRegion() {
-  const selected = selector.querySelector(':checked').value;
-  for (const region of document.querySelectorAll('[data-region]')) {
-    region.hidden = region.dataset.region !== selected;
+function connectPicker(fieldset, panels) {
+  function showSelected() {
+    const {name, value} = fieldset.querySelector(':checked');
+    for (const panel of panels) panel.hidden = panel.dataset[name] !== value;
   }
+  fieldset.addEventListener('change', showSelected);
+  showSelected();
+  fieldset.hidden = false;
 }
-selector.addEventListener('change', showRegion);
-selector.hidden = false;
-showRegion();
+connectPicker(document.querySelector('.region-switch'), document.querySelectorAll('[data-region]'));
+connectPicker(document.querySelector('.screen-switch'), document.querySelectorAll('[data-screen]'));

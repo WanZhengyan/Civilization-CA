@@ -38,6 +38,7 @@ import {constructionTurns} from './harvest-forecast.js';
 import {directoryButton,mountCityDirectory} from './city-directory.js';
 import {councilInvestments,investmentPanel} from './council-investment.js';
 import {renderCouncilPath} from './council-path.js';
+import {mountCouncilGraph} from './council-graph.js';
 import {councilOverview,initialCouncilView,navigateCouncilButtons,renderCouncilBrowser} from './research-catalog.js';
 import {POLICIES} from './policy.js';
 import {getSightRadius} from './vision.js';
@@ -764,10 +765,11 @@ function paintResearch(){
       const openDetails=Array.from(council.querySelectorAll('details[open]'),detail=>detail.className);
       const focused=document.activeElement;
       // A room update can repaint the same council while a keyboard user reads a card.
-      const marker=council.contains(focused) && ['project','planItem','routeOrder','councilMode','councilEra','councilGoal','policy'].find(key=>focused.dataset[key]!=null);
+      const marker=council.contains(focused) && ['treeInspect','treeJump','treeClose','project','planItem','routeOrder','councilMode','councilEra','councilGoal','policy'].find(key=>focused.dataset[key]!=null);
       const value=marker && focused.dataset[marker];
       const oldTrack=council.dataset.track;
       council.innerHTML=markup;lastCouncilMarkup=markup;council.dataset.track=id;
+      mountCouncilGraph(council);
       if(id==='civics')addPolicyPanel(council.querySelector('[data-policy-anchor]'),state,seat,allowed,action=>{el('research-modal').close();Game.doAction(action)});
       if(oldTrack===id){
         for(const detail of council.querySelectorAll('details'))detail.open=openDetails.includes(detail.className);
@@ -807,9 +809,9 @@ function showCouncilGoal(item,focusTitle=true){
 }
 function showAvailableCouncil(id){
   councilGoals[id]="";
-  councilViews[id]={mode:'available',era:''};
+  councilViews[id]=initialCouncilView();
   openCouncil(id);
-  el('research-options').querySelector('[data-project]:enabled')?.focus();
+  el('research-options').querySelector('[data-status="available"] [data-tree-inspect]')?.focus();
 }
 function forecastRow(role,label,before,after,max,damage,color){
   const percent=percentage(before,max), remaining=percentage(after,max);
@@ -1390,6 +1392,28 @@ function mount(){
       const era=filter.hasAttribute('data-council-reset')?'':councilViews[councilKind].era;
       councilViews[councilKind]={mode,era};paintResearch();
       councilPanel.querySelector('[data-council-mode="'+mode+'"]').focus({preventScroll:true});return;
+    }
+    const node=e.target.closest('[data-tree-inspect],[data-tree-jump],[data-tree-close]');
+    if(node){
+      const prefs=councilViews[councilKind];
+      const id=node.dataset.treeJump || node.dataset.treeInspect || node.dataset.treeClose;
+      if(node.hasAttribute('data-tree-jump') && !councilPanel.querySelector('[data-tree-inspect="'+id+'"]')){
+        Object.assign(prefs,initialCouncilView());
+      }
+      prefs.selected=node.hasAttribute('data-tree-close') || (node.hasAttribute('data-tree-inspect') && prefs.selected===id)?null:id;
+      paintResearch();
+      const trigger=councilPanel.querySelector('[data-tree-inspect="'+id+'"]');
+      trigger?.focus({preventScroll:true});
+      if(node.hasAttribute('data-tree-jump'))trigger?.scrollIntoView({block:'center'});
+      else if(prefs.selected && trigger){
+        const scroll=councilPanel.closest('.council-scroll');
+        const detail=el(trigger.getAttribute('aria-controls')).getBoundingClientRect();
+        const bounds=scroll.getBoundingClientRect();
+        const reveal=detail.top+Math.min(120,detail.height)-bounds.bottom;
+        const room=trigger.getBoundingClientRect().top-bounds.top-8;
+        if(reveal>0 && room>0)scroll.scrollTop+=Math.min(reveal,room);
+      }
+      return;
     }
     const investment=e.target.closest('[data-invest-city]');
     if(investment){
