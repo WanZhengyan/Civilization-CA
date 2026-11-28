@@ -4,21 +4,21 @@
 
 **[开始帕萨迪纳新手教程](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [开始单人战役](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [创建联机房间](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[游戏主页](https://wanzhengyan.github.io/Civilization-CA/) · [v7.2.0 更新记录](./CHANGELOG.md) · [English](./README.md)
+[游戏主页](https://wanzhengyan.github.io/Civilization-CA/) · [v7.2.1 更新记录](./CHANGELOG.md) · [English](./README.md)
 
 ## 科技树和市政树怎么看
 
-在地图左侧打开「科技」或「市政」，从上往下看。连线会从前置项目通向后续项目。两条分支汇合时，两项前置都要完成才能继续。点开项目卡可以查看花费和能解锁的内容。条件满足时，直接在卡片上开始研究或议定市政。
+在地图左侧打开「科技」或「市政」，上下滚动查看各个时代。在完整树里点一个项目，亮色连线会标出它的直接前置。在详情中点某个前置项目的名称，还能沿着这条分支往回看。
 
-![科技树中打开的地形测绘项目，卡片显示前置科技土地测绘与可解锁的学院](./docs/art/technology-tree-v72-zh.webp)
+**怎样研究弹道学？** 「野战战术」和「应用力学」两条线都通向「弹道学」。图中的「野战战术」已经可以研究，「应用力学」则尚未解锁。点「应用力学」就能看到它还需要「工坊工程」。完成两条分支后，就能研究弹道学并解锁步枪连。
 
-**想建学院？** 先研究「土地测绘」，城市就能建商店。沿着分支继续研究「地形测绘」，每座城市就可以建一所学院，每回合产出 2 点科研。
+![科技树中选中弹道学，亮色连线从野战战术和应用力学汇入该项目](./docs/art/technology-tree-v721-zh.webp)
 
-![市政树中打开的郡县联邦项目，卡片显示前置市政土地登记与自然扩地收益](./docs/art/civics-tree-v72-zh.webp)
+**怎样让港口城市多赚金币？** 在市政树里找到「港务委员会」，它需要「公共工程」和「郡县联邦」。点「郡县联邦」可以追溯到「土地登记」。通过港务委员会后，每座有港口的城市都会增加收入。
 
-**想更快扩地？** 在市政树里，依次找到「市政宪章」「土地登记」和「郡县联邦」。完成郡县联邦后，每座城市每回合多获得 2 点自然扩地进度。
+![市政树中选中港务委员会，公共工程和郡县联邦是它的两项直接前置](./docs/art/civics-tree-v721-zh.webp)
 
-[观看科技与市政树操作演示（29 秒，MP4）](https://wanzhengyan.github.io/Civilization-CA/film/councils-v72-zh.mp4)
+[观看科技与市政树操作演示（27 秒，MP4）](https://wanzhengyan.github.io/Civilization-CA/film/councils-v721-zh.mp4)
 
 ## 第一局怎么玩
 
@@ -55,7 +55,7 @@
 
 在首页选好地区后打开设置，地图会保留你选的地区。设置页会显示该地区的风景，并沿用首页的导航和语言切换按钮。你可以在这里选择电脑对手和胜利规则。
 
-![单人战役设置实机画面，可选择地区、文明和电脑难度](./docs/art/campaign-setup-v72-zh.webp)
+![洛杉矶单人战役设置，已选一名简单难度的电脑对手](./docs/art/campaign-setup-v721-zh.webp)
 
 | 模式 | 可以做什么 |
 | --- | --- |

@@ -151,3 +151,27 @@ test('a long dependency uses a gutter clear of every intervening node',()=>{
   assert.ok(coords[2]>obstacle.bottom);
   assert.equal(coords.at(-1),end.top);
 });
+
+test('focused branch includes prior steps and direct requirements, and excludes downstream and independent projects',()=>{
+  for(const [track,goal] of [['research','cartography'],['civic','federation']]){
+    const c=council(opening(),track), byId=new Map(c.options.map(o=>[o.item,o]));
+    const selected=renderCouncilBrowser(c,{...full,selected:goal},catalog,true);
+    const parents=byId.get(goal).requires;
+    const ancestors=new Set(parents);
+    for(const id of ancestors)for(const previous of byId.get(id).requires)ancestors.add(previous);
+    const edges=[...selected.matchAll(/data-from="([^"]+)" data-to="([^"]+)" data-known="[^"]+" data-traced="[^"]+" data-incoming="([^"]+)"/g)];
+    assert.ok(edges.some(([,from,to])=>from===goal && !ancestors.has(to)));
+    for(const [,from,to,relation] of edges){
+      assert.equal(relation,to===goal?'direct':ancestors.has(to)?'earlier':'off',from+' → '+to);
+    }
+    for(const option of c.options){
+      const expected=option.item===goal?'selected':parents.includes(option.item)?'direct':ancestors.has(option.item)?'earlier':'off';
+      assert.ok(card(selected,option.item).includes('data-relation="'+expected+'"'));
+    }
+    assert.ok(card(selected,goal).includes('Show all branches'));
+    const root=c.options.find(option=>!option.requires.length).item;
+    const first=renderCouncilBrowser(c,{...full,selected:root},catalog,true);
+    assert.doesNotMatch(first,/data-traced="true"/);
+    assert.ok(card(first,root).includes('No prerequisites.'));
+  }
+});

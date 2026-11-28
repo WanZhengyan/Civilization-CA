@@ -8,6 +8,7 @@ const isPages = existsSync(staticHome);
 const homepage = readFileSync(isPages ? staticHome : new URL('../app/campaign-document.html', site), 'utf8');
 const guideDir = new URL(isPages ? '../' : '../project-template/', site);
 const readmes = ['README.md', 'README.zh-CN.md'].map(name => readFileSync(new URL(name, guideDir), 'utf8'));
+const version = JSON.parse(readFileSync(new URL('package.json', guideDir), 'utf8')).version;
 
 function attribute(tag, name) {
   const match = tag.match(new RegExp('\\s' + name + '="([^"]+)"'));
@@ -15,14 +16,29 @@ function attribute(tag, name) {
   return match[1];
 }
 
+test('the homepage, campaign setup and README guides identify the same release', () => {
+  const game = readFileSync(new URL('game.html', site), 'utf8');
+  const notes = readFileSync(new URL('CHANGELOG.md', guideDir), 'utf8');
+  const release = 'v' + version;
+  for (const page of [homepage, game]) {
+    const header = page.match(/<header\b[\s\S]*?<\/header>/)[0];
+    assert.ok(header.includes('>' + release + '</a>'));
+  }
+  for (const readme of readmes) assert.ok(readme.includes('[' + release + ' '));
+  assert.ok(notes.match(/^## .+$/m)[0].startsWith('## ' + release + ' '));
+});
+
 test('each homepage screen opens its full capture and matches the README in the selected language', () => {
   const panels = homepage.match(/<article\b[^>]*data-screen="[^"]+"[^>]*>[\s\S]*?<\/article>/g);
   assert.ok(panels?.length >= 3);
   for (const panel of panels) {
     const image = panel.match(/<img\b[^>]*>/)[0];
-    const link = panel.match(/<a\b[^>]*>/)[0];
+    const links = panel.match(/<a\b[^>]*href="[^"]+\.webp"[^>]*>/g);
     const urls = [attribute(image, 'src'), attribute(image, 'data-zh-src')];
-    assert.deepEqual([attribute(link, 'href'), attribute(link, 'data-zh-href')], urls);
+    assert.ok(links?.length);
+    for (const link of links) {
+      assert.deepEqual([attribute(link, 'href'), attribute(link, 'data-zh-href')], urls);
+    }
     const captures = urls.map((url, language) => {
       assert.ok(readmes[language].includes('./docs/' + url.slice(2)), url);
       const bytes = readFileSync(new URL(url, site));

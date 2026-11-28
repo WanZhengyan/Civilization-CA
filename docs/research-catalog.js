@@ -66,7 +66,7 @@ const portraits = {
 };
 
 function prerequisiteLinks(option, byId) {
-  if (!option.requires.length) return '';
+  if (!option.requires.length) return '<div class="tree-prereqs">'+L('No prerequisites.','无需前置条件。')+'</div>';
   const met=option.requires.every(id=>byId.get(id)?.completed);
   const buttons=option.requires.map(id=>{
     const parent=byId.get(id);
@@ -75,7 +75,10 @@ function prerequisiteLinks(option, byId) {
   return '<div class="tree-prereqs"><strong>'+(met?L('Requirements met','前置条件已满足'):L('Requires','前置条件'))+'</strong> '+buttons+'</div>';
 }
 
-function projectCard(option,c,byId,catalog,canOrder,lane,selected,index) {
+function projectCard(option,c,byId,catalog,canOrder,lane,relation,compactIndex) {
+  const selected=relation==='selected';
+  const pair=3*Math.floor(compactIndex/2);
+  const role=selected?L('Viewing','当前查看'):relation==='direct'?L('Direct prerequisite','直接前置'):'';
   const state=projectStatus(option);
   const status={complete:L('Completed','已完成'),active:L('In progress','进行中'),locked:L('Locked','未解锁'),available:L('Available','可选择')}[state];
   const name=txt(option.label), id=esc(option.item), region='tree-detail-'+id;
@@ -93,12 +96,12 @@ function projectCard(option,c,byId,catalog,canOrder,lane,selected,index) {
     const verb=c.action==='research'?L('Research','研究'):L('Debate','议定');
     action='<button type="button" class="project-action" data-project="'+id+'" aria-label="'+verb+' · '+name+'"'+(canOrder && option.enabled?'':' disabled')+'>'+verb+'</button>';
   }
-  return '<article class="tree-project" data-status="'+state+'" data-card="'+id+'" style="--tree-lane:'+(lane+1)+';--tree-pair:'+(1+2*Math.floor(index/2))+'">'+
+  return '<article class="tree-project" data-status="'+state+'" data-card="'+id+'" data-relation="'+relation+'" style="--tree-lane:'+(lane+1)+';--tree-pair:'+pair+';--tree-cell:'+(pair+compactIndex%2)+'">'+
     '<button type="button" class="tree-node" data-tree-inspect="'+id+'" aria-controls="'+region+'" aria-expanded="'+selected+'">'+
-    plate+'<span class="tree-node-text"><span class="tree-node-name">'+name+'</span><span class="tree-price">'+quote+timing+'</span></span>'+
+    plate+'<span class="tree-node-text">'+(role?'<span class="tree-relation">'+role+'</span>':'')+'<span class="tree-node-name">'+name+'</span><span class="tree-price">'+quote+timing+'</span></span>'+
     '<span class="project-status"><i aria-hidden="true"></i>'+status+'</span></button>'+
     '<section class="tree-detail" id="'+region+'" aria-label="'+name+'"'+(selected?'':' hidden')+'>'+
-    '<header><h4>'+name+'</h4><button type="button" data-tree-close="'+id+'" aria-label="'+L('Close project details','关闭项目详情')+'">×</button></header>'+
+    '<header><h4>'+name+'</h4><button type="button" data-tree-close="'+id+'">'+L('Show all branches','显示所有分支')+'</button></header>'+
     '<p class="project-description">'+txt(option.description)+'</p>'+prerequisiteLinks(option,byId)+
     projectDetails(option,catalog,c.action,c.options)+
     '<footer class="project-meta"><span>'+quote+timing+remaining+'</span>'+action+'</footer></section></article>';
@@ -126,6 +129,7 @@ export function renderCouncilBrowser(c,prefs,catalog,canOrder) {
   const visible=c.options.filter(option=>matchesCouncilView(option,prefs.mode,prefs.era));
   const included=new Set(visible.map(option=>option.item));
   const selected=included.has(prefs.selected)?prefs.selected:null;
+  const direct=new Set(byId.get(selected)?.requires);
   const {rows,width}=councilGraphRows(c.options,availableEras);
   const route=new Set();
   function trace(id) {
@@ -134,20 +138,32 @@ export function renderCouncilBrowser(c,prefs,catalog,canOrder) {
     for(const parent of byId.get(id)?.requires||[])trace(parent);
   }
   if(selected)trace(selected);
-  const connections=visible.flatMap(option=>option.requires.filter(id=>included.has(id)).map(parent=>
-    '<path data-from="'+esc(parent)+'" data-to="'+esc(option.item)+'" data-known="'+Boolean(byId.get(parent)?.completed)+'" data-traced="'+(route.has(option.item)||parent===selected)+'"/>'
-  )).join('');
+  function relation(id){
+    if(id===selected)return 'selected';
+    if(direct.has(id))return 'direct';
+    return route.has(id)?'earlier':'off';
+  }
+  const connections=visible.flatMap(option=>option.requires.filter(id=>included.has(id)).map(parent=>{
+    const incoming=option.item===selected?'direct':route.has(option.item)?'earlier':'off';
+    return '<g class="tree-wire" data-incoming="'+incoming+'"><path class="wire-casing"/>'+
+      '<path class="wire-ink" data-from="'+esc(parent)+'" data-to="'+esc(option.item)+'" data-known="'+Boolean(byId.get(parent)?.completed)+'" data-traced="'+(incoming!=='off')+'" data-incoming="'+incoming+'"/></g>';
+  })).join('');
   const sections=availableEras.map(era=>{
     const eraRows=rows.filter(row=>row.era===era).map(row=>{
       const nodes=row.nodes.filter(({option})=>included.has(option.item));
       if(!nodes.length)return '';
-      return '<div class="tree-row">'+nodes.map(({option,lane},index)=>projectCard(option,c,byId,catalog,canOrder,lane,option.item===selected,index)).join('')+'</div>';
+      return '<div class="tree-row">'+nodes.map(({option,lane,compactIndex},index)=>
+        projectCard(option,c,byId,catalog,canOrder,lane,relation(option.item),nodes.length===row.nodes.length?compactIndex??index:index)
+      ).join('')+'</div>';
     }).join('');
     return eraRows?'<section class="tree-era" data-era="'+era+'"><h3><span>'+eraName(era)+'</span></h3>'+eraRows+'</section>':'';
   }).join('');
   const count=L(visible.length+(visible.length===1?' project':' projects'),visible.length+' 个项目');
   const empty='<div class="council-empty"><p>'+L('No projects in this view.','此视图下没有项目。')+'</p><button type="button" data-council-reset>'+L('Show the full tree','查看完整树')+'</button></div>';
-  const hint=L('Follow the lines down. Select a project to see its requirements and unlocks.','沿连线向下查看。选择项目可查看前置条件和解锁内容。');
+  let hint=L('Select a project to trace its prerequisites and see what it unlocks.','点选项目，沿线查看前置条件和解锁内容。');
+  if(selected)hint=direct.size
+    ?L('Bright lines lead from direct prerequisites to the selected project.','亮色连线从直接前置项目通向当前选择。')
+    :L('This project has no prerequisites.','该项目无需前置条件。');
   const graph='<div class="council-tree" data-council-graph data-selection="'+Boolean(selected)+'" style="--tree-columns:'+width+'">'+
     '<svg class="tree-wires" aria-hidden="true" focusable="false">'+connections+'</svg>'+sections+'</div>';
   return '<section class="council-browser" translate="no"><div class="council-filterbar"><div role="group" aria-label="'+L('Project view','项目视图')+'">'+views+'</div>'+select+'</div>'+

@@ -1,5 +1,24 @@
 # Development notes
 
+## Research and civics tree layout
+
+The table counts distinct crossing points in the full overview with no project selected. At each viewport size, we compared the rendered SVG prerequisite paths in v7.2.0 and v7.2.1. A crossing is a point where two paths pass through each other. Several pairs crossing at the same screen coordinate count once. A branch splitting from a shared stem contributes zero crossings at that fork.
+
+| Viewport | Tree | v7.2.0 crossings | v7.2.1 crossings | Prerequisite links |
+| --- | --- | ---: | ---: | ---: |
+| Desktop | Technology | 9 | 2 | 22 |
+| Desktop | Civics | 12 | 2 | 18 |
+| Phone, 390 px wide | Technology | 25 | 7 | 22 |
+| Phone, 390 px wide | Civics | 15 | 4 | 18 |
+
+Both versions contained every listed prerequisite link. In the four updated overviews, unrelated links had no overlapping line segments. The updated routes also cleared project cards and era headings in the overview and the open detail panels in the selected-project checks.
+
+Run the layout regressions from the repository root. The tests check line endpoints, path clearance and crossing limits in wide and narrow layouts, both with and without an open project. [Routing tests](./tests/council-routing.test.js)
+
+```sh
+node --test tests/council-routing.test.js
+```
+
 ## California atlas series
 
 The 100 revisions are individually runnable. In the version ledger, choose a feature, find its commit, and create a separate worktree at that hash. Inside it, run `npm run dev` and open the local homepage. The version ledger distinguishes each release; this section documents the recurring checks. [Version ledger](./VERSIONS.md)

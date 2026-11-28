@@ -1,5 +1,9 @@
 # Campaign updates
 
+## v7.2.1 — Trace a research prerequisite
+
+Connections from the same project share a line until they split. Select any technology or civic to show the paths that lead to it. The two lines into Ballistics highlight its immediate prerequisites, Field Tactics and Applied Mechanics. The 27-second English and Chinese walkthroughs trace this example and its counterpart in the civics tree, Harbor Commissions. The homepage and both README guides use screenshots of these decisions.
+
 ## v7.2.0 — Vertical research trees and campaign setup
 
 - Read the Technology and Civics trees from top to bottom. Each line points from a prerequisite to a project it unlocks. You can trace an early choice into the later eras and see where two branches meet.

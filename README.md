@@ -4,21 +4,21 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 **[Play the Pasadena tutorial](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Start a solo campaign](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Play with friends](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.2.0 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
+[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.2.1 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
 
 ## Read the research trees
 
-Open **Technology** or **Civics** from the left side of the map. Read down from the earliest projects and follow the lines into later eras. When two branches meet at a project, you need both prerequisites. Select a project to inspect its unlocks and cost. If it is available, you can start it from the same card.
+Open **Technology** or **Civics** on the left of the map and scroll down through the eras. In the full tree, select a project. The bright lines lead from its immediate prerequisites. Select a prerequisite in the project details to follow its own branch farther back.
 
-![Topographic Mapping selected on the technology tree, with Land Surveying and the Academy in its project details](./docs/art/technology-tree-v72.webp)
+**How do you reach Ballistics?** Both **Field Tactics** and **Applied Mechanics** lead into it. In the screenshot, Field Tactics is available and Applied Mechanics is still locked. Select Applied Mechanics to find its own prerequisite, **Workshop Engineering**. Once you complete both branches, you can research Ballistics and train a Rifle Company.
 
-**Want an Academy?** Start with **Land Surveying** to unlock the Shop. Follow its branch to **Topographic Mapping**, which lets each city build an Academy for 2 science per turn.
+![Ballistics selected in the technology tree, with incoming lines from Field Tactics and Applied Mechanics](./docs/art/technology-tree-v721.webp)
 
-![County Federation on the civics tree, showing the Land Registry prerequisite and natural border growth benefit](./docs/art/civics-tree-v72.webp)
+**How can a port city earn more gold?** Find **Harbor Commissions** in the civics tree. It requires both **Public Works** and **County Federation**. Trace County Federation back to **Land Registry**. Adopting Harbor Commissions raises income in each city with a harbor.
 
-**Want faster border growth?** Follow **Municipal Charter → Land Registry → County Federation** in the civics tree. County Federation gives each city 2 extra points of natural border growth per turn.
+![Harbor Commissions selected in the civics tree, with Public Works and County Federation as its immediate prerequisites](./docs/art/civics-tree-v721.webp)
 
-[Watch the 29-second research walkthrough (MP4)](https://wanzhengyan.github.io/Civilization-CA/film/councils-v72.mp4)
+[Watch the 27-second research walkthrough (MP4)](https://wanzhengyan.github.io/Civilization-CA/film/councils-v721.mp4)
 
 ## Your first campaign
 
@@ -57,7 +57,7 @@ The gazetteer covers **3 counties, 9 cities and 6 field sites or coastal works**
 
 Pick a region on the homepage to carry it into setup. The setup page shows the landscape for that region and keeps the homepage navigation and language controls while you choose opponents and victory rules.
 
-![Single-player campaign setup with the selected region, civilization and rival settings](./docs/art/campaign-setup-v72.webp)
+![Los Angeles single-player setup with one Easy computer opponent](./docs/art/campaign-setup-v721.webp)
 
 | Mode | How it works |
 | --- | --- |
