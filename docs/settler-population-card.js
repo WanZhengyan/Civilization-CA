@@ -15,8 +15,9 @@ export function settlerPopulationCard(state,city,item,language=getLanguage()){
     '</strong><p>'+safe(detail)+'</p><button type="button" data-work-population>'+ (zh?'查看本城人口计划':'View this city’s growth plan')+'</button></div>';
 }
 
-export function productionCard({item,icon,name,description,race='',timing,controls,lock=''}){
+export function productionCard({item,icon,name,description,race='',timing,upkeep,controls,lock=''}){
   return '<article class="production-item work-card" data-project="'+safe(item)+'"'+(lock?' data-population-locked':'')+'>'+
     icon+'<span><strong>'+safe(name)+'</strong>'+lock+'<small>'+safe(description)+'</small>'+race+'<small>'+timing+'</small>'+
+    (Number.isFinite(upkeep)?'<small translate="no">'+(getLanguage()==='zh-CN'?'部署后每回合维护费 '+upkeep+' 金币':'Maintenance after deployment · '+upkeep+' gold per turn')+'</small>':'')+
     controls+'</span></article>';
 }

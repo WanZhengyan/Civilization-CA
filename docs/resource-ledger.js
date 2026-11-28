@@ -1,3 +1,4 @@
+import {unitUpkeep} from './unit-upkeep.js';
 import {commerceLedger} from './commerce-ledger.js';
 import {settlerPopulationReason} from './population.js';
 import {illustration} from './illustrations.js';
@@ -54,7 +55,21 @@ export function ledgerBody(state, seat, accounts, selectedCity, busy, esc, stats
     return '<div class="cargo-row">'+illustration(key)+'<div class="cargo-balance"><strong>'+resource.name+'</strong><small><span>Stored</span> '+stock+' · <span>Harvest</span> +'+income+'</small></div><div class="cargo-actions">'+
       dispatch('sell',L('Sell for 5 gold','出售得 5 金币'),blocked)+dispatch('city',delivery,blocked||!city||!gain)+'</div></div>';
   });
-  return '<section class="budget-guide">'+budget('Treasury',player.capital,stats?.capitalIncome)+'<p>Use gold to buy eligible city projects, upgrade units or claim a neutral border tile.</p>'+budget('Influence',player.influence,stats?.influenceIncome)+
+  const label=id=>translate(UNIT_TYPES[id]?.name || id);
+  const roster=(state.units || []).filter(unit=>unit.seat===seat && unitUpkeep(unit.type)>0);
+  const counts=new Map();
+  for (const unit of roster) counts.set(unit.type,(counts.get(unit.type)||0)+1);
+  const lines=[...counts].map(([type,count])=>'<li>'+esc(label(type))+' × '+count+' · '+(count*unitUpkeep(type))+'</li>').join('');
+  const options=roster.map(u=>'<option value="'+esc(u.id)+'">'+esc(label(u.type))+' · '+esc(u.tile)+' · '+unitUpkeep(u.type)+'</option>').join('');
+  const ledger=Number.isFinite(stats?.unitMaintenance)?'<section class="payroll" translate="no"><h4>'+L('Unit maintenance','单位维护费')+'</h4>'+
+    '<p>'+L('Income before upkeep','扣除维护费前收入')+' '+stats.grossCapitalIncome+' · '+L('Roster upkeep','部队维护费')+' '+stats.unitMaintenance+'</p>'+
+    (lines?'<details><summary>'+L('Costs by unit type','按兵种查看费用')+'</summary><ul>'+lines+'</ul></details>':'')+
+    (player.maintenanceArrears?'<p><strong>'+L('Outstanding maintenance','拖欠维护费')+' '+player.maintenanceArrears+'</strong> · '+
+      L('Income pays arrears at the next harvest. New paid recruits and higher-cost upgrades wait.','下次收获优先偿还欠费。偿清前暂停招募需付费的单位和提高维护费的升级。')+'</p>':'')+
+    (roster.length?'<label class="cargo-destination">'+L('Review a unit for retirement','查看可退役的单位')+'<select name="payroll-unit">'+options+'</select></label> '+
+      '<button type="button" class="modal-secondary" data-act="review-retirement"'+(busy || !seatMayOrder(state,seat)?' disabled':'')+'>'+L('Review retirement','查看退役详情')+'</button>':'')+
+    '</section>':'';
+  return '<section class="budget-guide">'+budget('Treasury',player.capital,stats?.capitalIncome)+ledger+'<p>Use gold to buy eligible city projects, upgrade units or claim a neutral border tile.</p>'+budget('Influence',player.influence,stats?.influenceIncome)+
     '<p>'+L('Spend 6 influence to expand a city into its next eligible parcel.','花 6 点影响力可让城市立即取得下一格可扩张地块。')+'</p>'+
     '<button type="button" class="modal-secondary" data-influence-open>'+L('Spend influence','使用影响力')+'</button></section>'+
     '<p class="modal-desc">Each worked deposit adds one good at the end of your turn. Dispatch two of the same good once per turn.</p>'+destination+

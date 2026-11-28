@@ -1624,3 +1624,9 @@ Adds 3 production per turn to a city with a workshop.|拥有工坊的城市每�
 Generates 3 culture per turn for civics.|每回合为市政研究增加 3 点文化。
 Build a workshop in this city first.|请先在这座城市建造工坊。
 `);
+
+section(`
+Pay outstanding unit maintenance at harvest before recruiting or upgrading.|请在收获结算时偿清拖欠的单位维护费，再招募部队或提高维护费的兵种升级。
+Choose a maintained unit you control.|请选择一支由你控制且需要维护费的单位。
+Unit retired from service.|单位已退役。
+`);

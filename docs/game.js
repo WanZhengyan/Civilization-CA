@@ -1,3 +1,4 @@
+import {unitUpkeep} from './unit-upkeep.js';
 import {newGazetteer,gazetteerContent,gazetteerAction,bindGazetteer,districtProfiles} from './gazetteer.js';
 import {fieldGuideOrders} from './campaign-field-guide.js';
 import {installSoundtrack,soundtrackControls} from './music-controls.js';
@@ -106,7 +107,7 @@ let selectedMap = 'la';
 let selectedSize = DEFAULT_MAP_SIZE, selectedRivals = 3, selectedDifficulty = 'normal';
 let selectedMode='standard', selectedCivilization='random', roomVictoryMode='standard', joinCivilization='random';
 let roomSetup=newRoomSetup();
-let supplyCity='';
+let supplyCity='', retirement=null;
 let gazetteer = newGazetteer();
 let pending = false, errorMessage = '', playingBots = false;
 let unconfirmedOrder=null;
@@ -879,6 +880,18 @@ function teamStandings(state){
 function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
+  if (modal==='retirement') {
+    const zh=getLanguage()==='zh-CN';
+    const u=state.units.find(u=>u.seat===currentSeat() && u.id===retirement?.id && u.type===retirement.type);
+    const allowed=u && roomSeatTurn(state,currentSeat())==='active' && !pending && !playingBots && !(mode==='online' && (offline || unconfirmedOrder));
+    const name=u?translate(UNIT_TYPES[u.type].name):'';
+    return {kicker:zh?'金库':'Treasury',title:zh?'确认单位退役':'Review unit retirement',
+      body:(u?desc(escapeHTML(name+' · '+u.tile))+
+        muted(zh?'退役会移除该单位和它携带的物资，且不退还金币。每回合可节约 '+unitUpkeep(u.type)+' 金币。':
+          'Retirement removes this unit and its cargo with no refund. Future harvests save '+unitUpkeep(u.type)+' gold each.'):
+        muted(zh?'该单位现已不可用。':'This unit is no longer available.'))+
+        actions(button('supplies',zh?'返回金库':'Back to treasury'),allowed?button('confirm-retirement',zh?'确认退役':'Retire this unit','primary'):'')};
+  }
   if (modal === 'trade-market') return {kicker:getLanguage()==='zh-CN'?'经济':'Economy',title:getLanguage()==='zh-CN'?'城际货运市场':'Intercity freight exchange',body:freightExchange(state,currentSeat(),pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML)};
   if(modal==='gazetteer')return gazetteerContent(gazetteer,getLanguage(),mode==='home'?null:state);
   if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML,getStats(state,currentSeat()))};
@@ -955,8 +968,17 @@ function content() {
 function drawDialog() {
   if (!modal || !dialog) return;
   const scrolled = dialog.querySelector('.modal-body')?.scrollTop || 0;
+  const previousPayroll=modal==='supplies' ? dialog.querySelector('.payroll') : null;
+  const rosterChoice=previousPayroll?.querySelector('select')?.value;
+  const showRoster=previousPayroll?.querySelector('details')?.open;
   const { kicker, title, body } = content();
   dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl()+soundtrackControls(soundtrack?.music) : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  if(previousPayroll){
+    const roster=dialog.querySelector('.payroll select');
+    if(roster && Array.from(roster.options).some(option=>option.value===rosterChoice)) roster.value=rosterChoice;
+    const detail=dialog.querySelector('.payroll details');
+    if(detail)detail.open=Boolean(showRoster);
+  }
   if(modal==='gazetteer')bindGazetteer(dialog,gazetteer,getLanguage());
   if(modal==='help'){
     const state=mode==='home'?null:getState();
@@ -1030,6 +1052,16 @@ function modalAction(act) {
   if(act==='restart-tutorial' && mode==='solo' && tutorial){open('restart-tutorial');return}
   if(act==='confirm-tutorial' && modal==='restart-tutorial' && tutorial){enterTutorial(true);return}
   if(act==='trade-market'){open('trade-market');return}
+  if(act==='review-retirement' && modal==='supplies'){
+    const id=dialog.querySelector('[name="payroll-unit"]')?.value;
+    const u=getState().units.find(u=>u.id===id && u.seat===currentSeat() && unitUpkeep(u.type)>0);
+    if(u){retirement={id:u.id,type:u.type};open('retirement');}
+    return;
+  }
+  if(act==='confirm-retirement' && modal==='retirement' && retirement){
+    const {id,type}=retirement;retirement=null;open('supplies');
+    doAction({type:'retireUnit',unit:id,expectedType:type});return;
+  }
   if(act==='supplies'){open('supplies');return}
   if(act.startsWith('cargo-')){
     const [,resource,market]=act.split('-');

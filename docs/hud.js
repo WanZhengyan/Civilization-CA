@@ -682,7 +682,7 @@ function productionOptions(){
       const race=WONDERS[o.item] ? '<small><span>Charter fee</span> · <span>'+def.grant+' capital</span> · <span>'+({open:'Available worldwide.',commissioned:'Under construction',complete:'Already opened'})[campusStatus(view.state,o.item)]+'</span></small>' : '';
       const timing=(def.era?esc(eraName(def.era))+' · ':'')+(o.turns===null?'':esc(turnsText(o.turns))+' · ')+esc(o.required)+' production';
       return productionCard({item:o.item,icon:illustration(o.item),name:items[o.item]||o.label,description:desc,
-        race,timing,controls:orderButtons(o,mayOrder(),growth),lock});
+        race,timing,upkeep:o.upkeep,controls:orderButtons(o,mayOrder(),growth),lock});
     }).join('')+'</div>'});
   el("production-options").innerHTML=(c.queue?cityQueue(c)+'<p class="work-rules">Changing projects saves invested production in this city. A paused university releases its land and refunds the charter fee.</p>':'')+
     '<p class="work-rules">Buy with treasury gold to finish immediately. One remaining production costs three gold.</p>'+html.join('');
@@ -967,7 +967,7 @@ function paint(next){
   text("faction-name",f.name);document.querySelector(".faction-icon").style.color=f.color;
   el("change-region").hidden=mode!=="solo";
   text("mode-name",mode==="solo"?"Solo campaign":"Online · "+room.code);document.querySelector(".multiplayer span").textContent=mode==="online"?"Room "+room.code:"Multiplayer";
-  text("gold",player.capital);text("gold-rate","+"+stats.capitalIncome);
+  text("gold",player.capital);text("gold-rate",(stats.capitalIncome>=0?"+":"")+stats.capitalIncome);
   text("influence",player.influence);text("influence-rate","+"+stats.influenceIncome);text("unit-count",ownUnits().length);text("city-count",ownCities().length);
   const finished=state.phase==="finished",myTurn=roomSeatTurn(state,seat)==="active",waiting=lobby();
   const teamStatus=teamTurnLabels(state,seat);

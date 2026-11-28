@@ -1,3 +1,4 @@
+import {ARREARS_REASON,rosterUpkeep,settlePayroll,unitUpkeep} from './unit-upkeep.js';
 import {fieldOrder,corridorIncome} from './field-expeditions.js';
 import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon,establishDepot,gradeRoad,planOverlandCommerce,scheduleFoodLine,cancelFoodLine,fulfillFoodLine} from './land-commerce.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
@@ -698,6 +699,9 @@ function calculateStats(state,seat,includeSources=false) {
     sources.portDues=-Math.min(stats.influenceIncome,count);
     stats.influenceIncome+=sources.portDues;
   }
+  stats.grossCapitalIncome=stats.capitalIncome;
+  stats.unitMaintenance=rosterUpkeep(state.units || [],seat);
+  stats.capitalIncome-=stats.unitMaintenance;
   if (includeSources) stats.influenceSources=sources;
   return stats;
 }
@@ -949,6 +953,7 @@ export function getUpgradePlans(state,unitId,seat) {
     const blockers=[];
     if (!qualified) blockers.push('Complete the required era and council projects.');
     if (!legalSite) blockers.push(sea ? 'Refit on friendly or neutral water within one hex of your shipyard.' : 'Move into your territory to upgrade.');
+    if (player.maintenanceArrears>0 && unitUpkeep(route.to)>unitUpkeep(unit.type)) blockers.push(ARREARS_REASON);
     if (player.capital<route.cost) blockers.push('Your treasury cannot cover this upgrade.');
     if (unit.moves<=0) blockers.push('This unit has spent its movement for the turn.');
     if (!seatMayOrder(state,seat)) blockers.push('Wait for your turn.');
@@ -1004,10 +1009,12 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
   return available.map(([item,def])=>{
     const kind=item===SCIENCE_PROJECT.id ? 'project' : Object.hasOwn(UNIT_TYPES,item) ? 'unit':'building';
     const populationReason=settlerPopulationReason(city,item);
+    const financing=state.players[city.seat].maintenanceArrears>0 && unitUpkeep(item)>0 ? ARREARS_REASON : '';
     let reason='';
     if (state.phase!=='playing') reason='The campaign has ended.';
     else if (!seatMayOrder(state,city.seat)) reason='Wait for the city owner’s turn.';
     else if (populationReason) reason=populationReason;
+    else if (financing) reason=financing;
     else if (city.queue && (!replace || city.queue.item===item)) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
     else if (def.building && !city.buildings.includes(def.building)) reason='Build a workshop in this city first.';
@@ -1021,11 +1028,11 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
     const gold=purchasePrice(city,item,def.required);
     const current=city.queue?.item===item;
     const buyReason=kind==='project' ? 'Orbital Survey requires city production.' : WONDERS[item] ? 'University wonders require city production.' :
-      (current && state.phase==='playing' && seatMayOrder(state,city.seat) ? populationReason : reason) ||
+      (current && state.phase==='playing' && seatMayOrder(state,city.seat) ? populationReason || financing : reason) ||
       (!gold ? 'This project is ready for completion.' : '') ||
       (state.players[city.seat].capital+(replace && !current ? city.queue?.grant || 0 : 0)<gold ? 'Not enough gold.' : '') ||
       (kind==='unit' && !deploymentTile(state,city,item) ? 'No deployment tile is available. Move a unit before buying.' : '');
-    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,era:def.era || null,saved:parkedProduction(city,item),turns:populationReason?null:constructionTurns(state,city,def.required-(current?city.queue.progress:parkedProduction(city,item)),rate),required:def.required,enabled:!reason,reason};
+    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,...(kind==='unit' && {upkeep:unitUpkeep(item)}),era:def.era || null,saved:parkedProduction(city,item),turns:populationReason?null:constructionTurns(state,city,def.required-(current?city.queue.progress:parkedProduction(city,item)),rate),required:def.required,enabled:!reason,reason};
   });
 }
 const SCIENCE = {bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
@@ -1262,7 +1269,8 @@ function settleSeatEconomy(state,seat) {
   const map=getMap(state);
   const income=getStats(state,seat),player=state.players[seat];
   bankHarvest(state,seat,map.byId,map.neighbors);
-  player.capital+=income.capitalIncome;player.influence+=income.influenceIncome;
+  settlePayroll(player,income.capitalIncome);
+  player.influence+=income.influenceIncome;
   harvestCaravans(state,seat);
   fulfillFoodLine(state,seat,getLandRoutes);
   const borders = getCityExpansions(state,seat);
@@ -1630,6 +1638,14 @@ function resolveOrder(source,seat,action) {
     endTurn(next,seat);
     return next;
   }
+  if (action.type==='retireUnit') {
+    const unit=unitOrNull(next,action.unit);
+    if (!unit || unit.seat!==seat || unit.type!==action.expectedType || !unitUpkeep(unit.type))
+      throw new Error('Choose a maintained unit you control.');
+    next.units=next.units.filter(u=>u.id!==unit.id);
+    record(next,seat,'retireUnit','Unit retired from service.',unit.tile,{unit:unit.id,item:unit.type});
+    return next;
+  }
   if (action.type==='skipUnit') {
     if (!canSkipUnit(state, seat, action.unit)) throw new Error('Choose a ready unit you control.');
     unitOrNull(next, action.unit).skippedRound = next.round;
@@ -1856,7 +1872,11 @@ function botProject(state,city,difficulty) {
   if (city.buildings.includes('harbor') && !survey) choices.push('shipyard');
   choices.push('workshop','walls','monument','granary','foundry','academy','shop','grainMill','printingHouse');
   if (count('melee')<4) choices.push('melee');
-  const enabled=new Set(getProductionOptions(state,city.id).filter(o=>o.enabled).map(o=>o.item));
+  const netIncome=getStats(state,city.seat).capitalIncome;
+  const committed=cities.reduce((sum,c)=>sum+unitUpkeep(c.queue?.item),0);
+  const reserve=state.players[city.seat].capital;
+  const enabled=new Set(getProductionOptions(state,city.id).filter(o=>
+    o.enabled && (!o.upkeep || o.upkeep+committed<=netIncome+Math.floor(reserve/6))).map(o=>o.item));
   const option=choices.find(key=>enabled.has(key));
   if (!option) return null;
   const order={type:'produce',city:city.id,item:option};
