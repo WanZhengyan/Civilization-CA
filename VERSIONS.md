@@ -41,3 +41,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.31 | Map food reserves, starvation deadlines, housing limits and settler eligibility |
 | 7.0.32 | Inspect active construction, stalled recruitment and operating buildings at their city sites |
 | 7.0.33 | Compare present and reachable medical stations with movement-aware rest and capped healing |
+| 7.0.34 | Plan field-station visits by the local exchange offers and the civilization’s visit history |

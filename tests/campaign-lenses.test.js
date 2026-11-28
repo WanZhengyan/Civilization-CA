@@ -111,3 +111,13 @@ test('medical service maps capped healing and removes the rest bonus when no mov
   unit.hp=99;assert.equal(surveyLayer(s,0,'recovery').get(c.tile).rank,1);
   unit.hp=100;assert.equal(surveyLayer(s,0,'recovery').size,0);
 });
+
+test('station routes separate available exchanges from visits already redeemed by this seat',()=>{
+  const s=campaignView(capital(),0),tile=s.cities[0].tile;s.campaignVariety=1;s.board[tile].fieldStation='archive';
+  assert.match(surveyLayer(s,0,'stations').get(tile).en,/Bring a scout.*5 science/);
+  s.units=[{id:'s',tile,seat:0,type:'scout',moves:1,hp:50,maxHp:50}];
+  assert.equal(surveyLayer(s,0,'stations').get(tile).band,2);
+  s.players[0].stationVisits=[tile];
+  assert.equal(surveyLayer(s,0,'stations').get(tile).band,3);
+  assert.doesNotMatch(surveyLayer(s,0,'stations').get(tile).en,/5 science/);
+});

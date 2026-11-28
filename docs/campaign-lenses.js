@@ -1,3 +1,5 @@
+import {FIELD_STATIONS,fieldStationReport} from './field-stations.js';
+import {seatMayOrder} from './team-turns.js';
 import {getRouteDetail,hexDistance,UNIT_TYPES} from './rules.js';
 import {recoveryAt} from './unit-service.js';
 import {BUILDINGS} from './rules.js';
@@ -256,6 +258,25 @@ const lenses=[
           (extra?(zh?'，下令休息还可多恢复 ':'; rest order adds ')+extra:'')+(report.place?' · '+(zh?translate(report.place,'zh-CN'):report.place):'');
       }).join(' / ');
       rows.set(id,reading(list[0].band,summary(false),summary(true),list[0].report.gain+list[0].extra));
+    }
+    return rows;
+  }),
+  definition('stations','Field station exchanges','野外站点交换','Plan visits to charted posts, archives and lodges. Each civilization may choose one exchange per station.','为已探明的驿站、档案馆和驿舍安排访问。每个文明在每个站点只能选择一次交换。',[
+    ['Scout needed','需派侦察兵'],['Scout on site','侦察兵已抵达'],['Exchange available','可立即交换'],['Already visited','已访问']
+  ],({state,seat,known})=>{
+    const rows=new Map(),scouts=state.units.filter(u=>u.seat===seat && u.type==='scout');
+    for(const tile of known){
+      const station=FIELD_STATIONS[state.board[tile]?.fieldStation];if(!station)continue;
+      const here=scouts.find(u=>u.tile===tile);
+      const report=fieldStationReport(state,here||{seat,tile,type:'scout',moves:0,hp:1,maxHp:1});
+      if(!report)continue;
+      const available=here && state.phase==='playing' && seatMayOrder(state,seat) && report.choices.some(c=>c.enabled);
+      const band=report.visited?3:available?2:here?1:0;
+      const options=lang=>report.choices.map(c=>translate(c.name,lang)+' ('+translate(c.label,lang)+')').join(' / ');
+      const status=[['Bring a scout.','派一名侦察兵前来。'],['Wait for the scout’s next move.','等待侦察兵恢复移动力。'],
+        ['Select this scout to make an exchange.','选择此侦察兵即可交换。'],['Your civilization has used this exchange.','己方已在此完成过交换。']][band];
+      rows.set(tile,reading(band,station.name+' · '+status[0]+(report.visited?'':' '+options('en')),
+        translate(station.name,'zh-CN')+' · '+status[1]+(report.visited?'':options('zh-CN')),[2,3,4,0][band]));
     }
     return rows;
   }),
