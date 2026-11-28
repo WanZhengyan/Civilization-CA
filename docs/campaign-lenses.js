@@ -1,3 +1,4 @@
+import {mountLensFinder} from './lens-finder.js';
 import {FIELD_STATIONS,fieldStationReport} from './field-stations.js';
 import {seatMayOrder} from './team-turns.js';
 import {getRouteDetail,hexDistance,UNIT_TYPES} from './rules.js';
@@ -312,6 +313,7 @@ export function mountCampaignLenses(menu,inspect,redraw,locate) {
   const label=element('label',box),caption=element('span',label),picker=element('select',label);
   const guide=element('p',box),key=element('div',box);
   key.className='lens-legend';
+  const updateFinder=mountLensFinder(box,locate);
   const detail=document.createElement('section');detail.className='lens-inspection';detail.translate=false;
   inspect.after(detail);menu.prepend(box);
   let language,entry=null,lastState,lastSeat,lastLens,lastSelection,campaign,rows;
@@ -333,6 +335,7 @@ export function mountCampaignLenses(menu,inspect,redraw,locate) {
     if(changed)rows=entry?surveyLayer(state,seat,entry.id):null;
     lastState=state;lastLens=entry;lastSelection=selection;lastSeat=seat;
     key.hidden=guide.hidden=detail.hidden=!entry;
+    updateFinder(entry,rows,entry?getMap(state):null,selection);
     if(!entry)return rows;
     if(changed || translated){
       guide.textContent=t(entry.guide,entry.guideZh);

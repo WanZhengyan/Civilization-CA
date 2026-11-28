@@ -121,3 +121,13 @@ test('station routes separate available exchanges from visits already redeemed b
   assert.equal(surveyLayer(s,0,'stations').get(tile).band,3);
   assert.doesNotMatch(surveyLayer(s,0,'stations').get(tile).en,/5 science/);
 });
+
+test('lens finder ranks actionable records, filters bilingual text, and orders by selected parcel distance',async()=>{
+  const {findLensSites}=await import('../docs/lens-finder.js'),s=campaignView(capital(),0),map=getMap(s),[first,second]=s.intel.visible;
+  const rows=new Map([[first,{en:'Université campus',zh:'大学',rank:1}],[second,{en:'Port campus',zh:'港口',rank:9}]]);
+  assert.deepEqual(findLensSites(rows,map,'campus').map(s=>s.id),[second,first]);
+  assert.deepEqual(findLensSites(rows,map,'universite').map(s=>s.id),[first]);
+  assert.deepEqual(findLensSites(rows,map,'港口').map(s=>s.id),[second]);
+  assert.deepEqual(findLensSites(rows,map,'','distance',first).map(s=>s.id),[first,second]);
+  assert.deepEqual(findLensSites(rows,map,'nonsense'),[]);
+});

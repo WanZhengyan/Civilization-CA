@@ -42,3 +42,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.32 | Inspect active construction, stalled recruitment and operating buildings at their city sites |
 | 7.0.33 | Compare present and reachable medical stations with movement-aware rest and capped healing |
 | 7.0.34 | Plan field-station visits by the local exchange offers and the civilization’s visit history |
+| 7.0.35 | Find thematic map records by bilingual search, ranked priority or distance and jump to the parcel |

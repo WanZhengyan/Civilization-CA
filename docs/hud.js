@@ -1142,8 +1142,8 @@ function mount(){
   mountSurveyControls(atlas);
   updateCampaignLens=mountCampaignLenses(el('layers-menu'),el('entity-info'),redraw,id=>{
     if(!explored.has(id))return;
-    select(id);order='inspect';kind='tile';selectedUnit=null;
-    atlas.focus(id,true);redraw();updateHint(id);
+    select(id);order='inspect';kind='tile';selectedUnit=null;toggleLayers(false);
+    atlas.focus(id,true);redraw();updateHint(id);inspectMapOnMobile();
   });
   updateWaterKey=mountWaterKey(el('layers-menu'),id=>{
     if(!explored.has(id) || !chartedWaterSites(mapRegion,explored).some(site=>site.id===id))return;
