@@ -742,7 +742,7 @@ const guideSections = {
     ['Assign citizens', 'Select your city and open Manage citizens. Food, industry and science priorities change which controlled districts are worked. Each citizen works one district or a specialist job in town. The same district cannot support two cities.'],
     ['Choose a construction tile', 'Choose a building in City production, then select one of the outlined map tiles and confirm. Municipal buildings can share the city center. Campuses need their own empty parcel. A harbor reserves a shore berth.'],
     ['Change production or buy', 'You can change the current project. This city keeps its invested production until you resume the same item. Buying an ordinary project uses treasury gold and credits work already done. Universities must use city production.'],
-    ['Choose a building', 'A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.'],
+    ['Choose a building', 'Build a Granary for food or a Monument for influence from the start. Research Workshop Engineering for a Workshop, Land Surveying for a Shop or Topographic Mapping for an Academy. Each city can build one of each.'],
     ['Make room for recruits', 'Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.']
   ]},
   formations: {label:'Unit handbook'},

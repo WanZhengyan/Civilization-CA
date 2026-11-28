@@ -865,7 +865,7 @@ Food grows your population. Production completes the unit or building in a city�
 Improve nearby land|改良周边土地
 A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.|建设者可以施工三次。选择能经己方陆地在两步内连通己方城市的地块，并按资源选择设施。谷物需要农场，柑橘需要果园，木材需要伐木场，石料需要采石场，铁矿需要矿场。
 Choose a building|选择建筑
-A granary provides food, a workshop adds production, a monument earns influence and walls strengthen city defenses. Each city can build one of each.|粮仓提供粮食，工坊提高生产力，纪念碑增加影响力，城墙强化防御。每座城市可各建一座。
+Build a Granary for food or a Monument for influence from the start. Research Workshop Engineering for a Workshop, Land Surveying for a Shop or Topographic Mapping for an Academy. Each city can build one of each.|开局可以建粮仓增加粮食，或建纪念碑增加影响力。研究工坊工程可建工坊，土地测绘解锁商店，地形测绘解锁学院。每种建筑每座城市限建一座。
 Make room for recruits|留出部署空间
 A new unit deploys in the city or on an adjacent open, passable hex in friendly or neutral territory. If all those hexes are occupied, clear one and end the turn to deploy it.|新单位部署在城内或相邻的己方、中立可通行空地。如果地块已满，先腾出一个位置，再结束回合完成部署。
 Field tactics|野战战术
