@@ -31,7 +31,7 @@ function festivalCards(state,seat,city,canAct) {
     '<button class="modal-tab" data-hall-choice="cityFestival" data-item="'+row.id+'">Review festival</button>')+'</div></div>').join('')+'</section>';
 }
 
-export function openCityHall(id,onOrder) {
+export function openCityHall(id,onOrder,proposal=null) {
   if (!dialog) {
     dialog=document.createElement('dialog');
     dialog.className='modal-terminal population-dialog city-hall-dialog';
@@ -49,7 +49,7 @@ export function openCityHall(id,onOrder) {
     };
     dialog.addEventListener('close',()=>{previous=null;review=null;document.querySelector('[data-order="city-hall"]')?.focus();});
   }
-  cityId=id;submit=onOrder;review=null;dialog.showModal();
+  cityId=id;submit=onOrder;review=proposal;dialog.showModal();
 }
 
 export function paintCityHall(state,seat,canAct) {

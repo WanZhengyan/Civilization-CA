@@ -87,3 +87,14 @@ test('charter comparison locates the same parcel that an approved influence purc
   const next=applyAction(state,0,{type:'charterBorder',city:c.id,tile:parcel});
   assert.equal(next.board[parcel].owner,0);assert.equal(next.cities[0].borderProgress,0);
 });
+import {festivalBudget} from '../docs/city-profile-civic.js';
+test('market days compare their opening fee against income and never deduct it a second time',()=>{
+  const state=capital(),c=state.cities[0];c.population=2;c.food=9;
+  state.players[0].civics.push('charter');state.players[0].capital=20;
+  const row=festivalBudget(state,c).find(r=>r.option.id==='market');
+  assert.equal(row.gold,7);assert.equal(row.influence,3);assert.equal(row.food,-4);
+  const next=applyAction(state,0,{type:'cityFestival',city:c.id,item:'market'});
+  const active=festivalBudget(next,next.cities[0])[0];assert.equal(active.gold,15);
+  assert.equal(next.players[0].capital,12);assert.equal(active.food,0);
+  const after=applyAction(next,0,{type:'end'});assert.equal(festivalBudget(after,after.cities[0])[0].gold,10);
+});

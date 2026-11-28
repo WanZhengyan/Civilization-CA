@@ -82,3 +82,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.72 | Trace local commodity deliveries, idle deposits and repairs to their supply city |
 | 7.0.73 | Locate districts with natural landmark premiums and distinguish earned from idle yields |
 | 7.0.74 | Compare natural expansion with an immediate influence charter for the nominated parcel |
+| 7.0.75 | Compare full festival budgets and remaining receipts before confirming a city celebration |

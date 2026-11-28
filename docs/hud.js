@@ -1119,7 +1119,9 @@ function mount(){
       closeMapPanel();select(value,null,true);atlas.focus(value);redraw();return;
     }
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
-    if(command==='border'){el('entity-info').querySelector('[data-influence-city]')?.click();}
+    if(command==='festival'){
+      openCityHall(city.id,a=>Game.doAction(a),{type:'cityFestival',item:value});paintCityHall(view.state,view.seat,mayOrder());
+    }else if(command==='border'){el('entity-info').querySelector('[data-influence-city]')?.click();}
     else if(command==='supplies')chooseOrder('supplies');
     else if(command==='production')openProduction();
     else if(command==='work-quote' || command==='rush-quote'){
