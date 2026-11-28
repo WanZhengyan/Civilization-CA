@@ -1,4 +1,4 @@
-import {fieldReport,studies} from './field-expeditions.js';
+import {fieldReport,studies,corridorIncome} from './field-expeditions.js';
 import {getLanguage,translate} from './i18n.js';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -28,6 +28,7 @@ export function openFieldDesk(read,act) {
     if(!active && options.length)html+='<label>'+local('Choose a study','选择课题')+' <select data-study>'+options.map(([id,s])=>'<option value="'+id+'"'+(id===key?' selected':'')+'>'+label(s.name)+'</option>').join('')+'</select></label>';
     if(spec){
       html+='<h3>'+label(spec.name)+'</h3><p>'+local('Commission','委托费')+' '+spec.fee+' '+local('gold','金币')+' · '+local('On filing','交付后获得')+' '+rewardText(spec.reward)+'</p>';
+      if(spec.benefit)html+='<p>'+label(spec.benefit)+'</p>';
       html+='<ol>'+spec.steps.map((step,i)=>'<li>'+((active?.notes.length||0)>i?'✓ ':'')+label(step)+(active?.notes[i]?' <small>('+esc(active.notes[i].tile)+' · '+local('Turn ','回合 ')+active.notes[i].round+')</small>':'')+'</li>').join('')+'</ol>';
       html+='<p>'+local('Commission and file within one hex of your city. Each order costs one movement point.','在己方城市一格内领取和交付课题。每次指令消耗 1 移动力。')+'</p>';
       if(!active)html+=button('start',local('Commission study','委托考察'),ready && r.base && r.player.capital>=spec.fee);
@@ -41,6 +42,7 @@ export function openFieldDesk(read,act) {
       else html+=button('sample',local('Record observation','记录观察'),ready && r.canSample);
     }
     if(Object.keys(r.filed).length)html+='<h3>'+local('Filed reports','已交付报告')+'</h3><ul>'+Object.entries(r.filed).map(([id,f])=>'<li>'+label(studies[id].name)+' · '+local('Turn ','回合 ')+f.filed+'</li>').join('')+'</ul>';
+    if(r.filed.corridor)html+='<p>'+local('Habitat dividend this harvest','本次收获的栖息地收益')+' · '+corridorIncome(state,unit.seat)+' '+local('culture','文化')+'</p>';
     body.innerHTML=html;
     body.querySelector('select[data-study]')?.addEventListener('change',e=>{selected=e.target.value;paint();});
     body.querySelectorAll('[data-do]').forEach(b=>b.onclick=()=>{

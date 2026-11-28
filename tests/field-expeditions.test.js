@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,applyAction,campaignView,getMap,hexDistance} from '../docs/rules.js';
+import {createGame,applyAction,campaignView,getMap,getStats,hexDistance} from '../docs/rules.js';
 import {fieldReport} from '../docs/field-expeditions.js';
 
 function start(map='la'){
@@ -71,4 +71,15 @@ test('deposit assays pay either research or exactly two of the actual sampled go
   assert.equal(scientific.players[0].science,s.players[0].science+8);
   assert.equal(material.players[0].science,s.players[0].science);assert.equal(material.players[0].stockpile.stone,(s.players[0].stockpile?.stone||0)+2);
   assert.throws(()=>order(material,'file','assay'));
+});
+
+test('a filed two-plot habitat pays recurring culture only while both plots remain intact',()=>{
+  let s=start();const map=getMap(s),home=s.cities[0].tile;
+  const a=map.tiles.find(t=>t.terrain==='forest' && t.id!==home && map.neighbors(t.id).some(id=>id!==home && ['forest','hills'].includes(map.byId[id].terrain)));
+  const b=map.neighbors(a.id).find(id=>id!==home && ['forest','hills'].includes(map.byId[id].terrain));
+  for(const id of [a.id,b])s.board[id]={owner:0,level:0};
+  s=order(s,'start','corridor');
+  for(const id of [a.id,b])s=order(travel(s,id),'sample','corridor');
+  const before=getStats(s,0).cultureIncome;s=order(travel(s,home),'file','corridor');
+  assert.equal(getStats(s,0).cultureIncome,before+2);s.board[b].improvement='mine';assert.equal(getStats(s,0).cultureIncome,before);
 });

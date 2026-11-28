@@ -1,5 +1,6 @@
 import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon,establishDepot,gradeRoad,planOverlandCommerce} from './land-commerce.js';
 import {fieldOrder} from './field-expeditions.js';
+import {corridorIncome} from './field-expeditions.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
@@ -653,6 +654,7 @@ function calculateStats(state,seat,includeSources=false) {
   if (state.campaignVariety===1) sources.atlases=cities.reduce((n,city)=>n+(city.atlasCopies || 0),0);
   stats.capitalIncome+=bonus.capital || 0;
   if (adopted(state,seat,'harborCommission')) stats.capitalIncome += 3 * cities.filter(c=>c.buildings.includes('harbor')).length;
+  stats.cultureIncome+=corridorIncome(state,seat);
   if (adopted(state,seat,'normalSchools')) stats.scienceIncome += 2 * cities.filter(c=>c.population>=3).length;
   if (adopted(state,seat,'exposition')) {
     const campuses=cities.reduce((n,c)=>n+c.buildings.filter(id=>WONDERS[id]).length,0);

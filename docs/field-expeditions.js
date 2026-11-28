@@ -19,6 +19,11 @@ function watershedSample({tile,map,state,unit,notes,distance}) {
 }
 
 export const studies = {
+  corridor:{name:['Habitat corridor','栖息地廊道'],fee:6,reward:{influence:4},
+    benefit:['Earn 2 culture each harvest while both plots remain yours, free of improvements and facilities.','两块地均归你所有，且未建设改良或设施时，每次收获获得 2 文化。'],
+    steps:[['Mark an unimproved woodland in your territory.','在己方未改良的林地标记一处栖息地。'],['Mark an adjacent unimproved woodland or foothill you control.','在相邻的一块己方未改良林地或丘陵设置另一标记。']],
+    sample:({state,unit,tile,notes,map})=>intactHabitat(state,unit.seat,tile.id) && (notes.length ?
+      ['forest','hills'].includes(tile.terrain) && map.neighbors(notes[0].tile).includes(tile.id) : tile.terrain==='forest')},
   assay:{name:['Stone and ore assay','岩石与矿样分析'],fee:4,reward:{science:8},
     steps:[['Collect a sample at a surveyed stone or iron deposit.','在已探明的石料或铁矿资源处采集样本。']],
     sample:({state,unit,tile})=>canSeeDeposits(state,unit.seat) && ['iron','stone'].includes(state.board[tile.id]?.resource),
@@ -52,6 +57,15 @@ export const studies = {
     sample:({tile,notes,distance})=>notes.length===0 || (tile.terrain!==notes[0].terrain && distance(tile.id,notes[0].tile)>=2)
   }
 };
+
+function intactHabitat(state,seat,id) {
+  const land=state.board[id];
+  return land?.owner===seat && !land.improvement && !land.facility && !land.wonder && !state.cities.some(c=>c.tile===id);
+}
+export function corridorIncome(state,seat) {
+  const record=state.players[seat]?.fieldReports?.corridor;
+  return record?.notes?.length===2 && record.notes.every(n=>intactHabitat(state,seat,n.tile)) ? 2 : 0;
+}
 
 export function fieldReport(state,unit,map,distance) {
   if(state.campaignVariety!==1 || unit?.type!=='scout' || (state.intel && state.intel.seat!==unit.seat))return null;
