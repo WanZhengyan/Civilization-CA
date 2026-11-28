@@ -93,3 +93,13 @@ test('a field archive forwards written reports once at a published influence fee
   const next=order(s,'mail');assert.equal(next.players[0].influence,2);assert.equal(next.players[0].fieldReports.transect.city,home.id);
   assert.throws(()=>order(next,'mail'));
 });
+
+test('a two-angle wonder study must frame the same discovered landmark from different bearings',()=>{
+  let s=start('sf');const map=getMap(s);
+  const site=Object.keys(s.board).find(id=>s.board[id].naturalWonder && map.neighbors(id).filter(k=>!['ocean','mountains'].includes(map.byId[k].terrain)).some(a=>map.neighbors(id).some(b=>!['ocean','mountains'].includes(map.byId[b].terrain) && hexDistance(a,b)>=2)));
+  const land=map.neighbors(site).filter(id=>!['ocean','mountains'].includes(map.byId[id].terrain));
+  const a=land.find(id=>land.some(b=>hexDistance(id,b)>=2)),b=land.find(id=>hexDistance(id,a)>=2);
+  s=order(s,'start','perspectives');s=order(travel(s,a),'sample','perspectives');
+  assert.equal(read(s).mission.notes[0].wonderTile,site);assert.throws(()=>order(s,'sample','perspectives'));
+  s=order(travel(s,b),'sample','perspectives');assert.ok(read(s).complete);
+});

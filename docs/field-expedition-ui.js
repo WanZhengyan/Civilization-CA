@@ -1,4 +1,5 @@
 import {fieldReport,studies,corridorIncome} from './field-expeditions.js';
+import {NATURAL_WONDERS} from './natural-wonders.js';
 import {getLanguage,translate} from './i18n.js';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -30,6 +31,8 @@ export function openFieldDesk(read,act) {
       html+='<h3>'+label(spec.name)+'</h3><p>'+local('Commission','委托费')+' '+spec.fee+' '+local('gold','金币')+' · '+local('On filing','交付后获得')+' '+rewardText(spec.reward)+'</p>';
       if(spec.benefit)html+='<p>'+label(spec.benefit)+'</p>';
       html+='<ol>'+spec.steps.map((step,i)=>'<li>'+((active?.notes.length||0)>i?'✓ ':'')+label(step)+(active?.notes[i]?' <small>('+esc(active.notes[i].tile)+' · '+local('Turn ','回合 ')+active.notes[i].round+')</small>':'')+'</li>').join('')+'</ol>';
+      const photographed=active?.notes[0]?.wonder;
+      if(photographed)html+='<p>'+local('Subject','记录对象')+' · '+esc(translate(NATURAL_WONDERS[photographed].name))+' ('+esc(active.notes[0].wonderTile)+')</p>';
       html+='<p>'+local('Commission and file within one hex of your city. Each order costs one movement point.','在己方城市一格内领取和交付课题。每次指令消耗 1 移动力。')+'</p>';
       if(!active)html+=button('start',local('Commission study','委托考察'),ready && r.base && r.player.capital>=spec.fee);
       else if(r.complete){

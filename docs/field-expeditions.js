@@ -18,7 +18,20 @@ function watershedSample({tile,map,state,unit,notes,distance}) {
   return adjacent.some(id=>water.has(id));
 }
 
+function exhibitWonder({state,unit,tile,map,notes,distance}) {
+  const chart=getVision(state,unit.seat).explored;
+  if(notes.length){
+    const site=notes[0].wonderTile;
+    return distance(tile.id,site)===1 && distance(tile.id,notes[0].tile)>=2 ? site : null;
+  }
+  return map.neighbors(tile.id).find(id=>chart.has(id) && state.board[id]?.naturalWonder);
+}
+
 export const studies = {
+  perspectives:{name:['Natural wonder in two views','自然奇观双视角图录'],fee:5,reward:{culture:7,science:4},
+    steps:[['Sketch a discovered natural wonder from an adjacent land hex.','在已发现的自然奇观旁的一块陆地写生。'],['Draw the same wonder from another adjacent tile at least two hexes from your first viewpoint.','改从该奇观旁的另一地块写生，两处观察点至少相距两格。']],
+    sample:context=>Boolean(exhibitWonder(context)),
+    evidence:context=>{const id=exhibitWonder(context);return {wonderTile:id,wonder:context.state.board[id].naturalWonder};}},
   corridor:{name:['Habitat corridor','栖息地廊道'],fee:6,reward:{influence:4},
     benefit:['Earn 2 culture each harvest while both plots remain yours, free of improvements and facilities.','两块地均归你所有，且未建设改良或设施时，每次收获获得 2 文化。'],
     steps:[['Mark an unimproved woodland in your territory.','在己方未改良的林地标记一处栖息地。'],['Mark an adjacent unimproved woodland or foothill you control.','在相邻的一块己方未改良林地或丘陵设置另一标记。']],

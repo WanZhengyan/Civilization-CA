@@ -94,3 +94,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.84 | Assay a discovered deposit and choose between scientific publication and mineral stock |
 | 7.0.85 | Designate a habitat corridor whose cultural dividend depends on conserving both plots |
 | 7.0.86 | Send finished written reports home by field-archive courier at a quoted fee |
+| 7.0.87 | Assemble a natural-wonder collection from two independently reached viewpoints |
