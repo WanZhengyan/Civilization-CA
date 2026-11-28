@@ -1,3 +1,4 @@
+import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {mountTutorialCoach} from './tutorial-coach.js';
 import {mountTurnResults} from './turn-results.js';
 import {turnButtonState,paintTurnButton,pendingTurnTasks} from './turn-button.js';
@@ -319,7 +320,7 @@ function cityQueue(city){
   const q=city.queue;
   if(!q)return '<p class="inspect-caption idle-status"><i></i> This city is ready to produce.</p>';
   const turns=projectTurns(city);
-  const remaining=q.progress>=q.required?'Awaiting deployment':turnsText(turns)+' left';
+  const remaining=turns===null?SETTLER_WAITING:q.progress>=q.required?'Awaiting deployment':turnsText(turns)+' left';
   return '<div class="queue-info">'+illustration(q.item)+'<div class="queue-name"><strong><span>Producing</span> · <span>'+esc(items[q.item]||q.item)+'</span></strong><small>'+remaining+'</small>'+(q.site?'<small><span>Construction tile</span> · <span>'+esc(mapRegion.byId[q.site]?.name||q.site)+'</span> · '+esc(q.site)+'</small>':'')+'</div><div class="queue-progress"><i style="width:'+percentage(q.progress,q.required)+'%"></i></div></div>';
 }
 function depositStrip(id){
@@ -577,7 +578,7 @@ function roster(){
     const active=unitTab ? kind==="unit"&&sameId(o.id,selectedUnit) : kind==="city"&&o.tile===selectedTile;
     const label=unitTab ? items[o.type]||o.type : o.name;
     const turns=unitTab?null:projectTurns(o);
-    const subtitle=unitTab?o.moves+' / '+o.maxMoves+' movement':o.queue?(items[o.queue.item]||o.queue.item)+' · '+(turns?turnsText(turns):'Awaiting deployment'):'Awaiting production';
+    const subtitle=unitTab?o.moves+' / '+o.maxMoves+' movement':o.queue?(items[o.queue.item]||o.queue.item)+' · '+(turns===null?SETTLER_WAITING:turns?turnsText(turns):'Awaiting deployment'):'Awaiting production';
     const skipped=unitTab && o.skippedRound===view.state.round ? ' · <span>Skipped this turn</span>' : '';
     return '<button class="roster-unit" aria-pressed="'+active+'" data-roster-id="'+esc(o.id)+'"><span class="roster-symbol">'+icon(unitTab?o.type:'city')+'</span><span><b'+(unitTab?'':cityNameAttrs(o))+'>'+esc(label)+'</b><small><span>'+esc(subtitle)+'</span>'+skipped+'</small></span></button>';
   }).join('')||'<div class="roster-empty">'+(unitTab?'You have no units in the field.':'You have no cities.')+'</div>');
@@ -585,7 +586,7 @@ function roster(){
 }
 function redraw(){inspect();updateMap();roster()}
 function projectTurns(city){
-  if(!city.queue)return null;
+  if(!city.queue || settlerPopulationReason(city))return null;
   const remaining=Math.max(0,city.queue.required-city.queue.progress);
   return constructionTurns(view.state,city,remaining,getCityYield(view.state,city.id).production);
 }
@@ -600,7 +601,7 @@ function paintProjects(){
   }
   const markup=settler ? '<div class="expedition-orders"><p>Choose a site for your first city. Surveying or founding can reveal local resources.</p><button type="button" data-founding-unit="'+esc(settler.id)+'">Locate settler</button></div>' : (cities.length?directoryButton():'')+cities.map(city=>{
     const turns=projectTurns(city);
-    const status=turns===null?"Choose production":turns===0?"Awaiting deployment":items[city.queue.item]||city.queue.item;
+    const status=!city.queue?"Choose production":turns===null?SETTLER_WAITING:turns===0?"Awaiting deployment":items[city.queue.item]||city.queue.item;
     return '<button class="watch-city" type="button" data-watch="'+esc(city.id)+'">'+illustration(city.queue?.item)+'<strong'+cityNameAttrs(city)+'>'+esc(city.name)+'</strong><span>'+esc(status)+'</span>'+(turns>0?'<small>'+esc(turnsText(turns))+'</small>':'')+'</button>';
   }).join("");
   if(markup!==lastProjectsMarkup){el("watch-cities").innerHTML=markup;lastProjectsMarkup=markup}
@@ -662,7 +663,7 @@ function productionOptions(){
       const def=o.kind==="project"?SCIENCE_PROJECT:UNIT_TYPES[o.item]||BUILDINGS[o.item];
       const desc=productDescription(o.item);
       const race=WONDERS[o.item] ? '<small><span>Charter fee</span> · <span>'+def.grant+' capital</span> · <span>'+({open:'Available worldwide.',commissioned:'Under construction',complete:'Already opened'})[campusStatus(view.state,o.item)]+'</span></small>' : '';
-      return '<article class="production-item work-card">'+illustration(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+esc(turnsText(o.turns))+' · '+esc(o.required)+' production</small>'+orderButtons(o,mayOrder())+'</span></article>';
+      return '<article class="production-item work-card">'+illustration(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+(o.turns===null?'':esc(turnsText(o.turns))+' · ')+esc(o.required)+' production</small>'+orderButtons(o,mayOrder())+'</span></article>';
     }).join('')+'</div>'});
   el("production-options").innerHTML=(c.queue?cityQueue(c)+'<p class="work-rules">Changing projects saves invested production in this city. A paused university releases its land and refunds the charter fee.</p>':'')+
     '<p class="work-rules">Buy with treasury gold to finish immediately. One remaining production costs three gold.</p>'+html.join('');

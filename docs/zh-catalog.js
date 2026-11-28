@@ -765,6 +765,7 @@ Military units deal 7 more attack damage and 3 more retaliation damage.|军事�
 Each city earns 2 more capital and 1 more influence per turn.|每座城市每回合多获得 2 资金和 1 影响力。
 Founds a new city at least three hexes from another city. Train or buy at 3 or more residents. One resident leaves when the settler deploys.|在距离其他城市至少三格的位置建立新城。本城达到 3 人口才能训练或购买开拓者，部署时迁出 1 名居民。
 Settlers need 3 residents in this city.|本城达到 3 人口才能招募开拓者。
+Waiting for 3 residents|等待本城达到 3 人口
 Current residents|本城当前人口
 Residents leaving on deployment|部署时迁出的人口
 City of 3 or more residents|本城至少 3 人口

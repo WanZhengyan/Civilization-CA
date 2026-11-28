@@ -119,3 +119,16 @@ test('the recruiting review and bilingual handbook expose the deployment cost be
   assert.match(translate(row.note,'zh-CN'),/部署时迁出 1 名居民/);
   assert.match(translate('Settlers need 3 residents in this city.','zh-CN'),/3 人口/);
 });
+
+test('city production reports distinguish a population hold from unavailable deployment space',async()=>{
+  const {cityReports}=await import('../docs/city-directory.js');
+  const state=capital(),city=state.cities[0];
+  for(const progress of [4,14]){
+    city.queue={item:'settler',progress,required:14};
+    const row=cityReports(state,0)[0];
+    assert.equal(row.turns,null);
+    assert.equal(row.waitingForResidents,true);
+    assert.equal(row.blocked,false);
+    assert.equal(option(state).turns,null);
+  }
+});

@@ -1,5 +1,6 @@
 export const SETTLER_MIN_POPULATION = 3;
 export const SETTLER_RESIDENT_COST = 1;
+export const SETTLER_WAITING = 'Waiting for ' + SETTLER_MIN_POPULATION + ' residents';
 
 export function settlerPopulationReason(city, item = city?.queue?.item) {
   return item === 'settler' && city.population < SETTLER_MIN_POPULATION
