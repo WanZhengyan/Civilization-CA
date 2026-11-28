@@ -13,7 +13,7 @@ function charterCards(state,seat,city,canAct) {
       (disabled?'<small>'+esc(row.reason || 'Wait for your turn.')+'</small>':
         '<button class="modal-tab" data-hall-choice="cityCharter" data-item="'+row.id+'">Review charter</button>')+'</div></div>';
   });
-  return '<section><h3>Municipal charter</h3><p class="modal-muted">A city with two residents can spend 18 gold on one permanent charter. The charter stays with the city if it changes hands.</p>'+rows.join('')+'</section>';
+  return '<section><h3>City charter</h3><p class="modal-muted">A city with two residents can spend 18 gold on one permanent charter. The charter stays with the city if it changes hands.</p>'+rows.join('')+'</section>';
 }
 
 function festivalCards(state,seat,city,canAct) {
@@ -63,7 +63,9 @@ export function paintCityHall(state,seat,canAct) {
     const row=(festival ? festivalOptions : charterOptions)(state,seat,city).find(option=>option.id===review.item);
     if(row && !row.reason){
       body='<h3>'+row.name+'</h3><p>'+row.description+'</p><p>'+(festival?'Spend 8 gold and 4 stored food to open this festival.':'Spend 18 gold to grant this city its permanent charter.')+'</p>'+
-        '<div class="focus-options"><button class="modal-tab" data-hall-back>Back</button>'+
+        '<div class="city-food-report"><div><span>'+(festival?'Gold after opening':'Gold after signing')+'</span><b>'+(state.players[seat].capital-(festival?8:18))+'</b></div>'+
+        (festival?'<div><span>Food after opening</span><b>'+(city.food-4)+'</b></div>':'')+'</div>'+
+        '<div class="focus-options"><button class="modal-tab" data-hall-back>Return to city hall</button>'+
         '<button class="modal-tab" data-hall-confirm '+(canAct?'':'disabled')+ '>'+(festival?'Open festival':'Grant charter')+'</button></div>';
     } else review=null;
   }

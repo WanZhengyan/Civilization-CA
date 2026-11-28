@@ -412,7 +412,7 @@ function inspect(){
     if(own && c.buildingSites) info+='<div class="works-sites">'+Object.entries(c.buildingSites).map(([item,id])=>
       '<small>'+esc(items[item]||item)+' · '+esc(mapRegion.byId[id]?.name||id)+' · '+esc(id)+'</small>').join('')+'</div>';
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
-    if(own && state.campaignVariety===1) actions+=actionButton("city-hall","City hall","Municipal charter");
+    if(own && state.campaignVariety===1) actions+=actionButton("city-hall","City hall","City charter");
   }else{
     const station=FIELD_STATIONS[holding?.fieldStation];
     if(station){

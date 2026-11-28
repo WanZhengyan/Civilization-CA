@@ -32,7 +32,11 @@ Review festival|查看节庆
 Spend 8 gold and 4 stored food to open this festival.|花费 8 金币和本城 4 点储粮开始节庆。
 Open festival|举办节庆
 City hall|市政厅
-Municipal charter|城市特许状
+City charter|城市特许状
+Return to city hall|返回市政厅
+Gold after signing|签署后金币
+Food after opening|开幕后存粮
+Gold after opening|开幕后金币
 A city with two residents can spend 18 gold on one permanent charter. The charter stays with the city if it changes hands.|至少有两位居民的城市可以花费 18 金币颁发一份永久特许状。城市易主后仍保留该特许状。
 Growers’ cooperative|种植合作社
 The granary supplies 3 additional food each harvest.|每次收获时，粮仓额外提供 3 点粮食。
