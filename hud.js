@@ -1,3 +1,5 @@
+import {modeLabels} from './campaign-choices.js';
+import {SCIENCE_PROJECT} from './victory-rules.js';
 import {borderSummary} from './border-summary.js';
 import {getCityExpansions} from './rules.js';
 import {NATURAL_WONDERS,neighboringWonders} from './natural-wonders.js';
@@ -18,6 +20,7 @@ import {roomSeatTurn,teamTurnLabels} from './room-turn.js';
 import {sameTeam,teamLabel} from './teams.js';
 import {cityKind,developmentPanel,developmentReceipt,foundingLabel} from './district-command.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
+import {forecastCounterLabel} from './attack-mode.js';
 import {advancementPanel,recoveryPanel} from './unit-service-ui.js';
 import {getUpgradePlans,getRecoveryForecast} from './rules.js';
 import {mountSurveyControls, showSelectedFrontier} from './survey-controls.js';
@@ -28,7 +31,7 @@ import {FACTIONS,getMap,getCivicOptions,getEra,ERAS,MAX_ROUNDS,getRouteDetail,ge
 
 const el=id=>document.getElementById(id);
 const names=FACTIONS.map(f=>f.name);
-const items=Object.fromEntries(Object.entries({...UNIT_TYPES,...BUILDINGS,...IMPROVEMENTS}).map(([key,v])=>[key,v.name]));
+const items=Object.fromEntries(Object.entries({...UNIT_TYPES,...BUILDINGS,...IMPROVEMENTS,[SCIENCE_PROJECT.id]:SCIENCE_PROJECT}).map(([key,v])=>[key,v.name]));
 const terrain={ocean:"Open ocean",coast:"Coast",plains:"Lowlands",urban:"Urban",forest:"Woodland",hills:"Foothills",mountains:"Mountains"};
 const unitRole={settler:"Civilian unit",builder:"Engineering unit",melee:"Melee unit",ranged:"Ranged unit"};
 const isSeaUnit=item=>UNIT_TYPES[item]?.domain==="sea";
@@ -505,6 +508,7 @@ function productionOptions(){
     productionDraft=null;
   }
   const groups=[
+    ["Victory project",list.filter(x=>x.kind==="project")],
     ["Train a unit",list.filter(x=>x.kind==="unit"&&!isSeaUnit(x.item))],
     ["Construct a building",list.filter(x=>x.kind==="building"&&!portBuildings.has(x.item)&&!WONDERS[x.item])],
     ["University wonders",list.filter(x=>WONDERS[x.item])],
@@ -512,7 +516,7 @@ function productionOptions(){
   ];
   const html=groups.filter(([,opts])=>opts.length).map(([heading,opts])=>{
     return '<h3 class="production-group">'+heading+'</h3><div class="production-grid">'+opts.map(o=>{
-      const def=UNIT_TYPES[o.item]||BUILDINGS[o.item];
+      const def=o.kind==="project"?SCIENCE_PROJECT:UNIT_TYPES[o.item]||BUILDINGS[o.item];
       const desc=def.description||itemDesc[o.item]||o.label;
       const race=WONDERS[o.item] ? '<small><span>Charter fee</span> · <span>'+def.grant+' capital</span> · <span>'+({open:'Available worldwide.',commissioned:'Under construction',complete:'Already opened'})[campusStatus(view.state,o.item)]+'</span></small>' : '';
       return '<article class="production-item work-card">'+illustration(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+esc(turnsText(o.turns))+' · '+esc(o.required)+' production</small>'+orderButtons(o,mayOrder())+'</span></article>';
@@ -598,7 +602,7 @@ function drawCombat(){
   if(!defender){closeCombat();return false}
   text("combat-where",mapRegion.byId[battle.tile].name);
   const enemy=forecast.defenderType==="wild"?WILDS[defender.type].name:defender.type?items[defender.type]:defender.name;
-  const attack=forecastRow("Attacker",items[u.type],forecast.attackerHpBefore,forecast.attackerHpAfter,u.maxHp,forecast.retaliation?forecast.retaliation+" retaliation damage":"No retaliation",faction(u.seat).color);
+  const attack=forecastRow("Attacker",items[u.type],forecast.attackerHpBefore,forecast.attackerHpAfter,u.maxHp,forecastCounterLabel(forecast),faction(u.seat).color);
   const defend=forecastRow("Defender",enemy,forecast.defenderHpBefore,forecast.defenderHpAfterHit??forecast.defenderHpAfter,defender.maxHp,forecast.damage+" incoming damage",forecast.defenderType==="wild"?"#c38566":faction(defender.seat).color);
   const notes=(forecast.roleNotes||[]).map(note=>'<li>'+esc(note)+'</li>').join('');
   const modifiers=notes?'<ul class="formation-notes">'+notes+'</ul>':'';
@@ -636,12 +640,17 @@ function paint(next){
   text("faction-name",f.name);document.querySelector(".faction-icon").style.color=f.color;
   el("change-region").hidden=mode!=="solo";
   text("mode-name",mode==="solo"?"Solo campaign":"Online · "+room.code);document.querySelector(".multiplayer span").textContent=mode==="online"?"Room "+room.code:"Multiplayer";
-  text("gold",player.capital);text("gold-rate","+"+stats.capitalIncome);text("score",stats.score);
+  text("gold",player.capital);text("gold-rate","+"+stats.capitalIncome);
   text("influence",player.influence);text("influence-rate","+"+stats.influenceIncome);text("unit-count",ownUnits().length);text("city-count",ownCities().length);
   const finished=state.phase==="finished",myTurn=roomSeatTurn(state,seat)==="active",waiting=lobby();
   const teamStatus=teamTurnLabels(state,seat);
   text("turn-owner",waiting?"Room lobby":finished?"Campaign over":teamStatus?teamStatus.owner:myTurn?"Your turn":faction(state.turn).name);
-  text("turn-number",'Turn '+String(state.round).padStart(2,'0'));el("turn-number").title='Up to '+MAX_ROUNDS+' turns';
+  text("turn-number",'Turn '+String(state.round).padStart(2,'0'));
+  el("turn-number").title=state.victoryMode?modeLabels[state.victoryMode]:'Up to '+MAX_ROUNDS+' turns';
+  const trophy=el('score').closest('button');
+  trophy.title=state.victoryMode?'Victory progress':'View faction standings';
+  trophy.querySelector('.resource-label').textContent=state.victoryMode?'Victory':'Score';
+  text('score',state.victoryMode ? (state.practice?'Space race':({standard:'Two paths',conquest:'Conquest',science:'Space race'})[state.victoryMode]) : stats.score);
   text("end-label",waiting?"Open room":finished?"Standings":teamStatus?teamStatus.button:myTurn?"End turn":mode==="solo"?"Rivals playing…":state.players[state.turn]?.bot?"Computer playing…":"Waiting…");
   el("end-turn").disabled=!waiting&&!finished&&(!myTurn||view.busy);
   const event=state.log.at(-1);text("event-turn","TURN "+String(event?.round||1).padStart(2,"0"));text("event-text",event?Game.eventText(event):"");

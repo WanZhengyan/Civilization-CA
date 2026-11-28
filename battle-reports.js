@@ -38,6 +38,7 @@ export function prepareBattle(state, attacker, target, result, details = {}) {
         damage:result.damage, retaliation:sawOrigin ? result.retaliation : null, outcome,
         attackerLost:sawOrigin && Boolean(result.attackerDefeated), targetLost:Boolean(result.defeated)
       };
+      if (sawOrigin && result.attackMode) report.attackMode=result.attackMode;
       if (details.garrison) report.garrison = details.garrison;
       if (details.loot != null && seat === victim.seat) report.loot = details.loot;
       // Gaps in a shared sequence would disclose battles elsewhere on the map.

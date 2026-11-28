@@ -67,7 +67,7 @@ export function rivalPicker(selected=3) {
     return soloOption('rivals',count,selected,count===1?'1 rival':count+' rivals',(count+1)+' civilizations total');
   });
   return '<fieldset class="setup-setting solo-options solo-rivals"><legend>Computer opponents</legend><div>'+choices.join('')+
-    '</div><p id="solo-practice-note">In practice, neutral camps remain on the map and you can still earn civic points.</p></fieldset>';
+    '</div><p id="solo-practice-note">In practice, neutral camps remain on the map. Complete the Orbital Survey to win.</p></fieldset>';
 }
 
 export function victoryPicker(scoreTarget=TARGET_SCORE) {

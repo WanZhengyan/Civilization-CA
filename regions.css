@@ -74,3 +74,17 @@
 .size-options{container-type:inline-size}
 .size-options>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
 @container (max-width:23rem){.size-options>div{grid-template-columns:1fr}}
+
+.civilization-choice{margin:.45rem 0 .3rem;min-width:0}
+.room-seat>.civilization-choice{display:block}
+.civilization-guide{margin:.3rem 0 1rem}
+.civilization-guide h4{margin:.6rem 0 .12rem;color:#efdbac}
+.trait-note{margin:.35rem 0;color:#d6d7c9;font-size:.86rem;line-height:1.45}
+.civilization-guide .trait-note{margin:.15rem 0}
+.victory-modes label:has(:disabled){opacity:.65;cursor:default}
+@container (max-width:23rem){.victory-modes>div{grid-template-columns:1fr}}
+.victory-metrics{list-style:none;padding:0;margin:.3rem 0 .55rem}
+.victory-metric{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:.5rem 0;border-bottom:1px solid #4d5054;color:#dddcd2;font-size:.9rem}
+.victory-metric strong{color:#eddaab;font-variant-numeric:tabular-nums;white-space:nowrap}
+.victory-result{border:1px solid #7e7257;border-radius:6px;padding:.62rem .8rem;background:#57492c30}
+.victory-result h3,.victory-result p{margin:.25rem 0}

@@ -1,4 +1,5 @@
 import {FACTIONS, UNIT_TYPES} from './rules.js';
+import {witnessedMode} from './attack-mode.js';
 import {WILDS} from './barbarians.js';
 import {getLanguage, translate} from './i18n.js';
 
@@ -34,7 +35,10 @@ export function describeBattle(report,players,region,seat,locale=getLanguage()) 
   const location=[district && translate(district,locale),'('+report.target.tile.split(',').join(', ')+')'].filter(Boolean).join(' ');
   const details=[];
   if(report.damage>0)details.push(zh?'守方损失 '+report.damage+' 生命':report.damage+' damage to defender');
-  if(report.retaliation>0)details.push(zh?'反击造成 '+report.retaliation+' 伤害':report.retaliation+' counterdamage');
+  const mode=witnessedMode(report,UNIT_TYPES);
+  if(mode)details.push(translate(mode==='ranged'?'Ranged strike':'Melee strike',locale));
+  if(report.retaliation>0 || (mode==='ranged' && report.retaliation===0))
+    details.push(zh?'反击造成 '+report.retaliation+' 伤害':report.retaliation+' counterdamage');
   const outcome=({destroyed:'destroyed',captured:'captured',repelled:'repelled',looted:'raided'})[report.outcome] || (report.targetLost?'destroyed':null);
   if(outcome)details.push(words(outcome,locale));
   if(report.attackerLost)details.push(words('lost',locale));

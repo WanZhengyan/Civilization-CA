@@ -1,7 +1,8 @@
 import {UNIT_TYPES, BUILDINGS, IMPROVEMENTS} from './rules.js';
+import {SCIENCE_PROJECT} from './victory-rules.js';
 import {RESOURCES} from './resources.js';
 
-const catalog = {...UNIT_TYPES, ...BUILDINGS, ...IMPROVEMENTS, ...RESOURCES};
+const catalog = {...UNIT_TYPES, ...BUILDINGS, ...IMPROVEMENTS, ...RESOURCES, [SCIENCE_PROJECT.id]:SCIENCE_PROJECT};
 
 export function illustrationPath(id) {
   return Object.hasOwn(catalog, id) ? './art/'+id+'.webp' : null;

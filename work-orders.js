@@ -11,6 +11,7 @@ export function orderButtons(option,allowed) {
     return '<button type="button" data-'+key+'="'+escape(option.item)+'" '+(reason?'disabled':'')+'><span>'+label+'</span>'+n+'</button>'+
       (reason?'<small class="works-reason">'+escape(reason)+'</small>':'');
   };
+  if(option.kind==='project') return '<div class="work-choices"><div>'+make('produce','City production','',option.reason)+'</div></div>';
   return '<div class="work-choices"><div>'+make('produce','City production','',option.reason)+'</div><div>'+
     make('buy','Buy with gold',' <b>'+option.gold+'</b>',option.buyReason)+'</div></div>';
 }

@@ -29,6 +29,7 @@ function count(n,word) {
   return n+' '+(counters[normalized] || word);
 }
 const phraseRules = [
+  [/^(.+) won a science victory\.$/,winner=>zh(winner)+'取得了科技胜利。'],
   [/^Discovered (.+)\.$/,name=>'发现自然奇观“'+zh(name)+'”。'],
   [/^(.+) (grew to|fell to) (\d+) residents\.$/,(city,verb,n)=>cityLabel(city)+(verb==='grew to'?'的人口增至':'的人口减至')+n+'。'],
   [/^Holding every original capital wins immediately\. Civic points are compared at the end of the round when a faction reaches (\d+), or after round (\d+)\.$/,(score,round)=>'占领所有初始首府即可立刻获胜。有阵营达到 '+score+' 分时，在本轮结束后比较积分；最迟于第 '+round+' 轮结算。'],

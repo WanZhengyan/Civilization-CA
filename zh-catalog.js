@@ -1,8 +1,71 @@
 // The English UI copy is the catalog key. The rules and network protocol keep
 // their canonical IDs in both languages.
+import {CIVILIZATIONS} from './civilizations.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
+for (const civ of CIVILIZATIONS) {
+  for(const [label,translation] of [[civ.name,civ.nameZh],[civ.traitName,civ.traitNameZh],[civ.description,civ.descriptionZh]]) {
+    catalog.set(label.toLowerCase(),translation);
+  }
+}
+section(`
+Victory conditions|胜利条件
+Standard victory|标准胜利
+Conquest victory|征服胜利
+Science victory|科技胜利
+Win by conquest or launch the Orbital Survey.|通过征服获胜，或率先发射轨道勘测卫星。
+Control every original capital or be the last surviving side.|控制所有初始首都，或成为唯一幸存的一方。
+Research Rocketry, then complete the Orbital Survey in one city.|研究火箭技术，再在一座城市完成轨道勘测计划。
+Conquest requires a rival.|征服模式至少需要一个对手。
+Random civilization|随机文明
+Civilization|文明
+Compare civilization traits|比较文明特性
+Each civilization is unique in a campaign. Random draws from the civilizations still available.|每场战役中，同一文明只会出现一次。选择随机将从剩余文明中抽取。
+The invited player chooses their civilization.|受邀玩家自行选择文明。
+Allies share sight, discoveries and victory. Each player commands their own units and treasury.|盟友共享视野、探索记录和胜利。每位玩家独立指挥部队、管理国库。
+Teams are uneven. Each civilization controls its own cities and units.|队伍人数不均。每个文明独立指挥自己的城市与单位。
+Legacy civic rules|旧版市政积分规则
+Victory progress|胜利进度
+Victory|胜利
+Two paths|两种路线
+Space race|太空竞赛
+Production required|所需生产力
+Conquest|征服
+Victory project|胜利项目
+Your civilization|你的文明
+The winning side completed the Orbital Survey.|获胜方率先完成了轨道勘测计划。
+The winning side controls every original capital.|获胜方控制了所有文明的初始首都。
+The winning side is the last surviving side.|获胜方是场上唯一仍然存续的一方。
+Campaign ended|战役结束
+Original capitals confirmed under your control|已确认由己方控制的初始首都
+The chart counts only capitals visible to your side.|仅统计己方视野内已确认的首都。
+Pending|未完成
+Launch city|发射城市
+Paused project|暂停的发射项目
+Rocketry|火箭技术
+Orbital Survey|轨道勘测计划
+Launch a satellite to survey California from orbit. Completing this city project wins a science victory.|发射卫星，从轨道勘测加州。完成此城市项目即可取得科技胜利。
+Unlocks the Orbital Survey city project for a science victory.|解锁城市项目「轨道勘测计划」，可取得科技胜利。
+Open City production and choose Orbital Survey.|打开城市生产，选择「轨道勘测计划」。
+Research Radio Networks and Motorization to unlock Rocketry.|研究无线电网络和机械化，即可解锁火箭技术。
+Each region and size has its own solo save. Choose a victory condition, a civilization and up to three opponents. In multiplayer the host sets the map and the victory condition.|每种地区和地图大小分别保存单人进度。选择胜利条件、文明和最多三个对手。联机时由房主设置地图和胜利条件。
+Your side wins by controlling every original capital or by being the last side with a surviving civilization.|己方控制所有初始首都，或成为唯一仍有文明存续的一方，即可获胜。
+Research Radio Networks and Motorization, then Rocketry. In City production, choose Orbital Survey. Finish it in one city to win for your entire side.|先研究无线电网络和机械化，再研究火箭技术。打开城市生产，选择「轨道勘测计划」。在一座城市完成该项目即可为整个阵营赢得胜利。
+In practice, neutral camps remain on the map. Complete the Orbital Survey to win.|练习模式保留中立营地。完成轨道勘测计划即可获胜。
+Orbital Survey requires city production.|轨道勘测计划必须使用城市生产力。
+Orbital Survey launches from the city.|轨道勘测计划从城市发射。
+That civilization has already been chosen.|该文明已被选用。
+Choose one civilization for the host.|请为房主选择一个文明。
+Human players choose their own civilization.|人类玩家自行选择文明。
+Choose a valid victory mode.|请选择有效的胜利模式。
+Conquest requires a rival civilization.|征服模式至少需要一个对手文明。
+Civilizations are locked after the campaign starts.|战役开始后，文明选择已锁定。
+Choose a valid seat.|请选择有效的席位。
+Only the seat owner can choose this civilization.|只有该席位的玩家可以选择此文明。
+Choose a valid civilization.|请选择有效的文明。
+Each civilization can be chosen only once. Choose an available civilization or Random.|每个文明只能被选择一次。请选择尚未被选的文明，或选择随机。
+`);
 section(`
 Border expansion|领土扩张
 Locate next district|在地图上查看候选地
@@ -447,6 +510,9 @@ Discover now|立即研究
 Attacker|进攻方
 Defender|防守方
 No retaliation|无反击伤害
+Ranged strike|远程攻击
+Melee strike|近战攻击
+Rangers, ranged infantry, artillery and armed ships deal damage without losing HP to retaliation, even against an adjacent target. Every attack spends the remaining movement. Melee attackers can take counterdamage. Defeat the garrison first. Shooting can reduce cities and camps to 1 HP. Send a surviving capture-capable land unit to take them.|游骑兵、远程步兵、火炮与武装舰船发动攻击时不会因反击损失生命，即便目标位于相邻地块。每次攻击都会用完剩余移动力。近战单位可能受到反击。先击败守军；射击可将城市或营地削弱至 1 点生命，再派有占领能力的陆军单位将其攻占。
 Your militia will capture this city.|你的民兵将占领这座城市。
 Both units will fall.|双方单位均会阵亡。
 Your unit will fall in this attack.|你的单位会在这次进攻中阵亡。

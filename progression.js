@@ -1,3 +1,4 @@
+import {ROCKETRY} from './victory-rules.js';
 import {appliedScience} from './applied-science.js';
 // Research projects share stable IDs with saved campaigns and room commands.
 export const ERAS = {
@@ -25,7 +26,8 @@ export const TECHS = {
     description: 'Each city generates 2 more science per turn.'},
   motorization: {name: 'Motorization', era: 'modern', requires: ['steam', 'ballistics'], cost: 12,
     description: 'Each city produces 2 more production per turn.'},
-  ...appliedScience
+  ...appliedScience,
+  rocketry:ROCKETRY
 };
 
 export function eraFor(known = [], adopted = []) {
