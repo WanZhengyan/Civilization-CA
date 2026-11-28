@@ -38,10 +38,10 @@ import {getPopulationReport} from "./rules.js";
 import {wildAt,WILDS} from "./barbarians.js";
 import {addPolicyPanel,updateCivicAgenda} from "./policy-panel.js";
 import {draftOrder, orderButtons, orderReview, paintSiteBar, siteOrderAllowed} from './work-orders.js';
-import {getDevelopmentPreview,getProjectSites} from './rules.js';
+import {getProjectSites} from './rules.js';
 import {roomSeatTurn,teamTurnLabels} from './room-turn.js';
 import {sameTeam,teamLabel} from './teams.js';
-import {cityKind,developmentPanel,developmentReceipt,foundingLabel} from './district-command.js';
+import {cityKind,foundingLabel} from './district-command.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
 import {captureOrderHint,cityAttackHint,forecastCounterLabel} from './attack-mode.js';
 import {militaryTraining,trainingPanel} from './combat-training.js';
@@ -301,11 +301,11 @@ function flash(message){
   text("map-feedback",message);el("map-feedback").hidden=false;clearTimeout(feedbackTimer);
   feedbackTimer=setTimeout(()=>el("map-feedback").hidden=true,3400);
 }
-function entityTabs(tile,selected,development){
+function entityTabs(tile,selected){
   const units=view.state.units.filter(u=>u.tile===tile);
   const choices=units.map(u=>({id:'u'+u.id,label:items[u.type]||u.type,selected:kind==="unit"&&sameId(selected?.id,u.id)}));
   if(cityAt(tile))choices.push({id:'city',label:'City',selected:kind==="city"});
-  if(choices.length)choices.push({id:"land",label:development?"District development":"District",selected:kind==="tile"});
+  if(choices.length)choices.push({id:"land",label:"District",selected:kind==="tile"});
   const bar=el("entity-tabs");
   bar.hidden=choices.length<2;
   bar.innerHTML=choices.map(x=>'<button type="button" data-entity="'+esc(x.id)+'" aria-pressed="'+x.selected+'">'+esc(x.label)+'</button>').join('');
@@ -368,10 +368,9 @@ function inspect(){
     el("entity-location").innerHTML='<span>Controlled by</span> <span>'+esc(gov.name)+'</span> · <span>Original capital of</span> <span>'+esc(faction(activeCity.originalSeat).name)+'</span>';
   } else text("entity-location",activeUnit ? tile.name : activeCity ? gov.name : port?.name||surface);
   const territory=visible.has(tile.id) ? getActions(state,view.seat,tile.id)[0] : null;
-  const capped=visible.has(tile.id) && holding?.owner===view.seat && holding.level===3 && tile.terrain!=="ocean" && !nature && !campus && !port && !wildAt(state,tile.id);
-  entityTabs(tile.id,activeUnit,territory?.type==="develop" || capped);
+  entityTabs(tile.id,activeUnit);
   const disabled=!mayOrder()||!own;
-  let info="",actions="",explanation="",development="";
+  let info="",actions="",explanation="";
   selectedOptions=activeUnit?getUnitOptions(state,activeUnit.id):null;
   updateSurvey();
   if(activeUnit){
@@ -482,21 +481,11 @@ function inspect(){
       explanation="Ships launch here and repair in nearby water.";
     }else if(state.intel?.visibleBerths?.includes(tile.id)){
       text("entity-kind","Marked berth");explanation="A harbor occupies or has reserved this water tile.";
-    }else if(territory?.type==="develop"){
-      const preview=getDevelopmentPreview(state,view.seat,tile.id);
-      if(preview) {
-        development=developmentPanel(preview,getStats(state,view.seat));
-        const cost=preview.cost.capital+" capital · "+preview.cost.orders+" district order";
-        actions=actionButton("develop",territory.label,cost,"gold",!mayOrder()||!preview.enabled);
-        explanation=preview.reason || (state.actionsLeft===1 ? '1 district order remains this turn.' : state.actionsLeft+' district orders remain this turn.');
-      }
-    }else if(capped){
-      development=developmentPanel(null);
     }else if(territory){
-      const cost=[territory.cost.capital && (territory.cost.capital+" capital"),territory.cost.influence && (territory.cost.influence+" influence")].filter(Boolean).join(" · ");
+      const cost=[territory.cost.capital && (territory.cost.capital+" capital"),territory.cost.influence && (territory.cost.influence+" influence"),"1 district order"].filter(Boolean).join(" · ");
       actions=actionButton(territory.type,territory.label,cost,"gold",!mayOrder()||!territory.enabled);
-      explanation=territory.reason || state.actionsLeft+" district orders remain this turn.";
-    }else explanation=tile.waterway?"Ships spend one movement per water hex.":tile.terrain==="ocean"?"Land units cannot cross open water.":"Select a unit to give orders or a city to set production.";
+      explanation=territory.reason || (state.actionsLeft===1 ? "1 district order remains this turn." : state.actionsLeft+" district orders remain this turn.");
+    }else explanation=tile.waterway?"Ships spend one movement per water hex.":tile.terrain==="ocean"?"Land units cannot cross open water.":holding?.owner===view.seat?"Select a city to manage production or send a builder to improve nearby land.":"Select a unit to give orders or a city to set production.";
   }
   const neutral=!activeUnit && !activeCity && wildAt(state,tile.id);
   if(neutral){
@@ -519,7 +508,7 @@ function inspect(){
   }
   if(order==="attack")explanation="Select an enemy outlined in red to review the combat forecast.";
   el("entity-info").innerHTML=info;
-  el("entity-commands").innerHTML=development+'<div class="orders">'+actions+'</div>'+note(explanation);
+  el("entity-commands").innerHTML='<div class="orders">'+actions+'</div>'+note(explanation);
 }
 function currentMove(){
   const unit=getUnit();
@@ -860,7 +849,7 @@ let turnResults;
 let expansionForecasts = new Map();
 function paint(next){
   expansionForecasts=getCityExpansions(next.state,next.seat);
-  const previousKey=matchKey,previousState=view?.state;view=next;const {state,seat,mode,room}=next;
+  const previousKey=matchKey;view=next;const {state,seat,mode,room}=next;
   mapRegion=getMap(state);
   visible=new Set(state.intel?.visible??Object.keys(state.board));explored=new Set(state.intel?.explored??Object.keys(state.board));
   const regionKey=mapRegion.id+'-'+mapRegion.mapSize;
@@ -900,9 +889,7 @@ function paint(next){
   const event=state.log.at(-1);text("event-turn","TURN "+String(event?.round||1).padStart(2,"0"));text("event-text",event?Game.eventText(event):"");
   el("legend").innerHTML=contacts.map(p=>'<span class="legend-item"><i class="swatch" style="--swatch:'+FACTIONS[p.faction].color+'"></i><span>'+esc(names[p.faction])+'</span>'+(state.teams?' · <span>'+teamLabel(state.teams[p.seat])+'</span>':'')+'</span>').join('');
   const eventKey=event?JSON.stringify(event):"";
-  const receipt=previousKey===key ? developmentReceipt(previousState,state,seat,mapRegion) : null;
-  if(receipt) toast(receipt);
-  else if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end","develop"].includes(event.type))flash(Game.eventText(event));
+  if(previousKey===key && previousEvent && eventKey!==previousEvent && event?.seat===seat && !["start","end"].includes(event.type))flash(Game.eventText(event));
   previousEvent=eventKey;
   updateWaterKey?.(mapRegion,explored);
   redraw();if(focusOpening && selectedTile && state.intel)atlas.focus(selectedTile,true);paintResearch();showCampusOpening(state,seat,key);populationLedger();
@@ -960,15 +947,8 @@ function chooseOrder(key){
   }
   if(key==="supplies"){Game.open("supplies");return}
   if(key==="choose-production"){openProduction();return}
-  if(["develop","claim","contest"].includes(key)&&mayOrder()){
-    const tile=selectedTile,commands=el("entity-commands");
-    const restoreFocus=key==="develop" && commands.contains(document.activeElement);
-    const result=Game.doAction({type:key,tile});
-    if(restoreFocus) Promise.resolve(result).then(()=>{
-      if(tile!==selectedTile || kind!=="tile" || document.activeElement!==document.body)return;
-      const next=commands.querySelector('[data-order="develop"]:enabled') || commands.querySelector('.district-development');
-      next?.focus({preventScroll:true});
-    });
+  if(["claim","contest"].includes(key)&&mayOrder()){
+    Game.doAction({type:key,tile:selectedTile});
     return;
   }
   const u=getUnit();if(!u||u.seat!==view.seat)return;

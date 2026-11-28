@@ -730,13 +730,11 @@ const guideSections = {
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
     ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
     ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.'],
-    ['Plan your turn', 'Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
+    ['Plan your turn', 'Start with two district orders per turn to claim neutral land or contest a rival border. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
   ]},
   influence: {label:'Influence', entries:[]},
   city: {label:'City growth', entries:[
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
-    ['Develop a district', 'Select visible land you own. If a unit or city shares the hex, open District development in Field command. Each upgrade spends one district order and raises the level by one. Levels 1, 2 and 3 cost 5, 8 and 11 capital respectively. Level 3 is the maximum.'],
-    ['Compare development returns', 'Each new level adds 1 civic point. Coast, lowland and urban districts also earn 1 more capital per turn. Woodland, foothills and mountains add 1 to base influence income. Check the preview for the change under your current policy.'],
     ['Grow city borders', 'Each resident adds one border point at the end of your turn. A city starts at eight points per district. Each new district raises the next cost by two, up to sixteen. Only visible, unclaimed land within three connected land steps qualifies. If the frontier is blocked, explore or secure a clear route. Progress pauses until a parcel opens.'],
     ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
     ['Use stored goods', 'Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.'],
@@ -789,7 +787,7 @@ const guideSections = {
       if(state?.practice)return 'Reach the civic target to complete practice. At round 30, practice ends with your final score.';
       return `If a faction reaches ${getScoreTarget(state)} civic points, finish the current round and compare scores. The same scoring applies after round ${MAX_ROUNDS}. The highest score wins, and a tie shares victory.`;
     }],
-    ['Count civic points', 'Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.']
+    ['Count civic points', 'Score 2 per district and 2 per landmark. A city earns 3 points and its center adds 1. Each resident adds 1, each finished building adds 2 and each land improvement adds 1. Older districts keep the settlement points they have earned.']
   ]}
 };
 function guideTopics(chapter, language, state) {

@@ -53,7 +53,7 @@ export function ledgerBody(state, seat, accounts, selectedCity, busy, esc, stats
     return '<div class="cargo-row">'+illustration(key)+'<div class="cargo-balance"><strong>'+resource.name+'</strong><small><span>Stored</span> '+stock+' · <span>Harvest</span> +'+income+'</small></div><div class="cargo-actions">'+
       dispatch('sell',L('Sell for 5 gold','出售得 5 金币'),blocked)+dispatch('city',delivery,blocked||!city||!gain)+'</div></div>';
   });
-  return '<section class="budget-guide">'+budget('Treasury',player.capital,stats?.capitalIncome)+'<p>Spend gold to buy eligible city projects, upgrade units and develop owned land.</p>'+budget('Influence',player.influence,stats?.influenceIncome)+
+  return '<section class="budget-guide">'+budget('Treasury',player.capital,stats?.capitalIncome)+'<p>Use gold to buy eligible city projects, upgrade units or claim a neutral border tile.</p>'+budget('Influence',player.influence,stats?.influenceIncome)+
     '<p>'+L('Spend 6 influence to expand a city into its next eligible parcel.','花 6 点影响力可让城市立即取得下一格可扩张地块。')+'</p>'+
     '<button type="button" class="modal-secondary" data-influence-open>'+L('Spend influence','使用影响力')+'</button></section>'+
     '<p class="modal-desc">Each worked deposit adds one good at the end of your turn. Dispatch two of the same good once per turn.</p>'+destination+

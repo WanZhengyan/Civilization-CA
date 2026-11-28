@@ -673,13 +673,12 @@ function record(state,seat,type,text,tile,detail={}) {
 const DISTRICT_ORDER_COST=1;
 function territoryOrder(state,seat,tile) {
   if (tile.terrain==='ocean' || wildAt(state,tile.id)) return null;
-  const {owner,level}=state.board[tile.id];
+  const {owner}=state.board[tile.id];
   if (state.board[tile.id].facility || state.board[tile.id].wonder || state.board[tile.id].naturalWonder || state.cities.some(c=>c.queue?.site===tile.id)) return null;
-  if (owner===seat) return level<3 ? {type:'develop',label:'Develop district',cost:{capital:5+level*3,influence:0}} : null;
-  if (sameTeam(state,owner,seat)) return null;
+  if (owner===seat || sameTeam(state,owner,seat)) return null;
   if (state.cities.some(c=>c.tile===tile.id) || state.units.some(u=>u.tile===tile.id && u.seat!==seat)) return null;
   if (owner===null) return {type:'claim',label:'Claim district',cost:{capital:4,influence:0}};
-  return {type:'contest',label:'Contest district',cost:{capital:4,influence:5+level*2}};
+  return {type:'contest',label:'Contest district',cost:{capital:4,influence:5}};
 }
 export function getActions(state,seat,id,visible) {
   state=actingPerspective(state,seat);
@@ -693,29 +692,11 @@ export function getActions(state,seat,id,visible) {
   if (state.phase!=='playing') reason='The campaign has ended.';
   else if (state.turn!==seat) reason='Wait for your turn.';
   else if (state.actionsLeft<DISTRICT_ORDER_COST) reason='You have used all district orders this turn.';
-  else if (order.type!=='develop' && !getMap(state).neighbors(id).some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
+  else if (!getMap(state).neighbors(id).some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
   else if (player.capital<order.cost.capital) reason='You need '+order.cost.capital+' capital.';
   else if (player.influence<order.cost.influence) reason='You need '+order.cost.influence+' influence.';
   if (!reason && state.intel?.districtChoices && !state.intel.districtChoices.includes(id)) return [];
   return [{...order,enabled:!reason,reason}];
-}
-
-// Inspect one owned district without issuing an order. Revalue just the
-// changed holding through the same economy used at the end of the turn:
-// Port concessions can absorb an extra point of influence at the zero floor.
-export function getDevelopmentPreview(state,seat,id) {
-  if (!Number.isInteger(seat) || state?.board?.[id]?.owner!==seat || (state.intel && state.intel.seat!==seat)) return null;
-  const [order]=getActions(state,seat,id);
-  if (order?.type!=='develop') return null;
-  const holding=state.board[id], nextLevel=holding.level+1;
-  const proposed={...state,board:{...state.board,[id]:{...holding,level:nextLevel}}};
-  const before=getStats(state,seat), after=getStats(proposed,seat);
-  return {
-    currentLevel:holding.level, nextLevel,
-    cost:{...order.cost,orders:DISTRICT_ORDER_COST}, enabled:order.enabled, reason:order.reason,
-    delta:{capitalIncome:after.capitalIncome-before.capitalIncome,
-      influenceIncome:after.influenceIncome-before.influenceIncome, score:after.score-before.score}
-  };
 }
 
 function movementCost(state,unit, tileId) {
@@ -1694,9 +1675,9 @@ function resolveOrder(source,seat,action) {
     if (!order.enabled) throw new Error(order.reason);
     const tile=getMap(state).byId[action.tile],prior=next.board[tile.id],player=next.players[seat];
     player.capital-=order.cost.capital;player.influence-=order.cost.influence;
-    next.board[tile.id]={...prior,owner:seat,level:order.type==='develop' ? prior.level+1:prior.level};
+    next.board[tile.id]={...prior,owner:seat};
     next.actionsLeft-=DISTRICT_ORDER_COST;
-    const verb={develop:'developed',contest:'took control of',claim:'claimed'}[order.type];
+    const verb=order.type==='contest' ? 'took control of' : 'claimed';
     record(next,seat,order.type,FACTIONS[state.players[seat].faction].name+' '+verb+' '+tile.name+'.',tile.id);
   }
   refreshScores(next);
@@ -2028,6 +2009,7 @@ function botDistrict(state,difficulty) {
     const tile=map.byId[id];
     const [order]=getActions(state,state.turn,tile.id);
     if (!order?.enabled) continue;
+    if(order.type==='contest' && difficulty==='easy') continue;
     const parcel=state.board[id];
     // Both ordinary buildings and universities can reserve an unimproved plot.
     // Their location is private, so treat all plausible rival sites alike.
@@ -2038,9 +2020,8 @@ function botDistrict(state,difficulty) {
     }
     const frontier=map.neighbors(tile.id).filter(id=>explored.has(id) && terrainCost[map.byId[id].terrain] && state.board[id].owner===null).length;
     const variety=((tile.q*67+tile.r*31+state.round*19+state.turn*11+state.actionsLeft*7)%29)/29;
-    let value=order.type==='develop' ? 0.5 : 2+Number(Boolean(tile.landmark))*3+frontier*0.1+(order.type==='contest'?1.5:0);
-    if(difficulty==='easy' && order.type==='develop' && state.board[id].level===0)value+=2.8;
-    if(difficulty==='hard' && order.type!=='develop'){
+    let value=2+Number(Boolean(tile.landmark))*3+frontier*0.1+(order.type==='contest'?1.5:0);
+    if(difficulty==='hard'){
       value+=Number(Boolean(state.board[id].resource))*2;
       if(order.type==='contest')value+=2+state.board[id].level;
     }

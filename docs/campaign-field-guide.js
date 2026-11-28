@@ -19,8 +19,8 @@ const chapters = {
       'If the city is one turn from claiming the same parcel through population growth, you can wait and keep all 6 influence. To choose a different eligible neutral parcel on your border, claim it for 4 gold and one district order. Save influence for diplomacy if you want to learn a contacted rival’s era and city count. A delegation costs 6 influence and reports for three rounds, including the round you send it.',
       '如果城市再过一回合就能靠居民自动取得同一格地，可以等一等，省下这 6 点影响力。如果更想要另一格符合条件的中立边境地块，可用 4 金币和 1 次地区指令直接认领。接触其他文明后，可用这 6 点派遣使团，查看对方的时代和城市总数。报告从派遣当轮起持续三轮。'],
     ['Take a rival district or change policy', '争夺边境或更换政策',
-      'To take an eligible rival district next to your land, spend one district order, 4 gold and 5 influence. Each development level adds 2 influence to the price. Your first government policy is free. Switching to another unlocked policy later costs 3 influence.',
-      '要夺取紧邻己方领土、符合争夺条件的敌方地块，需花 1 次地区指令、4 金币和 5 点影响力。目标地块每升一级，还需多付 2 点影响力。首次颁布政府政策免费，以后改用其他已解锁政策需 3 点影响力。'],
+      'To take an eligible rival district next to your land, spend one district order, 4 gold and 5 influence. Your first government policy is free. Switching to another unlocked policy later costs 3 influence.',
+      '要夺取紧邻己方领土、符合争夺条件的敌方地块，需花 1 次地区指令、4 金币和 5 点影响力。首次颁布政府政策免费，以后改用其他已解锁政策需 3 点影响力。'],
     ['Read your income', '看懂收入',
       'Influence accumulates at the end of your turn. Territory contributes to income, and a monument adds 3 influence per turn. Treasury gold pays for purchases and upgrades. Culture advances the civic you are researching.',
       '影响力在你的回合结束时到账。领土会带来影响力收入，一座纪念碑每回合再增加 3 点。金库里的金币用来购买项目和升级单位。文化用来推进正在研究的市政。']

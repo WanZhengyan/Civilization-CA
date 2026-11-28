@@ -83,9 +83,9 @@ test('all campaign regions and renamed settlement messages keep their intended l
 test('city ownership, district decisions and the map key use distinct terms in both languages',()=>{
   const terms={
     'City':'城市','Landmark':'地标','Original capital':'初始首府','Captured original capital':'已易主的初始首府',
-    'Controlled by':'当前控制方','Original capital of':'建都阵营','District development':'地区开发',
-    'Develop district':'开发地区','District developed':'地区已开发','District level':'开发等级',
-    'Maximum district level':'已达最高开发等级','1 district order':'1 次地区指令',
+    'Controlled by':'当前控制方','Original capital of':'建都阵营','District':'地区',
+    'Claim district':'拓展领土','Contest district':'争夺地区',
+    '1 district order':'1 次地区指令','1 district order remains this turn.':'本回合还可下达 1 次地区指令。',
     'Capital per turn':'每回合资金收入','Influence per turn':'每回合影响力收入',
     'Your capital city':'己方首府','Rival capital city':'敌方首府','Map key':'地图图例'
   };
@@ -95,7 +95,7 @@ test('city ownership, district decisions and the map key use distinct terms in b
   }
 });
 
-test('both editions explain the map toggle, persistent capitals, costs and terrain income',()=>{
+test('both editions explain the map toggle, persistent capitals, border orders and civic scoring',()=>{
   const file=name=>readFileSync(new URL('../docs/'+name,import.meta.url),'utf8');
   const toggle=file('game.html').match(/id="map-labels"[^>]*title="([^"]+)"[^>]*>([^<]+)<\/label>/);
   assert.ok(toggle,'map layers must expose a label and a hint');
@@ -107,8 +107,8 @@ test('both editions explain the map toggle, persistent capitals, costs and terra
   const chapters=new Map([...file('game.js').matchAll(/\['([^']+)', '([^']+)'\]/g)].map(match=>[match[1],match[2]]));
   const cases=[
     ['Read city markers',/stays with that city after capture/,/占领后仍保留王冠/],
-    ['Develop a district',/5, 8 and 11 capital/,/5、8、11 资金/],
-    ['Compare development returns',/base influence income/,/基础影响力收入/]
+    ['Plan your turn',/claim neutral land or contest a rival border/,/认领中立地块或争夺敌方边境地块/],
+    ['Count civic points',/each finished building adds 2/,/每座竣工建筑加 2 分/]
   ];
   for(const [heading,english,chinese] of cases){
     const body=chapters.get(heading);

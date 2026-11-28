@@ -42,7 +42,7 @@ test('separated allies can found in either order without sharing a district budg
   for (const seat of [2,0]) s=applyAction(s,seat,{type:'found',unit:s.units.find(u=>u.seat===seat).id});
   assert.deepEqual(s.cities.map(c=>c.seat),[2,0]);assert.equal(JSON.stringify(before),snapshot);
   assert.throws(()=>applyAction(s,1,{type:'end'}));
-  s=applyAction(s,2,{type:'develop',tile:s.cities[0].tile});
+  s=applyAction(s,2,{type:'claim',tile:campaignView(s,2).intel.districtChoices[0]});
   assert.deepEqual(s.teamPhase.orders,[2,0,1]);assert.equal(s.players[0].capital,12);
 });
 test('Ready settles only the owner and advances one round after the last team',()=>{
@@ -78,7 +78,7 @@ test('an eliminated ally neither blocks readiness nor receives new movement or o
 test('a saved partial phase preserves Ready, each budget and personal recovery exactly once',()=>{
   let s=opening();
   for(const seat of [0,2])s=applyAction(s,seat,{type:'found',unit:s.units.find(u=>u.seat===seat).id});
-  s=applyAction(s,2,{type:'develop',tile:s.cities.find(c=>c.seat===2).tile});
+  s=applyAction(s,2,{type:'claim',tile:campaignView(s,2).intel.districtChoices[0]});
   s=applyAction(s,0,{type:'end'});const paid=s.players[0].capital;
   s=JSON.parse(JSON.stringify(s));
   assert.equal(campaignView(s,0).actionsLeft,0);assert.equal(campaignView(s,2).actionsLeft,1);

@@ -131,6 +131,19 @@ test("each seat issues unit and city orders through the server and observes the 
   assert.deepEqual((await seats.read(seats.guest)).game,room.game);
 });
 
+test("a stale client cannot spend gold or a district order on owned land", async t => {
+  const seats=await twoPlayers(roomFixture(t));
+  let room=await seats.start();
+  const settler=room.game.units.find(unit=>unit.seat===0);
+  room=(await seats.act(seats.host,room.revision,{type:'found',unit:settler.id})).room;
+  const home=room.game.cities.find(city=>city.seat===0).tile;
+  await seats.act(seats.host,room.revision,{type:'develop',tile:home},422);
+  assert.deepEqual(await seats.read(seats.host),room);
+  const project=rules.getResearchOptions(room.game,0).find(option=>option.enabled);
+  const resumed=(await seats.act(seats.host,room.revision,{type:'research',item:project.item})).room;
+  assert.equal(resumed.game.players[0].research,project.item);
+});
+
 function legacyGame() {
   // A saved in-progress match from the district-only game, before units and cities existed.
   const board=Object.fromEntries(rules.TILES.map(t=>[t.id,{owner:null,level:0}]));

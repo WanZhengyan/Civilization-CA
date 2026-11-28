@@ -4,7 +4,7 @@ import {civilizationPicker,compareCivilizations,validCivilization} from './campa
 export {teamLabel};
 const levels=Object.fromEntries(AI_LEVELS.map(id=>[id,id[0].toUpperCase()+id.slice(1)]));
 export const difficultyNotes={
-  easy:'Easy develops home districts first and patrols within three hexes of its cities.',
+  easy:'Easy claims neutral land and keeps military patrols within three hexes of its cities.',
   normal:'Normal balances scouting, growth and production, and compares targets for each unit.',
   hard:'Hard expands earlier and compares attacks across its units before committing one.'
 };
