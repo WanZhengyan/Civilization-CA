@@ -59,12 +59,50 @@ export function selectStarts(map, count, seed, neighbors, distance) {
   return homes.map(id => [id,...shuffled(neighbors(id).filter(next => habitable(map.byId[next].terrain)),random).slice(0,2)]);
 }
 
+// On the 17-column archived chart every hex can be represented by a bit in
+// its row. A town only excludes sites in its own row and the next two rows.
+function packCompactSites(map,candidates,count,distance) {
+  const rows=Array.from({length:map.rowsCount},()=>[]);
+  for(const tile of candidates)rows[tile.r].push(tile);
+  const options=rows.map((row,r)=>{
+    const choices=[{sites:[],mask:0,first:0,second:0}];
+    for(const tile of row){
+      const bit=1<<tile.q;
+      const blocked=targets=>(targets || []).reduce((mask,next)=>
+        distance(tile.id,next.id)<3 ? mask | (1<<next.q) : mask,0);
+      const first=blocked(rows[r+1]),second=blocked(rows[r+2]);
+      for(const choice of [...choices]){
+        if(choice.mask & ((bit>>1) | (bit>>2)))continue;
+        choices.push({sites:[...choice.sites,tile.id],mask:choice.mask|bit,
+          first:choice.first|first,second:choice.second|second});
+      }
+    }
+    return choices.sort((a,b)=>b.sites.length-a.sites.length);
+  });
+  const capacity=Array(rows.length+1).fill(0),failed=new Map();
+  for(let r=rows.length-1;r>=0;r--)capacity[r]=capacity[r+1]+options[r][0].sites.length;
+  function fill(r,needed,blocked,carry){
+    if(!needed)return [];
+    if(capacity[r]<needed)return null;
+    const key=[r,blocked,carry].join('/');
+    if((failed.get(key) ?? Infinity)<=needed)return null;
+    for(const option of options[r]){
+      if(option.mask & blocked || option.sites.length>needed)continue;
+      const rest=fill(r+1,needed-option.sites.length,carry|option.first,option.second);
+      if(rest)return [...option.sites,...rest];
+    }
+    failed.set(key,needed);
+    return null;
+  }
+  return fill(0,count,0,0);
+}
+
 // Farms, workshops and ships use normal city rules from the first harvest.
 // Reserve every home (including the human's first ring of founding choices)
 // before assigning satellite towns to any single governor.
 export function planGovernorTowns(map, homes, quotas, seed, distance, protectedHexes) {
-  const towns=homes.map(()=>[]);
-  if (!quotas.some(n=>n>1)) return towns;
+  const count=quotas.reduce((total,quota)=>total+Math.max(0,quota-1),0);
+  if (!count) return homes.map(()=>[]);
 
   const walking=homes.map(home=>{
     const steps=new Map([[home,0]]);
@@ -90,25 +128,36 @@ export function planGovernorTowns(map, homes, quotas, seed, distance, protectedH
   });
   // Try local, well-fed towns first. Crowded old charts may need a different
   // packing; each trial still enforces the founding separation and human buffer.
-  const trials=map.scaleFactor===1 ? 24 : 3;
-  for(let trial=0;trial<trials;trial++){
-    const random=seededRandom(seed,map.id+'/governor-towns/'+trial);
-    const choices=scored.map(list=>list.map(site=>({...site,rank:site.rank+random()*(trial ? 20 : 3)}))
-      .sort((a,b)=>a.rank-b.rank).map(site=>site.id));
+  function assign(choices){
     const assigned=homes.map(()=>[]),used=[];
-    let pending=quotas.reduce((n,quota)=>n+Math.max(0,quota-1),0);
+    let pending=count;
     while(pending){
-      // Alternate seats, prioritizing the governor who still needs the most towns.
+      // Give each governor a turn at picking sites, starting with the largest shortfall.
       let seat=-1,need=0;
       for(let i=0;i<quotas.length;i++){
         const left=quotas[i]-1-assigned[i].length;
         if(left>need){need=left;seat=i;}
       }
       const tile=choices[seat].find(id=>used.every(other=>distance(other,id)>=3));
-      if(!tile)break;
+      if(!tile)return null;
       assigned[seat].push(tile);used.push(tile);pending--;
     }
-    if(!pending)return assigned;
+    return assigned;
+  }
+  for(let trial=0;trial<3;trial++){
+    const random=seededRandom(seed,map.id+'/governor-towns/'+trial);
+    const choices=scored.map(list=>list.map(site=>({...site,rank:site.rank+random()*(trial ? 20 : 3)}))
+      .sort((a,b)=>a.rank-b.rank).map(site=>site.id));
+    const result=assign(choices);
+    if(result)return result;
+  }
+  if(map.scaleFactor===1){
+    const packed=packCompactSites(map,candidates,count,distance);
+    if(packed){
+      const reserved=new Set(packed);
+      return assign(scored.map(list=>list.filter(site=>reserved.has(site.id))
+        .sort((a,b)=>a.rank-b.rank).map(site=>site.id)));
+    }
   }
   return null;
 }

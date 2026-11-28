@@ -161,3 +161,10 @@ test('four hard governors receive twenty legal cities even on crowded archived c
     for(const c of s.cities)assert.ok(s.cities.every(other=>c===other || hexDistance(c.tile,other.tile)>=3));
   }
 });
+
+test('the old Los Angeles footprint is retained when twenty spaced towns fit around the reserved capitals',()=>{
+  const s=createGame(Array.from({length:4},()=>({bot:true})),'la',{seed:0,mapSize:'standard',difficulty:'hard'});
+  assert.equal(s.mapSize ?? 'standard','standard');
+  assert.equal(s.cities.length,20);
+  assert.ok(s.cities.every(city=>s.cities.every(other=>city===other || hexDistance(city.tile,other.tile)>=3)));
+});
