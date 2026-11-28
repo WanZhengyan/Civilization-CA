@@ -86,3 +86,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.76 | Follow permanent charter investments through prerequisite planning, signing and active returns |
 | 7.0.77 | Reconstruct each city’s dated municipal decisions, purchase receipts and acquired districts |
 | 7.0.78 | Benchmark cities against a selectable hometown and switch between personal city profiles |
+| 7.0.79 | Commission a landscape expedition, survey contrasting land and file a private report |

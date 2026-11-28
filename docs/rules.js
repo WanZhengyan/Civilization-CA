@@ -1,4 +1,5 @@
 import {tradeCorridors,dispatchCaravan,harvestCaravans,workTimber,recallWagon,diversionRoads,divertWagon,establishDepot,gradeRoad,planOverlandCommerce} from './land-commerce.js';
+import {fieldOrder} from './field-expeditions.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
@@ -1604,7 +1605,10 @@ function resolveOrder(source,seat,action) {
     unitOrNull(next, action.unit).skippedRound = next.round;
     return next;
   }
-  if (action.type==='recordTransect' || action.type==='fileTransect') {
+  if(action.type==='fieldStudy'){
+    const receipt=fieldOrder(next,seat,action,getMap(next),hexDistance);
+    record(next,seat,'fieldStudy',receipt,next.units.find(u=>u.id===action.unit).tile,{unit:action.unit});
+  } else if (action.type==='recordTransect' || action.type==='fileTransect') {
     const entry=runAtlasOrder(next,seat,action,getMap(next),hexDistance);
     record(next,seat,action.type,entry.text,entry.tile,{unit:action.unit});
   } else if (action.type==='visitStation') {

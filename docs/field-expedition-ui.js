@@ -1,0 +1,48 @@
+import {fieldReport,studies} from './field-expeditions.js';
+import {getLanguage,translate} from './i18n.js';
+
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lang=()=>getLanguage()==='zh-CN'?1:0;
+const local=(en,zh)=>lang()?zh:en;
+const label=(value)=>esc(value[lang()]);
+const currencies={capital:['gold','金币'],science:['science','科研'],culture:['culture','文化'],influence:['influence','影响力']};
+const rewardText=reward=>Object.entries(reward).map(([key,n])=>'+'+n+' '+label(currencies[key])).join(' · ');
+const button=(cmd,text,enabled)=>'<button type="button" class="btn" data-do="'+cmd+'"'+(enabled?'':' disabled')+'>'+text+'</button>';
+
+export function openFieldDesk(read,act) {
+  const dialog=document.createElement('dialog');dialog.className='order-dialog field-desk';dialog.setAttribute('aria-labelledby','field-desk-title');
+  dialog.innerHTML='<div class="modal-shell"><header class="modal-head"><h2 class="modal-title" id="field-desk-title">'+local('Field expeditions','野外考察')+'</h2><button type="button" data-close class="modal-close" aria-label="'+local('Close','关闭')+'">×</button></header><div class="modal-body"></div></div>';
+  let selected;
+  const body=dialog.querySelector('.modal-body');
+  function paint(){
+    const ctx=read();
+    if(!ctx){dialog.close();return;}
+    const {state,unit,map,distance,mayOrder}=ctx;
+    const r=fieldReport(state,unit,map,distance);
+    if(!r){dialog.close();return;}
+    const active=r.mission, options=r.open;
+    const key=active?.key || options.find(([id])=>id===selected)?.[0] || options[0]?.[0];
+    const spec=studies[key];
+    const ready=mayOrder && unit.moves>0;
+    let html='';
+    if(!active && options.length)html+='<label>'+local('Choose a study','选择课题')+' <select data-study>'+options.map(([id,s])=>'<option value="'+id+'"'+(id===key?' selected':'')+'>'+label(s.name)+'</option>').join('')+'</select></label>';
+    if(spec){
+      html+='<h3>'+label(spec.name)+'</h3><p>'+local('Commission','委托费')+' '+spec.fee+' '+local('gold','金币')+' · '+local('On filing','交付后获得')+' '+rewardText(spec.reward)+'</p>';
+      html+='<ol>'+spec.steps.map((step,i)=>'<li>'+((active?.notes.length||0)>i?'✓ ':'')+label(step)+'</li>').join('')+'</ol>';
+      html+='<p>'+local('Commission and file within one hex of your city. Each order costs one movement point.','在己方城市一格内领取和交付课题。每次指令消耗 1 移动力。')+'</p>';
+      if(!active)html+=button('start',local('Commission study','委托考察'),ready && r.base && r.player.capital>=spec.fee);
+      else if(r.complete)html+=button('file',local('File the report','交付报告'),ready && r.base);
+      else html+=button('sample',local('Record observation','记录观察'),ready && r.canSample);
+    }
+    if(Object.keys(r.filed).length)html+='<h3>'+local('Filed reports','已交付报告')+'</h3><ul>'+Object.entries(r.filed).map(([id,f])=>'<li>'+label(studies[id].name)+' · '+local('Turn ','回合 ')+f.filed+'</li>').join('')+'</ul>';
+    body.innerHTML=html;
+    body.querySelector('select[data-study]')?.addEventListener('change',e=>{selected=e.target.value;paint();});
+    body.querySelectorAll('[data-do]').forEach(b=>b.onclick=()=>{
+      dialog.close();
+      act({type:'fieldStudy',unit:unit.id,item:b.dataset.do,study:key,step:active?.notes.length||0});
+    });
+  }
+  dialog.querySelector('[data-close]').onclick=()=>dialog.close();
+  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+  document.body.append(dialog);paint();if(dialog.isConnected)dialog.showModal();
+}

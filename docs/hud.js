@@ -1,6 +1,7 @@
 import {mountCampaignExplorer} from './campaign-explorer.js';
 import {mountAdvisors} from './advisors-ui.js';
 import {mountCampaignLenses} from './campaign-lenses.js';
+import {openFieldDesk} from './field-expedition-ui.js';
 import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {mountTutorialCoach} from './tutorial-coach.js';
 import {mountTurnResults} from './turn-results.js';
@@ -433,6 +434,7 @@ function inspect(){
         const nearest=nearestKnownStation(state,u,explored,hexDistance);
         if(nearest)actions+=actionButton('locate-station','Nearest known station',FIELD_STATIONS[state.board[nearest].fieldStation].name);
       }
+      if(journal) actions+=actionButton('field-desk',getLanguage()==='zh-CN'?'野外考察':'Field expeditions',getLanguage()==='zh-CN'?'委托、观察与交付':'Commission, observe and file');
       actions+=notebookPanel(journal,disabled,actionButton,esc);
       if(canSurvey(state,u)) actions+=actionButton('survey','Survey resources','1 movement','gold',disabled);
       const plans=getUpgradePlans(state,u.id,view.seat);
@@ -1016,6 +1018,12 @@ function chooseOrder(key){
     return;
   }
   const u=getUnit();if(!u||u.seat!==view.seat)return;
+  if(key==='field-desk'){
+    const session=matchKey,id=u.id;
+    const read=()=>{const unit=view.state.units.find(piece=>piece.id===id && piece.seat===view.seat);
+      return matchKey===session && unit ? {state:view.state,unit,map:mapRegion,distance:hexDistance,mayOrder:mayOrder()} : null;};
+    openFieldDesk(read,action=>{if(read()?.mayOrder) Game.doAction(action);});return;
+  }
   if(mayOrder() && ['record-terrain','file-atlas'].includes(key)){
     Game.doAction({type:key==='record-terrain'?'recordTransect':'fileTransect',unit:u.id});return;
   }
