@@ -34,6 +34,10 @@ export function openFieldDesk(read,act) {
       if(!active)html+=button('start',local('Commission study','委托考察'),ready && r.base && r.player.capital>=spec.fee);
       else if(r.complete){
         html+=button('file',local('File the report','交付报告')+' · '+rewardText(spec.reward),ready && r.base);
+        if(!r.base && !spec.reward.food){
+          html+='<p>'+local('A Field archive can send a written report to its sponsoring city for 2 influence. Carry food and ore home in person.','在田野档案馆花 2 影响力可将书面报告寄回委托城市。粮食和矿物须由侦察兵自行带回。')+'</p>';
+          if(r.archive)html+=button('mail',local('Send by archive courier','委托档案馆递送'),ready && r.canMail);
+        }
         if(key==='assay'){
           const ore=active.notes[0].resource==='iron'?local('iron','铁'):local('stone','石料');
           html+=button('deliverOre',local('Supply the treasury instead','改为向国库供应物资')+' · +2 '+ore,ready && r.base);

@@ -80,7 +80,10 @@ export function fieldReport(state,unit,map,distance) {
   const spec=studies[mission?.key];
   const complete=Boolean(spec && notes.length===spec.steps.length);
   const canSample=Boolean(spec && !complete && unit.moves>0 && spec.sample(context));
-  return {player,mission,filed,base,open,spec,complete,canSample,context};
+  const sponsor=mission && state.cities.find(c=>c.id===mission.sponsor && c.seat===unit.seat);
+  const archive=state.board[unit.tile]?.fieldStation==='archive';
+  const canMail=Boolean(archive && sponsor && complete && !spec.reward.food && player.influence>=2);
+  return {player,mission,filed,base,sponsor,archive,canMail,open,spec,complete,canSample,context};
 }
 
 function storeCrew(player,id,mission) {
@@ -111,15 +114,18 @@ export function fieldOrder(state,seat,action,map,distance) {
     return 'Field observation recorded.';
   }
   const deliverOre=action.item==='deliverOre' && mission.key==='assay';
-  if((action.item==='file' || deliverOre) && r.complete && base) {
+  const mail=action.item==='mail' && r.canMail;
+  if(((action.item==='file' || deliverOre) && r.complete && base) || mail) {
+    const recipient=mail ? r.sponsor : base;
+    if(mail)player.influence-=2;
     if(deliverOre){
       const ore=mission.notes[0].resource;
       player.stockpile={...player.stockpile,[ore]:(player.stockpile?.[ore]||0)+2};
     }else for(const [stat,amount] of Object.entries(spec.reward)){
-      if(stat==='food')base.food=(base.food||0)+amount;
+      if(stat==='food')recipient.food=(recipient.food||0)+amount;
       else player[stat]=(player[stat]||0)+amount;
     }
-    player.fieldReports={...r.filed,[mission.key]:{...mission,filed:state.round,city:base.id,delivery:action.item}};
+    player.fieldReports={...r.filed,[mission.key]:{...mission,filed:state.round,city:recipient.id,delivery:action.item}};
     storeCrew(player,unit.id,null);
     unit.moves--;
     return 'Field report deposited.';

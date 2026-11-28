@@ -83,3 +83,13 @@ test('a filed two-plot habitat pays recurring culture only while both plots rema
   const before=getStats(s,0).cultureIncome;s=order(travel(s,home),'file','corridor');
   assert.equal(getStats(s,0).cultureIncome,before+2);s.board[b].improvement='mine';assert.equal(getStats(s,0).cultureIncome,before);
 });
+
+test('a field archive forwards written reports once at a published influence fee',()=>{
+  let s=start();const home=s.cities[0],map=getMap(s),station=map.tiles.find(t=>s.board[t.id].fieldStation==='archive' && hexDistance(t.id,home.tile)>1);
+  assert.ok(station);s=order(s,'start','transect');s=order(s,'sample');
+  const second=map.tiles.find(t=>!['ocean','mountains',map.byId[home.tile].terrain].includes(t.terrain) && hexDistance(t.id,home.tile)>=2);
+  s=order(travel(s,second.id),'sample');s=travel(s,station.id);
+  s.players[0].influence=1;assert.throws(()=>order(s,'mail'));s.players[0].influence=4;
+  const next=order(s,'mail');assert.equal(next.players[0].influence,2);assert.equal(next.players[0].fieldReports.transect.city,home.id);
+  assert.throws(()=>order(next,'mail'));
+});
