@@ -6,6 +6,12 @@
 
 [游戏主页](https://wanzhengyan.github.io/Civilization-CA/) · [v7.3.0 更新记录](./CHANGELOG.md) · [English](./README.md)
 
+## 设计来源与商标说明
+
+Civilization CA 是一款以加州为背景、独立开发的非官方网页游戏。六边形地图、城市生产以及分设科技树和市政树的设计，都借鉴了席德·梅尔的《文明 VI》。
+
+本项目与 Firaxis Games、2K 和 Take-Two Interactive 均无隶属关系，也未获这三家公司的赞助或背书。*Civilization* 和 *Sid Meier’s Civilization* 均为 Take-Two Interactive Software, Inc. 的注册商标。
+
 ## 在自然奇观旁兴建工程
 
 沿洛杉矶海岸探索，可以找到**巴洛纳湿地**。每名在湿地相邻地块工作的市民，每次收获都能额外带来 1 粮食和 1 科研。通过「灌溉合作区」后，附近的城市还可以修建湿地栈道，每回合再获得 2 粮食和 2 文化。三个地区各有三处自然奇观，每处景点都对应一项专属工程。

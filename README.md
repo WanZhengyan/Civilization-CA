@@ -6,6 +6,12 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 [Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.3.0 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
 
+## Design inspiration and trademarks
+
+Civilization CA is an independent, unofficial browser game set in California. We modeled its hex map, city production, and separate technology and civics trees on *Sid Meier’s Civilization VI*.
+
+This project has no affiliation with, sponsorship from, or endorsement by Firaxis Games, 2K, or Take-Two Interactive. *Civilization* and *Sid Meier’s Civilization* are registered trademarks of Take-Two Interactive Software, Inc.
+
 ## Build beside a natural wonder
 
 Scout the coast of Los Angeles for the **Ballona Wetlands**. A citizen working land next to the marsh earns an extra food and science each harvest. Adopt **Irrigation Districts** and a city near the wetlands can build a boardwalk for another 2 food and 2 culture per turn. All three regions have three discoverable landscapes, each with its own project.
