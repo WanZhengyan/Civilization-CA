@@ -21,7 +21,7 @@ export function advancementPanel(plans,open=false,disabled=false,unitId='') {
     const old=plan.current;
     const stats=metric('Strength',change(old.strength,out.strength))+metric('Range',change(old.range,out.range))+
       metric('Movement',change(old.maxMoves,out.maxMoves))+metric('HP',change(old.hp+' / '+old.maxHp,out.hp+' / '+out.maxHp));
-    const budget=metric('Price in capital',plan.cost)+metric('Treasury',plan.capital)+metric('Remaining movement',plan.moves);
+    const budget=metric('Price in gold',plan.cost)+metric('Treasury',plan.capital)+metric('Remaining movement',plan.moves);
     const future=plan.future.length ? '<p>'+label('Later upgrades')+' · '+plan.future.map(t=>label(UNIT_TYPES[t].name)).join(' / ')+'</p>' : '';
     return '<article><header><b>'+esc(def.name)+'</b>'+label(def.role||'Military unit')+'</header><div class="service-gates">'+gates.join('')+
       '</div><div class="service-metrics">'+stats+'</div><div class="service-metrics service-ledger">'+budget+'</div>'+label('Spends all remaining movement')+future+
