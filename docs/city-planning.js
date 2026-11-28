@@ -42,7 +42,7 @@ function focusComparison(current,plan) {
 }
 
 let ledger,openedCity,orderFocus,orderHousing,returnFocus,selectedFocus,latest;
-export function openCitizenLedger(cityId, onFocus, onHousing) {
+export function openCitizenLedger(cityId, onFocus, onHousing, previewFocus=null) {
   if(!ledger) {
     ledger=document.createElement('dialog');
     ledger.className='modal-terminal population-dialog';
@@ -77,7 +77,7 @@ export function openCitizenLedger(cityId, onFocus, onHousing) {
       else if(returnFocus) document.querySelector('[data-order="citizens"]')?.focus({preventScroll:true});
     });
   }
-  openedCity=cityId;orderFocus=onFocus;orderHousing=onHousing;selectedFocus=null;
+  openedCity=cityId;orderFocus=onFocus;orderHousing=onHousing;selectedFocus=Object.hasOwn(CITY_FOCUS,previewFocus)?previewFocus:null;
   returnFocus=document.activeElement;
   ledger.showModal();
 }

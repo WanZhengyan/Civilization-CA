@@ -1120,7 +1120,10 @@ function mount(){
     }
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
     if(command==='production')openProduction();
-    else if(command==='citizens')chooseOrder('citizens');
+    else if(command==='focus'){
+      openCitizenLedger(city.id,(id,item)=>Game.doAction({type:'focus',city:id,item}),reviewHousing,value);
+      populationLedger();
+    }else if(command==='citizens')chooseOrder('citizens');
   }
   cityProfile=mountCityProfile(()=>view,inspectCityReport);
   cityDirectory=mountCityDirectory(()=>view,inspectCityReport);

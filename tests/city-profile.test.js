@@ -29,3 +29,9 @@ test('constant-land harvest calendar grows and credits the same next harvest wit
   assert.ok(rows.at(-1).population>=rows[0].population);
   assert.equal(JSON.stringify(state),before);
 });
+test('workforce comparisons open a preview for each alternative while leaving the current focus intact',()=>{
+  const state=capital(),c=state.cities[0];
+  const html=cityProfilePage(state,0,c.id,'people');
+  assert.equal((html.match(/data-study-command="focus"/g)||[]).length,3);
+  assert.equal(c.focus||'balanced','balanced');
+});
