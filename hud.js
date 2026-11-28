@@ -1,3 +1,4 @@
+import {previewMove,sameMove,reviewPointerMove} from './move-review.js';
 import {mountDiplomacy,paintDiplomacy,publicContacts} from './diplomacy-ui.js';
 import {chartedWaterSites,knownCrossings,mountWaterKey,waterKind} from './water-key.js';
 import {fishingTask} from './maritime.js';
@@ -7,7 +8,7 @@ import {borderSummary} from './border-summary.js';
 import {getCityExpansions} from './rules.js';
 import {NATURAL_WONDERS,neighboringWonders} from './natural-wonders.js';
 import {naturalWonderArt} from './natural-wonder-art.js';
-import {mountMapWorkspace, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
+import {mountMapWorkspace, compactMap, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
 import {illustration, illustrationPath} from './illustrations.js';
 import {mountBattleReports} from './battle-history.js';
 import {researchLinks,syncResearchLens} from './research-catalog.js';
@@ -23,7 +24,7 @@ import {roomSeatTurn,teamTurnLabels} from './room-turn.js';
 import {sameTeam,teamLabel} from './teams.js';
 import {cityKind,developmentPanel,developmentReceipt,foundingLabel} from './district-command.js';
 import {WONDERS, universitiesUnlockedBy, campusStatus} from './wonders.js';
-import {forecastCounterLabel} from './attack-mode.js';
+import {captureOrderHint,cityAttackHint,forecastCounterLabel} from './attack-mode.js';
 import {advancementPanel,recoveryPanel} from './unit-service-ui.js';
 import {getUpgradePlans,getRecoveryForecast} from './rules.js';
 import {mountSurveyControls, showSelectedFrontier} from './survey-controls.js';
@@ -104,6 +105,7 @@ function cityNameAttrs(city){return customCity(city)?' translate="no"':''}
 function lobby(){return view.mode==="online"&&view.room?.phase==="lobby"}
 function mayOrder(){return roomSeatTurn(view.state,view.seat)==="active"&&!lobby()&&!view.busy}
 let view,atlas,battleReports,selectedTile,selectedUnit,kind="tile",order="",matchKey="",activeRoster="units",timer,productionCity=null;
+let moveBar,moveDraft=null;
 let hoverId=null, battle=null, selectedOptions=null, feedbackTimer, previousEvent="";
 const unavailableArt=new Set();
 let surveyUnitId=null;
@@ -118,7 +120,7 @@ function toast(message){
 }
 function select(tile,unit=null,city=false){
   if(!mapRegion.byId[tile])return;
-  order="";selectedTile=tile;
+  moveDraft=null;order="";selectedTile=tile;
   const candidates=view.state.units.filter(u=>u.tile===tile);
   const piece=candidates.find(u=>sameId(u.id,unit)) || (city ? null : candidates.find(u=>u.seat===view.seat)||candidates[0]);
   const place=cityAt(tile);
@@ -132,13 +134,14 @@ function selectOpening(){
 function openMapOnMobile(){
   displayMapOnMobile();
 }
-function onMapSelect(tileId,unitId,cityPlate=false){
+function onMapSelect(tileId,unitId,cityPlate=false,pointer="keyboard"){
   if(!view || !mapRegion.byId[tileId])return;
   if (parcelOrder) {
     if (parcelOptions.some(t=>t.id===tileId)) {parcelOrder.site=tileId;drawPlacement();updateMap();}
     else toast('Choose a highlighted construction tile.');
     return;
   }
+  if (!explored.has(tileId) && moveDraft) {moveDraft=null;updateMap();}
   if(!explored.has(tileId)) {toast("Uncharted territory. Move closer to explore.");return}
   if(cityPlate && cityAt(tileId)){
     const inspecting=order==="inspect";
@@ -149,9 +152,15 @@ function onMapSelect(tileId,unitId,cityPlate=false){
   const available=unit && unit.seat===view.seat && mayOrder() && order!=="inspect";
   if(available && targetUnit?.seat!==view.seat){
     const options=getUnitOptions(view.state,unit.id);
-    if(options.attacks.includes(tileId)){openCombat(unit.id,tileId);return}
+    if(options.attacks.includes(tileId)){moveDraft=null;openCombat(unit.id,tileId);return}
     if(options.moves.includes(tileId) && order!=="attack"){
-      Game.doAction({type:"move",unit:unit.id,tile:tileId});return;
+      if(reviewPointerMove(pointer,compactMap())){
+        moveDraft=previewMove(view.state,unit,tileId);
+        openMapOnMobile();
+        updateMap();
+        return;
+      }
+      moveDraft=null;Game.doAction({type:"move",unit:unit.id,tile:tileId});return;
     }
   }
   const keepInspect=order==="inspect";select(tileId,unitId);if(keepInspect)order="inspect";redraw();inspectMapOnMobile();
@@ -210,13 +219,16 @@ function updateHint(id){
   const ready=Boolean(u && u.seat===view.seat && mayOrder() && order!=="inspect");
   let hint=order==="inspect"?"Inspection mode. Click a hex to inspect it without moving.":"Select a unit, city or district to inspect it.";
   if(ready && selectedOptions?.moves.length)hint="Click a highlighted hex to move your "+items[u.type]+".";
+  if(ready && selectedOptions?.moves.length && (compactMap() || window.matchMedia("(hover:none)").matches))hint="Tap a highlighted hex to preview movement.";
   if(ready && order==="attack")hint="Click a red target to review the combat forecast.";
   if(tile){
     hint=tile.name+" · "+(waterKind(tile)||terrain[tile.terrain]);
     if(ready && selectedOptions?.attacks.includes(id))hint+=" · Click to preview attack";
     else if(ready && selectedOptions?.moves.includes(id) && order!=="attack"){
       const route=getRouteDetail(view.state,u.id,id);
-      hint+=" · Move here for "+route.cost+" movement"+(route.crossings.length?" · "+route.crossings.join(", "):"");
+      const left=u.moves-route.cost;
+      hint+=" · Move costs "+route.cost+(route.cost===1?" point":" points")+" · "+left+(left===1?" point left":" points left");
+      if(route.crossings.length)hint+=" · "+route.crossings.join(", ");
     }
   }
   if(surveyUnitId){
@@ -361,7 +373,8 @@ function inspect(){
     const c=activeCity;
     if(!own) {
       info='<div class="entity-stats">'+stat("Population",c.population)+stat("City HP",c.hp,c.maxHp)+'</div>'+healthBar(c.hp,c.maxHp);
-      el("entity-info").innerHTML=info;el("entity-commands").innerHTML=note("Only the city owner can inspect its economy.");return;
+      const atCaptureThreshold=c.hp===1 && visible.has(c.tile) && !sameTeam(state,view.seat,c.seat);
+      el("entity-info").innerHTML=info;el("entity-commands").innerHTML=note(atCaptureThreshold?captureOrderHint:"Only the city owner can inspect its economy.");return;
     }
     const y=getCityYield(state,c.id);
     info='<div class="entity-stats">'+stat("Population",c.population)+stat("Production","+"+y.production)+stat("City HP",c.hp,c.maxHp)+'</div>'+healthBar(c.hp,c.maxHp);
@@ -433,7 +446,28 @@ function inspect(){
   el("entity-info").innerHTML=info;
   el("entity-commands").innerHTML=development+'<div class="orders">'+actions+'</div>'+note(explanation);
 }
+function currentMove(){
+  const unit=getUnit();
+  if(!moveDraft || unit?.seat!==view.seat || !mayOrder())return null;
+  if(order==="inspect" || order==="attack" || parcelOrder || battle)return null;
+  return previewMove(view.state,unit,moveDraft.tile);
+}
+function paintMove(){
+  if(!moveBar)return;
+  if(moveDraft && !sameMove(moveDraft,currentMove())){
+    moveDraft=null;
+    toast("The route has changed. Choose a destination again.");
+  }
+  moveBar.hidden=!moveDraft;
+  if(!moveDraft)return;
+  const tile=mapRegion.byId[moveDraft.tile];
+  text("move-place",tile.name);
+  text("move-coord",tile.q+" / "+tile.r);
+  text("move-cost",moveDraft.cost);
+  text("move-left",moveDraft.left+" / "+getUnit().maxMoves);
+}
 function updateMap(){
+  paintMove();
   drawPlacement();
   showSelectedFrontier(selectedTile,view.state.board,visible,mapRegion.byId,faction);
   const u=getUnit(),ready=u && u.seat===view.seat && mayOrder() && order!=="inspect";
@@ -442,7 +476,7 @@ function updateMap(){
     if(assessment.status==="now")settlementSites.now.push(id);
     else if(assessment.status==="next-turn")settlementSites.nextTurn.push(id);
   }
-  atlas.update({campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
+  atlas.update({reviewPath:moveDraft?.path,campaignKey:matchKey,borderForecasts:expansionForecasts,workSites:parcelOptions.map(t=>t.id),workSelection:parcelOrder?.site,showResources:canSeeDeposits(view.state,view.seat),cityLabelPicking:!parcelOrder && order!=="attack",settlementSites,state:view.state,selectedId:selectedTile,selectedUnitId:u?.id??null,moveTiles:ready && order!=="attack"?selectedOptions?.moves||[]:[],attackTiles:ready?selectedOptions?.attacks||[]:[],targetId:battle?.tile??null});
   el("inspect-map").setAttribute("aria-pressed",String(order==="inspect"));
   updateHint(hoverId);
 }
@@ -503,6 +537,10 @@ function startPlacement(draft,city) {
   closeMapPanel();atlas.focus(city.tile);redraw();el('atlas').querySelector('canvas')?.focus({preventScroll:true});
 }
 
+function productDescription(item) {
+  const def=item===SCIENCE_PROJECT.id ? SCIENCE_PROJECT : UNIT_TYPES[item] || BUILDINGS[item];
+  return def?.description || itemDesc[item] || '';
+}
 function productionOptions(){
   const c=view.state.cities.find(c=>sameId(c.id,productionCity));
   if(!c||c.seat!==view.seat){closeProduction();return}
@@ -516,7 +554,7 @@ function productionOptions(){
       const needsSite=o.kind==='building' && c.queue?.item!==o.item;
       const sites=needsSite?getProjectSites(view.state,c.id,o.item):[];
       if (!productionDraft.site && sites.length) productionDraft.site=sites[0].id;
-      el('production-options').innerHTML=orderReview(productionDraft,c,o,sites,key=>items[key]||key);
+      el('production-options').innerHTML=orderReview(productionDraft,c,o,sites,key=>items[key]||key,productDescription(o.item));
       return;
     }
     productionDraft=null;
@@ -531,7 +569,7 @@ function productionOptions(){
   const html=groups.filter(([,opts])=>opts.length).map(([heading,opts])=>{
     return '<h3 class="production-group">'+heading+'</h3><div class="production-grid">'+opts.map(o=>{
       const def=o.kind==="project"?SCIENCE_PROJECT:UNIT_TYPES[o.item]||BUILDINGS[o.item];
-      const desc=def.description||itemDesc[o.item]||o.label;
+      const desc=productDescription(o.item);
       const race=WONDERS[o.item] ? '<small><span>Charter fee</span> · <span>'+def.grant+' capital</span> · <span>'+({open:'Available worldwide.',commissioned:'Under construction',complete:'Already opened'})[campusStatus(view.state,o.item)]+'</span></small>' : '';
       return '<article class="production-item work-card">'+illustration(o.item)+'<span><strong>'+esc(items[o.item]||o.label)+'</strong><small>'+esc(desc)+'</small>'+race+'<small>'+(def.era?esc(eraName(def.era))+' · ':'')+esc(turnsText(o.turns))+' · '+esc(o.required)+' production</small>'+orderButtons(o,mayOrder())+'</span></article>';
     }).join('')+'</div>'});
@@ -620,9 +658,10 @@ function drawCombat(){
   const enemy=forecast.defenderType==="wild"?WILDS[defender.type].name:defender.type?items[defender.type]:defender.name;
   const attack=forecastRow("Attacker",items[u.type],forecast.attackerHpBefore,forecast.attackerHpAfter,u.maxHp,forecastCounterLabel(forecast),faction(u.seat).color);
   const defend=forecastRow("Defender",enemy,forecast.defenderHpBefore,forecast.defenderHpAfterHit??forecast.defenderHpAfter,defender.maxHp,forecast.damage+" incoming damage",forecast.defenderType==="wild"?"#c38566":faction(defender.seat).color);
-  const notes=(forecast.roleNotes||[]).map(note=>'<li>'+esc(note)+'</li>').join('');
+  const cityHint=cityAttackHint(forecast,UNIT_TYPES[u.type],cityAt(battle.tile));
+  const notes=[...(forecast.roleNotes||[]),...(cityHint?[cityHint]:[])].map(note=>'<li>'+esc(note)+'</li>').join('');
   const modifiers=notes?'<ul class="formation-notes">'+notes+'</ul>':'';
-  const outcome=forecast.defenderType==="wild" && defender.type==="camp" && forecast.defeated?"Clearing the camp adds 12 capital to your treasury.":forecast.capture?"Your unit will capture this city.":forecast.attackerDefeated&&forecast.defeated?"Both units will fall.":forecast.attackerDefeated?"Your unit will fall in this attack.":forecast.defeated?"The defending unit will fall.":"Both sides will hold their positions.";
+  const outcome=forecast.defenderType==="wild" && defender.type==="camp" && forecast.defeated?"Clearing the camp adds 12 capital to your treasury.":forecast.capture?"Your unit will capture this city.":forecast.attackerDefeated&&forecast.defeated?"Both units will fall.":forecast.attackerDefeated?"Your unit will fall in this attack.":forecast.defeated?"The defending unit will fall.":forecast.defenderType==="city" && !UNIT_TYPES[u.type].captures?captureOrderHint:"Both sides will hold their positions.";
   el("combat-preview").innerHTML='<div class="forecast-grid">'+attack+defend+'</div>'+modifiers+'<p class="forecast-outcome">'+esc(outcome)+'</p>';
   return true;
 }
@@ -669,7 +708,7 @@ function paint(next){
   trophy.title=state.victoryMode?'Victory progress':'View faction standings';
   trophy.querySelector('.resource-label').textContent=state.victoryMode?'Victory':'Score';
   text('score',state.victoryMode ? (state.practice?'Space race':({standard:'Two paths',conquest:'Conquest',science:'Space race'})[state.victoryMode]) : stats.score);
-  text("end-label",waiting?"Open room":finished?"Standings":teamStatus?teamStatus.button:myTurn?"End turn":mode==="solo"?"Rivals playing…":state.players[state.turn]?.bot?"Computer playing…":"Waiting…");
+  text("end-label",view.roomStatus || (waiting?"Open room":finished?"Standings":teamStatus?teamStatus.button:myTurn?"End turn":mode==="solo"?"Rivals playing…":state.players[state.turn]?.bot?"Computer playing…":"Waiting…"));
   el("end-turn").disabled=!waiting&&!finished&&(!myTurn||view.busy);
   const event=state.log.at(-1);text("event-turn","TURN "+String(event?.round||1).padStart(2,"0"));text("event-text",event?Game.eventText(event):"");
   el("legend").innerHTML=contacts.map(p=>'<span class="legend-item"><i class="swatch" style="--swatch:'+FACTIONS[p.faction].color+'"></i><span>'+esc(names[p.faction])+'</span>'+(state.teams?' · <span>'+teamLabel(state.teams[p.seat])+'</span>':'')+'</span>').join('');
@@ -705,6 +744,7 @@ function populationLedger() {
   }));
 }
 function chooseOrder(key){
+  if(moveDraft){moveDraft=null;updateMap();}
   if(key==="citizens"){
     const c=cityAt(selectedTile);
     if(c?.seat===view.seat){openCitizenLedger(c.id,(city,item)=>Game.doAction({type:"focus",city,item}),(city,item)=>Game.doAction({type:"produce",city,item}));populationLedger()}
@@ -790,7 +830,7 @@ function mount(){
   };
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>Game.open(b.dataset.open));
   el("board-nav").onclick=()=>{closeMapPanel();el("atlas").querySelector("canvas")?.focus({preventScroll:true})};
-  el("end-turn").onclick=()=>{if(lobby())Game.open("multiplayer");else if(view.state.phase==="finished")Game.open("standings");else{order="";Game.endTurn()}};
+  el("end-turn").onclick=()=>{if(lobby())Game.open("multiplayer");else if(view.state.phase==="finished")Game.open("standings");else{moveDraft=null;order="";Game.endTurn()}};
   el("zoom-out").onclick=()=>atlas.zoomBy(.8);el("zoom-in").onclick=()=>atlas.zoomBy(1.25);el("recenter").onclick=()=>atlas.reset();
   el("inspect-map").onclick=()=>{order=order==="inspect"?"":"inspect";hoverId=null;redraw()};
   el("layers").onclick=()=>toggleLayers(el("layers-menu").hidden);
@@ -801,6 +841,24 @@ function mount(){
     atlas.focus(id,true);redraw();updateHint(id);inspectMapOnMobile();
   });
   mountMapWorkspace();
+  moveBar=document.createElement("section");
+  moveBar.className="move-review";moveBar.hidden=true;moveBar.setAttribute("aria-label","Movement preview");
+  moveBar.innerHTML=`<div class="move-place"><strong id="move-place"></strong> <small id="move-coord"></small></div>
+    <div class="move-budget" aria-live="polite"><span>Move cost</span> <b id="move-cost"></b>
+    <span>Remaining movement</span> <b id="move-left"></b></div>
+    <div class="move-controls"><button data-move-cancel type="button">Cancel</button>
+    <button data-move-confirm type="button">Confirm move</button></div>`;
+  document.querySelector(".map-messages").prepend(moveBar);
+  moveBar.onclick=e=>{
+    const commit=e.target.closest("[data-move-confirm]");
+    if(!commit && !e.target.closest("[data-move-cancel]"))return;
+    const draft=moveDraft;
+    const valid=commit && sameMove(draft,currentMove());
+    moveDraft=null;updateMap();
+    el("atlas").querySelector("canvas")?.focus({preventScroll:true});
+    if(valid)Game.doAction({type:"move",unit:draft.unit,tile:draft.tile});
+    else if(commit)toast("The route has changed. Choose a destination again.");
+  };
   mountDiplomacy(action=>Game.doAction(action));
   document.querySelector('.map-messages')?.prepend(parcelBar);
   el("map-labels").onchange=e=>atlas.setLabels(e.currentTarget.checked);
@@ -854,7 +912,7 @@ function mount(){
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};
   el("confirm-combat").onclick=()=>{if(!battle||!drawCombat())return;const {unit,tile}=battle;closeCombat();order="";Game.doAction({type:"attack",unit,tile})};
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(parcelOrder){endPlacement();redraw();el("atlas").querySelector("canvas")?.focus({preventScroll:true});return;}if(el("layers-menu").contains(document.activeElement))el("layers").focus();toggleLayers(false);if(order){order="";redraw()}}});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(moveDraft){moveDraft=null;updateMap();el("atlas").querySelector("canvas")?.focus({preventScroll:true});return;}if(parcelOrder){endPlacement();redraw();el("atlas").querySelector("canvas")?.focus({preventScroll:true});return;}if(el("layers-menu").contains(document.activeElement))el("layers").focus();toggleLayers(false);if(order){order="";redraw()}}});
   el("close-production").onclick=closeProduction;
   el("production-modal").addEventListener("close",()=>{productionCity=null});
   el("production-modal").onclick=e=>{if(e.target===el("production-modal"))closeProduction()};

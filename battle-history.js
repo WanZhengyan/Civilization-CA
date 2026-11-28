@@ -8,6 +8,9 @@ const maxPlayback=6;
 const exposure=2350;
 
 const labels={
+  all:['All battles','全部交战'], received:['Attacks on me','我方遇袭'], filter:['Filter battle reports','筛选战报'],
+  noIncoming:['No attacks on your units or cities have been reported.','尚未记录针对我方部队或城市的攻击。'],
+  attackerHp:['Attacker HP','攻方生命'], defenderHp:['Defender HP','守方生命'],
   history:['Battle reports','战报'], incoming:['Under attack','我方遇袭'], outgoing:['Your attack','我方进攻'],
   witnessed:['Observed battle','目击交战'], unidentified:['Unidentified attacker','未辨明的攻击者'],
   replay:['Replay on map','在地图上回放'], dismiss:['Dismiss','收起'], close:['Close battle reports','关闭战报'],
@@ -49,6 +52,17 @@ export function describeBattle(report,players,region,seat,locale=getLanguage()) 
     action:zh?source+' 攻击了 '+target:source+' attacked '+target,details:details.join(' · ')};
 }
 
+// Older reports may only have damage. A unit appearing after a capture may
+// also lack a witnessed starting position and health.
+export function witnessedHealth(report,locale=getLanguage()) {
+  const readings=[];
+  for(const [part,label] of [[report.target,'defenderHp'],[report.attacker,'attackerHp']]) {
+    if(part.kind==='unknown' || !Number.isFinite(part.hpBefore) || !Number.isFinite(part.hpAfter))continue;
+    readings.push({label:words(label,locale),before:part.hpBefore,after:part.hpAfter});
+  }
+  return readings;
+}
+
 export function recentIncomingReport(reports,seat,dismissed,round) {
   return reports.findLast(r=>incoming(r,seat) && r.id>dismissed && r.round>=round-1) || null;
 }
@@ -72,7 +86,7 @@ function button(cls) {
 
 export function mountBattleReports(atlas) {
   let view,region,key,records=[],recent=[],notice,playing,manual=false,timer,lastQueued=0,lastRound=0;
-  let played=0,dismissed=0,listVersion='';
+  let played=0,dismissed=0,listVersion='',incomingOnly=false;
   const frame=document.getElementById('map-frame');
   const strip=make('aside','battle-dispatch');strip.id='battle-dispatch';strip.hidden=true;
   strip.setAttribute('translate','no');
@@ -87,7 +101,9 @@ export function mountBattleReports(atlas) {
   const dialog=make('dialog','order-dialog battle-history');dialog.id='battle-history';dialog.setAttribute('aria-labelledby','battle-history-title');dialog.setAttribute('translate','no');
   const shell=make('div','modal-shell'),head=make('header','modal-head'),title=make('h2','modal-title'),close=button('modal-close');
   title.id='battle-history-title';close.textContent='×';
-  const body=make('div','modal-body');head.append(title,close);shell.append(head,body);dialog.append(shell);document.body.append(dialog);
+  const filters=make('div','battle-filters'),all=button('battle-filter'),received=button('battle-filter');
+  filters.setAttribute('role','group');filters.append(all,received);
+  const body=make('div','modal-body');head.append(title,close);shell.append(head,filters,body);dialog.append(shell);document.body.append(dialog);
 
   function persist() {
     const old=readHistory();
@@ -109,14 +125,32 @@ export function mountBattleReports(atlas) {
     detail.textContent=d.details+'  ·  '+d.location;strip.hidden=false;
   }
   function drawHistory() {
-    const version=[key,getLanguage(),records.at(-1)?.id,records[0]?.id].join('|');
+    const locale=getLanguage();
+    const version=[key,locale,records.at(-1)?.id,records[0]?.id,incomingOnly].join('|');
     if(listVersion===version)return;
     listVersion=version;
     const fragment=document.createDocumentFragment();
-    if(!records.length)fragment.append(make('p','',words('empty',getLanguage())));
-    for(const r of [...records].reverse()) {
+    const attacks=records.filter(r=>incoming(r,view.seat));
+    filters.setAttribute('aria-label',words('filter',locale));
+    all.textContent=words('all',locale)+' ('+records.length+')';
+    received.textContent=words('received',locale)+' ('+attacks.length+')';
+    all.setAttribute('aria-pressed',String(!incomingOnly));
+    received.setAttribute('aria-pressed',String(incomingOnly));
+    const matching=incomingOnly ? attacks : records;
+    if(!matching.length)fragment.append(make('p','battle-empty',words(incomingOnly?'noIncoming':'empty',locale)));
+    for(const r of [...matching].reverse()) {
       const d=describe(r),row=make('article','battle-record');
       row.append(make('span','battle-meta',d.category+'  ·  '+d.turn),make('h3','',d.action),make('p','',d.details));
+      const readings=witnessedHealth(r,locale);
+      if(readings.length){
+        const health=make('dl','battle-health');
+        for(const {label,before,after} of readings){
+          const pair=make('div','');
+          pair.append(make('dt','',label),make('dd','',before+' → '+after));
+          health.append(pair);
+        }
+        row.append(health);
+      }
       const foot=make('div','battle-record-foot'),loc=make('span','',d.location),b=button('battle-link');
       b.textContent=words('replay',getLanguage());b.dataset.report=String(r.id);
       b.setAttribute('aria-label',b.textContent+' · '+d.location+' · '+d.action);foot.append(loc,b);row.append(foot);fragment.append(row);
@@ -161,11 +195,19 @@ export function mountBattleReports(atlas) {
       halt();
     }else next();
   }
-  function openHistory(){
-    if(!view)return;
-    drawHistory();dialog.showModal();visibilityChanged();
+  function setFilter(value) {
+    incomingOnly=value;
+    body.scrollTop=0;
+    drawHistory();
   }
-  entry.onclick=history.onclick=openHistory;
+  function openHistory(attacks=false){
+    if(!view)return;
+    setFilter(attacks);dialog.showModal();visibilityChanged();
+  }
+  all.onclick=()=>setFilter(false);
+  received.onclick=()=>setFilter(true);
+  entry.onclick=()=>openHistory();
+  history.onclick=()=>openHistory(Boolean(notice && incoming(notice,view.seat)));
   locate.onclick=()=>replay(notice);
   dismiss.onclick=()=>{
     const latest=records.findLast(r=>incoming(r,view.seat));
@@ -179,7 +221,7 @@ export function mountBattleReports(atlas) {
   };
   close.onclick=()=>dialog.close();
   dialog.onclick=e=>{if(e.target===dialog)dialog.close();};
-  document.addEventListener('civitas-battle-history',openHistory);
+  document.addEventListener('civitas-battle-history',()=>openHistory());
   document.addEventListener('visibilitychange',visibilityChanged);
   document.addEventListener('civitas-screen',visibilityChanged);
   // Dialogs block the battlefield. Keep pending reports until the map is available.

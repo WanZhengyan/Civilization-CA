@@ -34,6 +34,10 @@ export function closeMapPanel(returnFocus=false) {
   if (returnFocus && !former.trigger.hidden) former.trigger.focus({preventScroll:true});
 }
 
+export function compactMap() {
+  return Boolean(compactScreen?.matches);
+}
+
 export function displayMapOnMobile() {
   if (compactScreen?.matches) closeMapPanel();
 }
