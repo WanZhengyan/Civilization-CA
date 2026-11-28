@@ -62,3 +62,13 @@ test('a tide staff requires a coastal sea site and a later reading at that same 
   assert.throws(()=>order(travel(s,shore[1].id),'sample','tideWatch'));s=order(s,'sample','tideWatch');
   assert.deepEqual(read(s).mission.notes.map(n=>n.round),[1,2]);
 });
+
+test('deposit assays pay either research or exactly two of the actual sampled good',()=>{
+  let s=start();const home=s.cities[0].tile;
+  s=order(s,'start','assay');s.board[home]={...s.board[home],resource:'grain'};assert.throws(()=>order(s,'sample','assay'));
+  s.board[home].resource='stone';s=order(s,'sample','assay');
+  const scientific=order(s,'file','assay'),material=order(s,'deliverOre','assay');
+  assert.equal(scientific.players[0].science,s.players[0].science+8);
+  assert.equal(material.players[0].science,s.players[0].science);assert.equal(material.players[0].stockpile.stone,(s.players[0].stockpile?.stone||0)+2);
+  assert.throws(()=>order(material,'file','assay'));
+});

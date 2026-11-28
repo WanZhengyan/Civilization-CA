@@ -31,7 +31,13 @@ export function openFieldDesk(read,act) {
       html+='<ol>'+spec.steps.map((step,i)=>'<li>'+((active?.notes.length||0)>i?'✓ ':'')+label(step)+(active?.notes[i]?' <small>('+esc(active.notes[i].tile)+' · '+local('Turn ','回合 ')+active.notes[i].round+')</small>':'')+'</li>').join('')+'</ol>';
       html+='<p>'+local('Commission and file within one hex of your city. Each order costs one movement point.','在己方城市一格内领取和交付课题。每次指令消耗 1 移动力。')+'</p>';
       if(!active)html+=button('start',local('Commission study','委托考察'),ready && r.base && r.player.capital>=spec.fee);
-      else if(r.complete)html+=button('file',local('File the report','交付报告'),ready && r.base);
+      else if(r.complete){
+        html+=button('file',local('File the report','交付报告')+' · '+rewardText(spec.reward),ready && r.base);
+        if(key==='assay'){
+          const ore=active.notes[0].resource==='iron'?local('iron','铁'):local('stone','石料');
+          html+=button('deliverOre',local('Supply the treasury instead','改为向国库供应物资')+' · +2 '+ore,ready && r.base);
+        }
+      }
       else html+=button('sample',local('Record observation','记录观察'),ready && r.canSample);
     }
     if(Object.keys(r.filed).length)html+='<h3>'+local('Filed reports','已交付报告')+'</h3><ul>'+Object.entries(r.filed).map(([id,f])=>'<li>'+label(studies[id].name)+' · '+local('Turn ','回合 ')+f.filed+'</li>').join('')+'</ul>';

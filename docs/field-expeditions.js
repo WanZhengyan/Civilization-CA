@@ -1,4 +1,5 @@
 import {getVision} from './vision.js';
+import {canSeeDeposits} from './resources.js';
 // Field studies are fictional contracts played on the campaign's own terrain.
 // Each board funds a different regional question. Only the current region offers its brief.
 function terrainPair(first,second) {
@@ -18,6 +19,10 @@ function watershedSample({tile,map,state,unit,notes,distance}) {
 }
 
 export const studies = {
+  assay:{name:['Stone and ore assay','岩石与矿样分析'],fee:4,reward:{science:8},
+    steps:[['Collect a sample at a surveyed stone or iron deposit.','在已探明的石料或铁矿资源处采集样本。']],
+    sample:({state,unit,tile})=>canSeeDeposits(state,unit.seat) && ['iron','stone'].includes(state.board[tile.id]?.resource),
+    evidence:({state,tile})=>({resource:state.board[tile.id].resource})},
   tideWatch:{name:['Two-day tide watch','两日潮汐观测'],fee:2,reward:{science:5,capital:5},
     steps:[['Set a tide staff on coastal land next to open sea or bay water.','在紧邻海洋或海湾的海岸地块设立潮尺。'],['Return to the same staff on a later turn for a second reading.','下一回合或更晚回到原地读取第二次潮位。']],
     sample:({tile,map,notes,state})=>notes.length ? tile.id===notes[0].tile && state.round>notes[0].round :
@@ -86,17 +91,21 @@ export function fieldOrder(state,seat,action,map,distance) {
   }
   if(!mission || mission.key!==action.study || action.step!==mission.notes.length)throw new Error('Field notes changed. Review the expedition.');
   if(action.item==='sample' && r.canSample) {
-    const note={tile:unit.tile,terrain:context.tile.terrain,round:state.round};
+    const note={tile:unit.tile,terrain:context.tile.terrain,round:state.round,...spec.evidence?.(context)};
     storeCrew(player,unit.id,{...mission,notes:[...mission.notes,note]});
     unit.moves--;
     return 'Field observation recorded.';
   }
-  if(action.item==='file' && r.complete && base) {
-    for(const [stat,amount] of Object.entries(spec.reward)){
+  const deliverOre=action.item==='deliverOre' && mission.key==='assay';
+  if((action.item==='file' || deliverOre) && r.complete && base) {
+    if(deliverOre){
+      const ore=mission.notes[0].resource;
+      player.stockpile={...player.stockpile,[ore]:(player.stockpile?.[ore]||0)+2};
+    }else for(const [stat,amount] of Object.entries(spec.reward)){
       if(stat==='food')base.food=(base.food||0)+amount;
       else player[stat]=(player[stat]||0)+amount;
     }
-    player.fieldReports={...r.filed,[mission.key]:{...mission,filed:state.round,city:base.id}};
+    player.fieldReports={...r.filed,[mission.key]:{...mission,filed:state.round,city:base.id,delivery:action.item}};
     storeCrew(player,unit.id,null);
     unit.moves--;
     return 'Field report deposited.';
