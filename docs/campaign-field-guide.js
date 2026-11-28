@@ -5,6 +5,20 @@ const chapters = {
       'Train a scout and select it at a trading post, field archive or trail lodge to choose an exchange. The same scout can also record three different terrains at least three hexes apart. Bring the notebook within one hex of one of your cities to publish your regional atlas.',
       '训练侦察兵，抵达商贸驿站、田野档案馆或山径驿舍后可以选择一次交换。也可以让同一名侦察兵在三个不同类型的地形做记录，各点之间至少相隔三格。带着记录返回己方城市一格以内，即可出版地区图志。']
   ],
+  influence: [
+    ['Use your first 6 influence', '开局的 6 点影响力怎么花',
+      'Found your capital, then click Influence at the top of the map. If the city lists a neutral parcel for expansion, spend 6 influence to add that parcel to your territory immediately. For example, with 6 influence and 12 gold, you finish with the new parcel, 0 influence and 12 gold. Each city can do this once per round. Its progress toward the next parcel starts at zero.',
+      '建立首都后，点地图顶部的「影响力」。如果首都有可扩张的中立地块，花 6 点影响力就能立刻把预览中的那一格纳入领土。例如，你有 6 点影响力和 12 金币，扩张后会多一格领土，剩下 0 点影响力和 12 金币。每座城市每轮可提前扩张一次，之后重新积累扩地进度。'],
+    ['Decide whether to spend now', '现在花，还是再等一轮',
+      'If the city is one turn from claiming the same parcel through population growth, you can wait and keep all 6 influence. Save it for diplomacy if you want to learn a contacted rival’s era and city count. A delegation costs 6 influence and reports for three rounds, including the round you send it.',
+      '如果城市再过一回合就能靠居民自动取得同一格地，可以等一等，省下这 6 点影响力。接触其他文明后，可用这 6 点派遣使团，查看对方的时代和城市总数。报告从派遣当轮起持续三轮。'],
+    ['Take a rival district or change policy', '争夺边境或更换政策',
+      'To take an eligible rival district next to your land, spend one district order, 4 gold and 5 influence. Each development level adds 2 influence to the price. Your first government policy is free. Switching to another unlocked policy later costs 3 influence.',
+      '要夺取紧邻己方领土、符合争夺条件的敌方地块，需花 1 次地区指令、4 金币和 5 点影响力。目标地块每升一级，还需多付 2 点影响力。首次颁布政府政策免费，以后改用其他已解锁政策需 3 点影响力。'],
+    ['Read your income', '看懂收入',
+      'Influence accumulates at the end of your turn. Territory contributes to income, and a monument adds 3 influence per turn. Treasury gold pays for purchases and upgrades. Culture advances the civic you are researching.',
+      '影响力在你的回合结束时到账。领土会带来影响力收入，一座纪念碑每回合再增加 3 点。金库里的金币用来购买项目和升级单位。文化用来推进正在研究的市政。']
+  ],
   city: [
     ['Give a city a specialty', '让城市发展专长',
       'Select your city and open City hall. A city with two residents can use its granary, workshop or monument to support one permanent charter for 18 gold. After Municipal Charter, the city can also spend 4 stored food and 8 gold on a three-harvest festival.',

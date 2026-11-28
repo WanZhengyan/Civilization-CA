@@ -51,9 +51,10 @@ export function dossierMarkup(view,row,stats,lang) {
       stat(L('Era','时代'),era)+stat(L('Cities','城市'),stats.cities)+stat(L('Population','人口'),stats.population)+
       stat(L('Gold','金币'),player.capital,income(stats.capitalIncome))+stat(L('Influence','影响力'),player.influence,income(stats.influenceIncome))+
       stat(L('Units','单位'),stats.units)+'</dl>');
-    html+=group(L('Spending influence','影响力用途'),'<p>'+L('Influence represents political reach. Territory and monuments help your civilization earn it each turn.','影响力代表文明的政治影响。领土和纪念碑可带来每回合的影响力收入。')+'</p><ul class="delegate-uses"><li>'+L('Contest a rival border district for 4 gold and 5 influence, plus 2 influence per district level.','争夺敌方边境地块需 4 金币和 5 点影响力，地块每升一级，再加 2 点影响力。')+'</li><li>'+
-      L('Changing an enacted policy costs 3 influence. Your first policy is free.','调整已实施的政策需 3 点影响力，首次颁布政策免费。')+'</li>'+
-      (Array.isArray(view.state.intel?.diplomacy)?'<li>'+L('Send a delegation to a contacted rival for 6 influence. Its report lasts three rounds.','向已接触的对手派遣使团需 6 点影响力，报告有效三轮。')+'</li>':'')+'</ul>');
+    html+=group(L('Spending influence','影响力用途'),
+      '<p>'+L('Use 6 influence to add a city’s next eligible parcel to your territory now, or send a delegation to a contacted rival. Open Influence to see the cities, rivals and policies you can choose.',
+        '花 6 点影响力，可以立即取得一座城市的下一格可扩张地块，也可以向已接触的对手派遣使团。点「使用影响力」查看当前可选的城市、对手和政策。')+'</p>'+
+      '<button type="button" class="delegate-send" data-influence-open>'+L('Spend influence','使用影响力')+'</button>');
   }
   if(row.eliminated) html+=group(L('Campaign status','战局状态'),'<p>'+L('This civilization has been eliminated.','这个文明已被淘汰。')+'</p>');
   if(!own){

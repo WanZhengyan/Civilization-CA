@@ -684,6 +684,7 @@ const guideSections = {
     ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.'],
     ['Plan your turn', 'Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
   ]},
+  influence: {label:'Influence', entries:[]},
   city: {label:'City growth', entries:[
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
     ['Develop a district', 'Select visible land you own. If a unit or city shares the hex, open District development in Field command. Each upgrade spends one district order and raises the level by one. Levels 1, 2 and 3 cost 5, 8 and 11 capital respectively. Level 3 is the maximum.'],
@@ -794,16 +795,19 @@ function content() {
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
-    const orders=(!state || state.campaignVariety===1) ? fieldGuideOrders(guideTab,getLanguage()) : [];
+    const orders=(guideTab==='influence' || !state || state.campaignVariety===1) ? fieldGuideOrders(guideTab,getLanguage()) : [];
     let entries=guideSections[guideTab].entries;
-    if(state && state.campaignVariety!==1)entries=entries.filter(entry=>entry!==freightGuide && entry!==voyageGuide);
+    if(entries && state && state.campaignVariety!==1)entries=entries.filter(entry=>entry!==freightGuide && entry!==voyageGuide);
     if(guideTab==='research' && (!state || state.victoryMode)){
       entries=entries.filter(([title])=>!['Win by domination','Win on civic points'].includes(title));
       if(!state || (!state.practice && state.victoryMode!=='science')) entries.push(['Conquest victory','Your side wins by controlling every original capital or by being the last side with a surviving civilization.']);
       if(!state || state.victoryMode!=='conquest') entries.push(['Science victory',
         '<span>Research Radio Networks and Motorization, then Rocketry. In City production, choose Orbital Survey. Finish it in one city to win for your entire side.</span> <strong>Production required</strong> · '+SCIENCE_PROJECT.required]);
     }
+    const influenceLink=guideTab==='influence' && state && mode!=='home'
+      ? '<button type="button" class="modal-primary" data-influence-open>'+ (getLanguage()==='zh-CN'?'使用影响力':'Spend influence')+'</button>' : '';
     return {kicker:'Field guide', title:'How to play', body:tabs +
+      (influenceLink ? actions(influenceLink) : '') +
       (guideTab==='start' && (!state || state.civilizationTraits===1) ? compareCivilizations() : '') +
       (guideTab === 'universities' ? wonderJournal(state) : '') +
       (orders.length ? list(orders.map(([title,text])=>row(title,text))) : '') +
