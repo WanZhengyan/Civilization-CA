@@ -1,6 +1,7 @@
 import {FACTIONS, UNIT_TYPES} from './rules.js';
 import {witnessedMode} from './attack-mode.js';
 import {WILDS} from './barbarians.js';
+import {closeMapPanel} from './map-workspace.js';
 import {getLanguage, translate} from './i18n.js';
 
 const storageKey='civitas.battle-summary';
@@ -11,6 +12,8 @@ const labels={
   all:['All battles','全部交战'], received:['Attacks on me','我方遇袭'], filter:['Filter battle reports','筛选战报'],
   noIncoming:['No attacks on your units or cities have been reported.','尚未记录针对我方部队或城市的攻击。'],
   attackerHp:['Attacker HP','攻方生命'], defenderHp:['Defender HP','守方生命'],
+  earlier:['Earlier battle','上一场'], later:['Later battle','下一场'], back:['Return to map','返回地图'],
+  list:['Report list','战报列表'],
   history:['Battle reports','战报'], incoming:['Under attack','我方遇袭'], outgoing:['Your attack','我方进攻'],
   witnessed:['Observed battle','目击交战'], unidentified:['Unidentified attacker','未辨明的攻击者'],
   replay:['Replay on map','在地图上回放'], dismiss:['Dismiss','收起'], close:['Close battle reports','关闭战报'],
@@ -85,16 +88,18 @@ function button(cls) {
 }
 
 export function mountBattleReports(atlas) {
-  let view,region,key,records=[],recent=[],notice,playing,manual=false,timer,lastQueued=0,lastRound=0;
+  let view,region,key,records=[],recent=[],notice,playing,review=null,timer,lastQueued=0,lastRound=0;
   let played=0,dismissed=0,listVersion='',incomingOnly=false;
   const frame=document.getElementById('map-frame');
   const strip=make('aside','battle-dispatch');strip.id='battle-dispatch';strip.hidden=true;
   strip.setAttribute('translate','no');
   const copy=make('div','battle-dispatch-copy');copy.setAttribute('role','status');copy.setAttribute('aria-atomic','true');
   const heading=make('span','battle-meta'), line=make('strong'), detail=make('span','battle-detail');
-  copy.append(heading,line,detail);
+  const reading=make('span','battle-review-health');
+  copy.append(heading,line,detail,reading);
   const actions=make('div','battle-dispatch-actions'), locate=button('battle-link'), history=button('battle-link'), dismiss=button('battle-dismiss');
-  actions.append(locate,history,dismiss);strip.append(copy,actions);frame.before(strip);
+  const earlier=button('battle-link'),later=button('battle-link');
+  actions.append(locate,earlier,later,history,dismiss);strip.append(copy,actions);frame.before(strip);
   const entry=button('text-btn battle-entry');entry.id='battle-reports-button';entry.setAttribute('translate','no');
   document.querySelector('.chronicle-head [data-open="log"]').before(entry);
 
@@ -117,12 +122,24 @@ export function mountBattleReports(atlas) {
     const count=records.length?' ('+records.length+')':'';
     entry.textContent=text('history')+count;
     title.textContent=text('history');close.setAttribute('aria-label',text('close'));
-    history.textContent=text('history')+count;
-    locate.textContent=text('replay');dismiss.textContent='×';dismiss.setAttribute('aria-label',text('dismiss'));dismiss.title=text('dismiss');
+    strip.classList.toggle('reviewing',Boolean(review));
+    history.textContent=review?text('list'):text('history')+count;
+    locate.textContent=text('replay');locate.hidden=Boolean(review);
+    earlier.hidden=later.hidden=reading.hidden=!review;
+    earlier.textContent=text('earlier');later.textContent=text('later');
+    dismiss.textContent=review?text('back'):'×';
+    dismiss.setAttribute('aria-label',text(review?'back':'dismiss'));dismiss.title=dismiss.getAttribute('aria-label');
     if(!notice){strip.hidden=true;return;}
     const d=describe(notice);
     heading.textContent=d.category+'  ·  '+d.turn;line.textContent=d.action;
     detail.textContent=d.details+'  ·  '+d.location;strip.hidden=false;
+    if(review){
+      earlier.disabled=review.index===0;later.disabled=review.index===review.reports.length-1;
+      const position=(review.index+1)+' / '+review.reports.length;
+      heading.textContent=position+'  ·  '+heading.textContent;
+      reading.textContent=witnessedHealth(notice,locale).map(h=>h.label+' '+h.before+' → '+h.after).join('  ·  ');
+      reading.hidden=!reading.textContent;
+    }
   }
   function drawHistory() {
     const locale=getLanguage();
@@ -162,37 +179,58 @@ export function mountBattleReports(atlas) {
   }
   function visible(){return !document.hidden && !document.body.classList.contains('on-title') && !document.querySelector('dialog[open]');}
   function halt() {
-    clearTimeout(timer);timer=null;playing=null;manual=false;atlas.stopBattle();
+    clearTimeout(timer);timer=null;playing=null;review=null;atlas.stopBattle();
   }
   function next() {
     if(playing || !visible() || !view)return;
     const r=recent.shift();
     if(!r){atlas.stopBattle();return;}
-    play(r,false);
+    playing=notice=r;
+    played=Math.max(played,r.id);persist();
+    renderNotice();atlas.playBattle(r,false,exposure);
+    timer=setTimeout(()=>{playing=null;next();},exposure);
   }
-  function play(r,requested) {
-    clearTimeout(timer);playing=r;manual=requested;notice=r;
-    if(!requested){played=Math.max(played,r.id);persist();}
-    renderNotice();atlas.playBattle(r,requested,exposure);
-    timer=setTimeout(()=>{
-      playing=null;
-      if(manual){manual=false;atlas.stopBattle();}
-      next();
-    },exposure);
+  function showReviewed(index) {
+    if(!review || index<0 || index>=review.reports.length)return;
+    review.index=index;
+    playing=notice=review.reports[index];
+    recent=recent.filter(report=>report.id!==notice.id);
+    renderNotice();atlas.playBattle(notice,true,exposure);
+    if(document.activeElement===earlier && earlier.disabled)later.focus({preventScroll:true});
+    if(document.activeElement===later && later.disabled)earlier.focus({preventScroll:true});
   }
-  function replay(r) {
+  function replay(r,attacks) {
     if(!r)return;
-    if(playing && !manual && playing.id!==r.id)recent.unshift(playing);
-    recent=recent.filter(queued=>queued.id!==r.id);
+    const reports=attacks?records.filter(report=>incoming(report,view.seat)):[...records];
+    const index=reports.findIndex(report=>report.id===r.id);
+    if(index<0)return;
+    if(playing && !review && playing.id!==r.id)recent.unshift(playing);
     halt();
-    document.getElementById('map-frame').scrollIntoView({block:'nearest',behavior:'instant'});
-    document.querySelector('#atlas canvas')?.focus({preventScroll:true});
-    play(r,true);
+    review={reports,index,attacks};
+    closeMapPanel();
+    frame.scrollIntoView({block:'nearest',behavior:'instant'});
+    showReviewed(index);
+    (later.disabled?(earlier.disabled?dismiss:earlier):later).focus({preventScroll:true});
+  }
+  function stopReview(toList) {
+    const id=notice.id,attacks=review.attacks;
+    halt();
+    notice=recentIncomingReport(records,view.seat,dismissed,lastRound);
+    renderNotice();
+    if(toList){
+      openHistory(attacks);
+      const rowButton=body.querySelector('[data-report="'+id+'"]');
+      rowButton?.focus({preventScroll:true});rowButton?.scrollIntoView({block:'nearest'});
+    }else{
+      document.querySelector('#atlas canvas')?.focus({preventScroll:true});next();
+    }
   }
   function visibilityChanged(){
+    if(review && !document.body.classList.contains('on-title') && !document.querySelector('dialog[open]'))return;
     if(!visible()){
-      if(playing && !manual)recent.unshift(playing);
+      if(playing && !review)recent.unshift(playing);
       halt();
+      if(view){notice=recentIncomingReport(records,view.seat,dismissed,lastRound);renderNotice();}
     }else next();
   }
   function setFilter(value) {
@@ -207,9 +245,11 @@ export function mountBattleReports(atlas) {
   all.onclick=()=>setFilter(false);
   received.onclick=()=>setFilter(true);
   entry.onclick=()=>openHistory();
-  history.onclick=()=>openHistory(Boolean(notice && incoming(notice,view.seat)));
-  locate.onclick=()=>replay(notice);
+  history.onclick=()=>review?stopReview(true):openHistory(Boolean(notice && incoming(notice,view.seat)));
+  locate.onclick=()=>replay(notice,incoming(notice,view.seat));
+  earlier.onclick=()=>showReviewed(review.index-1);later.onclick=()=>showReviewed(review.index+1);
   dismiss.onclick=()=>{
+    if(review){stopReview(false);return;}
     const latest=records.findLast(r=>incoming(r,view.seat));
     dismissed=Math.max(dismissed,latest?.id||0);persist();recent=[];halt();notice=null;renderNotice();entry.focus({preventScroll:true});
   };
@@ -217,7 +257,7 @@ export function mountBattleReports(atlas) {
     const id=e.target.closest('[data-report]')?.dataset.report;
     if(!id)return;
     const r=records.find(x=>String(x.id)===id);
-    dialog.close();replay(r);
+    dialog.close();replay(r,incomingOnly);
   };
   close.onclick=()=>dialog.close();
   dialog.onclick=e=>{if(e.target===dialog)dialog.close();};

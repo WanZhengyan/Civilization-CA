@@ -1303,10 +1303,11 @@ export function createAtlas(host, options = {}) {
       const points=battleMarkers(report,model.byId);if(!points)return;
       const still=Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
       const player=model.players[report.attacker.seat];
-      replay={report,...points,still,color:player?.color || FACTION[player?.faction] || '#d58a6c',start:performance.now(),duration};
+      if(manual && !replay?.pinned && !returnCamera)returnCamera=[cx,cy];
+      replay={report,...points,still,pinned:manual,color:player?.color || FACTION[player?.faction] || '#d58a6c',start:performance.now(),duration};
       const [x,y]=points.to;
       const outside=obscured(x,y,48);
-      if(manual){manualCamera();centerAt(x,y);}
+      if(manual){cancelAnimationFrame(tween);centerAt(x,y);}
       else if(outside && !still && !gesture && performance.now()-lastCameraInput>2600){
         if(!returnCamera)returnCamera=[cx,cy];
         centerAt(x,y);

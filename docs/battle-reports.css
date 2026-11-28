@@ -28,3 +28,12 @@ button.battle-link:hover,button.battle-dismiss:hover{background:#4b3932}
 .battle-health dd {margin:0;color:#f3e3cc;font-variant-numeric:tabular-nums;font-weight:650}
 .battle-empty {padding:16px 0}
 @media(max-width:520px){.battle-filters{padding:6px 13px}.battle-filter{min-height:40px}}
+
+.battle-dispatch.reviewing {display:grid;gap:7px}
+.battle-review-health {font-size:12px;line-height:1.4;color:#f4debc;font-variant-numeric:tabular-nums}
+.battle-dispatch.reviewing .battle-dispatch-actions {flex-wrap:wrap;margin:0}
+.battle-dispatch.reviewing button {min-height:34px}
+.battle-dispatch.reviewing .battle-dismiss {font:600 11px/1.25 var(--sans,system-ui,sans-serif);padding:6px 9px;margin:0}
+.battle-dispatch button:disabled {opacity:.5;cursor:default}
+.battle-dispatch button[hidden],.battle-dispatch[hidden],.battle-review-health[hidden] {display:none}
+@media(max-width:820px){.battle-dispatch.reviewing .battle-dispatch-actions {gap:5px}.battle-dispatch.reviewing button {min-height:40px}}

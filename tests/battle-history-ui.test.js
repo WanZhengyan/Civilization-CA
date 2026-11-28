@@ -60,3 +60,19 @@ test('journal HP uses both witnessed endpoints and never infers missing health f
   assert.deepEqual(witnessedHealth(report,'en'),[]);
   assert.equal(witnessedHealth({...hit,target:{...hit.target,hpAfter:0}},'en')[0].after,0);
 });
+
+test('a stepped map review holds the witnessed impact without another animation frame or a hidden origin',()=>{
+  const hidden={...report,attacker:{kind:'unknown'},retaliation:null};
+  const points=battleMarkers(hidden,new Map(Object.entries(map.byId)));
+  const calls=[];
+  const ctx=new Proxy({measureText(){return {width:8};}}, {get(obj,key){
+    return obj[key] || ((...args)=>calls.push([key,...args]));
+  }});
+  const image={report:hidden,...points,still:false,pinned:true,start:0,duration:2350};
+  assert.equal(paintBattleReport(ctx,image,1,8000),false);
+  assert.ok(calls.some(([op,text])=>op==='fillText' && text==='−26'));
+  assert.ok(!calls.some(([op])=>op==='lineTo'));
+  calls.length=0;
+  assert.equal(paintBattleReport(ctx,{...image,pinned:false},1,8000),false);
+  assert.deepEqual(calls,[]);
+});
