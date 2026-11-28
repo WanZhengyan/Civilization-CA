@@ -70,3 +70,9 @@ test('a sending academy can finance scholars who deliver seven science into the 
   while(next.players[0].caravans.length){next=applyAction(next,0,{type:'end'});control=applyAction(control,0,{type:'end'});}
   assert.equal(next.players[0].science-control.players[0].science,7);
 });
+test('express wagons charge three more gold only for a genuinely earlier delivery',()=>{
+  const {state,home,dest}=market(),route=getLandRoutes(state,0,home)[0];assert.ok(route.steps>3);
+  const next=applyAction(state,0,{type:'dispatchCaravan',origin:home,destination:dest,item:'provisions',service:'express'});
+  assert.equal(next.players[0].capital,state.players[0].capital-3);
+  assert.ok(next.players[0].caravans[0].turns<route.turns);
+});

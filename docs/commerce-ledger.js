@@ -10,10 +10,10 @@ function cityText(state,id,esc) {
   const name=state.cities.find(c=>c.id===id)?.name;
   return esc(name?translate(name):L('Former city','原城市'));
 }
-function costText(item) {
-  const c=CARGO[item];
+function costText(offer) {
+  const c=CARGO[offer.item];
   const parts=[];
-  if(c.fare)parts.push(c.fare+L(' gold',' 金币'));
+  if(offer.fare)parts.push(offer.fare+L(' gold',' 金币'));
   if(c.resource)parts.push(c.stock+' '+translate(RESOURCES[c.resource].name));
   if(c.food)parts.push(c.food+L(' food',' 储粮'));
   return parts.join(' + ');
@@ -29,16 +29,16 @@ function rewardText(offer) {
 const reasons={fare:['Not enough treasury gold for the fare.','国库金币不足以支付旅费。'],stock:['Insufficient goods in the stockpile.','库存物资不足。'],departure:['A wagon has left this turn.','本回合已发车。'],crew:['Crew in transit.','商队正在途中。'],food:['Not enough stored food at the origin.','起点城市储粮不足。']};
 function dispatchButton(offer,enabled,esc) {
   const reason=reasons[offer.reason];
-  return '<div class="commerce-offer"><strong>'+cargoText(offer.item)+'</strong><span>'+costText(offer.item)+' → '+rewardText(offer)+'</span>'+
+  return '<div class="commerce-offer"><strong>'+cargoText(offer.item)+'</strong><span>'+costText(offer)+' → '+rewardText(offer)+'</span>'+
     '<button type="button" class="cargo-order" data-caravan-order="dispatchCaravan" data-origin="'+esc(offer.origin)+'" data-destination="'+esc(offer.destination)+'" data-item="'+esc(offer.item)+'" data-service="'+esc(offer.service)+'"'+
-    (!enabled || reason?' disabled':'')+'>'+L('Dispatch','发运')+'</button>'+(reason?'<small>'+L(...reason)+'</small>':'')+'</div>';
+    (!enabled || reason?' disabled':'')+'>'+(offer.service==='express'?L('Express','加急'):L('Dispatch','发运'))+' · '+offer.turns+L(' harvests',' 次收获')+'</button>'+(reason?'<small>'+L(...reason)+'</small>':'')+'</div>';
 }
 export function commerceLedger(state,seat,city,busy,esc) {
   if (!city || state.intel && state.intel.seat!==seat) return '';
   const player=state.players[seat],routes=getLandRoutes(state,seat,city.id);
   const enabled=!busy && state.phase==='playing' && seatMayOrder(state,seat);
   const rows=routes.map(route=>{
-    const offers=Object.keys(CARGO).map(item=>freightOffer(state,seat,route,item)).filter(Boolean);
+    const offers=Object.keys(CARGO).flatMap(item=>['standard','express'].map(service=>freightOffer(state,seat,route,item,service))).filter(Boolean);
     return '<li><strong>'+cityText(state,route.destination,esc)+'</strong> · '+route.steps+L(' land hexes',' 格陆路')+' · '+route.turns+L(' harvests',' 次收获')+
       offers.map(o=>dispatchButton(o,enabled,esc)).join('')+'</li>';
   }).join('');

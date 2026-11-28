@@ -33,22 +33,25 @@ export function freightOffer(state,seat,route,item,service='standard') {
   const cargo=Object.hasOwn(CARGO,item)?CARGO[item]:null;
   const origin=state.cities.find(c=>c.id===route.origin && c.seat===seat);
   const destination=state.cities.find(c=>c.id===route.destination && c.seat===seat);
-  if (!cargo || !origin || !destination || service!=='standard') return null;
+  if (!cargo || !origin || !destination || !['standard','express'].includes(service)) return null;
   if(cargo.atOrigin && !origin.buildings.includes(cargo.atOrigin))return null;
   if(cargo.atDestination && !destination.buildings.includes(cargo.atDestination))return null;
   const player=state.players[seat], fleet=player.caravans || [];
   const gold=(cargo.freight ? Math.min(9,2+Math.floor(route.steps/2)) : 0)+(cargo.market || 0);
+  const speed=service==='express'?6:3,turns=Math.ceil(route.steps/speed);
+  if(service==='express' && turns>=route.turns)return null;
+  const fare=(cargo.fare || 0)+(service==='express'?3:0);
   const reason=player.lastCaravan===state.round?'departure':fleet.length>=1?'crew':
-    player.capital<(cargo.fare || 0)?'fare':(origin.food || 0)<(cargo.food || 0)?'food':
+    player.capital<fare?'fare':(origin.food || 0)<(cargo.food || 0)?'food':
     cargo.resource && (player.stockpile?.[cargo.resource] || 0)<cargo.stock?'stock':'';
-  return {origin:origin.id,destination:destination.id,item,service,turns:route.turns,gold,reason};
+  return {origin:origin.id,destination:destination.id,item,service,speed,turns,fare,gold,reason};
 }
 export function dispatchCaravan(state,seat,order,routes) {
   const route=routes.find(r=>r.destination===order.destination);
   const offer=route && freightOffer(state,seat,route,order.item,order.service);
   if (!offer || offer.reason) throw new Error('Review the available wagon, cargo and charted trade route.');
   const cargo=CARGO[order.item],player=state.players[seat],origin=state.cities.find(c=>c.id===route.origin);
-  player.capital-=(cargo.fare || 0);
+  player.capital-=offer.fare;
   origin.food-=(cargo.food || 0);
   if(cargo.resource)player.stockpile={...player.stockpile,[cargo.resource]:player.stockpile[cargo.resource]-cargo.stock};
   player.caravans=[...(player.caravans || []),{...offer,id:'wagon-'+state.round+'-'+seat,remaining:offer.turns,launched:state.round}];
