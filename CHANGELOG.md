@@ -6,7 +6,7 @@ Room setup starts with the number of seats. Set each position to human or comput
 
 The previous Large map is now the smallest choice for a new game. Grand and Epic subdivide each coast further. Places such as Westwood extend across several named tiles. Older small maps keep their saved geometry.
 
-Cities grow their borders with population and show an expansion forecast beside their name. Owners can change their current project, bank its invested production, place buildings on the main map and spend gold to buy eligible projects. The treasury explains spending and influence costs. Select a unit to compare paid upgrades, technology and location requirements and expected healing.
+Cities grow their borders with population and show an expansion forecast beside their name. Owners can change their current project, bank its invested production, place buildings on the main map and spend gold to buy eligible projects. The treasury explains spending and influence costs. Select a unit to compare upgrade routes, their exact prices in gold, technology and location requirements, and expected healing. The army handbook lists the same prices in English and Simplified Chinese.
 
 ## Play team matches with friends and computer governors
 

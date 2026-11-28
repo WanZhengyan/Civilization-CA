@@ -117,7 +117,7 @@ test('a deliberate rest spends remaining movement, applies once next turn, and r
 import {advancementPanel} from '../docs/unit-service-ui.js';
 test('selected-unit panel names locked discoveries and shows each path’s real cost, purse and resulting health',()=>{
   const {state,unit}=fixture();const markup=advancementPanel(getUpgradePlans(state,unit.id,0),'open');
-  for(const label of ['Upgrade paths','Pike Guard','Ballistics','Price in capital','Treasury','Remaining movement','Upgrade to']) {
+  for(const label of ['Upgrade paths','Pike Guard','Ballistics','Price in gold','Treasury','Remaining movement','Upgrade to']) {
     assert.ok(markup.includes(label),label);
   }
   assert.match(markup,/data-order="upgrade:riflemen" disabled/);assert.match(markup,/110 \/ 110/);
@@ -145,11 +145,14 @@ test('paths expose subsequent upgrades, and the comparison displays the original
  const {state,unit}=fixture();const plans=getUpgradePlans(state,unit.id,0);
  assert.deepEqual(plans.find(p=>p.to==='riflemen').future,['armor']);
  const panel=advancementPanel(plans);
- for(const s of ['Later upgrades','Armored Column','42 → 55','Price in capital','Spends all remaining movement'])assert.ok(panel.includes(s),s);
+ for(const s of ['Later upgrades','Armored Column','42 → 55','Price in gold','Spends all remaining movement'])assert.ok(panel.includes(s),s);
 });
 
-import {handbookRows} from '../docs/army-handbook.js';
+import {armyHandbook,handbookRows} from '../docs/army-handbook.js';
 test('the army handbook and field orders publish the same branches and prices',()=>{
+  assert.match(armyHandbook(String),/10 <span>gold<\/span>/);
+  assert.equal(translate('Price in gold','zh-CN'),'所需金币');
+  assert.equal(translate('gold','zh-CN'),'金币');
   for(const era of ['frontier','industrial','modern']) for(const row of handbookRows(era)){
     const id=Object.keys(UNIT_TYPES).find(k=>UNIT_TYPES[k].name===row.name);
     assert.deepEqual(row.routes,advancementRoutes(id,UNIT_TYPES).map(r=>({name:UNIT_TYPES[r.to].name,cost:r.cost})));
