@@ -147,3 +147,13 @@ test('reverse mail runs consume one short-lived backhaul ticket and deliver cult
   assert.equal(next.players[0].tradeReceipt.paid,3);
   assert.deepEqual(next.players[0].mailTickets,{});
 });
+import {freightExchange} from '../docs/commerce-ledger.js';
+test('the exchange compares funded bids across all cities and exposes dispatchable authorized orders only',()=>{
+  const {state,home,dest}=market();state.cities[1].food=0;
+  const view=campaignView(state,0),html=freightExchange(view,0,false,String);
+  assert.ok(html.includes('data-origin="'+home+'" data-destination="'+dest+'"'));
+  assert.ok(!html.includes('data-origin="'+dest+'" data-destination="'+home+'" data-item="provisions"'));
+  assert.ok(!html.includes('data-item="citrusMarket"'));
+  assert.equal(freightExchange(view,1,false,String),'');
+  assert.match(freightExchange(view,0,true,String),/data-service="standard" disabled/);
+});

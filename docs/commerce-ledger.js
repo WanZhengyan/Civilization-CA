@@ -57,7 +57,44 @@ export function commerceLedger(state,seat,city,busy,esc) {
     (!enabled || player.capital<18?' disabled':'')+'>'+L('Open wagon depot · 18 gold · second crew','设立商队货栈 · 18 金币 · 增加第二支商队')+'</button>' : '';
   const receipt=player.tradeReceipt;
   return '<section class="commerce-ledger" translate="no"><h3>'+L('Overland trade','陆路贸易')+'</h3><p>'+
-    L('Wagon routes from ','商队起点：')+cityText(state,city.id,esc)+' · '+L('Crews on the road ','在途商队 ')+(player.caravans?.length || 0)+' / '+capacity+'</p>'+depot+(city.freightTimber?'<p>'+L('Lumber yard reserve','木料库存产能')+' · '+city.freightTimber+'</p>':'')+active+
+    L('Wagon routes from ','商队起点：')+cityText(state,city.id,esc)+' · '+L('Crews on the road ','在途商队 ')+(player.caravans?.length || 0)+' / '+capacity+'</p>'+(routes.length?'<button type="button" class="cargo-order" data-act="trade-market">'+L('Compare city markets','比较各城货运')+'</button>':'')+depot+(city.freightTimber?'<p>'+L('Lumber yard reserve','木料库存产能')+' · '+city.freightTimber+'</p>':'')+active+
     (receipt?'<p>'+L('Last delivery','上次到货')+' · '+cargoText(receipt.item)+' · '+cityText(state,receipt.destination,esc)+' · '+(receipt.returning?L('Cargo returned; no freight paid','原货已退还，无运费收益'):rewardText(receipt))+'</p>':'')+
     (rows?'<ul>'+rows+'</ul>':'<p>'+L('Found a second city and explore a land corridor between them to open a wagon route.','建立第二座城市，并探明两城之间的陆路，便可开通商队路线。')+'</p>')+'</section>';
+}
+
+export function freightExchange(state,seat,busy,esc) {
+  if(!state.players[seat] || state.intel && state.intel.seat!==seat)return '';
+  const enabled=!busy && state.phase==='playing' && seatMayOrder(state,seat);
+  const towns=state.cities.filter(c=>c.seat===seat),quotes=[];
+  for(const town of towns){
+    for(const route of getLandRoutes(state,seat,town.id)){
+      for(const item of Object.keys(CARGO)){
+        for(const service of ['standard','express']){
+          const offer=freightOffer(state,seat,route,item,service);
+          if(offer && !offer.reason)quotes.push(offer);
+        }
+      }
+    }
+  }
+  const groups=[
+    [L('Treasury income','国库收入'),o=>o.gold-o.fare],
+    [L('Food for growing cities','为城市补粮'),o=>CARGO[o.item].deliverFood || 0],
+    [L('Construction supplies','建造物资'),o=>CARGO[o.item].production || 0],
+    [L('Research and culture','科研与文化'),o=>CARGO[o.item].science || CARGO[o.item].culture || 0]
+  ];
+  const boards=groups.map(([label,reward],index)=>{
+    const ranked=quotes.filter(o=>reward(o)>0).sort((a,b)=>reward(b)/b.turns-reward(a)/a.turns || a.fare-b.fare || a.turns-b.turns);
+    const unique=new Set(),rows=[];
+    for(const o of ranked){
+      const key=JSON.stringify([o.origin,o.destination,o.item]);
+      if(unique.has(key))continue;
+      unique.add(key);
+      rows.push('<li><b>'+cityText(state,o.origin,esc)+' → '+cityText(state,o.destination,esc)+'</b>'+dispatchButton(o,enabled,esc)+'</li>');
+      if(rows.length===3)break;
+    }
+    return rows.length?'<details'+(index===0?' open':'')+'><summary>'+label+'</summary><ul>'+rows.join('')+'</ul></details>':'';
+  }).join('');
+  return '<section class="commerce-ledger" translate="no"><p>'+L('Compare funded shipments across your cities. Each board ranks its three best offers by delivery per harvest. Treasury income deducts the fare.','比较各城市当前能负担的货运。每组按每次收获的交付量列出前三项，国库收入已扣除旅费。')+'</p>'+
+    (boards || '<p>'+L('No funded shipments. Check available crews, goods and explored corridors in the supply ledger.','当前没有可发运货物。请在补给账本查看商队、物资和已探明路线。')+'</p>')+
+    '<button type="button" class="cargo-order" data-act="supplies">'+L('Return to supply ledger','返回补给账本')+'</button></section>';
 }

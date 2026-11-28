@@ -9,6 +9,7 @@ import {discoveredNaturalWonders} from './natural-wonders.js';
 import {invitationCode, launchDestination} from './launch.js';
 import {buildGuideIndex, guideSearchBox, bindGuideSearch} from './guide-search.js';
 import {armyHandbook, handbookRows} from './army-handbook.js';
+import {freightExchange} from './commerce-ledger.js';
 import {ledgerBody} from './resource-ledger.js';
 import {getResourceLedger} from './rules.js';
 import {getLanguage, translate, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
@@ -150,7 +151,7 @@ function showTitle(visible) {
 
 function emit() {
   if (mode === 'home' || (mode === 'online' && !room?.game)) return;
-  if (modal==='supplies' && dialog?.open) drawDialog();
+  if (['supplies','trade-market'].includes(modal) && dialog?.open) drawDialog();
   const state = getState();
   soundtrack?.music.setScene(state ? getEra(state,currentSeat()).id : null);
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
@@ -876,6 +877,7 @@ function teamStandings(state){
 function content() {
   const state = getState();
   if (modal === 'multiplayer') return multiplayerContent();
+  if (modal === 'trade-market') return {kicker:getLanguage()==='zh-CN'?'经济':'Economy',title:getLanguage()==='zh-CN'?'城际货运市场':'Intercity freight exchange',body:freightExchange(state,currentSeat(),pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML)};
   if (modal === 'supplies') return {kicker:'Economy',title:'Supply ledger',body:ledgerBody(state,currentSeat(),getResourceLedger(state,currentSeat()),supplyCity,pending || playingBots || (mode==='online' && (offline || !!unconfirmedOrder)),escapeHTML,getStats(state,currentSeat()))};
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
@@ -1011,6 +1013,7 @@ function modalAction(act) {
   if(act==='title-screen'){enterTitle();return}
   if(act==='restart-tutorial' && mode==='solo' && tutorial){open('restart-tutorial');return}
   if(act==='confirm-tutorial' && modal==='restart-tutorial' && tutorial){enterTutorial(true);return}
+  if(act==='trade-market'){open('trade-market');return}
   if(act==='supplies'){open('supplies');return}
   if(act.startsWith('cargo-')){
     const [,resource,market]=act.split('-');
@@ -1091,7 +1094,7 @@ async function init({ render, locate, toast: showToast }) {
   soundtrack=installSoundtrack(dialog);
   dialog.addEventListener('click', e=>{
     const button=e.target.closest('[data-caravan-order]');
-    if (!button || button.disabled || modal!=='supplies')return;
+    if (!button || button.disabled || !['supplies','trade-market'].includes(modal))return;
     const {caravanOrder:type,origin,destination,item,service,wagon,season}=button.dataset;
     doAction({type,origin,destination,item,service,wagon,...(season?{season:Number(season)}:{})});
   });
