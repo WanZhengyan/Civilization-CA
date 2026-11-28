@@ -1,3 +1,4 @@
+import {tradeCorridors} from './land-commerce.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
@@ -37,6 +38,10 @@ import { PORT_BUILDINGS, VESSELS, findPortSite, fisheryPort } from "./maritime.j
 import {nextTechnology} from './applied-science.js';
 import {TECHS, CIVICS, ERAS, ERA_UNITS, eraFor, councilTree} from './progression.js';
 export {TECHS, CIVICS, ERAS, councilTree} from './progression.js';
+export function getLandRoutes(state,seat,origin) {
+  if (!state?.players[seat] || state.intel && state.intel.seat!==seat) return [];
+  return tradeCorridors(state,seat,origin,getMap(state),getVision(state,seat).explored);
+}
 export function getEra(state, seat) { return eraFor(state.players[seat]?.technologies, state.players[seat]?.civics); }
 import {planWaterways, waterwayChart} from './waterways.js';
 import {campaignChart, largeCampaignChart, neighborCoordinates, REGIONAL_SHAPE} from './region-shapes.js';

@@ -1,3 +1,4 @@
+import {commerceLedger} from './commerce-ledger.js';
 import {settlerPopulationReason} from './population.js';
 import {illustration} from './illustrations.js';
 import {RESOURCES,isProduce,materialShipmentGain,SHIPMENT} from './resources.js';
@@ -58,5 +59,5 @@ export function ledgerBody(state, seat, accounts, selectedCity, busy, esc, stats
     '<button type="button" class="modal-secondary" data-influence-open>'+L('Spend influence','使用影响力')+'</button></section>'+
     '<p class="modal-desc">Each worked deposit adds one good at the end of your turn. Dispatch two of the same good once per turn.</p>'+destination+
     cityQuote(state,city,!spent,L,esc)+(spent?'<p class="modal-muted">Shipment dispatched this turn.</p>':'')+
-    '<div class="cargo-ledger">'+rows.join('')+'</div>';
+    '<div class="cargo-ledger">'+rows.join('')+'</div>'+commerceLedger(state,seat,city,busy,esc);
 }

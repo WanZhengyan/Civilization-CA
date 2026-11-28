@@ -45,3 +45,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.35 | Find thematic map records by bilingual search, ranked priority or distance and jump to the parcel |
 | 7.0.36 | Pin a parcel on the atlas and compare its observation side by side across map lenses and turns |
 | 7.0.37 | Triage the three leading decisions and drill into accessible departmental briefings |
+| 7.0.38 | Survey charted land corridors between friendly cities from the supply ledger |
