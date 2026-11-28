@@ -32,7 +32,7 @@ export function worksPage(state,city){
     [local('Project','项目'),local('Build turns','建造回合'),local('Yield change / housing','每回合收益／住房变化')],rows)+
     '<div class="city-study-actions">'+options.map(o=>action('building',local('Survey ','选址')+label(o.label),o.item)).join('')+'</div>':
     '<p>'+local('No new municipal building can be commissioned by this city right now.','本城目前没有可以开工的新市政建筑。')+'</p>',
-    local('Compares each available building at current population, policy and research. Housing is immediate capacity; other values are per harvest.',
+    local('Compares each available building at current population, policy and research. Housing increases capacity immediately. Other values are per harvest.',
       '按当前人口、政策和科技比较各个可建项目。住房是完工后新增的容量，其余数字是每次收获的变化。'));
 }
 

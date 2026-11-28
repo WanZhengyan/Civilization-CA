@@ -1119,7 +1119,8 @@ function mount(){
       closeMapPanel();select(value,null,true);atlas.focus(value);redraw();return;
     }
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
-    if(command==='production')openProduction();
+    if(command==='supplies')chooseOrder('supplies');
+    else if(command==='production')openProduction();
     else if(command==='work-quote' || command==='rush-quote'){
       const option=getProductionOptions(view.state,city.id,{replace:true}).find(o=>o.item===value);
       const buy=command==='rush-quote';

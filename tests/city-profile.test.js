@@ -57,3 +57,13 @@ test('a partially finished order quotes the remaining gold and credits parked pr
   assert.match(markup,/Builder \(paused\)/);
   assert.match(markup,/data-study-command="rush-quote"/);
 });
+import {cityDeposits} from '../docs/city-profile-land.js';
+test('supply catchments distinguish active and damaged deposits and exclude foreign holdings',()=>{
+  const state=capital(),c=state.cities[0],id=c.tile;
+  Object.assign(state.board[id],{resource:'grain',improvement:'farm'});
+  assert.equal(cityDeposits(state,c).find(r=>r.id===id).connected,true);
+  state.board[id].pillaged=true;
+  assert.equal(cityDeposits(state,c).find(r=>r.id===id).repair,true);
+  state.board[id].owner=1;
+  assert.ok(!cityDeposits(state,c).some(r=>r.id===id));
+});
