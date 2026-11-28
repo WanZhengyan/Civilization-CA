@@ -9,3 +9,4 @@
 .gaz-facts {display:flex;flex-wrap:wrap;gap:.65rem 2rem;margin:.75rem 0}
 .gaz-facts dt {font-size:.87rem;color:#c2cec7}.gaz-facts dd {color:#f6deb0;margin:0;font-size:1.2rem;font-variant-numeric:tabular-nums}
 .gaz a {color:#a9d7d8;text-decoration:underline;text-underline-offset:.15rem}
+.gaz-places{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.75rem}.gaz-places .gaz-choice{border-radius:1.3rem;padding-inline:.85rem}

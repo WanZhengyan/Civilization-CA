@@ -1,4 +1,4 @@
-import {counties,regions,sourceOf} from './gazetteer-data.js';
+import {counties,cities,places,regions,sourceOf} from './gazetteer-data.js';
 
 const labels = {profile:['Places','地点档案']};
 const esc = value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -9,12 +9,14 @@ const fact = (label,value)=>'<div><dt>'+esc(label)+'</dt><dd>'+esc(value)+'</dd>
 const link = (url,label)=>'<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>';
 
 export function newGazetteer(region='la') {
-  return {region:Object.hasOwn(regions,region)?region:'la',section:'profile'};
+  return {region:Object.hasOwn(regions,region)?region:'la',section:'profile',place:null};
 }
 function profile(view,lang) {
-  const place=counties.find(p=>p.region===view.region);
+  const current=places.filter(p=>p.region===view.region);
+  const place=current.find(p=>p.id===view.place) || current[0];
+  const list=current.map(p=>choice('place-'+p.id,tr(p.name,lang),p===place)).join('');
   const tabs=Object.entries(regions).map(([key,names])=>choice('region-'+key,tr(names,lang),key===view.region)).join('');
-  return '<div class="gaz-switch" role="group" aria-label="'+tr(['Region','地区'],lang)+'">'+tabs+'</div>'+
+  return '<div class="gaz-switch" role="group" aria-label="'+tr(['Region','地区'],lang)+'" >'+tabs+'</div><div class="gaz-places" role="group" aria-label="'+tr(['County or city','县或城市'],lang)+'">'+list+'</div>'+
     '<article class="gaz-place"><h3>'+esc(tr(place.name,lang))+'</h3><p>'+esc(tr(place.scope,lang))+'</p>'+
     '<dl class="gaz-facts">'+fact(tr(['Residents · 1 April 2020','常住人口 · 2020 年 4 月 1 日'],lang),number(place.pop,lang))+'</dl>'+
     link(sourceOf(place),tr(['US Census Bureau · QuickFacts','美国人口普查局 · QuickFacts'],lang))+'</article>';
@@ -27,6 +29,10 @@ export function gazetteerContent(view,lang,campaign) {
     (Object.keys(labels).length>1?'<nav class="gaz-nav" aria-label="'+tr(['Gazetteer sections','地名志栏目'],lang)+'">'+modes+'</nav>':'')+body+'</section>'};
 }
 export function gazetteerAction(view,action) {
+  if(action.startsWith('place-')){
+    const place=places.find(p=>p.id===action.slice(6));
+    if(place){view.region=place.region;view.place=place.id;view.section='profile';}
+  }
   if(action.startsWith('section-') && Object.hasOwn(labels,action.slice(8)))view.section=action.slice(8);
   if(action.startsWith('region-') && Object.hasOwn(regions,action.slice(7)))view.region=action.slice(7);
 }

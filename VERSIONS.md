@@ -60,3 +60,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.50 | Compare and dispatch the best funded bids across the intercity exchange |
 | 7.0.51 | Give rival governors supply, construction, market and scholarship priorities |
 | 7.0.52 | Open a bilingual California gazetteer with three dated county profiles |
+| 7.0.53 | Explore municipal Census profiles for nine real campaign cities |
