@@ -1,3 +1,4 @@
+import {BUILDINGS} from './rules.js';
 import {getPopulationReport} from './rules.js';
 import {SETTLER_MIN_POPULATION,SETTLER_RESIDENT_COST} from './population.js';
 import {getWonderSites,getProductionOptions} from './rules.js';
@@ -198,6 +199,36 @@ const lenses=[
       rows.set(city.tile,reading(band,city.name+' · population '+f.population+'/'+f.housing+' housing. Food '+f.food+' stored, '+f.harvest+' harvested, '+f.consumption+' consumed. '+status[0]+' '+departure[0],
         translate(city.name,'zh-CN')+' · 人口 '+f.population+'／住房 '+f.housing+'。存粮 '+f.food+'，收获 '+f.harvest+'，消耗 '+f.consumption+'。'+status[1]+departure[1],band===3?100-(f.starvationTurns||0):band===1?40:f.growthTurns?20-f.growthTurns:0));
     }
+    return rows;
+  }),
+  definition('works','Civic works register','公共工程台账','Inspect completed facilities and active sites. The city center also reports recruitment and projects without a separate site.','查看已竣工设施和当前工地。没有独立场址的招募或项目会列在市中心。',[
+    ['City administration','城市行政中心'],['Under construction','建造中'],['Operating facility','设施运营中'],['Order held','项目暂停']
+  ],({state,own,known})=>{
+    const rows=new Map(),sites=new Map();
+    function record(id,band,en,zh){
+      const site=sites.get(id)||{band:0,en:[],zh:[]};
+      const priority=[0,2,1,3];
+      if(priority[band]>priority[site.band])site.band=band;
+      site.en.push(en);site.zh.push(zh);sites.set(id,site);
+    }
+    for(const city of own){
+      record(city.tile,0,city.name,translate(city.name,'zh-CN'));
+      for(const item of city.buildings){
+        const def=BUILDINGS[item];if(!def)continue;
+        const campus=WONDERS[item]&&[...known].find(id=>state.board[id]?.wonderCity===city.id && state.board[id]?.wonder===item);
+        const id=city.buildingSites?.[item] || campus || (item==='harbor' && city.portTile) || city.tile;
+        record(id,2,def.name+' operating for '+city.name+'.',translate(def.name,'zh-CN')+'已为'+translate(city.name,'zh-CN')+'投入运营。');
+      }
+      const queue=city.queue;
+      if(!queue){record(city.tile,0,'No active production order.','暂无进行中的生产项目。');continue;}
+      const quote=getProductionOptions(state,city.id,{replace:true}).find(o=>o.item===queue.item);
+      if(!quote)continue;
+      const site=queue.site || queue.portTile || city.tile;
+      const held=quote.turns==null;
+      record(site,held?3:1,quote.label+' · '+city.name+' · '+queue.progress+'/'+quote.required+' production. '+(held?quote.reason:quote.turns+' turns estimated.'),
+        translate(quote.label,'zh-CN')+' · '+translate(city.name,'zh-CN')+' · 生产进度 '+queue.progress+'/'+quote.required+'。'+(held?translate(quote.reason,'zh-CN'):'预计还需 '+quote.turns+' 回合。'));
+    }
+    for(const [id,site] of sites)rows.set(id,reading(site.band,site.en.join(' '),site.zh.join(' '),[0,3,1,4][site.band]));
     return rows;
   }),
 ];

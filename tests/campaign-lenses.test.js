@@ -95,3 +95,10 @@ test('food relief distinguishes housing, starvation and readiness to recruit a s
   assert.equal(short.band,3);assert.match(short.en,/Can sponsor a settler/);
   assert.ok(short.en.includes('Resident lost in '+f.starvationTurns+' turns.'));
 });
+
+test('works register places an active order and a completed building at their campaign sites',()=>{
+  const raw=capital(),city=raw.cities[0],ordered=applyAction(raw,0,{type:'produce',city:city.id,item:'granary'}),s=campaignView(ordered,0),c=s.cities[0];
+  const site=c.queue.site || c.tile;assert.match(surveyLayer(s,0,'works').get(site).en,/Granary.*production/);
+  c.queue=null;c.buildings=['granary'];c.buildingSites={granary:site};
+  assert.match(surveyLayer(s,0,'works').get(site).en,/Granary operating/);
+});

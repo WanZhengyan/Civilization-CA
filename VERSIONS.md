@@ -39,3 +39,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.29 | Trace navigable charted waters to home berths and distinguish disconnected port networks |
 | 7.0.30 | Survey legal university sites by charter availability, grant price and specialty terrain |
 | 7.0.31 | Map food reserves, starvation deadlines, housing limits and settler eligibility |
+| 7.0.32 | Inspect active construction, stalled recruitment and operating buildings at their city sites |
