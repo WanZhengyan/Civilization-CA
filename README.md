@@ -156,3 +156,5 @@ Solo games use browser storage. Online rooms and visitor counts use a Cloudflare
 4. Set the `civitas-api-origin` meta tag in both HTML entry points to the Worker’s HTTPS origin. Publish the frontend and join a room from two browser sessions to check that both see the next turn and their own explored map. The maintained service accepts the project’s Pages origin, `https://wanzhengyan.github.io`. [D1 migration reference](https://developers.cloudflare.com/d1/reference/migrations/)
 
 Interface icons are from Lucide. See the [third-party notices](./THIRD-PARTY-NOTICES.txt).
+
+Made together with ChatGPT.

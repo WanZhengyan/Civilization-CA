@@ -108,3 +108,5 @@ npm run dev
 打开[本地游戏](http://127.0.0.1:8080/Civilization-CA/)。本地房间数据保存在 `.civitas-local/`。可用第二个浏览器或隐私窗口模拟另一位玩家。运行 `npm test` 检查规则、界面和联机功能，运行 `npm run playtest` 可在三个地区重复试玩 18 局固定开局。
 
 查看[发布流程](./README.md#publish-an-update)、[独立部署联机服务](./README.md#host-your-own-room-service)、[开发测试记录](./DEVELOPMENT.md)与[100 个可玩版本的逐版改动](./VERSIONS.md)。
+
+与 ChatGPT 共同制作。
