@@ -1,5 +1,6 @@
 import {CIVILIZATIONS} from './civilizations.js';
 import {observeContacts,diplomacyView} from './diplomacy.js';
+import {alliedFreightPorts} from './coastal-freight.js';
 import {chartedWaterways} from './waterways.js';
 import {actingPerspective,publicTeamPhase} from './team-turns.js';
 import {sameTeam} from './teams.js';
@@ -183,6 +184,7 @@ export function projectForSeat(state,seat) {
     const occupied=state.cities.flatMap(city=>[city.portTile,city.queue?.portTile]);
     view.intel.visibleBerths=[...new Set(occupied.filter(id=>id && visible.has(id)))].sort();
   }
+  if (state.campaignVariety===1) view.intel.alliedFreightPorts=alliedFreightPorts(state,seat,visible);
   if (state.barbarians) {
     const shown=entries=>(entries||[]).filter(e=>visible.has(e.tile))
       .map(e=>publicShape(e,['id','tile','type','hp','maxHp']));

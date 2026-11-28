@@ -64,7 +64,7 @@ export function fisheryPort(state, seat, tile, byId, neighbors, charted) {
 // A crew can work its gear or carry one catch. Loading and landing each spend
 // the rest of its turn. The optional manifest also works for older saved crews.
 export function fishingTask(state,unit,byId) {
-  if (unit.type!=='workboat' || !waterKind(byId[unit.tile])) return null;
+  if (unit.type!=='workboat' || unit.freight || !waterKind(byId[unit.tile])) return null;
   const port=state.cities.find(c=>c.seat===unit.seat && c.portTile===unit.tile && c.buildings.includes('harbor'));
   if (unit.fishCargo) return port ? {type:'landCatch',city:port.id} : null;
   if(port)return null;

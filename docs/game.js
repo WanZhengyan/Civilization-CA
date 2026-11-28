@@ -1,5 +1,5 @@
 import {installSoundtrack,soundtrackControls} from './music-controls.js';
-import {fishingGuide,inlandGuide} from './maritime-guide.js';
+import {fishingGuide,inlandGuide,freightGuide} from './maritime-guide.js';
 import {captureRoomOrder,isComputerActing,recoveryMessage,roomSeatTurn,teamMemberStatus} from './room-turn.js';
 import {DEFAULT_MAP_SIZE,validNewMapSize} from './maps.js';
 import {advancementGuide,recoveryGuide} from './unit-service-copy.js';
@@ -719,6 +719,7 @@ const guideSections = {
   coast: {label:'At sea', entries:[
     ['Choose a harbor site', 'Found on the shore or connect a city to your own coast within two hexes. Choose Harbor in city production. The harbor reserves an adjacent water hex and earns capital.'],
     fishingGuide,
+    freightGuide,
     inlandGuide,
     ['Choose a warship', 'An ironclad is slow and tough and excels at coastal sieges. An escort destroyer moves four hexes and deals extra damage to armed ships. Both launch from a shipyard.'],
     ['Launch a fleet', 'A harbor trains Revenue cutters. Research Steam Power to unlock the Shipyard, then build one to train Steam frigates. Ships bombard the shore; bring a land unit to occupy a city.']
@@ -792,6 +793,7 @@ function content() {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
     let entries=guideSections[guideTab].entries;
+    if(state && state.campaignVariety!==1)entries=entries.filter(entry=>entry!==freightGuide);
     if(guideTab==='research' && (!state || state.victoryMode)){
       entries=entries.filter(([title])=>!['Win by domination','Win on civic points'].includes(title));
       if(!state || (!state.practice && state.victoryMode!=='science')) entries.push(['Conquest victory','Your side wins by controlling every original capital or by being the last side with a surviving civilization.']);

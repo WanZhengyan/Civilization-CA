@@ -3,6 +3,8 @@ import {hexDistance} from './rules.js';
 import {previewMove,sameMove,reviewPointerMove} from './move-review.js';
 import {mountDiplomacy,paintDiplomacy,publicContacts} from './diplomacy-ui.js';
 import {chartedWaterSites,knownCrossings,mountWaterKey,waterKind} from './water-key.js';
+import {getFreightManifest} from './rules.js';
+import {freightPanel} from './harbor-ledger-ui.js';
 import {fishingTask} from './maritime.js';
 import {modeLabels} from './campaign-choices.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
@@ -367,6 +369,7 @@ function inspect(){
         }
         if(water){
           const task=fishingTask(state,u,mapRegion.byId);
+          actions+=freightPanel(getFreightManifest(state,u),esc,actionButton,disabled);
           if(u.fishCargo) info+='<div class="unit-sight"><span>Catch aboard</span><strong>1</strong></div>';
           if(task)actions+=actionButton(task.type,task.type==="landCatch"?"Land the catch":"Load a catch",task.type==="landCatch"?"1 stored fish and 3 city food":"Spends all remaining movement","gold",disabled||!u.moves);
         }
@@ -831,9 +834,9 @@ function chooseOrder(key){
     return;
   }
   if(!mayOrder())return;
-  if(key==="landCatch" || key==="haulFish"){order="";Game.doAction({type:key,unit:u.id});return}
   if(key.startsWith("train:")){order="";Game.doAction({type:"train",unit:u.id,item:key.slice(6)});return}
   if(key==="fortify"){order="";Game.doAction({type:"fortify",unit:u.id});return}
+  if(["loadFreight","landFreight","returnFreight","landCatch","haulFish"].includes(key)){order="";Game.doAction({type:key,unit:u.id});return}
   if(key==="recover"){order="";Game.doAction({type:"recover",unit:u.id});return}
   if(key==="move"){
     order="";redraw();openMapOnMobile();return;

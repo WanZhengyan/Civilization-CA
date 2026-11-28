@@ -8,6 +8,8 @@ import {advanceCityBorder, planCityBorders} from './city-expansion.js';
 import {advancementRoutes,promotionOutcome,recoveryAt,nearestServiceStation} from './unit-service.js';
 import {fleetBasin,flotillaMove} from './naval-plan.js';
 import {waterKind} from './water-navigation.js';
+import {freightManifest,carryFreight} from './coastal-freight.js';
+import {sailTo} from './naval-plan.js';
 import {harborSites,fishingTask,runFishingTask} from './maritime.js';
 import {revisionOf, advanceProduction, verifyProduction, parkedProduction, parkProject, resumeWork, purchasePrice} from './works.js';
 import {NATURAL_WONDERS, placeNaturalWonders, neighboringWonders} from './natural-wonders.js';
@@ -821,7 +823,7 @@ function unitImprovement(state,unit,tile) {
   if (!unit.charges) return null;
   if (state.intel?.workSites) return state.intel.workSites[unit.id]?.[tile] ?? null;
   if (unit.type==='workboat') {
-    if(unit.fishCargo)return null;
+    if(unit.fishCargo || unit.freight)return null;
     const chart=state.waterways ? getVision(state,unit.seat).explored : null;
     return fisheryPort(state,unit.seat,tile,map.byId,map.neighbors,chart) ? 'fishery' : null;
   }
@@ -1362,6 +1364,11 @@ function resolveAttack(state, unit, target) {
   }
   recordResult();
 }
+export function getFreightManifest(state,unit) {
+  if(state.campaignVariety!==1 || !unit || unit.type!=='workboat' || state.intel && state.intel.seat!==unit.seat)return null;
+  return freightManifest(state,unit,getMap(state),getVision(state,unit.seat).explored,hexDistance);
+}
+const freightOrders=['loadFreight','landFreight','returnFreight'];
 function unitOrder(state,seat,action) {
   const unit=unitOrNull(state,action.unit);
   if (!unit || unit.seat!==seat) throw new Error('Choose one of your units.');
@@ -1385,6 +1392,11 @@ function unitOrder(state,seat,action) {
     unit.moves--;
     state.players[seat].surveyEnabled=true;
     record(state,seat,'survey','Resource survey completed.',id,{unit:unit.id});
+  } else if (freightOrders.includes(action.type)) {
+    const manifest=getFreightManifest(state,unit);
+    carryFreight(state,unit,action,manifest);
+    const message={loadFreight:'Loaded 4 food for coastal freight.',landFreight:'Coastal freight delivered.',returnFreight:'Cargo returned to its departure city.'};
+    record(state,seat,action.type,message[action.type],id,{unit:unit.id,food:manifest.food,gold:manifest.delivery?.gold || 0});
   } else if (action.type==='haulFish' || action.type==='landCatch') {
     runFishingTask(state,unit,action,getMap(state).byId);
     record(state,seat,action.type,action.type==='haulFish'?'Fishing crew loaded a catch.':'The harbor received 3 food and 1 stored fish.',id,{unit:unit.id});
@@ -1510,9 +1522,7 @@ function resolveOrder(source,seat,action) {
       advanceProduction(city);
       record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
     }
-  } else if (action.type==='fortify' || action.type==='train') {
-    unitOrder(next,seat,action);
-  } else if (['move','attack','found','improve','upgrade','survey','recover','haulFish','landCatch'].includes(action.type)) {
+  } else if (['move','attack','found','improve','upgrade','survey','recover','haulFish','landCatch','fortify','train',...freightOrders].includes(action.type)) {
     unitOrder(next,seat,action);
   } else {
     if (typeof action.tile!=='string') throw new Error('Choose a district.');
@@ -1902,6 +1912,15 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   for (const [unit,options] of plans) {
     if (options.canFound) return {type:'found',unit:unit.id};
     if(unit.type==='workboat' && Array.isArray(state.intel.visibleBerths)){
+      const freight=getFreightManifest(state,unit);
+      if(freight?.ready && (freight.type==='landFreight' || freight.type==='loadFreight' && freight.origin.food>=8))
+        return {type:freight.type,unit:unit.id};
+      if(freight?.cargo){
+        const destinations=freight.routes.filter(r=>!state.units.some(u=>u.id!==unit.id && u.tile===r.berth)).map(r=>r.berth);
+        const sail=sailTo(state,unit,options.moves,destinations,getMap(state));
+        if(sail)return sail;
+        if(freight.ready && freight.type==='returnFreight' && !freight.routes.length)return {type:'returnFreight',unit:unit.id};
+      }
       const task=fishingTask(state,unit,getMap(state).byId);
       if(task && (task.type==='landCatch' || unit.charges<2 || !options.improvements.length))
         return {type:task.type,unit:unit.id};
