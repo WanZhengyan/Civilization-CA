@@ -1089,6 +1089,12 @@ async function init({ render, locate, toast: showToast }) {
   installLanguage();
   dialog = document.getElementById('modal');
   soundtrack=installSoundtrack(dialog);
+  dialog.addEventListener('click', e=>{
+    const button=e.target.closest('[data-caravan-order]');
+    if (!button || button.disabled || modal!=='supplies')return;
+    const {caravanOrder:type,origin,destination,item,service,wagon}=button.dataset;
+    doAction({type,origin,destination,item,service,wagon});
+  });
   dialog.addEventListener('change', e => {
     const {name,value} = e.target;
     if (modal==='supplies' && name==='supply-city') {

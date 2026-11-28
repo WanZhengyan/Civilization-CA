@@ -1,4 +1,4 @@
-import {tradeCorridors} from './land-commerce.js';
+import {tradeCorridors,dispatchCaravan,harvestCaravans} from './land-commerce.js';
 import {expeditionOrder,expeditionScout,runAtlasOrder} from './regional-atlas.js';
 import {constructionTurns,councilFestivalIncome,incomeHorizon} from './harvest-forecast.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
@@ -1230,6 +1230,7 @@ function settleSeatEconomy(state,seat) {
   const income=getStats(state,seat),player=state.players[seat];
   bankHarvest(state,seat,map.byId,map.neighbors);
   player.capital+=income.capitalIncome;player.influence+=income.influenceIncome;
+  harvestCaravans(state,seat);
   const borders = getCityExpansions(state,seat);
   for (const city of state.cities) if (city.seat===seat) {
     const parcel=advanceCityBorder(state,city,borders.get(city.id));
@@ -1618,6 +1619,8 @@ function resolveOrder(source,seat,action) {
   } else if (action.type==='delegation') {
     sendDelegation(next,seat,action.target,getVisibleTiles(next,seat));
     record(next,seat,'delegation','Diplomatic delegation dispatched.',null,{target:action.target});
+  } else if (action.type==='dispatchCaravan') {
+    dispatchCaravan(next,seat,action,getLandRoutes(next,seat,action.origin));
   } else if (action.type==='shipment') {
     shipGoods(next,seat,action);
     record(next,seat,'shipment','Resource shipment dispatched.');

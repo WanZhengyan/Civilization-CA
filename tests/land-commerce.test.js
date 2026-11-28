@@ -27,3 +27,15 @@ test('a land corridor uses only charted land and is reciprocal for its two owner
   assert.equal(route.turns,Math.ceil(route.steps/3));
   assert.deepEqual(getLandRoutes(campaignView(state,0),1,home),[]);
 });
+test('food is reserved at departure and paid only once when the wagon arrives',()=>{
+  const {state,home,dest}=market(),route=getLandRoutes(state,0,home)[0];
+  const order={type:'dispatchCaravan',origin:home,destination:dest,item:'provisions'};
+  let next=applyAction(state,0,order);
+  assert.equal(next.cities[0].food,state.cities[0].food-4);
+  assert.equal(state.players[0].caravans,undefined);
+  assert.throws(()=>applyAction(next,0,order),/wagon/);
+  for(let i=0;i<route.turns;i++)next=applyAction(next,0,{type:'end'});
+  assert.equal(next.players[0].caravans.length,0);
+  assert.equal(next.players[0].tradeReceipt.destination,dest);
+  assert.equal(next.players[0].tradeReceipt.paid,2+Math.floor(route.steps/2));
+});
