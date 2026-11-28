@@ -1,5 +1,6 @@
 import {getCitizenWorkforce,getPopulationReport,getMap,getWorkingCity} from './rules.js';
 import {canSeeDeposits,connectedDeposit,RESOURCES} from './resources.js';
+import {NATURAL_WONDERS} from './natural-wonders.js';
 import {local,label,section,table,action,signed} from './city-profile-format.js';
 
 export function nextHire(state,city){
@@ -20,7 +21,7 @@ export function landPage(state,city){
     [[label(job.name),signed(gain('food')-2),signed(gain('production')),signed(gain('science'))]]),
     housingLimited?local('Housing is full. The job becomes available after housing and population increase.','住房已满。增加住房和人口后，居民可在此工作。'):
       local('Uses the current focus and border. Net food includes the new resident’s two-food consumption.','按当前分配方针和边界推算。粮食净变化已扣除新居民消耗的 2 粮食。'));
-  return supplyPage(state,city)+outlook+section(local('Unworked district survey','未工作的地块'),vacant.length?table(
+  return supplyPage(state,city)+landmarkPage(current)+outlook+section(local('Unworked district survey','未工作的地块'),vacant.length?table(
     [local('District','地块'),local('Food','粮食'),local('Production','生产力'),local('Science','科研')],
     vacant.map(j=>[label(j.name),...j.output]))+'<div class="city-study-actions">'+vacant.map(j=>
       action('tile',local('Locate ','定位')+label(j.name),j.id)).join('')+'</div>':
@@ -48,4 +49,27 @@ function supplyPage(state,city){
     local('Each connected facility adds one unit to the shared stockpile per harvest. A damaged facility resumes deliveries after repair.',
       '每个连通设施每次收获向文明库存添加一单位物资。受损设施修复后恢复供应。'))+
     action('supplies',local('Review goods and shipments','查看库存与货运'));
+}
+
+export function landmarkJobs(workforce){
+  const worked=new Set(workforce.workedTiles.map(job=>job.id));
+  return workforce.eligibleTiles.filter(job=>job.naturalWonders?.length).map(job=>{
+    const features=job.naturalWonders.map(key=>NATURAL_WONDERS[key]);
+    const premium=[0,1,2].map(k=>features.reduce((total,f)=>total+f.bonus[k],0));
+    return {job,worked:worked.has(job.id),features,premium};
+  });
+}
+
+function landmarkPage(workforce){
+  const jobs=landmarkJobs(workforce);
+  return section(local('Landmark employment','自然奇观周边就业'),jobs.length?table(
+    [local('District','地块'),local('Neighboring landmark','相邻奇观'),local('Employment','劳动力'),
+      local('Extra food','额外粮食'),local('Extra production','额外生产力'),local('Extra science','额外科研')],
+    jobs.map(j=>[label(j.job.name),j.features.map(f=>label(f.name)).join(' / '),
+      j.worked?local('Working','已工作'):local('Vacant','闲置'),...j.premium]))+
+    '<div class="city-study-actions">'+jobs.map(j=>action('tile',local('Locate ','定位')+label(j.job.name),j.job.id)).join('')+
+    action('citizens',local('Compare labor assignments','比较劳动力分配'))+'</div>':
+    '<p>'+local('No eligible district currently borders an identified natural wonder.','当前没有可工作地块与已发现的自然奇观相邻。')+'</p>',
+    local('Each worked district collects every adjacent identified landmark bonus. Vacant districts yield this premium only while employed.',
+      '已工作的地块会收集所有已发现相邻奇观的加成。闲置地块需分配劳动力才能获得加成。'));
 }

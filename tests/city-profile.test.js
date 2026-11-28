@@ -67,3 +67,14 @@ test('supply catchments distinguish active and damaged deposits and exclude fore
   state.board[id].owner=1;
   assert.ok(!cityDeposits(state,c).some(r=>r.id===id));
 });
+import {landmarkJobs} from '../docs/city-profile-land.js';
+import {assignWorkforce} from '../docs/workforce.js';
+test('landmark employment separates unrealized income and stacks actual adjacent landmark bonuses',()=>{
+  const workforce=assignWorkforce({population:1},[
+    {id:'a',name:'A',terrain:'plains',naturalWonders:['laBrea','topanga']},
+    {id:'b',name:'B',terrain:'plains',naturalWonders:['laBrea']}]);
+  const [a,b]=landmarkJobs(workforce);
+  assert.deepEqual(a.premium,[0,1,3]);
+  assert.equal(a.worked,true);assert.equal(b.worked,false);
+  assert.deepEqual(workforce.yields,{food:3,production:1,science:3});
+});
