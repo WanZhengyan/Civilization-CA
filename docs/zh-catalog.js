@@ -2,9 +2,11 @@ import {maritimeCopy} from './maritime-guide.js';
 // The English UI copy is the catalog key. The rules and network protocol keep
 // their canonical IDs in both languages.
 import {CIVILIZATIONS} from './civilizations.js';
+import {positionTranslations} from './field-position.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
+section(positionTranslations);
 section(`
 Applied Mechanics|应用力学
 Each workshop supplies 1 additional production per turn.|每座工坊每回合额外提供 1 点产能。

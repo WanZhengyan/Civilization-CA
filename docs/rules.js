@@ -35,6 +35,7 @@ import {campaignChart, largeCampaignChart, neighborCoordinates, REGIONAL_SHAPE} 
 import {LOS_ANGELES, regionalMaps, MAP_SCALES, validMapId, validMapSize} from './maps.js';
 export {CAMPAIGN_MAPS, validMapId, validMapSize} from './maps.js';
 import {prepareBattle} from './battle-reports.js';
+import {fieldPosition,holdGround} from './field-position.js';
 import {attackMode} from './attack-mode.js';
 import {barbarianRound,seedCamps,wildAt,wildForecast,resolveWildAttack} from "./barbarians.js";
 
@@ -1232,7 +1233,9 @@ function calculateCombatPreview(state,unitId,target) {
   const attackBonus = (knows(state, unit.seat, 'tactics') ? 7 : 0)
     + (UNIT_TYPES[unit.type].range > 1 && knows(state, unit.seat, 'ballistics') ? 5 : 0);
   const role=matchup(unit,defender,town,state,hexDistance,UNIT_TYPES);
-  let damage = Math.min(opponent.hp, Math.max(1, strength + role.damage + attackBonus - terrainDefense - (walls ? 7 : 0)));
+  const position=defender?.fortified && fieldPosition(state,defender,UNIT_TYPES[defender.type],terrain);
+  if (position) role.notes.push(position.benefit);
+  let damage = Math.min(opponent.hp, Math.max(1, strength + role.damage + attackBonus - terrainDefense - (position?.guard || 0) - (walls ? 7 : 0)));
   let retaliation = 0;
   if (melee) {
     if (defender) {
@@ -1322,7 +1325,11 @@ function unitOrder(state,seat,action) {
   if (!unit || unit.seat!==seat) throw new Error('Choose one of your units.');
   if (!unit.moves) throw new Error('This unit has spent its movement for the turn.');
   const id=unit.tile, label=UNIT_TYPES[unit.type].name;
-  if (action.type==='move') {
+  if (unit.fortified && action.type!=='fortify') delete unit.fortified;
+  if (action.type==='fortify') {
+    holdGround(state,unit,UNIT_TYPES[unit.type],getMap(state).byId[id].terrain);
+    record(state,seat,'fortify','The unit prepared a defensive position.',id,{unit:unit.id});
+  } else if (action.type==='move') {
     const path=getMovePath(state,unit.id,action.tile);
     if (!path.length) throw new Error('Choose an unoccupied tile within movement range.');
     unit.moves-=path.slice(1).reduce((sum,k,i)=>sum+routeStepCost(state,unit,path[i],k),0);
@@ -1447,6 +1454,8 @@ function resolveOrder(source,seat,action) {
       advanceProduction(city);
       record(next,seat,'produce',city.name+' started production of '+option.label+'.',city.tile,{city:city.id,item:option.item});
     }
+  } else if (action.type==='fortify') {
+    unitOrder(next,seat,action);
   } else if (['move','attack','found','improve','upgrade','survey','recover','haulFish','landCatch'].includes(action.type)) {
     unitOrder(next,seat,action);
   } else {
@@ -1859,6 +1868,13 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   }
   if(combinedAttack)return combinedAttack;
   if(assault.advance)return assault.advance;
+  if (state.campaignVariety===1 && difficulty!=='easy') {
+    const guard=available.find(unit=>!unit.fortified && unit.moves===unit.maxMoves &&
+      fieldPosition(state,unit,UNIT_TYPES[unit.type],getMap(state).byId[unit.tile].terrain) &&
+      state.cities.some(city=>city.seat===seat && city.tile===unit.tile) &&
+      state.units.some(other=>!sameTeam(state,seat,other.seat) && UNIT_TYPES[other.type].strength && hexDistance(other.tile,unit.tile)<=2));
+    if (guard) return {type:'fortify',unit:guard.id};
+  }
   // A fully trained unit waits in its city when no legal deployment space
   // remains. Bank that work if this government can launch from the same city.
   if (state.researchPace>=1 && allowsScience(state) && player.technologies.includes('rocketry')) {

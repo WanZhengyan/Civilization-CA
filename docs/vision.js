@@ -167,7 +167,7 @@ export function projectForSeat(state,seat) {
   const cities=state.cities.filter(c=>c.seat===seat || visible.has(c.tile)).map(c=>c.seat===seat ? c :
     {...publicShape(c,['id','name','seat','tile','hp','maxHp','population','originalSeat']),buildings:[]});
   const units=state.units.filter(u=>u.seat===seat || visible.has(u.tile)).map(u=>u.seat===seat ? u :
-    publicShape(u,['id','seat','type','tile','hp','maxHp','maxMoves']));
+    publicShape(u,['id','seat','type','tile','hp','maxHp','maxMoves','fortified']));
   // A founder remembers their first capital even after losing sight of it.
   // Campaigns predating the settler opening began with a capital for every seat.
   const hasFoundedCapital=state.opening!=='settlers' || state.cities.some(city=>city.originalSeat===seat);

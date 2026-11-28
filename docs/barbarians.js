@@ -1,3 +1,4 @@
+import {fieldPosition} from './field-position.js';
 import {attackMode} from './attack-mode.js';
 import {prepareBattle} from './battle-reports.js';
 import {sameTeam} from './teams.js';
@@ -156,7 +157,8 @@ function raidTurn(state,party,town,defs,map,neighbors,distance,record) {
   }
   const foe=state.units.find(u=>defs[u.type]?.strength>0 && defs[u.type]?.domain!=='sea' && sameTeam(state,u.seat,town.seat) && distance(u.tile,party.tile)===1);
   if (foe) {
-    const damage=Math.min(foe.hp,14);
+    const position=foe.fortified && fieldPosition(state,foe,defs[foe.type],map.byId[foe.tile].terrain);
+    const damage=Math.min(foe.hp,14-(position?.guard || 0));
     const retaliation=Math.min(party.hp,Math.max(4,Math.round(defs[foe.type].strength*.4)));
     const garrison=state.cities.find(c=>c.tile===foe.tile && c.seat===foe.seat);
     const recordResult=prepareBattle(state,party,foe,{
