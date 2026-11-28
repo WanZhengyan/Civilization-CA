@@ -1,3 +1,5 @@
+import {getCityExpansions,getBorderCharter} from './rules.js';
+import {borderParcels} from './city-expansion.js';
 import {RESOURCES,connectedDeposit,serviceCity,canSeeDeposits} from './resources.js';
 import {IMPROVEMENTS} from './rules.js';
 import {getCitizenWorkforce} from './rules.js';
@@ -90,6 +92,27 @@ const lenses=[
       else if(!cell.pillaged && cell.improvement!==deposit.improvement)rows.set(id,reading(1,'Improve '+name+' with '+improvement+'.',zh+'需要'+translate(improvement,'zh-CN')+'。',3));
       else rows.set(id,reading(3,cell.pillaged?'Pillaged. Repair the site to resume production.':'The site needs a city connection.',
         cell.pillaged?'遭劫掠。修复后才能恢复产出。':'该地块需要城市连接。',4));
+    }
+    return rows;
+  }),
+  definition('borders','City frontiers','城市边界','Follow natural expansion from the city to its nominated parcel. Compare the wait with an immediate influence charter.','找到各城将自然并入的地块，对比等待时间和立即签发特许状的影响力成本。',[
+    ['City','城市'],['Next parcel','下个地块'],['Charter available','可签特许状'],['Later candidate','后续候选']
+  ],({state,seat,map,own,visible})=>{
+    const rows=new Map(),reports=getCityExpansions(state,seat);
+    for(const city of own){
+      for(const candidate of borderParcels(state,city,map,visible)){
+        if(!rows.has(candidate.id))rows.set(candidate.id,reading(3,'Within the growth frontier of '+city.name+'. Nomination can change as ownership changes.',
+          '位于'+translate(city.name,'zh-CN')+'的扩张候选范围。归属变化会影响下次提名。'));
+      }
+    }
+    for(const city of own){
+      const report=reports.get(city.id),quote=getBorderCharter(state,seat,city.id,reports);
+      if(!report)continue;
+      rows.set(city.tile,reading(0,city.name+' · '+report.progress+'/'+report.required+' border progress, +'+report.rate+' per turn.',
+        translate(city.name,'zh-CN')+' · 边界进度 '+report.progress+'/'+report.required+'，每回合 +'+report.rate+'。',1));
+      if(!report.tile)continue;
+      rows.set(report.tile,reading(quote.enabled?2:1,city.name+' · joins in '+report.turns+' turns. Charter for '+quote.cost+' influence. '+quote.reason,
+        translate(city.name,'zh-CN')+' · '+report.turns+' 回合后并入。特许状消耗 '+quote.cost+' 影响力。'+translate(quote.reason,'zh-CN'),4));
     }
     return rows;
   }),

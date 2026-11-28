@@ -48,3 +48,12 @@ test('supply map hides unsurveyed resources and names the matching site improvem
   assert.match(surveyLayer(s,0,'supply').get(id).en,/1 good/);
   assert.equal(surveyLayer(campaignView(fresh(),0),0,'supply').size,0);
 });
+
+test('city frontier marks the authoritative next annexation and quotes influence and wait',async()=>{
+  const {getCityExpansions,getBorderCharter}=await import('../docs/rules.js'),s=campaignView(capital(),0),c=s.cities[0];
+  const report=getCityExpansions(s,0).get(c.id),quote=getBorderCharter(s,0,c.id);
+  assert.ok(report.tile);
+  const row=surveyLayer(s,0,'borders').get(report.tile);
+  assert.equal(row.band,quote.enabled?2:1);assert.ok(row.en.includes(report.turns+' turns'));
+  assert.ok(row.en.includes(quote.cost+' influence'));
+});
