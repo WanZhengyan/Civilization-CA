@@ -117,3 +117,16 @@ test('the city journal includes its founding and purchase receipt without exposi
   const html=cityProfilePage(state,0,c.id,'history');
   assert.match(html,/12 gold spent/);assert.match(html,/&lt;receipt&gt;/);assert.doesNotMatch(html,/secret rival|another city/);
 });
+import {cityComparison} from '../docs/city-profile-comparison.js';
+test('city comparisons use the selected baseline and exclude rivals, including from selection commands',()=>{
+  const state=capital(),c=state.cities[0];
+  const second={...c,id:'other',name:'Another <city>',buildings:['workshop'],population:2};
+  const enemy={...second,id:'enemy',seat:1,name:'Hidden camp'};
+  state.cities.push(second,enemy);
+  const report=cityComparison(state,c);
+  assert.equal(report.length,2);assert.equal(report[0].productionDelta,0);
+  assert.equal(report[1].productionDelta,-cityComparison(state,second)[1].productionDelta);
+  const html=cityProfilePage(state,0,c.id,'comparison');
+  assert.match(html,/data-study-command="compare-city" data-study-value="other"/);
+  assert.match(html,/Another &lt;city&gt;/);assert.doesNotMatch(html,/Hidden camp|enemy/);
+});

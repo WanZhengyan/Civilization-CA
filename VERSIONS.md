@@ -85,3 +85,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.75 | Compare full festival budgets and remaining receipts before confirming a city celebration |
 | 7.0.76 | Follow permanent charter investments through prerequisite planning, signing and active returns |
 | 7.0.77 | Reconstruct each city’s dated municipal decisions, purchase receipts and acquired districts |
+| 7.0.78 | Benchmark cities against a selectable hometown and switch between personal city profiles |

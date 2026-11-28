@@ -1,3 +1,4 @@
+import {comparisonPage} from './city-profile-comparison.js';
 import {historyPage} from './city-profile-records.js';
 import {civicPage} from './city-profile-civic.js';
 import {worksPage} from './city-profile-works.js';
@@ -23,6 +24,7 @@ const pages={overview:{name:()=>local('Overview','总览'),render:overview},
   people:{name:()=>local('Workforce','劳动力'),render:workforcePage},
   growth:{name:()=>local('Food and housing','粮食与住房'),render:growthPage},
   land:{name:()=>local('Hinterland','周边土地'),render:landPage},
+  comparison:{name:()=>local('City comparison','城市对照'),render:comparisonPage},
   history:{name:()=>local('Chronicle','编年史'),render:historyPage},
   civic:{name:()=>local('City government','城市政务'),render:civicPage},
   works:{name:()=>local('Construction','建设'),render:worksPage}};
@@ -70,6 +72,11 @@ export function mountCityProfile(getView,inspect){
         const button=e.target.closest('[data-study-command]');if(!button)return;
         const {state,seat}=getView(),city=state.cities.find(c=>c.id===selected && c.seat===seat);
         if(!city || state.intel && state.intel.seat!==seat)return;
+        if(button.dataset.studyCommand==='compare-city'){
+          const next=state.cities.find(c=>c.id===button.dataset.studyValue && c.seat===seat);
+          if(next){selected=next.id;page='comparison';paint();dialog.querySelector('[data-study-page]').focus();}
+          return;
+        }
         dialog.close();inspect(city,button.dataset.studyCommand,button.dataset.studyValue);
       };
       dialog.onchange=e=>{if(e.target.hasAttribute('data-study-page') && Object.hasOwn(pages,e.target.value)){
