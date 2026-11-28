@@ -2,7 +2,7 @@ import {councilCourse} from "./council-path.js";
 import {housingCapacity} from "./population.js";
 import {scoutingRoutes} from "./scout-routes.js";
 // Advisors read only the seat's projected chart. They never issue orders.
-import {getResearchOptions,BUILDINGS,getMap,getPopulationReport,getCitizenWorkforce,getCityYield,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
+import {getCivicOptions,getResearchOptions,BUILDINGS,getMap,getPopulationReport,getCitizenWorkforce,getCityYield,getProductionOptions,getSettlementAssessment,getUnitOptions,getRouteDetail,RESOURCES,IMPROVEMENTS} from './rules.js';
 import {roomSeatTurn} from './room-turn.js';
 import {translate} from './i18n.js';
 
@@ -145,7 +145,30 @@ function scienceDesk({state,seat,cities,L,t,add}){
     79,{kind:'research',item:BUILDINGS[item].tech});
 }
 
-const desks=[scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
+function civicDesk({state,seat,cities,L,t,name,add}){
+  if(!cities.length || state.players[seat].civic)return;
+  const choices=getCivicOptions(state,seat),balance=state.players[seat].culture||0;
+  const offers=[
+    {goal:'normalSchools',eligible:cities.filter(c=>c.population>=3),gain:2,unit:L('science','科研')},
+    {goal:'harborCommission',eligible:cities.filter(c=>c.buildings.includes('harbor')),gain:3,unit:L('gold','金币')},
+    {goal:'publicWorks',eligible:cities,gain:1,unit:L('production','生产力')}
+  ].flatMap(o=>{
+    const route=councilCourse(choices,o.goal,balance);
+    const first=route?.steps.find(s=>!s.completed);
+    if(!first?.enabled || !o.eligible.length)return [];
+    const total=o.gain*o.eligible.length;
+    return [{...o,route,first,total,ratio:total/Math.max(1,route.remaining)}];
+  }).sort((a,b)=>b.ratio-a.ratio || b.total-a.total);
+  const choice=offers[0];if(!choice)return;
+  const {goal,eligible,route,first,total,unit}=choice;
+  const list=eligible.map(name).join(L(', ','、'));
+  add('civic',L('Debate ','议定市政 · ')+t(choices.find(o=>o.item===goal).label),
+    L('First project: '+t(first.label)+'. After completing the route, '+list+' together gain '+total+' '+unit+' per turn at current city sizes and facilities. The route still needs '+route.remaining+' culture.',
+      '首项议题为'+t(first.label)+'。按当前城市规模和设施，完成路线后，'+list+'合计每回合新增 '+total+' '+unit+'。路线还需 '+route.remaining+' 文化点。'),
+    78,{kind:'civics',item:goal});
+}
+
+const desks=[civicDesk,scienceDesk,treasuryDesk,industryDesk,housingDesk,improvementsDesk,explorationDesk,settlementDesk,foodDesk];
 export function advisorReport(state,seat,language='en'){
   if(!state?.players?.[seat] || state.intel?.seat!==seat || state.phase!=='playing' || state.players[seat].eliminated)return [];
   const L=(en,zh)=>language==='zh-CN'?zh:en;

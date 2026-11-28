@@ -23,3 +23,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.13 | Calculate the local construction payback of legal industrial investments |
 | 7.0.14 | Show the live treasury cost per turn saved for each affordable rush delivery |
 | 7.0.15 | Rank building unlocks by unfinished research and cities able to use the investment |
+| 7.0.16 | Compare civic paths by total new income across eligible settlements |

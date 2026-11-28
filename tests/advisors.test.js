@@ -67,3 +67,10 @@ test('technology planning prices the complete route to an unbuilt facility after
   const advice=read(s).find(r=>r.desk==='science');assert.ok(advice);assert.match(advice.detail,/after savings/);
   s.players[0].research=advice.link.item;assert.ok(!read(s).some(r=>r.desk==='science'));
 });
+
+test('civic proposals count only cities that meet each policy’s requirements',()=>{
+  const s=capital(),p=s.players[0];p.civics=['publicWorks','charter'];
+  assert.ok(!read(s).some(r=>r.desk==='civic'));s.cities[0].population=3;
+  const school=read(s).find(r=>r.desk==='civic');assert.equal(school.link.item,'normalSchools');assert.match(school.detail,/gain 2 science/);
+  s.cities[0].population=1;s.cities[0].buildings.push('harbor');assert.equal(read(s).find(r=>r.desk==='civic').link.item,'harborCommission');
+});
