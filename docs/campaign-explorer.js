@@ -1,6 +1,6 @@
 import {RESOURCES} from './resources.js';
 import {WONDERS} from './wonders.js';
-import {getUnitOptions,getSettlementAssessment,IMPROVEMENTS,getMap,TERRAIN_NAMES} from './rules.js';
+import {getUnitOptions,getSettlementAssessment,IMPROVEMENTS,getActions,getMap,TERRAIN_NAMES} from './rules.js';
 import {getLanguage,translate} from './i18n.js';
 
 const L=(en,zh)=>getLanguage()==='zh-CN'?zh:en;
@@ -10,6 +10,7 @@ const modes={
   places:['Charted places','已探明地点'],
   deposits:['Surveyed deposits','已勘测资源'],
   founding:['Settlement survey','建城选址'],
+  borders:['Border proposals','边界提案'],
 };
 
 function describe(row,info){return {...row,info,search:row.search+' '+info};}
@@ -50,6 +51,12 @@ export function explorerRows(view,mode='places'){
     }).sort((a,b)=>Number(candidates.get(b.id).canFoundThisTurn)-Number(candidates.get(a.id).canFoundThisTurn)||
       candidates.get(a.id).moveCost-candidates.get(b.id).moveCost);
   }
+  if(mode==='borders')return rows.flatMap(row=>{
+    if(!row.visible || !map.neighbors(row.id).some(id=>state.board[id].owner===seat))return [];
+    return getActions(state,seat,row.id).map(action=>describe(row,tr(action.label)+' · '+action.cost.capital+
+      L(' gold',' 金币')+' · '+action.cost.influence+L(' influence',' 影响力')+' · '+
+      (action.enabled?L('Ready to order','可下达指令'):tr(action.reason))));
+  });
   return rows;
 }
 

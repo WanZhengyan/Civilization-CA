@@ -27,3 +27,11 @@ test('settlement comparisons use a real settler and disappear once it founds a c
  assert.ok(sites.every(r=>v.state.intel.explored.includes(r.id)));
  assert.equal(explorerRows(view(capital()),'founding').length,0);
 });
+
+test('the frontier index lists only visible bordering land with the current authority price',()=>{
+ const s=capital(),options=explorerRows(view(s),'borders');
+ assert.ok(options.length);
+ assert.match(options[0].info,/4 gold/);
+ const chosen=options.find(r=>r.info.startsWith('Claim'));
+ assert.equal(applyAction(s,0,{type:'claim',tile:chosen.id}).board[chosen.id].owner,0);
+});

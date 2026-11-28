@@ -11,3 +11,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.1 | Search the campaign's charted places and jump to a named hex from the map |
 | 7.0.2 | Find surveyed resource deposits and the exact works needed to use them |
 | 7.0.3 | Compare reachable founding sites by timing and movement on the actual map |
+| 7.0.4 | Price visible border claims and contests and locate the selected proposal |
