@@ -1117,7 +1117,7 @@ function produceCityTurn(state,city) {
     record(state,city.seat,'population',city.name+verb+city.population+' residents.',city.tile,{city:city.id});
   }
   const queue=city.queue;
-  if (!queue) return;
+  if (!queue || settlerPopulationReason(city)) return;
   queue.progress=Math.min(queue.required,queue.progress+yieldNow.production);
   if (queue.progress>=queue.required) completeCityProject(state,city);
 }

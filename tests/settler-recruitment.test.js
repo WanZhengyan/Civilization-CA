@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,applyAction,getProductionOptions,campaignView,migrateGame} from '../docs/rules.js';
+import {createGame,applyAction,getProductionOptions,campaignView,migrateGame,getMap} from '../docs/rules.js';
 import {revisionOf} from '../docs/works.js';
 
 function capital() {
@@ -46,4 +46,48 @@ test('buying a settler deducts one resident only on successful deployment and a 
   assert.throws(()=>applyAction(bought,0,payload),/Production changed/);
   assert.equal(option(bought).enabled,false);
   assert.equal(city.population,3);
+});
+
+test('a legacy project keeps its invested production while underpopulated and resumes on the harvest that restores three residents',()=>{
+  const state=capital(),city=state.cities[0];
+  city.population=1;
+  city.queue={item:'settler',progress:13,required:14};
+  const end=s=>applyAction(s,0,{type:'end'});
+  const paused=end(migrateGame(JSON.parse(JSON.stringify(state))));
+  assert.deepEqual(paused.cities[0].queue,city.queue);
+  assert.equal(paused.units.length,0);
+  const changed=order(paused,'switchProduction','scout');
+  assert.equal(changed.cities[0].parkedProduction.settler,13);
+  assert.equal(changed.cities[0].population,paused.cities[0].population);
+  paused.cities[0].population=2;
+  paused.cities[0].food=10;
+  const restored=end(paused);
+  assert.equal(restored.units.filter(u=>u.type==='settler').length,1);
+  assert.equal(restored.cities[0].queue,null);
+  assert.equal(restored.cities[0].population,2);
+});
+
+test('starvation or a blocked ring of tiles never consumes a resident before deployment',()=>{
+  const state=capital(),city=state.cities[0];
+  city.population=3;
+  city.focus='industry';
+  city.food=0;
+  city.queue={item:'settler',progress:14,required:14};
+  const hungry=applyAction(state,0,{type:'end'});
+  assert.equal(hungry.cities[0].population,2);
+  assert.deepEqual(hungry.cities[0].queue,city.queue);
+  assert.equal(hungry.units.length,0);
+
+  city.focus='balanced';
+  state.units=[city.tile,...getMap(state).neighbors(city.tile)].map((tile,i)=>({
+    id:'blocker-'+i,seat:0,type:'melee',tile,maxHp:100,hp:100,moves:0,maxMoves:2
+  }));
+  let blocked=applyAction(state,0,{type:'end'});
+  assert.equal(blocked.cities[0].population,3);
+  assert.deepEqual(blocked.cities[0].queue,city.queue);
+  blocked.units=blocked.units.filter(u=>u.tile!==city.tile);
+  const deployed=applyAction(blocked,0,{type:'end'});
+  assert.equal(deployed.cities[0].population,2);
+  assert.equal(deployed.units.filter(u=>u.type==='settler').length,1);
+  assert.equal(deployed.cities[0].queue,null);
 });
