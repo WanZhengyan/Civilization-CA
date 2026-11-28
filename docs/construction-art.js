@@ -1,7 +1,14 @@
+import {SCENIC_WORKS} from './scenic-works.js';
+
 // Fixed screen-weight outlines separate construction sites from movement paths.
 export function paintWorkSurvey(g,model,scale,hexPath,pos) {
   if (!model.workSites?.length) return;
   g.save();
+  const landmark=model.byId.get(model.workLandmark);
+  if (landmark && (!model.fog || model.fog.explored.has(landmark.id))) {
+    g.strokeStyle='#efc875';g.lineWidth=2.4/scale;g.setLineDash([4/scale,3/scale]);
+    g.stroke(hexPath(landmark.q,landmark.r));g.setLineDash([]);
+  }
   for(const id of model.workSites) {
     const tile=model.byId.get(id);
     if (!tile || (model.fog && !model.fog.visible.has(id))) continue;
@@ -33,7 +40,45 @@ export function drawCivicBuilding(g,item,x,y,color,siteScale=1) {
     g.strokeStyle=color;g.lineWidth=width;g.stroke();
   };
   polygon([[-11,4],[-2,8],[12,3],[2,-2]],'#79735c');
-  if(item==='monument'){block(0,2,6,3,'#dbd1a7');polygon([[-2,-1],[1,-15],[3,-1],[1,1]],'#e2cda4');}
+  if(SCENIC_WORKS[item]){
+    const boardwalk=()=> {
+      polygon([[-10,2],[-3,5],[9,-1],[4,-3]],'#c8a471');
+      stroke([[-8,0],[-8,-3],[1,0],[8,-4],[8,-1]],'#765738');
+      stroke([[-2,2],[-2,-1]],'#765738');
+    };
+    const roof=(x,y)=>polygon([[x-7,y],[x,y-5],[x+6,y-1],[x,y+2]],'#6a907e');
+    const signs=(x,y)=>{stroke([[x,y+3],[x,y-2]],'#70583c',1.4);
+      polygon([[x-2,y-5],[x+3,y-4],[x+3,y-1],[x-2,y-2]],'#e4d4a6');};
+    if(item==='ballonaBoardwalk' || item==='muirGroveWalk' || item==='topangaTrail' || item==='missionGorgeTrail'){
+      if(item==='muirGroveWalk'){
+        block(4,-1,2,10,'#9c7052','#ad8057');polygon([[0,-7],[4,-17],[8,-8],[4,-6]],'#4d7360');
+      } else if(item==='missionGorgeTrail'){
+        polygon([[1,0],[3,-9],[7,-12],[9,-4],[6,1]],'#b79373');
+        stroke([[3,-3],[7,-7],[8,-6]],'#dfbe95',1.4);
+      } else if(item==='ballonaBoardwalk'){
+        for(const x of [4,7,9])stroke([[x,4],[x-1,-2],[x+1,0]],'#6d8a5b',1.3);
+      }
+      boardwalk();
+      if(item==='topangaTrail')signs(6,-1);
+    } else if(item==='tamLookout' || item==='torreyOverlook'){
+      const h=item==='tamLookout'?8:3;
+      for(const x of [-6,1,7])stroke([[x,3],[x,1-h]],'#765e46',1.7);
+      block(0,1-h,7,2,'#c7ae81');stroke([[-5,-h],[-5,-h-5],[5,-h-5],[5,-h]],'#7d7154');
+      if(item==='tamLookout')roof(0,-h-5);else signs(5,3);
+    } else {
+      block(0,2,7,5,'#b8ab85','#c7bda1','#958c71');roof(0,-5);
+      if(item==='laBreaFieldLab'){
+        polygon([[-10,3],[-7,1],[-2,3],[-6,5]],'#605944');
+        stroke([[-8,3],[-5,3]],'#eadfc1',1.4);
+      } else if(item==='marshHide'){
+        stroke([[-6,-2],[0,0],[5,-2]],'#333f38',1.8);
+        stroke([[6,2],[8,-1],[10,-1]],'#a3b98a');
+      } else {
+        stroke([[4,-1],[6,-9],[9,-10]],'#526b70',1.5);
+        polygon([[-7,3],[-4,2],[-1,3],[-4,5]],'#90b6b1');
+      }
+    }
+  } else if(item==='monument'){block(0,2,6,3,'#dbd1a7');polygon([[-2,-1],[1,-15],[3,-1],[1,1]],'#e2cda4');}
   else if(item==='walls'){block(-4,1,4,7,'#b5a286');block(4,1,4,7,'#b5a286');block(0,1,4,4,'#af9e86');}
   else if(item==='workshop'){
     block(0,1,8,5,'#ab654a','#c98768','#946b56');block(-4,-1,1.8,12,'#925b48','#a16e54');

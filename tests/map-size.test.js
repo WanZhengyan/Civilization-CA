@@ -42,14 +42,14 @@ test('large charts retain the regional footprint, landmark locations and navigab
   }
 });
 
-test('large-game seeds yield separated settler starts, private sight, nearby resources and two regional wonders',()=>{
+test('large-game seeds yield separated settler starts, private sight, nearby resources and three regional wonders',()=>{
   for(const region of regions) for(const seed of [0,9,35,417007]) {
     const players=['A','B','C','D'],options={seed,mapSize:'large'},game=createGame(players,region,options),map=getMap(game);
     assert.deepEqual(createGame(players,region,options),game);
     assert.deepEqual(game.units.map(u=>u.type),Array(4).fill('settler'));
     assert.equal(game.cities.length,0);
     assert.equal(Object.keys(game.board).length,map.tiles.length);
-    assert.equal(Object.values(game.board).filter(cell=>cell.naturalWonder).length,2);
+    assert.equal(Object.values(game.board).filter(cell=>cell.naturalWonder).length,3);
     assert.equal(getMap(migrateGame(JSON.parse(JSON.stringify(game)))),map);
     for(const unit of game.units) {
       assert.ok(game.units.every(other=>other===unit || hexDistance(unit.tile,other.tile)>=9));

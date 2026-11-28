@@ -14,14 +14,14 @@
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#15262b">
-  <meta name="description" content="Learn Civilization CA in a guided Los Angeles campaign. Explore a relief map of California, found your capital and play solo or with friends.">
+  <meta name="description" content="Explore three California regions, discover natural wonders and choose where to build trails, boardwalks and research stations. Play solo or with friends.">
   <meta name="civitas-api-origin" content="https://angel-basin-civilization.gifteddream3.chatgpt.site">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Civilization CA | Found your first California city">
-  <meta property="og:description" content="Found a port on the Pacific or head inland for the hills. Play turn-based strategy on maps of Los Angeles, San Francisco Bay and San Diego, solo or with friends.">
+  <meta property="og:title" content="Civilization CA | Build beside California’s natural wonders">
+  <meta property="og:description" content="Choose a site beside Mission Gorge, Muir Woods or the Ballona Wetlands. Each landscape offers a different project and a lasting benefit for your city.">
   <meta property="og:url" content="https://wanzhengyan.github.io/Civilization-CA/">
-  <meta property="og:image" content="https://wanzhengyan.github.io/Civilization-CA/art/technology-tree-v721.webp">
-  <meta property="og:image:alt" content="The technology tree highlighting both prerequisites for Ballistics.">
+  <meta property="og:image" content="https://wanzhengyan.github.io/Civilization-CA/art/scenic-construction-v730.webp">
+  <meta property="og:image:alt" content="Choosing a construction site beside Mission Gorge on the San Diego campaign map.">
   <meta name="twitter:card" content="summary_large_image">
   <title data-zh="Civilization CA｜加州海岸回合制策略游戏">Civilization CA | Turn-Based Strategy on the California Coast</title>
   <link rel="icon" href="./favicon.svg">
@@ -40,7 +40,7 @@
         <a href="#first-turns" data-zh="怎么玩">How to play</a>
         <a href="#regions" data-zh="选地图">Maps</a>
         <a href="./game.html?setup=guide" data-zh="游戏指南">Field guide</a>
-        <a class="version-link" href="https://github.com/WanZhengyan/Civilization-CA/blob/main/CHANGELOG.md" aria-label="Release notes for v7.2.1" data-zh-label="查看 v7.2.1 版本更新">v7.2.1</a>
+        <a class="version-link" href="https://github.com/WanZhengyan/Civilization-CA/blob/main/CHANGELOG.md" aria-label="Release notes for v7.3.0" data-zh-label="查看 v7.3.0 版本更新">v7.3.0</a>
       </nav>
       <div class="language" role="group" aria-label="Language" data-zh-label="语言">
         <button type="button" data-language="en" lang="en" aria-pressed="true">EN</button>
@@ -71,15 +71,28 @@
 
     <section id="first-turns" class="first-turns page-width" aria-labelledby="first-title">
       <div class="lesson-heading">
-        <p class="kicker" data-zh="v7.2.1 实机画面">Gameplay · v7.2.1</p>
-        <h2 id="first-title" data-zh="规划你的开局">Plan your opening</h2>
+        <p class="kicker" data-zh="战役实机指南">Campaign field guide</p>
+        <h2 id="first-title" data-zh="下一步建什么？">What will you build next?</h2>
       </div>
       <fieldset class="screen-switch" hidden>
         <legend class="sr-only" data-zh="选择实机画面">Choose a gameplay screen</legend>
-        <label><input type="radio" name="screen" aria-controls="screen-technology" value="technology" checked><span data-zh="科技树">Technology tree</span></label>
+        <label><input type="radio" name="screen" aria-controls="screen-scenic" value="scenic" checked><span data-zh="奇观选址">Scenic construction</span></label>
+        <label><input type="radio" name="screen" aria-controls="screen-technology" value="technology"><span data-zh="科技树">Technology tree</span></label>
         <label><input type="radio" name="screen" aria-controls="screen-civics" value="civics"><span data-zh="市政树">Civics tree</span></label>
         <label><input type="radio" name="screen" aria-controls="screen-setup" value="setup"><span data-zh="战役设置">Campaign setup</span></label>
       </fieldset>
+      <article id="screen-scenic" class="screen-view" data-screen="scenic">
+        <figure class="game-figure">
+          <a href="./art/scenic-construction-v730.webp" data-zh-href="./art/scenic-construction-v730-zh.webp" aria-label="View the full-size Mission Gorge construction map" data-zh-label="查看米申峡谷工程选址大图">
+            <img src="./art/scenic-construction-v730.webp" data-zh-src="./art/scenic-construction-v730-zh.webp" width="1363" height="936" loading="lazy" alt="The San Diego campaign map shows where the city can build the Mission Gorge Geology Trail beside the gorge" data-zh-alt="圣迭戈战役地图上显示米申峡谷的位置，以及城市可以修建地质步道的相邻地块">
+          </a>
+        </figure>
+        <div class="screen-copy">
+          <h3 data-zh="峡谷旁，哪一格能修步道？">Where can the geology trail go?</h3>
+          <p data-zh="发现米申峡谷并研究「应用力学」后，打开附近城市的生产面板，选择「米申峡谷地质步道」。在亮起的地块中选一格开工。地块须紧邻峡谷、属于己方，并且与市中心相距不超过两格。">Discover Mission Gorge and research Applied Mechanics. Open a nearby city’s production panel and choose Mission Gorge Geology Trail. Pick a highlighted plot to start work. It must be open land you control, next to the gorge and within two hexes of the city center.</p>
+          <a class="map-link" href="./art/scenic-construction-v730.webp" data-zh-href="./art/scenic-construction-v730-zh.webp" data-zh="查看选址地图大图">Enlarge construction map</a>
+        </div>
+      </article>
       <article id="screen-technology" class="screen-view" data-screen="technology">
         <figure class="game-figure">
           <a href="./art/technology-tree-v721.webp" data-zh-href="./art/technology-tree-v721-zh.webp" aria-label="View the full-size technology tree screenshot" data-zh-label="查看科技树实机大图">
@@ -132,7 +145,7 @@
         <div class="atlas-heading">
           <p class="kicker" data-zh="战役地图">Campaign atlas</p>
           <h2 id="atlas-heading" data-zh="选择你的战役地图">Choose your campaign map</h2>
-          <p class="section-intro" data-zh="选好地区后，可为对手设置难度。简单、普通、困难的电脑分别以 1、3、5 座城市开局，你用开拓者选址建都。游戏指南中的加州地名志收录了地图上的真实地点。">Pick a region and set your rivals’ difficulty. Easy, Normal and Hard computers begin with 1, 3 and 5 cities respectively. You choose your capital site with a Settler. Open Field guide → California gazetteer to explore the real places on the map.</p>
+          <p class="section-intro" data-zh="每张地图都有三处真实的加州自然景点。派侦察兵找到一处，再打开「奇观」日志，看看附近城市能建什么、需要先研究哪项科技或市政。">Each map holds three natural wonders drawn from real places in California. Send out a scout, then open the Wonders journal to see what a nearby city can build and which technology or civic it needs.</p>
         </div>
         <fieldset class="region-switch" hidden>
           <legend class="sr-only" data-zh="查看地区">Explore a region</legend>
@@ -141,23 +154,23 @@
           <label><input type="radio" name="region" value="sd"><span data-zh="圣迭戈湾">San Diego Bay</span></label>
         </fieldset>
         <article class="region" data-region="la">
-          <figure><img src="./art/topanga.webp" width="680" height="300" loading="lazy" alt="Painted sandstone slopes of Topanga Canyon" data-zh-alt="托潘加峡谷的砂岩山坡画作"><figcaption data-zh="托潘加峡谷">Topanga Canyon</figcaption></figure>
+          <figure><img src="./art/ballonaWetlands.webp" width="680" height="300" loading="lazy" alt="A white egret wading in a winding tidal channel at Ballona Wetlands" data-zh-alt="巴洛纳湿地的潮沟蜿蜒穿过盐沼，一只白鹭正涉水觅食"><figcaption data-zh="巴洛纳湿地">Ballona Wetlands</figcaption></figure>
           <div class="region-copy"><h3 data-zh="洛杉矶盆地">Los Angeles Basin</h3>
-            <p data-zh="圣莫尼卡山脉绵延于城市以北。沿山脚寻找托潘加峡谷，市民在峡谷旁的地块工作能获得额外的生产力与科研。">The Santa Monica Mountains rise above the basin. Find Topanga Canyon in the foothills and put citizens to work beside it for extra production and science.</p>
+            <p data-zh="沿巴洛纳溪寻找入海处的盐沼。通过「灌溉合作区」后，附近的城市可投入 22 点生产力修建巴洛纳湿地栈道，每回合增加 2 点粮食和 2 点文化。">Follow Ballona Creek to the salt marsh near its mouth. Once you adopt Irrigation Districts, a nearby city can spend 22 production on the Ballona Wetlands Boardwalk and gain 2 food and 2 culture each turn.</p>
             <a class="map-link" href="./game.html?setup=solo&amp;region=la" data-zh="设置洛杉矶战役">Set up Los Angeles</a>
           </div>
         </article>
         <article class="region" data-region="sf">
-          <figure><img src="./art/southBayMarsh.webp" width="680" height="300" loading="lazy" alt="Painted tidal channels in the South Bay Salt Marshes" data-zh-alt="南湾盐沼潮沟画作"><figcaption data-zh="南湾盐沼">South Bay Salt Marshes</figcaption></figure>
+          <figure><img src="./art/muirWoods.webp" width="680" height="300" loading="lazy" alt="Towering redwoods and ferns beside a shaded creek in Muir Woods" data-zh-alt="缪尔红杉林中，高大的红杉与蕨丛环绕林荫下的溪流"><figcaption data-zh="缪尔红杉林">Muir Woods</figcaption></figure>
           <div class="region-copy"><h3 data-zh="旧金山湾">San Francisco Bay</h3>
-            <p data-zh="建造港口横渡海湾，或沿岸向南穿过湿地。若在南湾盐沼旁建城，附近劳作的市民就能带回额外粮食。">Build a port on the bay or follow the shoreline south to its wetlands. Settle near the South Bay Salt Marshes to give neighboring workers extra food.</p>
+            <p data-zh="到旧金山湾以北探索缪尔红杉林。通过「公园保护区」后，附近的城市可投入 27 点生产力修建缪尔红杉林树冠步道，每回合增加 3 点文化和 2 点科研。">Explore the redwood groves north of San Francisco. Adopt Park Conservancies to build the Muir Woods Canopy Walk. It costs 27 production and brings the city 3 culture and 2 science each turn.</p>
             <a class="map-link" href="./game.html?setup=solo&amp;region=sf" data-zh="设置旧金山战役">Set up San Francisco Bay</a>
           </div>
         </article>
         <article class="region" data-region="sd">
-          <figure><img src="./art/torreyPines.webp" width="680" height="300" loading="lazy" alt="Painted coastal cliffs and pines above the Pacific" data-zh-alt="俯瞰太平洋的托里松林与海崖画作"><figcaption data-zh="托里松林">Torrey Pines</figcaption></figure>
+          <figure><img src="./art/missionGorge.webp" width="680" height="300" loading="lazy" alt="The San Diego River winding between sunlit granite outcrops at Mission Gorge" data-zh-alt="米申峡谷中，圣迭戈河从阳光下的花岗岩之间蜿蜒流过"><figcaption data-zh="米申峡谷">Mission Gorge</figcaption></figure>
           <div class="region-copy"><h3 data-zh="圣迭戈湾">San Diego Bay</h3>
-            <p data-zh="沿科罗纳多的狭长海岸建设港区，或向北探索拉霍亚的海崖。托里松林为相邻的工作地块增加粮食与生产力。">Develop the harbor along Coronado or explore the bluffs near La Jolla. Torrey Pines rewards adjacent worked districts with food and production.</p>
+            <p data-zh="沿圣迭戈河向内陆探索米申峡谷。研究「应用力学」后，附近的城市可用 23 点生产力修建米申峡谷地质步道，每回合增加 2 点生产力和 2 点科研。">Follow the San Diego River inland to Mission Gorge. Research Applied Mechanics to unlock the Mission Gorge Geology Trail. The trail costs 23 production and gives the city 2 production and 2 science each turn.</p>
             <a class="map-link" href="./game.html?setup=solo&amp;region=sd" data-zh="设置圣迭戈战役">Set up San Diego Bay</a>
           </div>
         </article>

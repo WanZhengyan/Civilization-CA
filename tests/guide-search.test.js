@@ -63,3 +63,16 @@ test('building searches give the real city cost, prerequisites and benefit in th
   }
   assert.ok(!gameGuideIndex({}).some(t=>t.key==='building-printingHouse'));
 });
+
+test('the bilingual guide finds projects from the player’s discoveries and links to their journal entry',()=>{
+  const state={naturalWonderVersion:2,researchPace:2,board:{'5,5':{naturalWonder:'ballonaWetlands'}},intel:{explored:[]}};
+  assert.ok(!gameGuideIndex(state).some(topic=>topic.key==='scenic-ballonaBoardwalk'));
+  assert.deepEqual(searchGuide(gameGuideIndex(state),'Ballona Wetlands Boardwalk','en'),[]);
+  state.intel.explored.push('5,5');
+  const index=gameGuideIndex(state);
+  for(const [lang,query] of [['en','Ballona Wetlands Boardwalk'],['zh-CN','巴洛纳湿地栈道']]) {
+    const [work]=searchGuide(index,query,lang);
+    assert.equal(work.key,'scenic-ballonaBoardwalk');assert.equal(work.chapter,'universities');
+    assert.equal(work.title,query);
+  }
+});

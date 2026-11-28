@@ -44,7 +44,7 @@ function retainedWorkPage(state,city){
     [local('Project','项目'),local('Invested','已投入'),local('Harvests left','尚需收获次数'),local('Rush price','加速价格'),local('Gold after rush','购买后金币')],
     choices.map(o=>{
       const current=o.item===city.queue?.item;
-      const rush=o.kind!=='project'&&!WONDERS[o.item];
+      const rush=o.kind!=='project'&&!WONDERS[o.item]&&!o.scenicWonder;
       return [label(o.label)+(current?local(' (current)','（当前）'):local(' (paused)','（暂停）')),
         (current?city.queue.progress:o.saved)+' / '+o.required,o.turns??'—',rush?o.gold:'—',o.buyEnabled?treasury+(current?0:city.queue?.grant||0)-o.gold:'—'];
     }))+'<div class="city-study-actions">'+choices.map(o=>(o.enabled?action('work-quote',local('Review resuming ','查看恢复')+label(o.label),o.item):'')+

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGame,getMap,campaignView,applyAction,getActions,getUnitOptions,getSettlementAssessment,getWonderSites,getPortSite,getCityYield,getCitizenWorkforce,getStats,migrateGame} from '../docs/rules.js';
-import {NATURAL_WONDERS,discoveredNaturalWonders} from '../docs/natural-wonders.js';
+import {NATURAL_WONDERS,discoveredNaturalWonders,placeNaturalWonders} from '../docs/natural-wonders.js';
 import {rememberVision} from '../docs/vision.js';
 import {fisheryPort} from '../docs/maritime.js';
 import {getAtlasPlace} from '../docs/atlas.js';
@@ -9,26 +9,28 @@ import {translate} from '../docs/i18n.js';
 
 const sites=s=>Object.entries(s.board).filter(([,cell])=>cell.naturalWonder).map(([tile,cell])=>[tile,cell.naturalWonder]);
 
-test('all six protected landscapes vary locally with the seed and preserve viable, separated openings',()=>{
+test('all nine protected landscapes vary locally with the seed and preserve viable, separated openings',()=>{
   const locations=new Map();
   for(const region of ['la','sf','sd'])for(let seed=0;seed<60;seed++){
     const s=createGame(undefined,region,{seed}),map=getMap(s);
+    const occupied=new Set([...s.cities,...s.units,...s.barbarians.camps,...s.barbarians.parties].map(piece=>piece.tile));
     assert.deepEqual(sites(s),sites(createGame(undefined,region,{seed})));
-    assert.equal(sites(s).length,2);
+    assert.equal(sites(s).length,3);
     for(const [tile,id] of sites(s)){
       const def=NATURAL_WONDERS[id];
       assert.equal(def.region,region);
       assert.equal(map.byId[tile].naturalWonder,undefined);
       assert.equal(s.board[tile].resource,undefined);
       assert.ok(!s.units.some(u=>u.tile===tile) && !s.barbarians.camps.some(c=>c.tile===tile));
-      assert.ok(map.neighbors(tile).some(n=>!['ocean','mountains'].includes(map.byId[n].terrain)));
+      assert.ok(map.neighbors(tile).some(n=>!['ocean','mountains'].includes(map.byId[n].terrain) && !map.byId[n].landmark &&
+        !occupied.has(n) && !s.board[n].naturalWonder && !s.board[n].resource && !s.board[n].fieldStation),id+' needs a construction parcel');
       assert.equal(getAtlasPlace(map.byId[tile],s.board[tile]).name,def.name);
       if(!locations.has(id))locations.set(id,new Set());
       locations.get(id).add(tile);
     }
     for(const u of s.units)assert.ok(map.neighbors(u.tile).some(n=>s.board[n].resource && map.byId[n].terrain!=='ocean'));
   }
-  assert.equal(locations.size,6);
+  assert.equal(locations.size,9);
   for(const locationsOfSite of locations.values())assert.ok(locationsOfSite.size>=2);
 });
 
@@ -123,15 +125,62 @@ test('settlement survey previews only discovered natural-wonder districts and ma
 
 test('older saves keep their geography and both languages explain every discoverable site and effect',()=>{
   const s=createGame(['A','B'],'sf',{seed:70});
+  const older=structuredClone(s);
+  older.naturalWonderVersion=1;
+  delete older.board[sites(older).find(([,id])=>id==='muirWoods')[0]].naturalWonder;
+  const previousSites=sites(older);
+  assert.equal(previousSites.length,2);
+  const retained=migrateGame(JSON.parse(JSON.stringify(older)));
+  assert.deepEqual(sites(retained),previousSites);
+  assert.equal(campaignView(retained,0).naturalWonderVersion,1);
   for(const [tile] of sites(s))delete s.board[tile].naturalWonder;
   delete s.naturalWonderVersion;
   const restored=migrateGame(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(sites(restored),[]);
   assert.equal(campaignView(restored,0).naturalWonderVersion,undefined);
-  assert.equal(campaignView(createGame(['A','B'],'sd',{seed:9}),0).naturalWonderVersion,1);
+  assert.equal(campaignView(createGame(['A','B'],'sd',{seed:9}),0).naturalWonderVersion,2);
   for(const w of Object.values(NATURAL_WONDERS)){
     for(const text of [w.name,w.effect,w.description,'Discovered '+w.name+'.']){
       assert.notEqual(translate(text,'zh-CN'),text);
     }
   }
+});
+
+test('new scenic landmarks stay on local ground across the four chart scales',()=>{
+  const regions={
+    la:{id:'ballonaWetlands',anchors:['5,9','6,9','6,10','7,10'],terrain:['coast','plains']},
+    sf:{id:'muirWoods',anchors:['4,2','3,1','3,0','4,0'],terrain:['forest','hills']},
+    sd:{id:'missionGorge',anchors:['12,2','11,1','12,3','13,3','11,5'],terrain:['hills','forest']}
+  };
+  for(const [region,feature] of Object.entries(regions))for(const size of ['standard','large','grand','epic']){
+    for(const seed of [3,64,72,182]){
+      const state=createGame(['A','B','C','D'],region,{mapSize:size,seed}),map=getMap(state);
+      const localAnchors=map.anchorId?feature.anchors.map(map.anchorId):feature.anchors;
+      const locality=new Set(localAnchors.flatMap(id=>[id,...map.neighbors(id)]));
+      const site=sites(state).find(([,id])=>id===feature.id)?.[0];
+      assert.ok(site && locality.has(site),region+' '+size);
+      assert.ok(feature.terrain.includes(map.byId[site].terrain));
+      assert.ok(!map.byId[site].landmark && !state.units.some(unit=>unit.tile===site));
+      assert.equal(sites(state).length,3);
+      assert.ok(!Object.hasOwn(state.board,'undefined'));
+    }
+  }
+});
+
+test('site placement can skip completely unavailable localities without inventing a board entry',()=>{
+  const state={board:{},units:[],seed:18};
+  const map={id:'sf',byId:{},neighbors:()=>[]};
+  placeNaturalWonders(state,map);
+  assert.deepEqual(state.board,{});
+});
+
+test('a blocked survey center falls back to a local hex and repeated placement preserves the board',()=>{
+  const map={id:'la',byId:{'5,9':{terrain:'coast'},'5,10':{terrain:'plains'},'5,11':{terrain:'coast'}},
+    neighbors:tile=>({'5,9':['5,10'],'5,10':['5,9','5,11'],'5,11':['5,10']}[tile] || [])};
+  const state={board:{'5,9':{},'5,10':{},'5,11':{}},units:[{tile:'5,9'}],seed:18};
+  assert.deepEqual([...placeNaturalWonders(state,map)],['5,10','5,11']);
+  assert.deepEqual(sites(state),[['5,10','ballonaWetlands']]);
+  state.units=[];
+  placeNaturalWonders(state,map);
+  assert.deepEqual(sites(state),[['5,10','ballonaWetlands']]);
 });

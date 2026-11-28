@@ -22,7 +22,7 @@ export function wildAt(state,tile) {
   const wilds=state.barbarians;
   return wilds?.parties.find(p=>p.tile===tile) || wilds?.camps.find(c=>c.tile===tile);
 }
-export function seedCamps(state,map,neighbors,distance) {
+export function seedCamps(state,map,neighbors,distance,protectedHexes) {
   if (state.barbarians) return;
   const result=state.barbarians={camps:[],parties:[],nextPiece:1};
   const starts=state.units.map(u=>u.tile).concat(state.cities.map(c=>c.tile));
@@ -34,7 +34,7 @@ export function seedCamps(state,map,neighbors,distance) {
     const next=[...neighbors(queue[i]),...(map.bridgesByTile?.[queue[i]]||[]).map(link=>link.to)];
     for (const id of next) if (!reachable.has(id) && dry(id)) {reachable.add(id);queue.push(id);}
   }
-  const safe=id=>reachable.has(id) && dry(id) && !state.board[id].naturalWonder && state.board[id].owner==null &&
+  const safe=id=>reachable.has(id) && dry(id) && !protectedHexes?.has(id) && !state.board[id].naturalWonder && state.board[id].owner==null &&
     starts.every(start=>distance(start,id)>=4);
   const rank=id=>randomRank(state.seed,'camp/'+map.id+'/'+id);
   const candidates=map.tiles.map(t=>t.id).filter(safe).sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));

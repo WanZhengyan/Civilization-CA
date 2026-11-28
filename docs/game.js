@@ -7,6 +7,8 @@ import {captureRoomOrder,isComputerActing,recoveryMessage,roomSeatTurn,teamMembe
 import {DEFAULT_MAP_SIZE,validNewMapSize} from './maps.js';
 import {advancementGuide,recoveryGuide} from './unit-service-copy.js';
 import {naturalWonderArt} from './natural-wonder-art.js';
+import {SCENIC_WORKS} from './scenic-works.js';
+import {scenicProjectFor,scenicProjectDetails,scenicGate,scenicSiteHint} from './scenic-project-ui.js';
 import {discoveredNaturalWonders} from './natural-wonders.js';
 import {invitationCode, launchDestination} from './launch.js';
 import {buildGuideIndex, guideSearchBox, bindGuideSearch} from './guide-search.js';
@@ -781,6 +783,7 @@ const guideSections = {
   ]},
   influence: {label:'Influence', entries:[]},
   city: {label:'City growth', entries:[
+    ['Build beside a natural wonder', 'Find a landmark in the Wonders journal to see its project and the technology or civic it needs. Open a nearby city’s production menu and choose an empty owned tile next to the landmark, within two hexes of the city. The project earns its listed yields each turn.'],
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
     ['Grow city borders', 'Each resident adds one border point per turn. Land Surveying adds 1 and County Federation adds 2 in each city. The first parcel costs 8 points. Each new parcel raises the next cost by 2, up to 16. Progress pauses if no visible neutral land is reachable within three land steps.'],
     ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
@@ -856,11 +859,20 @@ function guideTopics(chapter, language, state) {
   const topics=[...orders, ...entries].map(([title,detail],i)=>({
     key:'topic-'+i, title, body:typeof detail==='function'?detail(state):detail
   }));
+  if(chapter==='universities') {
+    for(const site of discoveredNaturalWonders(state)) {
+      const item=scenicProjectFor(state,site.id);
+      if(!item)continue;
+      const work=SCENIC_WORKS[item];
+      topics.push({key:'scenic-'+item,title:work.name,inJournal:true,
+        body:'<span>'+work.description+'</span> · '+scenicGate(item)+' · <span>'+site.name+'</span> · <span>'+scenicSiteHint+'</span>'});
+    }
+  }
   if(chapter==='city') {
     const tree=councilTree(state || {researchPace:2},'research');
     const name=value=>translate(value,language);
     for(const [item,building] of Object.entries(BUILDINGS)) {
-      if(!building.tech || !tree[building.tech] || !(building.yields || item==='workshop' || item==='walls' || item==='modernWalls'))continue;
+      if(SCENIC_WORKS[item] || !building.tech || !tree[building.tech] || !(building.yields || item==='workshop' || item==='walls' || item==='modernWalls'))continue;
       const tech=name(tree[building.tech].name);
       const facility=building.building ? name(BUILDINGS[building.building].name) : '';
       const cost=building.required;
@@ -883,15 +895,17 @@ function wonderJournal(state) {
   const entries=discoveries.map(site=>{
     const label=region.byId[site.tile]?.name;
     const coordinate='('+site.tile.split(',').join(', ')+')';
-    return '<li class="journal-entry">'+
+    const item=scenicProjectFor(state,site.id);
+    return '<li class="journal-entry"'+(item?' tabindex="-1" data-guide-target="scenic-'+item+'"':'')+'>'+
       '<img src="'+escapeHTML(naturalWonderArt(site.id))+'" width="72" height="72" alt="">'+
       '<div><strong>'+escapeHTML(site.name)+'</strong><small>'+escapeHTML(site.effect)+'</small>'+
-      '<span>'+(label?'<span>'+escapeHTML(label)+'</span> · ':'')+coordinate+'</span></div>'+
+      '<span>'+(label?'<span>'+escapeHTML(label)+'</span> · ':'')+coordinate+'</span>'+scenicProjectDetails(state,item)+'</div>'+
       button('locate-wonder-'+site.id,'Show on map')+'</li>';
   });
   const intro=state && !state.naturalWonderVersion ? 'Start a new campaign to discover natural wonders. This save keeps its original terrain.' :
     'Explore to record natural wonders here. Work a district next to a discovered site to gain its local bonus.';
   return '<h3 class="journal-heading">Natural wonders</h3>'+desc(intro)+
+    (discoveries.some(site=>scenicProjectFor(state,site.id))?muted(scenicSiteHint):'')+
     (entries.length?'<ul class="wonder-journal">'+entries.join('')+'</ul>':'')+
     '<h3 class="journal-heading">University wonders</h3>';
 }
@@ -946,7 +960,7 @@ function content() {
     const influenceLink=guideTab==='influence' && state && mode!=='home'
       ? '<button type="button" class="modal-primary" data-influence-open>'+ (getLanguage()==='zh-CN'?'使用影响力':'Spend influence')+'</button>' : '';
     const guides=guideTab==='formations' ? armyHandbook(escapeHTML) :
-      list(guideTopics(guideTab,getLanguage(),guideState).map(({title,body,key})=>
+      list(guideTopics(guideTab,getLanguage(),guideState).filter(topic=>!topic.inJournal).map(({title,body,key})=>
         row('<span tabindex="-1" data-guide-target="'+key+'">'+title+'</span>',body)));
     return {kicker:'Field guide', title:'How to play', body:actions(button('gazetteer',getLanguage()==='zh-CN'?'加州地名志':'California gazetteer'))+guideSearchBox(getLanguage())+'<div data-guide-chapter>'+tabs +
       (influenceLink ? actions(influenceLink) : '') +

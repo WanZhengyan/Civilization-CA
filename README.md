@@ -4,7 +4,31 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 **[Play the Pasadena tutorial](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Start a solo campaign](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Play with friends](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.2.1 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
+[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.3.0 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
+
+## Build beside a natural wonder
+
+Scout the coast of Los Angeles for the **Ballona Wetlands**. A citizen working land next to the marsh earns an extra food and science each harvest. Adopt **Irrigation Districts** and a city near the wetlands can build a boardwalk for another 2 food and 2 culture per turn. All three regions have three discoverable landscapes, each with its own project.
+
+Open **Wonders** to check a discovery and its research requirement. From a nearby city, open **City production → Natural wonder projects**. Pick a highlighted parcel that you own next to the landmark, within two hexes of the city. Keep it clear of resources and other construction. The first city to commission the work reserves it while building. Its recurring yields start at completion, and the landscape keeps its original worker bonus.
+
+On turn 11 in San Diego, the city of North Park lowlands can build the Mission Gorge Geology Trail on the highlighted foothill hex between the city and the gorge.
+
+![North Park’s production drawer beside the highlighted parcel for the Mission Gorge Geology Trail](./docs/art/scenic-construction-v730.webp)
+
+| Region | Project | Technology or civic | Cost in production | Yield per turn |
+| --- | --- | --- | ---: | --- |
+| Los Angeles | La Brea Fossil Lab | Land Surveying | 22 | 3 science |
+| Los Angeles | Topanga Canyon Trail | Public Works | 16 | 1 production, 2 culture |
+| Los Angeles | Ballona Wetlands Boardwalk | Irrigation Districts | 22 | 2 food, 2 culture |
+| San Francisco Bay | Tamalpais Summit Lookout | Topographic Mapping | 27 | 2 science, 3 gold |
+| San Francisco Bay | South Bay Bird Observatory | Agronomy | 18 | 1 food, 2 science |
+| San Francisco Bay | Muir Woods Canopy Walk | Park Conservancies | 27 | 3 culture, 2 science |
+| San Diego | Torrey Pines Bluff Overlook | Municipal Charter | 17 | 2 gold, 1 culture |
+| San Diego | Cabrillo Intertidal Station | Coastal Navigation | 23 | 3 science, 1 food |
+| San Diego | Mission Gorge Geology Trail | Applied Mechanics | 23 | 2 production, 2 science |
+
+Other production chains also depend on what that city has already built. A completed **Workshop** and Industrial Metallurgy unlock its Foundry. A finished **Harbor** supports early vessels and, with Steam Power, a Shipyard. Finish the Shipyard to train larger warships as their technologies become available. A city with completed **City walls** and Motorization can build Modern fortifications.
 
 ## Read the research trees
 
@@ -18,7 +42,7 @@ Open **Technology** or **Civics** on the left of the map and scroll down through
 
 ![Harbor Commissions selected in the civics tree, with Public Works and County Federation as its immediate prerequisites](./docs/art/civics-tree-v721.webp)
 
-[Watch the 27-second research walkthrough (MP4)](https://wanzhengyan.github.io/Civilization-CA/film/councils-v721.mp4)
+[Watch the 27-second research walkthrough from v7.2.1 (MP4)](https://wanzhengyan.github.io/Civilization-CA/film/councils-v721.mp4)
 
 ## Your first campaign
 
@@ -57,7 +81,7 @@ The gazetteer covers **3 counties, 9 cities and 6 field sites or coastal works**
 
 Pick a region on the homepage to carry it into setup. The setup page shows the landscape for that region and keeps the homepage navigation and language controls while you choose opponents and victory rules.
 
-![Los Angeles single-player setup with one Easy computer opponent](./docs/art/campaign-setup-v721.webp)
+![Los Angeles single-player setup from v7.2.1 with one Easy computer opponent](./docs/art/campaign-setup-v721.webp)
 
 | Mode | How it works |
 | --- | --- |

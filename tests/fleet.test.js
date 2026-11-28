@@ -24,7 +24,8 @@ test('a harbor launches ships into water only and a blocked launch waits rather 
   assert.ok(!getProductionOptions({...state,turn:0},interior.id).some(p=>p.item==='cutter'));
   assert.ok(!getProductionOptions(state,city.id).some(p=>p.item==='frigate'));
   state.players[1].technologies.push('steam');
-  assert.match(getProductionOptions(state,city.id).find(p=>p.item==='frigate').reason,/shipyard/);
+  assert.ok(!getProductionOptions(state,city.id).some(p=>p.item==='frigate'));
+  assert.throws(()=>order(state,{type:'produce',city:city.id,item:'frigate'}),/shipyard/);
   city.buildings.push('shipyard');
   assert.equal(getProductionOptions(state,city.id).find(p=>p.item==='frigate').enabled,true);
   state=order(state,{type:'produce',city:city.id,item:'cutter'});

@@ -1,5 +1,13 @@
 # Campaign updates
 
+## v7.3.0 — Build beside California’s natural wonders
+
+- Discover Ballona Wetlands in Los Angeles, Muir Woods in Marin and Mission Gorge in San Diego. Citizens working their neighboring districts earn food and science, science, or production and science respectively. New campaigns have three natural wonders per region. Existing saves retain their recorded sites.
+- Each of the nine landmarks has a unique city project. Los Angeles can build the La Brea Fossil Lab, Topanga Canyon Trail and Ballona Wetlands Boardwalk. The Bay Area has the Tamalpais Summit Lookout, South Bay Bird Observatory and Muir Woods Canopy Walk. San Diego has the Torrey Pines Bluff Overlook, Cabrillo Intertidal Station and Mission Gorge Geology Trail.
+- Check the required technology or civic in the Wonders journal. Select the project in a nearby city and choose an adjacent owned parcel within two hexes of its center. City production pays for the work. Commissioning reserves it until the order changes or finishes. The completed project earns its listed yields every turn and preserves the landscape’s existing worker bonus.
+- New maps reserve space beside each natural wonder during setup so that towns, deposits, field stations and camps leave an empty construction parcel. The player can use that land normally once play begins.
+- City production checks completed local buildings. A Workshop unlocks the Foundry after Industrial Metallurgy. A Harbor supports early vessels and unlocks a Shipyard after Steam Power. Larger warships need a completed Shipyard. City walls unlock Modern fortifications after Motorization. These gates also apply to purchases.
+
 ## v7.2.1 — Trace a research prerequisite
 
 Connections from the same project share a line until they split. Select any technology or civic to show the paths that lead to it. The two lines into Ballistics highlight its immediate prerequisites, Field Tactics and Applied Mechanics. The 27-second English and Chinese walkthroughs trace this example and its counterpart in the civics tree, Harbor Commissions. The homepage and both README guides use screenshots of these decisions.

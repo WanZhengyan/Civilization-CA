@@ -17,7 +17,8 @@ test('construction and direct purchases always place city fortifications in the 
   assert.equal(getProjectSites(s,city.id,'walls').length,0);
   s.players[0].technologies=['tactics','motorization'];
   assert.deepEqual(getProjectSites(s,city.id,'walls').map(t=>t.id),[city.tile]);
-  assert.match(getProductionOptions(s,city.id).find(o=>o.item==='modernWalls').reason,/walls/i);
+  assert.ok(!getProductionOptions(s,city.id).some(o=>o.item==='modernWalls'));
+  assert.throws(()=>applyAction(s,city.seat,{type:'produce',city:city.id,item:'modernWalls'}),/walls/i);
   assert.throws(()=>buy(s,'walls',edge),/construction tile/);
   assert.throws(()=>applyAction(s,0,{type:'produce',city:city.id,item:'walls',site:edge}),/construction tile/);
   s=buy(s,'walls');assert.equal(s.cities[0].buildingSites.walls,city.tile);

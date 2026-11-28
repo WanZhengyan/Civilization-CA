@@ -15,7 +15,7 @@ test('a coastal scout returns three distinct regional observations to its foundi
   const note=()=>order({type:'recordTransect',unit});
   const publish=()=>order({type:'fileTransect',unit});
   const read=()=>game.units.find(u=>u.id===unit);
-  move('9,17');order({type:'visitStation',unit,item:'provisions'});end();
+  move('9,17');end();
   note();assert.throws(note,/new terrain/);assert.throws(publish);
   move('10,15');end();
   assert.throws(note,/three hexes/);

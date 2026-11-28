@@ -16,10 +16,11 @@ SIDE = 24
 COLUMNS = 7
 CATALOG = """
 import {UNIT_TYPES,BUILDINGS,IMPROVEMENTS} from './docs/rules.js';
+import {illustrationPath} from './docs/illustrations.js';
 import {RESOURCES} from './docs/resources.js';
 import {SCIENCE_PROJECT} from './docs/victory-rules.js';
 const items={...UNIT_TYPES,...BUILDINGS,...IMPROVEMENTS,...RESOURCES,[SCIENCE_PROJECT.id]:SCIENCE_PROJECT};
-console.log(JSON.stringify(Object.keys(items).sort()));
+console.log(JSON.stringify(Object.keys(items).sort().map(id=>[id,illustrationPath(id)])));
 """
 
 items = json.loads(subprocess.check_output(
@@ -28,9 +29,9 @@ items = json.loads(subprocess.check_output(
 rows = ceil(len(items) / COLUMNS)
 sheet = Image.new("RGB", (SIDE * COLUMNS, SIDE * rows))
 positions = []
-for index, item in enumerate(items):
+for index, (item, illustration) in enumerate(items):
     column, row = index % COLUMNS, index // COLUMNS
-    with Image.open(ROOT / "docs" / "art" / f"{item}.webp") as original:
+    with Image.open(ROOT / "docs" / illustration) as original:
         crop = ImageOps.fit(original.convert("RGB"), (SIDE, SIDE), method=Image.Resampling.LANCZOS)
         sheet.paste(crop, (column * SIDE, row * SIDE))
     x = 100 * column / max(1, COLUMNS - 1)

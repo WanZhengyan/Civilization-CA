@@ -1,6 +1,8 @@
 import {cityCenterProject} from './city-defenses.js';
 import {SETTLER_MIN_POPULATION, SETTLER_RESIDENT_COST} from './population.js';
 import {illustration} from './illustrations.js';
+import {SCENIC_WORKS} from './scenic-works.js';
+import {scenicLandmark,scenicSiteHint} from './scenic-project-ui.js';
 import {WONDERS} from './wonders.js';
 import {revisionOf} from './works.js';
 
@@ -18,7 +20,7 @@ function settlerGrowth(report) {
     '</dd></div><div><dt>'+outlook+'</dt><dd>'+escape(amount)+'</dd></div></dl>';
 }
 export function orderButtons(option,allowed,growth) {
-  const canBuy=option.kind!=='project' && !Object.hasOwn(WONDERS,option.item);
+  const canBuy=option.kind!=='project' && !Object.hasOwn(WONDERS,option.item) && !Object.hasOwn(SCENIC_WORKS,option.item);
   const wait=allowed ? '' : 'Wait for your turn.';
   const production=option.reason || wait, purchase=option.buyReason || wait;
   const shared=canBuy && production && production===purchase;
@@ -79,7 +81,7 @@ export function paintSiteBar(bar,draft,city,option,sites,canOrder) {
   const selected=sites.find(s=>s.id===draft.site);
   const html='<button class="site-back" data-site-back type="button">Back to production</button><div class="work-bar-title">'+illustration(option.item)+'<div><strong>'+escape(option.label)+'</strong><small>'+escape(city.name)+'</small></div></div>'+
     workQuote(draft,city,option)+
-    '<p><span>Choose a highlighted tile on the map.</span></p>'+
+    (SCENIC_WORKS[option.item] ? '<p class="scenic-site">'+scenicLandmark(option.item)+'</p><p>'+scenicSiteHint+'</p>' : '<p><span>Choose a highlighted tile on the map.</span></p>')+
     '<label class="site-choice"><span>Construction tile</span><select data-site-list><option value="">Select a tile</option>'+
     sites.map(t=>'<option value="'+escape(t.id)+'" '+(selected?.id===t.id?'selected':'')+'>'+escape(t.name)+' · '+escape(t.id)+'</option>').join('')+'</select></label>'+
     (selected?.terrain ? '<p class="site-terrain"><span>Terrain</span> · <span>'+escape(selected.terrain[0].toUpperCase()+selected.terrain.slice(1))+'</span></p>' : '')+

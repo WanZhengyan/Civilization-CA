@@ -1,7 +1,7 @@
 import {createClassicGame} from './classic-game.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {applyAction, getCityYield, getPortSite, getProductionOptions, getStats, TILE_BY_ID} from '../docs/rules.js';
+import {applyAction, campaignView, getCityYield, getPortSite, getProductionOptions, getStats, TILE_BY_ID} from '../docs/rules.js';
 
 function turn(state, action) { return applyAction(state,state.turn,action); }
 function finishQueue(state, id) {
@@ -36,6 +36,42 @@ test('a coastal harbor reserves a water hex, adds tax income, and enables a prod
   const yieldBefore=getCityYield(state,city.id).production;
   state.cities[1].buildings=state.cities[1].buildings.filter(key=>key!=='shipyard');
   assert.equal(yieldBefore-getCityYield(state,city.id).production,2);
+});
+
+test('production and purchase expose a port’s ships only after its own buildings finish', () => {
+  let state=nextSeat(createClassicGame(['Inland','Coast']),1);
+  const city=state.cities[1], seat=city.seat;
+  state.players[seat].technologies.push('steam','metallurgy','radar');
+  state.cities[0].buildings.push('harbor','shipyard');
+  const fleet=['workboat','cutter','frigate','ironclad','destroyer'];
+  function checkListed(expected) {
+    for (const view of [state,campaignView(state,seat)]) {
+      const options=getProductionOptions(view,city.id,{replace:true});
+      assert.deepEqual(fleet.filter(item=>options.some(option=>option.item===item)),expected);
+      assert.equal(options.some(option=>option.item==='shipyard'),state.cities[1].buildings.includes('harbor'));
+    }
+  }
+  function rejectPurchase(item,reason) {
+    assert.throws(()=>turn(state,{type:'buyProduction',city:city.id,item,
+      gold:3,expected:state.cities[1].productionRevision||0}),reason);
+  }
+  checkListed([]);
+  const otherCity=state.cities[0];
+  const otherOwner=otherCity.seat;
+  otherCity.seat=seat;
+  checkListed([]);
+  otherCity.seat=otherOwner;
+  rejectPurchase('cutter',/harbor/);
+  state=turn(state,{type:'produce',city:city.id,item:'harbor'});
+  assert.ok(state.cities[1].queue.portTile);
+  checkListed([]);
+  state=nextSeat(finishQueue(state,city.id),seat);
+  checkListed(['workboat','cutter']);
+  rejectPurchase('frigate',/shipyard/);
+  state=turn(state,{type:'produce',city:city.id,item:'shipyard'});
+  checkListed(['workboat','cutter']);
+  state=nextSeat(finishQueue(state,city.id),seat);
+  checkListed(fleet);
 });
 
 test('an inland city needs a connected chain of owned land to its shoreline', () => {

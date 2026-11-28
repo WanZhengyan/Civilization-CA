@@ -68,9 +68,7 @@ for (const [item,expected] of Object.entries(buildings)) {
     Object.assign(state.players[0],{science:2000,capital:1000});
     state=learn(state,expected.tech);
     if (item==='foundry') {
-      const blocked=offers(state).find(o=>o.item===item);
-      assert.match(blocked.reason,/workshop/i);
-      assert.equal(blocked.buyEnabled,false);
+      assert.ok(!offers(state).some(o=>o.item===item));
       assert.deepEqual(getProjectSites(state,state.cities[0].id,item),[]);
       assert.throws(()=>cityOrder(state,item),/workshop/i);
       state=buy(state,'workshop');
