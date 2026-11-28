@@ -16,7 +16,7 @@ export function handbookRows(era) {
     if (unit.tech) requirements.push(TECHS[unit.tech].name);
     if (unit.civic) requirements.push(CIVICS[unit.civic].name);
     if (unit.domain==='sea') requirements.push('Harbor');
-    if (unit.shipyard || id==='frigate') requirements.push('Shipyard');
+    if (unit.shipyard) requirements.push('Shipyard');
     return {
       id, name:unit.name, moves:unit.moves, sight:getSightRadius(), range:unit.range, cost:unit.required,
       requirements, note:unit.description || notes[id] || '', upgrade:UNIT_TYPES[unit.upgrade]?.name,

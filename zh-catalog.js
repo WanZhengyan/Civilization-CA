@@ -7,6 +7,39 @@ import {positionTranslations} from './field-position.js';
 import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(`
+Natural wonder project|自然奇观工程
+Natural wonder projects|自然奇观工程
+Beside|相邻景点
+View project in city|前往城市查看工程
+Choose an empty owned land tile beside this landmark and within two hexes of the city.|选择紧邻此景点、距城市不超过两格的一块己方空地。
+This scenic work is complete.|这项自然奇观工程已完工。
+This scenic work is already under construction.|这项自然奇观工程已开工。
+Claim an empty land tile next to the landmark within two hexes of this city.|请先取得景点旁、距本城不超过两格的一块空地。
+Scenic works require city production.|自然奇观工程需要由城市投入生产力。
+Choose an eligible plot beside the natural wonder.|请选择紧邻自然奇观且符合条件的地块。
+Build beside a natural wonder|在自然奇观旁建造工程
+Find a landmark in the Wonders journal to see its project and the technology or civic it needs. Open a nearby city’s production menu and choose an empty owned tile next to the landmark, within two hexes of the city. The project earns its listed yields each turn.|打开「奇观」日志，查看已发现景点的专属工程及所需科技或市政。进入附近城市的生产菜单，选择紧邻景点、距城市不超过两格的己方空地。工程完工后，每回合可获得列出的收益。
+La Brea Fossil Lab|拉布雷亚化石实验室
+Catalog Ice Age fossils for 3 science per turn.|整理冰河时代化石，每回合获得 3 点科研。
+Topanga Canyon Trail|托潘加峡谷步道
+Maintain canyon trails for 1 production and 2 culture per turn.|维护峡谷步道，每回合获得 1 点生产力和 2 点文化。
+Ballona Wetlands Boardwalk|巴洛纳湿地栈道
+Restore the wetland edge for 2 food and 2 culture per turn.|修复湿地边缘，每回合获得 2 点粮食和 2 点文化。
+Tamalpais Summit Lookout|塔玛尔派斯山顶瞭望台
+Maintain a summit survey post for 2 science and 3 gold per turn.|运营山顶测绘站，每回合获得 2 点科研和 3 金币。
+South Bay Bird Observatory|南湾鸟类观测站
+Monitor the tidal marsh for 1 food and 2 science per turn.|监测潮汐盐沼，每回合获得 1 点粮食和 2 点科研。
+Muir Woods Canopy Walk|缪尔红杉林树冠步道
+Interpret the redwood canopy for 3 culture and 2 science per turn.|研究红杉树冠并为访客解说，每回合获得 3 点文化和 2 点科研。
+Torrey Pines Bluff Overlook|托里松海崖观景台
+Welcome bluff visitors for 2 gold and 1 culture per turn.|接待海崖游客，每回合获得 2 金币和 1 点文化。
+Cabrillo Intertidal Station|卡布里洛潮间带研究站
+Study the tide pools for 3 science and 1 food per turn.|研究潮池生态，每回合获得 3 点科研和 1 点粮食。
+Mission Gorge Geology Trail|米申峡谷地质步道
+Interpret the exposed canyon rock for 2 production and 2 science per turn.|解说峡谷裸露岩层，每回合获得 2 点生产力和 2 点科研。
+`);
+
+section(`
 California coast|加州海岸
 Game setup|游戏设置
 Maps|选地图
@@ -1080,6 +1113,7 @@ A shipyard warship that bombards targets up to two hexes away.|由造船厂建�
 Settle on the shore or claim a shore district connected to this city within two hexes.|沿海建城，或取得与此城相连且距离不超过两格的海岸。
 Build a harbor in this city first.|先在此城修建港口。
 Build a shipyard in this city first.|先在此城建造船厂。
+Complete the required building in this city first.|请先在本城建成所需的建筑。
 Research Steam Power first.|请先研究蒸汽动力。
 Build a fishery on open water within two water hexes of a friendly harbor.|在距己方港口两格水路以内的空水域建设渔场。
 Establish a fishery in coastal water for +2 food and +1 capital.|在沿岸水域建设渔场，提供 2 粮食和 1 资金。
@@ -1458,6 +1492,12 @@ La Brea Tar Pits|拉布雷亚沥青坑
 South Bay Salt Marshes|南湾盐沼
 Torrey Pines|托里松林
 Cabrillo Tide Pools|卡布里洛潮池
+Ballona Wetlands|巴洛纳湿地
+Muir Woods|缪尔红杉林
+Mission Gorge|米申峡谷
+Near the mouth of Ballona Creek, salt marsh and coastal dunes shelter birds along Santa Monica Bay.|在巴洛纳溪入海口附近，盐沼和海岸沙丘为圣莫尼卡湾的鸟类提供栖息地。
+Old-growth coast redwoods shade Redwood Creek in a sheltered canyon in Marin County.|在马林县一处背风的峡谷里，古老的海岸红杉为林下的红杉溪遮荫。
+The San Diego River cuts through steep rock walls between the ridges of Mission Trails Regional Park.|圣迭戈河穿过米申步道地区公园的山脊，两岸是陡峭的岩壁。
 Each adjacent worked district gains 2 science.|每块由市民工作的相邻地块增加 2 点科研。
 Each adjacent worked district gains 1 production and 1 science.|每块由市民工作的相邻地块增加 1 点生产力和 1 点科研。
 Each adjacent worked district gains 2 food.|每块由市民工作的相邻地块增加 2 点粮食。

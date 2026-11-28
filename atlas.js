@@ -4,6 +4,7 @@ import {battleMarkers,paintBattleReport} from './battle-overlay.js';
 import {boxesOverlap,cityFont,cityLabelAt,paintCityLabels,planCityLabels} from './city-labels.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
 import {drawFieldStation} from './field-stations.js';
+import {SCENIC_WORKS} from './scenic-works.js';
 import {drawNaturalWonder} from './natural-wonder-marker.js';
 import {W,H,ROW,dX,dY,pos,idFor,adjacent,chartHit,chartExtent,chartFrame,paintChartMargin,inkChartFrame,chartMesh,inkHexGrid,regionOverviewZoom,chartViewport,atlasRasterLayout} from './hex-survey.js';
 import {politicalPaths, inkPolitics} from './political-borders.js';
@@ -24,6 +25,8 @@ export function getAtlasPlace(tile, holding) {
   if(nature)return {name:nature.name,landmark:null};
   const campus=WONDERS[holding?.wonder];
   if(campus) return {name:campus.name, landmark:null};
+  const scenic=SCENIC_WORKS[holding?.facility];
+  if(scenic) return {name:scenic.name,landmark:null};
   if(!tile.landmark) return null;
   const name=tile.landmark==='studios' ? 'Burbank' : places[tile.landmark] || tile.name;
   return {name,landmark:tile.landmark};
@@ -1380,7 +1383,7 @@ export function createAtlas(host, options = {}) {
       if(Object.hasOwn(o,'frontierHexes'))model.frontierHexes=o.frontierHexes;
       if(Object.hasOwn(o,'reviewPath'))model.reviewPath=o.reviewPath;
       if(Object.hasOwn(o,'previewPath'))model.previewPath=o.previewPath||[];
-      if(Object.hasOwn(o,'workSites')){model.workSites=o.workSites;model.workSelection=o.workSelection;}
+      if(Object.hasOwn(o,'workSites')){model.workSites=o.workSites;model.workSelection=o.workSelection;model.workLandmark=o.workLandmark;}
       if(Object.hasOwn(o,'targetId'))model.targetId=o.targetId;
       if(o.moveTiles||o.moveIds)model.moveTiles=[...(o.moveTiles||o.moveIds)];
       if(o.attackTiles||o.attackIds)model.attackTiles=[...(o.attackTiles||o.attackIds)];

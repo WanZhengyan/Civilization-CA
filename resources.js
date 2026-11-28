@@ -19,10 +19,10 @@ function roll(seed, tile, salt) {
   n = Math.imul(n ^ n >>> 15, 2221713035);
   return ((n ^ n >>> 16) >>> 0) / 4294967296;
 }
-export function populateDeposits(state, region, seed, adjacent, homes) {
+export function populateDeposits(state, region, seed, adjacent, homes, protectedHexes) {
   const assigned = new Set();
   for (const [i,[key, item]] of Object.entries(RESOURCES).entries()) {
-    const sites = region.tiles.filter(tile => item.terrains.includes(tile.terrain) && !assigned.has(tile.id) && !state.board[tile.id].naturalWonder
+    const sites = region.tiles.filter(tile => item.terrains.includes(tile.terrain) && !assigned.has(tile.id) && !protectedHexes?.has(tile.id) && !state.board[tile.id].naturalWonder
       && !state.cities.some(city => city.tile === tile.id || city.portTile === tile.id));
     // Hills are shared by quarries and ore; place a modest number of each.
     const count = Math.min(sites.length, Math.max(sites.length ? 1 : 0,
@@ -38,7 +38,7 @@ export function populateDeposits(state, region, seed, adjacent, homes) {
   // original fallback of undecided settlers when no opening layout is supplied.
   if (adjacent) for (const home of homes ?? (state.units || []).filter(u=>u.type==='settler').map(u=>u.tile)) {
     const ring=adjacent(home).map(id=>region.byId[id]).filter(tile=>
-      tile && !state.board[tile.id].naturalWonder && !['mountains','ocean'].includes(tile.terrain) && !state.cities.some(c=>c.tile===tile.id));
+      tile && !protectedHexes?.has(tile.id) && !state.board[tile.id].naturalWonder && !['mountains','ocean'].includes(tile.terrain) && !state.cities.some(c=>c.tile===tile.id));
     if (ring.some(tile=>RESOURCES[state.board[tile.id]?.resource])) continue;
     ring.sort((a,b)=>roll(seed,a,0x3da7)-roll(seed,b,0x3da7));
     const tile=ring[0];

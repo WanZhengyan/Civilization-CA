@@ -5,6 +5,7 @@ import {chartedWaterways} from './waterways.js';
 import {actingPerspective,publicTeamPhase} from './team-turns.js';
 import {sameTeam} from './teams.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
+import {observedScenicWorks} from './scenic-works.js';
 // All regions use the same odd-row, point-up hex grid. Cached footprints contain
 // only public geometry; never cache occupancy, observations, or player data here.
 const footprints = new Map();
@@ -152,7 +153,9 @@ export function projectForSeat(state,seat) {
   const memory=teamMemory(state,seat);
   const {visible,explored}=getVision(state,seat,memory);
   const surveyed=teamSurveyed(state,seat);
+  const knownLandmarks=new Set();
   const board=Object.fromEntries(Object.entries(state.board).map(([id,cell])=>{
+    if (cell.naturalWonder && explored.has(id)) knownLandmarks.add(cell.naturalWonder);
     if(visible.has(id)) {
       const {resource,...fields}=cell;
       if (resource && surveyed) fields.resource=resource;
@@ -179,6 +182,8 @@ export function projectForSeat(state,seat) {
     ...(state.teamPhase ? {teamPhase:publicTeamPhase(state,seat)} : {}),
     actionsLeft:state.turn===seat?state.actionsLeft:0, board,players,cities,units,
     log:state.log.map(e=>observedEvent(e,seat,knownSeats)).filter(Boolean),intel:{seat,diplomacy,hasFoundedCapital,...(state.teams ? {teamSurveyed:surveyed} : {}),visible:[...visible],explored:[...explored],battles:state.battleReports?.[seat] || []}};
+  const scenicRegistry=observedScenicWorks(state,knownLandmarks);
+  if (Object.keys(scenicRegistry).length) view.scenicRegistry=scenicRegistry;
   if (state.waterways) view.waterways=chartedWaterways(state.waterways,explored);
   if (state.waterways) {
     const occupied=state.cities.flatMap(city=>[city.portTile,city.queue?.portTile]);

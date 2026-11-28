@@ -20,3 +20,9 @@
   .journal-entry { grid-template-columns:minmax(0,1fr) }
   .journal-entry button { justify-self:start }
 }
+
+.scenic-project {display:grid;gap:.2rem;margin-top:.7rem;padding:.55rem .7rem;border-inline-start:2px solid #bcaa75;background:#56665426}
+.scenic-project>small {color:#c9d1c4;line-height:1.4}
+.scenic-project>small:first-child,.scenic-project>.scenic-status,.work-card .scenic-site,.work-sitebar .scenic-site {color:#e2cb8c}
+.scenic-project>strong {color:#edf0df;font-size:.95rem}
+.work-card[data-project]:focus-visible {outline:2px solid #d7c18b;outline-offset:-2px}

@@ -20,6 +20,8 @@ import {sailTo} from './naval-plan.js';
 import {harborSites,fishingTask,runFishingTask} from './maritime.js';
 import {revisionOf, advanceProduction, verifyProduction, parkedProduction, parkProject, resumeWork, purchasePrice} from './works.js';
 import {NATURAL_WONDERS, placeNaturalWonders, neighboringWonders} from './natural-wonders.js';
+import {SCENIC_WORKS, getScenicWorkStatus} from './scenic-works.js';
+export {SCENIC_WORKS,getScenicWorkStatus};
 import {REGIMENTS, matchup, formationChoices, signalPosition} from './regiments.js';
 import {WONDERS, universityYield, surveyCampus, campusStatus, updateCampusRegistry, settleCampusRace} from './wonders.js';
 import {getVision, getVisibleTiles, projectForSeat, rememberVision, sightFrom} from './vision.js';
@@ -284,6 +286,7 @@ export const UNIT_TYPES = {
 };
 export const BUILDINGS = {
   ...WONDERS,
+  ...SCENIC_WORKS,
   ...PORT_BUILDINGS,
   granary: {name:"Granary", required:10, description:"Provides 2 food and housing for 2 more citizens."},
   neighborhood: {name:"Residential quarter", era:"frontier", civic:"publicWorks", required:16, description:"Provides housing for 3 more citizens."},
@@ -450,7 +453,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
   const next = {seed, mapId, formationVersion:1, ...(influencePlanning && campaignVariety ? {influencePlanning:1} : {}), ...(campaignVariety ? {campaignVariety:1} : {}), ...(campaignVariety && fieldCommandRevision===1 ? {fieldCommandRevision} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
     ...(teams ? {teams:[...teams]} : {}), ...(difficulty!=='normal' ? {difficulty} : {}),
-    ...(drawInitiative===true ? {firstSeat} : {}), ...(!legacyVictory || scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:firstSeat,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
+    ...(drawInitiative===true ? {firstSeat} : {}), ...(!legacyVictory || scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:2, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:firstSeat,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
     players:players.map((player,seat)=>({
       name:(typeof player === 'string' ? player : player?.name)?.trim().slice(0,32) || FACTIONS[allocation[seat]].name,
@@ -460,9 +463,8 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
     next.teamPhase=newTeamPhase(next,teams[firstSeat],()=>ACTIONS_PER_TURN);
   }
   starts.forEach(([site],seat)=>spawn(next,seat,'settler',site));
-  placeNaturalWonders(next,map);
+  const protectedHexes=placeNaturalWonders(next,map);
   const homes=starts.map(([tile])=>tile);
-  const protectedHexes=new Set(map.tiles.filter(tile=>next.board[tile.id].naturalWonder).map(tile=>tile.id));
   const towns=planGovernorTowns(map,homes,quotas,seed,hexDistance,protectedHexes);
   if(!towns){
     // Standard remains available to legacy callers but is smaller than every
@@ -478,10 +480,10 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
     }
   }
   next.units=next.units.filter(unit=>!quotas[unit.seat]);
-  seedCamps(next,map,map.neighbors,hexDistance);
+  seedCamps(next,map,map.neighbors,hexDistance,protectedHexes);
   refreshScores(next);
-  populateDeposits(next,map,seed,map.neighbors,homes);
-  placeFieldStations(next,map,hexDistance);
+  populateDeposits(next,map,seed,map.neighbors,homes,protectedHexes);
+  placeFieldStations(next,map,hexDistance,protectedHexes);
   return rememberVision(addResearch(next));
 }
 function cityOrNull(state,id) { return state.cities.find(c=>c.id === id); }
@@ -490,11 +492,40 @@ export function getWonderSites(state,cityId,item) {
   if (!city || !campus || !productionUnlocked(state,city.seat,campus)) return [];
   return surveyCampus(state,city,item,getMap(state),hexDistance);
 }
+// A city can work on land within two hexes; its neighboring landmark can be
+// one hex farther away. Only the seat's chart may supply a landmark location.
+function nearbyScenery(state,city,map,explored) {
+  const landmarks=new Map();
+  const center=map.byId[city.tile];
+  for (let r=center.r-3;r<=center.r+3;r++) for (let q=center.q-3;q<=center.q+3;q++) {
+    const id=q+','+r, landmark=state.board[id]?.naturalWonder;
+    if (landmark && explored.has(id) && hexDistance(city.tile,id)<=3) landmarks.set(landmark,id);
+  }
+  return landmarks;
+}
+
+function scenicSites(state,city,map,landmark) {
+  if (!landmark) return [];
+  const reserved=new Set(state.cities.flatMap(c=>[c.tile,c.portTile,c.id===city.id ? null : c.queue?.site]));
+  return map.neighbors(landmark).filter(id=>{
+    const plot=state.board[id], tile=map.byId[id];
+    return plot.owner===city.seat && hexDistance(city.tile,id)<=2 && terrainCost[tile.terrain] &&
+      !reserved.has(id) && !tile.landmark && !plot.naturalWonder && !plot.fieldStation &&
+      !plot.wonder && !plot.facility && !plot.improvement && !plot.resource && !wildAt(state,id);
+  }).map(id=>({...map.byId[id],range:hexDistance(city.tile,id),favored:false}))
+    .sort((a,b)=>a.range-b.range || a.r-b.r || a.q-b.q);
+}
+
 export function getProjectSites(state,cityId,item) {
   const city=cityOrNull(state,cityId),map=getMap(state);
   if (!city || !Object.hasOwn(BUILDINGS,item) || (state.intel && state.intel.seat!==city.seat)) return [];
   const definition=BUILDINGS[item];
-  if (!cityProjectUnlocked(state,city,item,definition) || (definition.building && !city.buildings.includes(definition.building))) return [];
+  if (!cityProjectUnlocked(state,city,item,definition)) return [];
+  if (SCENIC_WORKS[item]) {
+    if (getScenicWorkStatus(state,item)!=='open') return [];
+    const chart=nearbyScenery(state,city,map,getVision(state,city.seat).explored);
+    return scenicSites(state,city,map,chart.get(definition.landmark));
+  }
   if (WONDERS[item]) return getWonderSites(state,cityId,item);
   const describe=id=>({...map.byId[id],range:hexDistance(city.tile,id),favored:false});
   if (cityCenterProject(item)) return [describe(city.tile)];
@@ -991,11 +1022,26 @@ function productionUnlocked(state,seat,definition,era=getEra(state,seat)) {
     && (!definition.civic || adopted(state,seat,definition.civic));
 }
 
+// Requirements belong to the producing city. A reserved berth or an unfinished
+// building must not open its successors in the production or purchase list.
+function missingProductionBuilding(city, definition) {
+  if (definition.domain==='sea' && !city.buildings.includes('harbor')) return 'harbor';
+  if (definition.shipyard && !city.buildings.includes('shipyard')) return 'shipyard';
+  return definition.building && !city.buildings.includes(definition.building) ? definition.building : null;
+}
+
+const buildingOrderReasons = {
+  harbor:'Build a harbor in this city first.',
+  shipyard:'Build a shipyard in this city first.',
+  workshop:'Build a workshop in this city first.',
+  walls:'Build city walls in this city first.'
+};
+
 // Workshops and walls ordered before they had prerequisites keep their invested work.
 function cityProjectUnlocked(state,city,item,definition,era) {
   if ((item==='workshop' || item==='walls') &&
       (city.queue?.item===item || parkedProduction(city,item)>0)) return true;
-  return productionUnlocked(state,city.seat,definition,era);
+  return productionUnlocked(state,city.seat,definition,era) && !missingProductionBuilding(city,definition);
 }
 
 export function getProductionOptions(state,cityId,{replace=false}={}) {
@@ -1004,38 +1050,42 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
   const rate=getCityYield(state,city.id).production;
   const era=getEra(state,city.seat), berth=getPortSite(state,city.id);
   const map=getMap(state);
+  const explored=getVision(state,city.seat).explored;
+  const scenery=nearbyScenery(state,city,map,explored);
   const hasCoast=city.buildings.includes('harbor') || berth || findPortSite(
-    state,city,map.byId,map.neighbors,getVision(state,city.seat).explored,true);
+    state,city,map.byId,map.neighbors,explored,true);
   const available=Object.entries(PRODUCTS).filter(([item,def])=>
     (item!==SCIENCE_PROJECT.id || allowsScience(state)) && cityProjectUnlocked(state,city,item,def,era) &&
+    (!SCENIC_WORKS[item] || scenery.has(def.landmark)) &&
     (hasCoast || !(Object.hasOwn(PORT_BUILDINGS,item) || def.domain==='sea')));
   return available.map(([item,def])=>{
     const kind=item===SCIENCE_PROJECT.id ? 'project' : Object.hasOwn(UNIT_TYPES,item) ? 'unit':'building';
     const populationReason=settlerPopulationReason(city,item);
     const financing=state.players[city.seat].maintenanceArrears>0 && unitUpkeep(item)>0 ? ARREARS_REASON : '';
+    const scenicStatus=SCENIC_WORKS[item] && getScenicWorkStatus(state,item);
     let reason='';
     if (state.phase!=='playing') reason='The campaign has ended.';
     else if (!seatMayOrder(state,city.seat)) reason='Wait for the city owner’s turn.';
     else if (populationReason) reason=populationReason;
     else if (financing) reason=financing;
     else if (city.queue && (!replace || city.queue.item===item)) reason='This city already has a project in progress.';
+    else if (scenicStatus==='complete') reason='This scenic work is complete.';
+    else if (scenicStatus==='commissioned') reason='This scenic work is already under construction.';
+    else if (scenicStatus && !scenicSites(state,city,map,scenery.get(def.landmark)).length) reason='Claim an empty land tile next to the landmark within two hexes of this city.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
-    else if (def.building && !city.buildings.includes(def.building)) reason=def.building==='walls' ? 'Build city walls in this city first.' : 'Build a workshop in this city first.';
     else if (WONDERS[item] && campusStatus(state,item)==='complete') reason='This university has already opened.';
     else if (WONDERS[item] && state.cities.some(c=>c.seat===city.seat && c.queue?.item===item)) reason='One of your cities already holds this charter.';
     else if (item==='harbor' && !berth) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';
-    else if ((item==='shipyard' || def.domain==='sea') && !city.buildings.includes('harbor')) reason='Build a harbor in this city first.';
-    else if ((item==='frigate' || def.shipyard) && !city.buildings.includes('shipyard')) reason='Build a shipyard in this city first.';
     else if (WONDERS[item] && state.players[city.seat].capital+(replace ? city.queue?.grant || 0 : 0)<def.grant) reason='You need '+def.grant+' capital.';
     else if (WONDERS[item] && !getWonderSites(state,city.id,item).length) reason='Claim an empty land tile within two hexes of the city.';
     const gold=purchasePrice(city,item,def.required);
     const current=city.queue?.item===item;
-    const buyReason=kind==='project' ? 'Orbital Survey requires city production.' : WONDERS[item] ? 'University wonders require city production.' :
+    const buyReason=kind==='project' ? 'Orbital Survey requires city production.' : WONDERS[item] ? 'University wonders require city production.' : scenicStatus ? 'Scenic works require city production.' :
       (current && state.phase==='playing' && seatMayOrder(state,city.seat) ? populationReason || financing : reason) ||
       (!gold ? 'This project is ready for completion.' : '') ||
       (state.players[city.seat].capital+(replace && !current ? city.queue?.grant || 0 : 0)<gold ? 'Not enough gold.' : '') ||
       (kind==='unit' && !deploymentTile(state,city,item) ? 'No deployment tile is available. Move a unit before buying.' : '');
-    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,...(kind==='unit' && {upkeep:unitUpkeep(item)}),era:def.era || null,saved:parkedProduction(city,item),turns:populationReason?null:constructionTurns(state,city,def.required-(current?city.queue.progress:parkedProduction(city,item)),rate),required:def.required,enabled:!reason,reason};
+    return {gold,buyReason,buyEnabled:!buyReason,item,label:def.name,kind,...(scenicStatus && {scenicWonder:def.landmark}),...(kind==='unit' && {upkeep:unitUpkeep(item)}),era:def.era || null,saved:parkedProduction(city,item),turns:populationReason?null:constructionTurns(state,city,def.required-(current?city.queue.progress:parkedProduction(city,item)),rate),required:def.required,enabled:!reason,reason};
   });
 }
 const SCIENCE = {bank:'science', income:'scienceIncome', known:'technologies', focus:'research',
@@ -1162,8 +1212,9 @@ function queueCityProject(state,city,option,chosenSite) {
   }
   if (!WONDERS[option.item] && option.kind==='building') {
     const sites=getProjectSites(state,city.id,option.item);
-    const selected=chosenSite==null ? sites[0] : sites.find(s=>s.id===chosenSite);
-    if (!selected) throw new Error('Choose an available construction tile.');
+    const scenic=SCENIC_WORKS[option.item];
+    const selected=chosenSite==null && !scenic ? sites[0] : sites.find(s=>s.id===chosenSite);
+    if (!selected) throw new Error(scenic ? 'Choose an eligible plot beside the natural wonder.' : 'Choose an available construction tile.');
     site=selected.id;
   } else if (option.kind==='unit' && chosenSite!=null) throw new Error('Units deploy from the city.');
   const berth=option.item==='harbor' ? site : null;
@@ -1206,6 +1257,10 @@ function completeCityProject(state,city) {
       if (WONDERS[queue.item].terrain.includes(terrain)) city.campusHonors=[...(city.campusHonors||[]),queue.item];
     }
     if(WONDERS[queue.item]) settleCampusRace(state,city,queue.item,record);
+    if (SCENIC_WORKS[queue.item]) {
+      // Another city may have parked work before this commission was awarded.
+      for (const rival of state.cities) resumeWork(rival,queue.item);
+    }
     if (!WONDERS[queue.item]) {
       const site=queue.site || (queue.item==='harbor' ? city.portTile : city.tile);
       city.buildingSites={...city.buildingSites,[queue.item]:site};
@@ -1731,6 +1786,11 @@ function resolveOrder(source,seat,action) {
     const replacing=action.type==='switchProduction' || (buying && city.queue && !finishing);
     if (buying || replacing || action.expected!=null) verifyProduction(city,action.expected);
     if (replacing && !city.queue) throw new Error('This city has no project to switch.');
+    const def=Object.hasOwn(PRODUCTS,action.item) ? PRODUCTS[action.item] : null;
+    if (def && productionUnlocked(next,seat,def)) {
+      const missing=missingProductionBuilding(city,def);
+      if (missing) throw new Error(buildingOrderReasons[missing] || 'Complete the required building in this city first.');
+    }
     const option=getProductionOptions(next,city.id,{replace:replacing}).find(o=>o.item===action.item);
     if (buying) {
       if (!option?.buyEnabled) throw new Error(option?.buyReason || 'Choose a purchasable project.');
@@ -1773,6 +1833,20 @@ function resolveOrder(source,seat,action) {
 }
 function pursuingOrbitalResearch(state,seat) {
   return state.campaignVariety===1 && state.victoryMode==='science' && !knows(state,seat,'rocketry');
+}
+
+// Keep the last buildable plot for a known scenic work when another site is available.
+function botBuildingSites(state,city,item,options) {
+  const sites=getProjectSites(state,city.id,item);
+  if (sites.length<2) return sites;
+  const reserved=new Set();
+  for (const option of options) {
+    if (!option.scenicWonder || !option.enabled || option.item===item) continue;
+    const candidates=getProjectSites(state,city.id,option.item);
+    if (candidates.length===1) reserved.add(candidates[0].id);
+  }
+  const alternatives=sites.filter(site=>!reserved.has(site.id));
+  return alternatives.length ? alternatives : sites;
 }
 
 function botProject(state,city,difficulty) {
@@ -1830,15 +1904,15 @@ function botProject(state,city,difficulty) {
   if (forecast.housingLimited && !city.buildings.includes('neighborhood')) choices.push('neighborhood');
   const defensible=units.some(u=>UNIT_TYPES[u.type]?.strength>0 && UNIT_TYPES[u.type]?.domain!=='sea')
     && !rivals.some(u=>UNIT_TYPES[u.type]?.strength>0 && hexDistance(u.tile,city.tile)<=2);
+  const available=getProductionOptions(state,city.id);
   if (!choices.length && defensible && state.players[city.seat].capital>=12 && (state.round>=5 || cities.length>1)) {
     const preferences=[
       ['ucla','berkeley','stanford','caltech'],['stanford','caltech','ucla','berkeley'],
       ['berkeley','ucla','caltech','stanford'],['caltech','stanford','berkeley','ucla']
     ][state.players[city.seat].faction%4];
-    const available=getProductionOptions(state,city.id);
     const university=preferences.find(item=>available.some(o=>o.item===item && o.enabled));
     if(university && !cities.some(c=>WONDERS[c.queue?.item])) {
-      const site=getWonderSites(state,city.id,university)[0];
+      const site=botBuildingSites(state,city,university,available)[0];
       if(site) return {type:'produce',city:city.id,item:university,site:site.id};
     }
   }
@@ -1863,6 +1937,7 @@ function botProject(state,city,difficulty) {
     } else if (knows(state,city.seat,'steam') && (!basin || basin.tiles.size>=8)) choices.push('shipyard');
   }
   if (defensible) {
+    choices.push(...Object.keys(SCENIC_WORKS));
     if (forecast.surplus<=1 && !forecast.housingLimited) choices.push('grainMill');
     if (state.players[city.seat].capital<3*BUILDINGS.shop.required) choices.push('shop');
     if (pursuingOrbitalResearch(state,city.seat)) {
@@ -1889,13 +1964,13 @@ function botProject(state,city,difficulty) {
   const netIncome=getStats(state,city.seat).capitalIncome;
   const committed=cities.reduce((sum,c)=>sum+unitUpkeep(c.queue?.item),0);
   const reserve=state.players[city.seat].capital;
-  const enabled=new Set(getProductionOptions(state,city.id).filter(o=>
+  const enabled=new Set(available.filter(o=>
     o.enabled && (!o.upkeep || o.upkeep+committed<=netIncome+Math.floor(reserve/6))).map(o=>o.item));
   const option=choices.find(key=>enabled.has(key));
   if (!option) return null;
   const order={type:'produce',city:city.id,item:option};
   if (Object.hasOwn(BUILDINGS,option)) {
-    const sites=getProjectSites(state,city.id,option);
+    const sites=botBuildingSites(state,city,option,available);
     // Keep at least one vacant campus parcel while placing civic works in town.
     const chosen=option==='harbor' ? sites.find(s=>s.id===preferredBerth) : sites.length>=3 ? sites[1] : sites[0];
     if (chosen) order.site=chosen.id;

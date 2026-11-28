@@ -1,5 +1,6 @@
 import {UNIT_TYPES, BUILDINGS, IMPROVEMENTS} from './rules.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
+import {SCENIC_WORKS} from './scenic-works.js';
 import {RESOURCES} from './resources.js';
 
 // Full-size art normally paints over its local miniature. Keep the miniature
@@ -16,7 +17,7 @@ if (typeof document!=='undefined') document.addEventListener('error',event=>{
 const catalog = {...UNIT_TYPES, ...BUILDINGS, ...IMPROVEMENTS, ...RESOURCES, [SCIENCE_PROJECT.id]:SCIENCE_PROJECT};
 
 export function illustrationPath(id) {
-  return Object.hasOwn(catalog, id) ? './art/'+id+'.webp' : null;
+  return Object.hasOwn(catalog, id) ? './art/'+(SCENIC_WORKS[id]?.landmark || id)+'.webp' : null;
 }
 
 // The adjacent live label names the subject in the player's language.

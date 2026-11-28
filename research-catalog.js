@@ -41,6 +41,7 @@ function projectDetails(option,catalog,track,options) {
   const lines=[
     [L('Buildings','建筑'),matches(catalog.buildings)],
     [L('Universities','大学奇观'),matches(catalog.universities)],
+    [L('Natural wonder projects','自然奇观工程'),matches(catalog.scenic || {})],
     [L('Units','单位'),links.formations],
     [L('Policies','施政方针'),matches(catalog.policies)],
     [L('City projects','城市项目'),matches(catalog.projects)]
