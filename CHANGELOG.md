@@ -1,5 +1,13 @@
 # Campaign updates
 
+## v6.6.0 — Choose a game mode and find the next order
+
+The homepage and title screen present the tutorial, solo play and multiplayer in the same order. Select **Multiplayer** to open room creation. Players with an invitation code can go straight to **Join a room**.
+
+The Field Guide now searches both English and Chinese. Search from the title screen or inside a campaign to read a short answer and jump to the matching topic. In the tutorial, a scout can compare a recommended route by its movement cost and the number of new hexes it would reveal, then confirm the destination or choose a different one.
+
+The GitHub project page now opens with an English introduction and an English screenshot from the Pasadena campaign. The [Chinese guide](./README.zh-CN.md) is available separately.
+
 ## v6.5.0 — Play your first campaign in Pasadena
 
 Start the guided campaign from the homepage or the game title screen. Found a capital on the Los Angeles relief map, choose a technology and a civic, set up production, weigh the cost of expanding early, and send a unit into the field. Open the usual game controls for each choice. You can keep your influence, choose a different unit, collapse the tips, and continue to play after the last lesson. The tutorial resumes from its own save slot.
