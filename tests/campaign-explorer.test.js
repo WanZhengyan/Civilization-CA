@@ -43,3 +43,9 @@ test('the work crew directory respects the owning seat and remaining charges',()
  assert.match(explorerRows(v,'crews')[0].info,/Farm.*2 charges/);
  v.state.units.at(-1).charges=0;assert.equal(explorerRows(v,'crews').length,0);
 });
+
+test('fresh inland campaigns show no fictitious port investment or hidden berth',()=>{
+ const v=view(capital()),r=explorerRows(v,'ports');
+ assert.ok(r.every(site=>v.state.intel.explored.includes(site.id) && site.terrain==='ocean'));
+ const first=view(start());assert.deepEqual(explorerRows(first,'ports'),[]);
+});

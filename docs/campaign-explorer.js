@@ -1,6 +1,6 @@
 import {RESOURCES} from './resources.js';
 import {WONDERS} from './wonders.js';
-import {getUnitOptions,getSettlementAssessment,IMPROVEMENTS,getActions,getRouteDetail,getMap,TERRAIN_NAMES} from './rules.js';
+import {getUnitOptions,getSettlementAssessment,IMPROVEMENTS,getActions,getRouteDetail,getProductionOptions,getProjectSites,getMap,TERRAIN_NAMES} from './rules.js';
 import {getLanguage,translate} from './i18n.js';
 
 const L=(en,zh)=>getLanguage()==='zh-CN'?zh:en;
@@ -12,6 +12,7 @@ const modes={
   founding:['Settlement survey','建城选址'],
   borders:['Border proposals','边界提案'],
   crews:['Worker assignments','建设者工作地点'],
+  ports:['Harbor siting','港口选址'],
 };
 
 function describe(row,info){return {...row,info,search:row.search+' '+info};}
@@ -72,6 +73,19 @@ export function explorerRows(view,mode='places'){
       }
     }
     return rows.filter(row=>assignments.has(row.id)).map(row=>describe(row,assignments.get(row.id).join(' / ')));
+  }
+  if(mode==='ports'){
+    const sites=new Map();
+    for(const city of state.cities.filter(c=>c.seat===seat)){
+      const harbor=getProductionOptions(state,city.id,{replace:true}).find(o=>o.item==='harbor' && o.enabled);
+      if(!harbor)continue;
+      for(const site of getProjectSites(state,city.id,'harbor')){
+        const offers=sites.get(site.id)||[];
+        offers.push(tr(city.name)+' · '+harbor.required+L(' production',' 生产力')+' · '+harbor.turns+L(' turns',' 回合'));
+        sites.set(site.id,offers);
+      }
+    }
+    return rows.filter(row=>sites.has(row.id)).map(row=>describe(row,sites.get(row.id).join(' / ')));
   }
   return rows;
 }
