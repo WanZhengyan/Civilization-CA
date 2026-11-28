@@ -898,6 +898,7 @@ function overlayUnitBoxes(model,scale) {
 function renderOverlay(g,tiles,model,scale,labels,territories,unitBoxes,cityBoxes) {
   const {board={},players=[]}=model;
   const piece=(tile,paint)=>upright(g,...pos(tile.q,tile.r),model.pitch,paint);
+  const pitch=model.pitch||1;
   const getFaction=owner=>players[owner]?.color||FACTION[owner%4]||FACTION[0];
   if(territories){
     for(const t of tiles){
@@ -963,7 +964,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories,unitBoxes,cityBoxe
   const labelBounds=[];
   function placeLabel(x,y,name){
     g.save();g.font='600 12.2px Georgia,serif';
-    const half=(g.measureText(name).width+16)*labelScale/2,height=9.5*labelScale;g.restore();
+    const half=(g.measureText(name).width+16)*labelScale/2,height=9.5*labelScale/pitch;g.restore();
     let best,minimum=Infinity;
     for(const [dx,dy] of [[0,0],[12,-7],[-12,-7],[23,-4],[-23,-4],[9,11],[-9,11],[25,8],[-25,8],[0,-11]]){
       const [xx,yy]=fitAtlasCaption(x+dx,y+dy,half,height,region);
@@ -988,7 +989,7 @@ function renderOverlay(g,tiles,model,scale,labels,territories,unitBoxes,cityBoxe
     const lx=x+(place.landmark==='hollywood'?-22:place.landmark==='griffith'?15:0);
     const ly=y+(place.landmark==='hollywood'?18:place.landmark==='griffith'?28:24);
     const point=placeLabel(lx,ly,name);
-    if(point)label(g,name,...point,owner!=null && territories?getFaction(owner):'#a5997a',labelScale);
+    if(point)upright(g,...point,pitch,()=>label(g,name,...point,owner!=null && territories?getFaction(owner):'#a5997a',labelScale));
   }
   if(scale>.45 && region.waterways){
     for(const {name,tile,alternates} of model.waterCaptions||[]){
@@ -996,12 +997,14 @@ function renderOverlay(g,tiles,model,scale,labels,territories,unitBoxes,cityBoxe
       g.save();g.font='italic 600 '+size+'px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
       const half=g.measureText(caption).width/2+2,occupied=[...cityBoxes,...unitBoxes,...labelBounds];
       for(const candidate of [tile,...alternates]){
-        const [x,y]=pos(candidate.q,candidate.r),box=[x-half,y+4,x+half,y+6+size];
+        const [x,y]=pos(candidate.q,candidate.r),box=[x-half,y+5+size/2-size/(2*pitch),x+half,y+5+size/2+size/(2*pitch)];
         if(occupied.some(other=>boxesOverlap(box,other,2/scale)))continue;
         if(model.fog && [box[0],x,box[2]].some(xx=>[box[1],box[3]].some(yy=>
           !chartHit(xx,yy,id=>model.fog.explored.has(id)))))continue;
-        g.strokeStyle='#25515b';g.lineWidth=2.8/Math.max(.72,scale);g.strokeText(caption,x,y+5+size/2);
-        g.fillStyle='#e8f6e8';g.fillText(caption,x,y+5+size/2);labelBounds.push(box);break;
+        upright(g,x,y+5+size/2,pitch,()=>{
+          g.strokeStyle='#25515b';g.lineWidth=2.8/Math.max(.72,scale);g.strokeText(caption,x,y+5+size/2);
+          g.fillStyle='#e8f6e8';g.fillText(caption,x,y+5+size/2);
+        });labelBounds.push(box);break;
       }
       g.restore();
     }
@@ -1011,10 +1014,12 @@ function renderOverlay(g,tiles,model,scale,labels,territories,unitBoxes,cityBoxe
       if(!tile.localityLabel||tile.waterway||model.cityTiles.has(tile.id)||board[tile.id]?.wonder)continue;
       const [x,y]=pos(tile.q,tile.r),name=translate(tile.locality);
       g.save();g.font='italic 11px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
-      const half=g.measureText(name).width/2+2,box=[x-half,y+7,x+half,y+23];
+      const half=g.measureText(name).width/2+2,box=[x-half,y+15-8/pitch,x+half,y+15+8/pitch];
       if(![...cityBoxes,...unitBoxes,...labelBounds].some(other=>boxesOverlap(box,other,2/scale))){
-        g.strokeStyle='#34463e';g.lineWidth=2.4;g.strokeText(name,x,y+15);
-        g.fillStyle='#f6e6bf';g.fillText(name,x,y+15);labelBounds.push(box);
+        upright(g,x,y+15,pitch,()=>{
+          g.strokeStyle='#34463e';g.lineWidth=2.4;g.strokeText(name,x,y+15);
+          g.fillStyle='#f6e6bf';g.fillText(name,x,y+15);
+        });labelBounds.push(box);labelBounds.push(box);
       }
       g.restore();
     }
@@ -1024,8 +1029,11 @@ function renderOverlay(g,tiles,model,scale,labels,territories,unitBoxes,cityBoxe
     for(const t of tiles) if(t.namedCenter!==false && names.includes(t.name)&&!getAtlasPlace(t,board[t.id])&&!model.cityTiles.has(t.id)){
       const [x,y]=pos(t.q,t.r);g.save();g.font='italic 13px Georgia, serif';g.textAlign='center';g.textBaseline='middle';
       const name=translate(t.name),half=g.measureText(name).width/2+2;
-      if(!cityBoxes.some(box=>boxesOverlap(box,[x-half,y+5,x+half,y+23]))){
-        g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(name,x,y+14);g.fillStyle='#eee1bd';g.fillText(name,x,y+14);
+      const box=[x-half,y+14-9/pitch,x+half,y+14+9/pitch];
+      if(![...cityBoxes,...unitBoxes,...labelBounds].some(other=>boxesOverlap(other,box,2/scale))){
+        upright(g,x,y+14,pitch,()=>{
+          g.strokeStyle='#39443e';g.lineWidth=2.5;g.strokeText(name,x,y+14);g.fillStyle='#eee1bd';g.fillText(name,x,y+14);
+        });labelBounds.push(box);
       }
       g.restore();
     }
