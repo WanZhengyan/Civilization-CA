@@ -21,7 +21,7 @@ const catalogue=[...places,...landmarks,...coastalWorks];
 function entryAction(p) {
   return (p.slug?'place-':p.year?'work-':'site-')+p.id;
 }
-const labels = {search:['Search atlas','搜索地名志'],profile:['Places','地点档案'],compare:['Compare','横向对比'],sites:['Field sites','实地档案'],coast:['Coastal timeline','海岸建设年表']};
+const labels = {saved:['Notebook','地点收藏'],search:['Search atlas','搜索地名志'],profile:['Places','地点档案'],compare:['Compare','横向对比'],sites:['Field sites','实地档案'],coast:['Coastal timeline','海岸建设年表']};
 const esc = value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tr = (pair,lang)=>pair[lang==='zh-CN'?1:0];
 const number = (value,lang)=>new Intl.NumberFormat(lang,{maximumFractionDigits:2}).format(value);
@@ -29,8 +29,24 @@ const choice = (action,label,selected=false)=>'<button type="button" class="gaz-
 const fact = (label,value)=>'<div><dt>'+esc(label)+'</dt><dd>'+esc(value)+'</dd></div>';
 const link = (url,label)=>'<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>';
 
+const bookmarksKey='california-gazetteer.bookmarks.v1';
+function readPins() {
+  try {
+    const ids=JSON.parse(globalThis.localStorage?.getItem(bookmarksKey) || '[]');
+    return Array.isArray(ids)?[...new Set(ids)].filter(id=>catalogue.some(p=>p.id===id)):[];
+  } catch {return [];}
+}
+function pinControl(view,p,lang) {
+  const pinned=view.pins.includes(p.id);
+  return choice('pin-'+p.id,tr(pinned?['Remove from notebook','取消收藏']:['Save to notebook','收藏地点'],lang),pinned);
+}
+function notebook(view,lang) {
+  const records=view.pins.map(id=>catalogue.find(p=>p.id===id)).filter(Boolean);
+  if(!records.length)return '<p>'+tr(['Save a city, county, field site or coastal project from its profile to build your own field notebook.','在城市、县、实地档案或海岸工程页面收藏地点，即可在这里建立自己的笔记本。'],lang)+'</p>';
+  return '<p>'+tr(['Saved on this device','本设备已收藏'],lang)+' · '+records.length+'</p>'+indexRows(records,lang);
+}
 export function newGazetteer(region='la') {
-  return {region:Object.hasOwn(regions,region)?region:'la',section:'profile',place:null,scale:'city',metric:'population',unit:'mi'};
+  return {pins:readPins(),region:Object.hasOwn(regions,region)?region:'la',section:'profile',place:null,scale:'city',metric:'population',unit:'mi'};
 }
 function profile(view,lang,campaign) {
   const current=places.filter(p=>p.region===view.region);
@@ -44,7 +60,7 @@ function profile(view,lang,campaign) {
     '<div class="gaz-switch">'+unitControls(view,lang)+'</div>'+
     (Object.hasOwn(regionalEconomy.jobs.values,place.id)?'<h4>'+tr(['County economy','县域经济'],lang)+'</h4><dl class="gaz-facts">'+
       Object.values(regionalEconomy).map(m=>fact(tr(m.label,lang),number(m.values[place.id],lang))).join('')+'</dl>':'')+
-    link(sourceOf(place),tr(['US Census Bureau · QuickFacts','美国人口普查局 · QuickFacts'],lang))+mapControl(place,lang,campaign)+'</article>';
+    link(sourceOf(place),tr(['US Census Bureau · QuickFacts','美国人口普查局 · QuickFacts'],lang))+pinControl(view,place,lang)+mapControl(place,lang,campaign)+'</article>';
 }
 const area=(p,unit)=>landArea[p.id]*(unit==='km'?2.589988110336:1);
 const areaUnit=(unit,lang)=>tr(unit==='km'?['km²','平方公里']:['mi²','平方英里'],lang);
@@ -102,7 +118,7 @@ function coast(view,lang,campaign) {
   return '<ol class="gaz-timeline">'+coastalWorks.map((x,i)=>'<li>'+choice('work-'+x.id,x.year+' · '+tr(x.name,lang),i===index)+'</li>').join('')+'</ol>'+
     '<article class="gaz-place"><h3>'+esc(tr(p.name,lang))+'</h3><p>'+p.year+' · '+tr(regions[p.region],lang)+'</p><p>'+esc(tr(p.context,lang))+'</p>'+
     (previous?'<p>'+tr(['Years after the preceding project','距上一个工程的年数'],lang)+' · '+(p.year-previous.year)+'</p>':'')+
-    link(p.url,tr(p.publisher,lang))+mapControl(p,lang,campaign)+'</article>';
+    link(p.url,tr(p.publisher,lang))+pinControl(view,p,lang)+mapControl(p,lang,campaign)+'</article>';
 }
 function sites(view,lang,campaign) {
   const selected=landmarks.find(p=>p.id===view.site) || landmarks.find(p=>p.region===view.region);
@@ -110,16 +126,23 @@ function sites(view,lang,campaign) {
   return '<div class="gaz-places">'+list+'</div><article class="gaz-place"><h3>'+esc(tr(selected.name,lang))+
     '</h3><p>'+esc(tr(regions[selected.region],lang))+'</p><dl class="gaz-facts">'+
     fact(tr(selected.date,lang),tr(selected.measure,lang))+'</dl><p>'+esc(tr(selected.context,lang))+'</p>'+
-    link(selected.url,tr(selected.publisher,lang))+mapControl(selected,lang,campaign)+'</article>';
+    link(selected.url,tr(selected.publisher,lang))+pinControl(view,selected,lang)+mapControl(selected,lang,campaign)+'</article>';
 }
 export function gazetteerContent(view,lang,campaign) {
   const modes=Object.entries(labels).map(([id,names])=>choice('section-'+id,tr(names,lang),id===view.section)).join('');
-  let body=view.section==='search'?search(view,lang):view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
+  let body=view.section==='saved'?notebook(view,lang):view.section==='search'?search(view,lang):view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
   return {kicker:tr(['Field guide','游戏指南'],lang),title:tr(['California gazetteer','加州地名志'],lang),body:'<section class="gaz" translate="no"><p class="gaz-intro">'+
     tr(['Real places and public measurements. Campaign hexes represent approximate locations and have their own game yields.','查阅现实地点与公开数据。战役地块是近似位置，产出按游戏规则计算。'],lang)+'</p>'+
     (Object.keys(labels).length>1?'<nav class="gaz-nav" aria-label="'+tr(['Gazetteer sections','地名志栏目'],lang)+'">'+modes+'</nav>':'')+body+'</section>'};
 }
 export function gazetteerAction(view,action,campaign) {
+  if(action.startsWith('pin-')){
+    const id=action.slice(4);
+    if(!catalogue.some(p=>p.id===id))return;
+    view.pins=view.pins.includes(id)?view.pins.filter(p=>p!==id):[...view.pins,id];
+    try {globalThis.localStorage?.setItem(bookmarksKey,JSON.stringify(view.pins));} catch {}
+    return;
+  }
   if(action.startsWith('locate-'))return knownAnchor(catalogue.find(p=>p.id===action.slice(7)),campaign);
   if(['unit-mi','unit-km'].includes(action))view.unit=action.slice(5);
   if(action.startsWith('metric-') && (Object.hasOwn(metrics,action.slice(7)) || view.scale==='county' && Object.hasOwn(regionalEconomy,action.slice(7))))view.metric=action.slice(7);

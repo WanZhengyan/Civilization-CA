@@ -67,3 +67,13 @@ test('a bilingual index supports multi-word region matching and safe empty resul
   const v=newGazetteer();gazetteerAction(v,'section-search');v.query='"<x>';
   assert.match(gazetteerContent(v,'en').body,/&quot;&lt;x&gt;/);
 });
+test('field notebooks persist ordered real sites across atlas sessions and recover from malformed local data',()=>{
+  let data='null';const old=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+  Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:()=>data,setItem:(_,value)=>{data=value;}}});
+  try {
+    let v=newGazetteer();gazetteerAction(v,'pin-oakland');gazetteerAction(v,'pin-lighthouse');gazetteerAction(v,'pin-unknown');
+    v=newGazetteer();assert.deepEqual(v.pins,['oakland','lighthouse']);gazetteerAction(v,'section-saved');
+    assert.match(gazetteerContent(v,'en').body,/Show|Old Point Loma Lighthouse/);
+    gazetteerAction(v,'pin-oakland');assert.deepEqual(newGazetteer().pins,['lighthouse']);
+  } finally {if(old)Object.defineProperty(globalThis,'localStorage',old);else delete globalThis.localStorage;}
+});
