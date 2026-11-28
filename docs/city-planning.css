@@ -45,3 +45,18 @@
 .report-flags span {font-size:12px;border:1px solid #96805a;color:#efd7a6;padding:1px 5px;border-radius:3px}
 .city-report .report-queue {padding-top:6px;border-top:1px solid #4a625a}
 .city-directory :is(button,select):focus-visible,.cities-compare:focus-visible {outline:2px solid #edca86;outline-offset:2px}
+
+dialog.city-profile {width:min(48rem,calc(100vw - 1.5rem));color:#ececde}
+.city-profile .modal-body {padding:1rem 1.25rem}
+.city-profile .study-page {display:flex;align-items:center;gap:1rem;color:#d2cbb4}
+.study-page select,.city-study-actions button {min-height:42px;color:#f2e8cb;background:#253436;border:1px solid #66756e;border-radius:4px;padding:.3rem .7rem;font:inherit}
+.city-study {padding:.5rem 0 .9rem;border-bottom:1px solid #485351}
+.city-study h3 {font:normal 1.25rem var(--serif);margin:.5rem 0;color:#f1dbab}
+.city-study p {line-height:1.45}.city-study .city-study-note {font-size:.87rem;color:#c3cfca;margin:.55rem 0 0}
+.city-study-scroll {overflow-x:auto;max-width:100%}
+.city-study table {border-collapse:collapse;width:100%;font-size:.9rem;line-height:1.35;font-variant-numeric:tabular-nums}
+.city-study td,.city-study th {padding:.4rem .55rem;border-bottom:1px solid #3a4849;text-align:end}
+.city-study th:first-child {text-align:start}.city-study tbody th {font-weight:500}
+.city-study thead {color:#adc5bc;background:#243136}
+.city-study-actions {display:flex;flex-wrap:wrap;gap:.5rem;margin:.6rem 0}
+.city-profile :is(select,button,.city-study-scroll):focus-visible {outline:2px solid #e8c77f;outline-offset:2px}

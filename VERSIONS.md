@@ -72,3 +72,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.62 | Build a persistent personal field notebook across regions and source types |
 | 7.0.63 | Track unique atlas districts discovered by each campaign seat in a live survey |
 | 7.0.64 | Follow three regional field trips with exploration-aware objectives and saveable stops |
+| 7.0.65 | Open an owner-only city profile with reconciled local harvest accounts |

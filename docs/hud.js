@@ -36,6 +36,7 @@ import {councilOverview,initialCouncilView,navigateCouncilButtons,renderCouncilB
 import {POLICIES} from './policy.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
+import {mountCityProfile} from './city-profile.js';
 import {openCityHall,paintCityHall} from './city-hall.js';
 import {populationSummary,openCitizenLedger,paintCitizenLedger} from "./city-planning.js";
 import {getPopulationReport} from "./rules.js";
@@ -66,7 +67,7 @@ const unitRole={settler:"Civilian unit",builder:"Engineering unit",melee:"Melee 
 const isSeaUnit=item=>UNIT_TYPES[item]?.domain==="sea";
 const portBuildings=new Set(["harbor","shipyard"]);
 const eraName=id=>ERAS[id]?.name||id;
-let updateWaterKey,cityDirectory,influencePanel;
+let updateWaterKey,cityDirectory,cityProfile,influencePanel;
 const councilGoals={research:"",civics:""};
 const councilViews={};
 const routeOrigins={};
@@ -464,6 +465,7 @@ function inspect(){
     if(own && c.buildingSites) info+='<div class="works-sites">'+Object.entries(c.buildingSites).map(([item,id])=>
       '<small>'+esc(items[item]||item)+' · '+esc(mapRegion.byId[id]?.name||id)+' · '+esc(id)+'</small>').join('')+'</div>';
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
+    if(own)actions+=actionButton('city-profile',getLanguage()==='zh-CN'?'城市档案':'City view',getLanguage()==='zh-CN'?'收支与规划':'Accounts and planning');
     if(own && state.campaignVariety===1) actions+=actionButton("city-hall","City hall","City charter");
   }else{
     const station=FIELD_STATIONS[holding?.fieldStation];
@@ -926,6 +928,7 @@ function paint(next){
   turnResults?.(view);
   cityDirectory?.paint();
   paintAdvisors?.();
+  cityProfile?.paint();
   text("brand-region",mapRegion.shortName);text("campaign-title",mapRegion.name);
   text("chart-coordinate",mapRegion.coordinates);text("footer-region",mapRegion.shortName);
   document.querySelector(".map-panel").setAttribute("aria-label","Tactical map · "+mapRegion.shortName);
@@ -985,6 +988,7 @@ function reviewHousing(cityId,item) {
 }
 function chooseOrder(key){
   if(moveDraft){moveDraft=null;updateMap();}
+  if(key==='city-profile'){cityProfile?.open(cityAt(selectedTile)?.id);return;}
   if(key==="city-hall"){
     const c=cityAt(selectedTile);
     if(c?.seat===view.seat){openCityHall(c.id,action=>Game.doAction(action));paintCityHall(view.state,view.seat,mayOrder());}
@@ -1108,11 +1112,14 @@ function mount(){
     if(current)openPendingTask(current);
   });
   document.addEventListener('civitas-language',()=>turnResults(view));
-  cityDirectory=mountCityDirectory(()=>view,(city,command)=>{
+  function inspectCityReport(city,command,value){
+    if(command==='profile'){cityProfile.open(city.id);return;}
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
     if(command==='production')openProduction();
-    else chooseOrder('citizens');
-  });
+    else if(command==='citizens')chooseOrder('citizens');
+  }
+  cityProfile=mountCityProfile(()=>view,inspectCityReport);
+  cityDirectory=mountCityDirectory(()=>view,inspectCityReport);
   parcelBar=document.createElement('section');parcelBar.className='work-sitebar';parcelBar.hidden=true;
   parcelBar.setAttribute('aria-label','Construction site selection');
   el('map-hint').before(parcelBar);
