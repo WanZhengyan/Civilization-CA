@@ -51,3 +51,9 @@ button.brand:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px
   .title-summary { margin: 12px 0 16px; font-size: 1rem; }
 }
 @media (prefers-reduced-motion: reduce) { .title-screen button { transition: none; } }
+
+.title-version { margin-inline-end:auto; font-variant-numeric:tabular-nums; color:#edcf96; letter-spacing:.05em; }
+.title-imprint { text-decoration:none; }
+.title-imprint:hover { text-decoration:underline; }
+.title-imprint:focus-visible { outline:3px solid #fff0bd;outline-offset:4px; }
+@media(max-width:400px){.title-regions{flex-wrap:wrap}.title-version{margin-inline-end:5px}}

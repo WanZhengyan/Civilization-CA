@@ -406,6 +406,12 @@ Choose a region and map size. Each combination has its own solo save. Set the ci
 In a campaign with rivals, control every participating civilization’s original capital to win immediately.|在有对手的战役中，占领所有参战文明的初始首府即可立即获胜。
 Starting over replaces the solo save for this region and size.|重新开始会覆盖该地区在所选尺寸下的单人存档。
 Official website|官方网站
+New player tutorial|新手教程
+Continue tutorial|继续新手教程
+Learn the first turns in Pasadena, or choose a California region for your own campaign.|在帕萨迪纳学会前几个回合，也可以选择加州地图，开启自己的战役。
+Restart the tutorial?|重新开始新手教程？
+Restart tutorial|重玩新手教程
+Your tutorial will start again in Pasadena. Your other campaigns keep their saves.|教程将从帕萨迪纳重新开始，其他战役的存档将保留。
 This room server created a Standard map. Large maps are available in solo play.|当前联机服务器创建了标准地图。你可以在单人模式中选择大型地图。
 Planning|规划
 Roster|名册

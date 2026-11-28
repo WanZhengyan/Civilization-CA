@@ -17,6 +17,7 @@ export function launchDestination(url, hasSolo, seats) {
     const code = invitationCode(location.searchParams.get('room'));
     return {screen: code && seats[code] ? 'reconnect' : 'join', code};
   }
+  if (location.hash === '#tutorial' || location.searchParams.get('setup') === 'tutorial') return {screen:'tutorial'};
   if (location.hash === '#campaign') return {screen: hasSolo ? 'solo' : 'home'};
   const setup = location.searchParams.get('setup');
   if (['solo','create','host','join'].includes(setup)) {

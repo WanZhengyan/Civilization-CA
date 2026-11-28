@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
 import assert from 'node:assert/strict';
 import {newSolo,restoreSolo,soloSlotKey,SOLO_KEY} from '../docs/solo-saves.js';
+import {TUTORIAL_KEY} from '../docs/tutorial-save.js';
 import {createGame,getScoreTarget} from '../docs/rules.js';
 
 test('all solo setups keep their chosen opponents, civilization and victory condition after reload',()=>{
@@ -49,13 +50,19 @@ async function openPage(address,storage) {
   const history = {replaceState(_data,_title,url){location.href = url.href;}};
   Object.assign(globalThis,{document,location,history,window:{localStorage,scrollTo(){}},localStorage,requestAnimationFrame:cb=>cb()});
   const {Game} = await import('../docs/game.js?session='+crypto.randomUUID());
-  await Game.init({render(){},locate(){},toast(){}});
+  let rendered;
+  await Game.init({render:view=>{rendered=view;},locate(){},toast(){}});
   function dispatch(type,target) {
     const event = new Event(type);
     Object.defineProperty(event,'target',{value:target});
     dialog.dispatchEvent(event);
   }
-  return {Game,dialog,body,location,
+  return {Game,dialog,body,location,get view(){return rendered;},
+    titleClick(action){
+      const event = new Event('click');
+      Object.defineProperty(event,'target',{value:{closest:selector=>selector==='[data-title]' ? {dataset:{title:action}} : null}});
+      title.dispatchEvent(event);
+    },
     select(name,value){dispatch('change',{name,value:String(value)});},
     click(act){
       assert.ok(dialog.innerHTML.includes('data-act="'+act+'"'),'Missing dialog action '+act);
@@ -188,4 +195,54 @@ test('team standings keep other seats’ scores private during play and explain 
   assert.match(done.dialog.innerHTML,/Shared victory/);
   assert.equal(done.dialog.innerHTML.match(/130 pts/g)?.length,2);
   assert.ok(done.dialog.innerHTML.includes('Team A') && done.dialog.innerHTML.includes('Team B'));
+});
+
+test('the tutorial uses one independent slot across a deep link, reload, restart and return to ordinary solo play',async()=>{
+  const base='https://example.test/Civilization-CA/game.html';
+  const existing=newSolo('la','large',0);
+  const regionalKey=soloSlotKey('la','large');
+  const ordinary=JSON.stringify(existing);
+  const storage=new Map([[SOLO_KEY,ordinary],[regionalKey,ordinary]]);
+  const page=await openPage(base+'?setup=tutorial',storage);
+  assert.equal(page.location.search,'');
+  assert.equal(page.location.hash,'#tutorial');
+  assert.equal(page.view.tutorial,true);
+  assert.equal(JSON.parse(storage.get(TUTORIAL_KEY)).game.seed,24680);
+  const founder=page.view.state.units[0];
+  const id=page.view.tutorialId;
+  page.Game.doAction({type:'found',unit:founder.id});
+  page.Game.setTutorialProgress({collapsed:true});
+  assert.equal(page.view.tutorialProgress.founded,true);
+  assert.equal(storage.get(SOLO_KEY),ordinary);
+  assert.equal(storage.get(regionalKey),ordinary);
+
+  const resumed=await openPage(page.location.href,storage);
+  assert.equal(resumed.view.tutorialId,id);
+  assert.equal(resumed.view.state.cities[0].name,'Pasadena');
+  assert.equal(resumed.view.tutorialProgress.collapsed,true);
+  resumed.Game.open('menu');
+  resumed.click('restart-tutorial');
+  const checkpoint=storage.get(TUTORIAL_KEY);
+  resumed.click('back');
+  assert.equal(storage.get(TUTORIAL_KEY),checkpoint);
+  resumed.Game.open('menu');
+  resumed.click('restart-tutorial');
+  resumed.click('confirm-tutorial');
+  assert.notEqual(resumed.view.tutorialId,id);
+  assert.equal(resumed.view.state.cities.length,0);
+  assert.deepEqual(resumed.view.tutorialProgress,{});
+  assert.equal(storage.get(SOLO_KEY),ordinary);
+  assert.equal(storage.get(regionalKey),ordinary);
+  const restartedId=resumed.view.tutorialId;
+  resumed.Game.open('menu');
+  resumed.click('title-screen');
+  assert.equal(resumed.location.hash,'');
+  resumed.titleClick('tutorial');
+  assert.equal(resumed.view.tutorialId,restartedId);
+  resumed.Game.open('campaign-atlas');
+  resumed.click('load-region');
+  assert.equal(resumed.location.hash,'#campaign');
+  assert.equal(resumed.view.tutorial,false);
+  assert.equal(resumed.view.session,existing.seed);
+  assert.equal(JSON.parse(storage.get(TUTORIAL_KEY)).id,restartedId);
 });

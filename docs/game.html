@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./battle-reports.css">
   <link rel="stylesheet" href="./title-screen.css">
+  <link rel="stylesheet" href="./tutorial-coach.css">
   <link rel="stylesheet" href="./visitor-counts.css">
   <link rel="stylesheet" href="./map-workspace.css">
   <link rel="stylesheet" href="./diplomacy-ui.css">
@@ -27,14 +28,15 @@
     </header>
     <section class="title-menu">
       <h1 id="title-wordmark" translate="no">Civilization <em>CA</em></h1>
-      <p class="title-summary">Explore California, settle its coast and lead your civilization through the ages.</p>
+      <p class="title-summary">Learn the first turns in Pasadena, or choose a California region for your own campaign.</p>
       <div class="title-orders">
-        <button class="title-primary" type="button" data-title="solo">Play solo</button>
+        <button class="title-primary" type="button" data-title="tutorial" translate="no">New player tutorial</button>
+        <button type="button" data-title="solo">Play solo</button>
         <button type="button" data-title="reconnect" hidden><span>Rejoin room</span> <b data-last-room translate="no"></b></button>
         <div class="title-online"><button type="button" data-title="create">Create room</button><button type="button" data-title="join">Join room</button></div>
       </div>
     </section>
-    <footer class="title-regions"><span>Los Angeles</span><i></i><span>San Francisco</span><i></i><span>San Diego</span></footer>
+    <footer class="title-regions"><span class="title-version" translate="no">v6.5.0</span><span>Los Angeles</span><i></i><span>San Francisco</span><i></i><span>San Diego</span></footer>
   </div>
 </main>
 <link rel="preload" as="image" href="./favicon.svg"/><div class="app tactics">
