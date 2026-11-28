@@ -1,3 +1,4 @@
+import {notebookReport,notebookPanel} from './regional-atlas.js';
 import {FIELD_STATIONS,fieldStationReport,nearestKnownStation,stationInstruction} from './field-stations.js';
 import {hexDistance} from './rules.js';
 import {previewMove,sameMove,reviewPointerMove} from './move-review.js';
@@ -380,6 +381,7 @@ function inspect(){
         const definition=UNIT_TYPES[u.type];
         explanation=definition.description||itemDesc[u.type]||("Attack range · "+definition.range+" hexes.");
       }
+      const journal=notebookReport(state,u,mapRegion,hexDistance);
       const visit=fieldStationReport(state,u);
       if(visit){
         info+=note(visit.name)+note(visit.visited?'Your expedition has visited this station.':'Each civilization can visit once. An exchange uses the scout’s remaining movement.');
@@ -388,6 +390,7 @@ function inspect(){
         const nearest=nearestKnownStation(state,u,explored,hexDistance);
         if(nearest)actions+=actionButton('locate-station','Nearest known station',FIELD_STATIONS[state.board[nearest].fieldStation].name);
       }
+      actions+=notebookPanel(journal,disabled,actionButton,esc);
       if(canSurvey(state,u)) actions+=actionButton('survey','Survey resources','1 movement','gold',disabled);
       const plans=getUpgradePlans(state,u.id,view.seat);
       if (!training?.drill) actions+=trainingPanel(training,true,disabled || !u.moves);
@@ -409,6 +412,7 @@ function inspect(){
     if(buildings.length)info+='<div class="built-gallery">'+buildings.join('')+'</div>';
     const expansion=expansionForecasts.get(c.id);
     info+=populationSummary(getPopulationReport(state,c.id))+borderSummary(expansion,mapRegion.byId[expansion?.tile],esc)+cityQueue(c);
+    if(c.atlasCopies)info+='<div class="unit-sight"><span>Regional atlas collection</span><strong>+'+Number(c.atlasCopies)+' <span>influence</span></strong></div>';
     if(own && c.buildingSites) info+='<div class="works-sites">'+Object.entries(c.buildingSites).map(([item,id])=>
       '<small>'+esc(items[item]||item)+' · '+esc(mapRegion.byId[id]?.name||id)+' · '+esc(id)+'</small>').join('')+'</div>';
     if(own)actions=actionButton("choose-production",c.queue?"View production":"Choose production","City orders","gold",false)+actionButton("supplies","Supply ledger","Stored goods")+actionButton("citizens","Manage citizens","City planning","",false);
@@ -823,6 +827,9 @@ function chooseOrder(key){
     return;
   }
   const u=getUnit();if(!u||u.seat!==view.seat)return;
+  if(mayOrder() && ['record-terrain','file-atlas'].includes(key)){
+    Game.doAction({type:key==='record-terrain'?'recordTransect':'fileTransect',unit:u.id});return;
+  }
   if(key==="locate-station"){
     const station=nearestKnownStation(view.state,u,explored,hexDistance);
     if(station){atlas.focus(station);openMapOnMobile()}

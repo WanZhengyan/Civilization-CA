@@ -10,6 +10,8 @@ section(serviceTranslations);
 section(positionTranslations);
 import {stationCopy} from './field-stations.js';
 section(stationCopy);
+import {notebookCopy} from './regional-atlas.js';
+section(notebookCopy);
 section(`
 Craft exhibition|工艺展
 Each of the next three harvests adds 3 production to the city and 1 culture to the council.|接下来三次收获，本城每次额外获得 3 点生产力，议会额外获得 1 点文化。

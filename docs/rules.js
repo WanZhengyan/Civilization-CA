@@ -1,3 +1,4 @@
+import {expeditionOrder,runAtlasOrder} from './regional-atlas.js';
 import {placeFieldStations,visitFieldStation,nearestKnownStation,volunteerStationOrder} from './field-stations.js';
 import {sendDelegation,proposeDelegation} from './diplomacy.js';
 import {councilProjectCost} from './council-costs.js';
@@ -521,6 +522,7 @@ export function getCityYield(state,cityId) {
   result.food+=bonus.food || 0;
   result.production+=bonus.production || 0;
   result.capital+=bonus.capital || 0;
+  if (state.campaignVariety===1 && city.atlasCopies) result.influence+=city.atlasCopies;
   if (farms && adopted(state,city.seat,'irrigationDistricts')) result.food += 2;
   if (has('harbor') && adopted(state,city.seat,'harborCommission')) result.capital += 3;
   if (adopted(state,city.seat,'exposition')) result.influence += 2 * city.buildings.filter(id=>WONDERS[id]).length;
@@ -575,6 +577,7 @@ export function getStats(state,seat) {
   }
   const bonus=capitalBonus(state,seat,cities.find(city=>city.originalSeat===seat));
   stats.scienceIncome+=bonus.science || 0;
+  if (state.campaignVariety===1) stats.influenceIncome+=cities.reduce((n,city)=>n+(city.atlasCopies || 0),0);
   stats.capitalIncome+=bonus.capital || 0;
   if (adopted(state,seat,'harborCommission')) stats.capitalIncome += 3 * cities.filter(c=>c.buildings.includes('harbor')).length;
   if (adopted(state,seat,'normalSchools')) stats.scienceIncome += 2 * cities.filter(c=>c.population>=3).length;
@@ -1463,7 +1466,10 @@ function resolveOrder(source,seat,action) {
   if (!action || typeof action!=='object') throw new Error('Choose an action.');
   const next=cloneGame(state);
   if (action.type==='end') {endTurn(next,seat);return next;}
-  if (action.type==='visitStation') {
+  if (action.type==='recordTransect' || action.type==='fileTransect') {
+    const entry=runAtlasOrder(next,seat,action,getMap(next),hexDistance);
+    record(next,seat,action.type,entry.text,entry.tile,{unit:action.unit});
+  } else if (action.type==='visitStation') {
     const visit=visitFieldStation(next,seat,action);
     record(next,seat,'visitStation',visit.text,visit.tile,{unit:action.unit});
   } else if (action.type==='delegation') {
@@ -1993,6 +1999,10 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   for (const [unit,options] of plans) {
     const station=volunteerStationOrder(state,unit);
     if(station)return station;
+    if(unit.type==='scout'){
+      const fieldwork=expeditionOrder(state,unit,options.moves,getMap(state),hexDistance);
+      if(fieldwork)return fieldwork;
+    }
     const move=botMovement(state,unit,options,difficulty);
     if (move) return move;
   }
