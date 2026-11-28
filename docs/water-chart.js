@@ -80,7 +80,7 @@ function riverInk(course) {
     wake.moveTo(a.x+a.nx*w,a.y+a.ny*w);
     wake.quadraticCurveTo(b.x+b.nx*(w+.9),b.y+b.ny*(w+.9),c.x+c.nx*w,c.y+c.ny*w);
   }
-  return {outline,wake,samples,shoal:bankLine(samples,1,-2.7),depth:bankLine(samples,-1,-3.8)};
+  return {outline,wake,samples,flow:bankLine(samples,0,0),shoal:bankLine(samples,1,-2.7),depth:bankLine(samples,-1,-3.8)};
 }
 
 function lakePath(rings) {
@@ -95,7 +95,7 @@ function lakePath(rings) {
 }
 
 const inkCache=new WeakMap();
-export function inkWaterways(g,map) {
+export function inkWaterways(g,map,{relief=false,pitch=.70}={}) {
   if(!map.waterways)return;
   let ink=inkCache.get(map);
   if(!ink){
@@ -104,36 +104,69 @@ export function inkWaterways(g,map) {
     inkCache.set(map,ink);
   }
   g.save();g.lineCap='round';g.lineJoin='round';
-  for(const course of ink.courses)inkRiver(g,course);
-  if(ink.basin)inkLake(g,ink.lake,ink.basin);
+  const view={relief,pitch:Math.max(.25,Math.min(1,Number(pitch)||.70))};
+  for(const course of ink.courses)inkRiver(g,course,view);
+  if(ink.basin)inkLake(g,ink.lake,ink.basin,view);
   g.restore();
 }
 
-function inkRiver(g,{outline,wake,samples,shoal,depth}) {
-  if(samples.length===1){
-    const p=samples[0];g.beginPath();g.ellipse(p.x,p.y,18,13,-.15,0,Math.PI*2);
-    g.fillStyle='#569d9c';g.fill();g.strokeStyle='#aec7a6';g.lineWidth=2.5;g.stroke();return;
-  }
-  g.strokeStyle='#728f79';g.lineWidth=5.2;g.stroke(outline);
-  g.strokeStyle='#d0d1a2';g.lineWidth=2.8;g.stroke(outline);
-  const first=samples[0],last=samples.at(-1);
-  const pigment=g.createLinearGradient(first.x,first.y,last.x,last.y);
-  pigment.addColorStop(0,'#589b9b');pigment.addColorStop(.4,'#4a9295');pigment.addColorStop(.7,'#448c91');pigment.addColorStop(1,'#559e9b');
-  g.fillStyle=pigment;g.fill(outline);
-  g.save();g.clip(outline);
-  g.strokeStyle='#89bba7';g.lineWidth=5.5;g.stroke(shoal);
-  g.strokeStyle='#467f85';g.lineWidth=4.6;g.stroke(depth);
-  g.strokeStyle='#c3dfc9';g.lineWidth=.95;g.stroke(wake);g.restore();
+function bankRelief(g,outline,pitch) {
+  // A small displacement gives the bank a dark vertical face without moving
+  // the waterline or painting a broad opaque stripe over nearby land.
+  g.save();g.translate(1.3,2.1/pitch);
+  g.strokeStyle='#183b3e59';g.lineWidth=6.2;g.stroke(outline);g.restore();
+  g.strokeStyle='#536e56';g.lineWidth=5.8;g.stroke(outline);
+  g.strokeStyle='#d9cfa1';g.lineWidth=2.9;g.stroke(outline);
 }
 
-function inkLake(g,lake,basin) {
-  g.strokeStyle='#819a7e';g.lineWidth=6;g.stroke(basin);
-  g.strokeStyle='#d2d5ae';g.lineWidth=3;g.stroke(basin);
+function waterInset(g,outline,pitch) {
+  // The current water clip and the caller's explored-area clip both remain
+  // in force: this rim cannot reveal a bank beyond a surveyed segment.
+  g.save();g.translate(0,2.3/pitch);
+  g.strokeStyle='#183d5270';g.lineWidth=4.8;g.stroke(outline);g.restore();
+  g.save();g.translate(-.6,-1/pitch);
+  g.strokeStyle='#d7ead283';g.lineWidth=.8;g.stroke(outline);g.restore();
+}
+
+function inkRiver(g,{outline,wake,samples,flow,shoal,depth},{relief,pitch}) {
+  if(samples.length===1){
+    const p=samples[0];g.beginPath();g.ellipse(p.x,p.y,18,13,-.15,0,Math.PI*2);
+    if(relief){
+      const blue=g.createRadialGradient(p.x-5,p.y-4,2,p.x,p.y,19);
+      blue.addColorStop(0,'#367a94');blue.addColorStop(.7,'#4599a3');blue.addColorStop(1,'#96c7b4');
+      g.fillStyle=blue;
+    }else g.fillStyle='#569d9c';
+    g.fill();g.strokeStyle=relief?'#d4cc9f':'#aec7a6';g.lineWidth=2.5;g.stroke();return;
+  }
+  if(relief)bankRelief(g,outline,pitch);
+  else{
+    g.strokeStyle='#728f79';g.lineWidth=5.2;g.stroke(outline);
+    g.strokeStyle='#d0d1a2';g.lineWidth=2.8;g.stroke(outline);
+  }
+  const first=samples[0],last=samples.at(-1);
+  const pigment=g.createLinearGradient(first.x,first.y,last.x,last.y);
+  pigment.addColorStop(0,relief?'#3b91a0':'#589b9b');pigment.addColorStop(.4,relief?'#357d93':'#4a9295');pigment.addColorStop(.7,relief?'#286c85':'#448c91');pigment.addColorStop(1,relief?'#4a9fa8':'#559e9b');
+  g.fillStyle=pigment;g.fill(outline);
+  g.save();g.clip(outline);
+  if(relief){g.strokeStyle='#1c4f6d38';g.lineWidth=12;g.stroke(flow);}
+  g.strokeStyle=relief?'#91cdb578':'#89bba7';g.lineWidth=5.5;g.stroke(shoal);
+  g.strokeStyle=relief?'#245c795e':'#467f85';g.lineWidth=4.6;g.stroke(depth);
+  if(relief)waterInset(g,outline,pitch);
+  g.strokeStyle=relief?'#d3eee0bd':'#c3dfc9';g.lineWidth=relief?.75:.95;g.stroke(wake);g.restore();
+}
+
+function inkLake(g,lake,basin,{relief,pitch}) {
+  if(relief)bankRelief(g,basin,pitch);
+  else{
+    g.strokeStyle='#819a7e';g.lineWidth=6;g.stroke(basin);
+    g.strokeStyle='#d2d5ae';g.lineWidth=3;g.stroke(basin);
+  }
   const ys=lake.map(t=>hexPoint(t)[1]);
   const blue=g.createLinearGradient(0,Math.min(...ys)-22,0,Math.max(...ys)+25);
-  blue.addColorStop(0,'#79adbc');blue.addColorStop(.48,'#659bb0');blue.addColorStop(1,'#4c819c');
-  g.fillStyle=blue;g.fill(basin,'evenodd');g.clip(basin,'evenodd');
-  g.strokeStyle='#a6c8d0';g.lineWidth=7;g.globalAlpha=.57;g.stroke(basin);g.globalAlpha=1;
+  blue.addColorStop(0,relief?'#4b9ba8':'#79adbc');blue.addColorStop(.48,relief?'#327e9c':'#659bb0');blue.addColorStop(1,relief?'#255a7f':'#4c819c');
+  g.fillStyle=blue;g.fill(basin,'evenodd');g.save();g.clip(basin,'evenodd');
+  g.strokeStyle=relief?'#a0d2bd':'#a6c8d0';g.lineWidth=relief?9:7;g.globalAlpha=.57;g.stroke(basin);g.globalAlpha=1;
+  if(relief)waterInset(g,basin,pitch);
   for(const tile of lake){
     const [x,y]=hexPoint(tile);
     for(let i=0;i<15;i++){
@@ -141,10 +174,11 @@ function inkLake(g,lake,basin) {
       const frac=f-Math.floor(f),xx=x+((frac*71)%66)-33,yy=y+((frac*529)%56)-28;
       const length=2+frac*6;
       g.beginPath();g.moveTo(xx,yy);g.quadraticCurveTo(xx+length*.45,yy-.7,xx+length,yy+.2);
-      g.strokeStyle=i%4===0?'#c2dce1a8':i%3===0?'#4d809b77':'#a4c4cf73';
+      g.strokeStyle=i%4===0?(relief?'#d0e9e7bb':'#c2dce1a8'):i%3===0?'#4d809b77':'#a4c4cf73';
       g.lineWidth=i%4===0?.85:.55;g.stroke();
     }
   }
+  g.restore();
 }
 
 // Place names only on discovered water. Choose from each contiguous segment
@@ -186,7 +220,8 @@ export function waterCaptions(tiles) {
 }
 
 // Deck, abutments and parallel rails distinguish a land crossing at small scales.
-export function inkRiverBridge(g,a,b) {
+export function inkRiverBridge(g,a,b,{relief=false,pitch=.70}={}) {
+  if(relief){inkReliefBridge(g,a,b,Math.max(.25,Math.min(1,Number(pitch)||.70)));return;}
   const [x,y]=hexPoint(a),[xx,yy]=hexPoint(b),length=Math.hypot(xx-x,yy-y);
   g.save();g.translate((x+xx)/2,(y+yy)/2);g.rotate(Math.atan2(yy-y,xx-x));
   const segment=(x1,y1,x2,y2,color,width)=>{
@@ -202,6 +237,55 @@ export function inkRiverBridge(g,a,b) {
     segment(-end,side*3,end,side*3,'#947f61',1.6);
     segment(side*end,-6,side*end,6,'#584c40',3.8);
     segment(side*end,-5.5,side*end,5.5,'#cdc09f',1.6);
+  }
+  g.restore();
+}
+
+function inkReliefBridge(g,a,b,pitch) {
+  const [ax,ay]=hexPoint(a),[bx,by]=hexPoint(b),length=Math.hypot(bx-ax,by-ay);
+  if(!length)return;
+  const ux=(bx-ax)/length,uy=(by-ay)/length,nx=-uy,ny=ux;
+  const mx=(ax+bx)/2,my=(ay+by)/2,end=length*.29,height=4.2,half=4.1;
+  // Height is vertical in screen space even when the bridge runs diagonally.
+  const point=(along,across,z=0)=>[mx+ux*along+nx*across,my+uy*along+ny*across-z/pitch];
+  const polygon=(points,color)=>{
+    g.beginPath();g.moveTo(...points[0]);for(const p of points.slice(1))g.lineTo(...p);
+    g.closePath();g.fillStyle=color;g.fill();
+  };
+  const line=(a,b,color,width)=>{
+    g.beginPath();g.moveTo(...a);g.lineTo(...b);g.strokeStyle=color;g.lineWidth=width;g.stroke();
+  };
+  const solid=(from,to,width,top,sideColor)=>{
+    const corners=[[from,-width],[to,-width],[to,width],[from,width]];
+    const lower=corners.map(([x,y])=>point(x,y)),upper=corners.map(([x,y])=>point(x,y,top));
+    const sides=corners.map((_,i)=>({i,y:(lower[i][1]+lower[(i+1)%4][1])/2})).sort((a,b)=>a.y-b.y);
+    for(const {i} of sides){
+      const j=(i+1)%4;
+      polygon([lower[i],lower[j],upper[j],upper[i]],sideColor);
+    }
+    return upper;
+  };
+  g.save();g.lineJoin='round';g.lineCap='butt';
+  const shadow=[point(-end,-half),point(end,-half),point(end,half),point(-end,half)].map(([x,y])=>[x+2.4,y+3.2/pitch]);
+  polygon(shadow,'#183b4b59');
+  for(const sign of [-1,1]){
+    line(point(sign*length/2,0),point(sign*end,0,height),'#766d54',5.3);
+    line(point(sign*length/2,0),point(sign*end,0,height),'#cdbb8c',3.3);
+    polygon(solid(sign*end-1.4,sign*end+1.4,half+1.5,height,'#5a5d4d'),'#aca587');
+  }
+  const top=solid(-end,end,half,height,'#685942');
+  const deck=g.createLinearGradient(...point(0,-half,height),...point(0,half,height));
+  deck.addColorStop(0,'#e6d3a9');deck.addColorStop(1,'#bca375');
+  polygon(top,deck);
+  for(let t=-end+3;t<end;t+=4.4)line(point(t,-half,height),point(t,half,height),'#88704e70',.65);
+  for(const side of [-1,1]){
+    line(point(-end,side*half,height),point(end,side*half,height),'#ebd8a6',.85);
+    for(const t of [-end,0,end]){
+      line(point(t,side*half,height),point(t,side*half,height+3.2),'#594b35',1.4);
+      line(point(t-.3,side*half,height+.4),point(t-.3,side*half,height+3.2),'#d4bd8b',.55);
+    }
+    line(point(-end,side*half,height+3.2),point(end,side*half,height+3.2),'#5d4e36',1.65);
+    line(point(-end,side*half,height+3.55),point(end,side*half,height+3.55),'#e7d1a1',.75);
   }
   g.restore();
 }
