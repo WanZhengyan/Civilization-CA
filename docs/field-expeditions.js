@@ -109,13 +109,14 @@ export function fieldReport(state,unit,map,distance) {
     const load=Boolean(!loan?.host && !carrier && !loaded && origin && ownCities.length>1 && distance(origin.tile,unit.tile)<=1 && player.capital>=2);
     return {key,loan,origin,host,carry,load};
   });
+  const canPublish=Boolean(base && Object.keys(filed).length>=3 && player.influence>=4 && !base.fieldCollection && !player.fieldPublication);
   const spec=studies[mission?.key];
   const complete=Boolean(spec && notes.length===spec.steps.length);
   const canSample=Boolean(spec && !complete && unit.moves>0 && spec.sample(context));
   const sponsor=mission && state.cities.find(c=>c.id===mission.sponsor && c.seat===unit.seat);
   const archive=state.board[unit.tile]?.fieldStation==='archive';
   const canMail=Boolean(archive && sponsor && complete && !spec.reward.food && player.influence>=2);
-  return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,relay,lost,tours,open,spec,complete,canSample,context};
+  return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,relay,lost,tours,canPublish,open,spec,complete,canSample,context};
 }
 
 // Only recommend currently visible endpoints. Dynamic plot conditions and archive
@@ -181,9 +182,16 @@ export function fieldOrder(state,seat,action,map,distance) {
     }
     throw new Error('This field order is unavailable here.');
   }
+  if(action.item==='publish' && r.canPublish && ['science','culture'].includes(action.target)){
+    player.influence-=4;
+    base.fieldCollection=action.target;
+    player.fieldPublication={city:base.id,series:action.target,round:state.round};
+    unit.moves--;
+    return 'Regional field collection inaugurated.';
+  }
   if(action.item==='start') {
     const entry=r.open.find(([key])=>key===action.study);
-    if(!entry || mission || !r.office || player.capital<entry[1].fee)throw new Error('Commission a new field study near your city with enough gold.');
+    if(!entry || mission || !r.office || player.capital<entry[1].fee)throw new Error('Commission a field study at a city or camp with enough gold.');
     player.capital-=entry[1].fee;
     storeCrew(player,unit.id,{key:entry[0],sponsor:r.office.id,started:state.round,notes:[]});
     unit.moves--;

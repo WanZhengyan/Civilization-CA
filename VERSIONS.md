@@ -104,3 +104,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.94 | Open contextual real-world field notes directly from explored district inspectors |
 | 7.0.95 | Authorize recurring shortage relief with explicit food reserves and manual priority |
 | 7.0.96 | Show locked settlers in the normal picker with local eligibility, growth planning and departure costs |
+| 7.0.97 | Publish a permanent city collection with a science or culture specialization |

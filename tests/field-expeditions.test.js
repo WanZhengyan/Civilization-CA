@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,applyAction,campaignView,getMap,getStats,hexDistance} from '../docs/rules.js';
+import {createGame,applyAction,campaignView,getMap,getStats,hexDistance,getUnitOptions,getRouteDetail} from '../docs/rules.js';
 import {fieldReport,fieldRoutes} from '../docs/field-expeditions.js';
 
 function start(map='la'){
@@ -152,4 +152,42 @@ test('a travelling exhibition moves a filed report between two different owned c
   assert.throws(()=>tour(s,'loadTour'));assert.throws(()=>tour(s,'hostTour'));const before=s.players[0].culture;
   s=tour(travel(s,location.id),'hostTour');assert.equal(s.players[0].culture,before+6);assert.equal(s.players[0].fieldLoans.transect.host,'host-town');
   assert.throws(()=>tour(s,'hostTour'));assert.throws(()=>tour(travel(s,home.tile),'loadTour'));
+});
+
+test('three different filed reports can endow one city with a permanent science or culture collection',()=>{
+  const s=start(),p=s.players[0],city=s.cities[0];p.influence=4;p.fieldReports={transect:{city:city.id},basin:{city:city.id}};
+  const publish=(state,target)=>order(state,'publish','transect',{target});
+  assert.throws(()=>publish(s,'science'));p.fieldReports.assay={city:city.id};const before=getStats(s,0);
+  for(const series of ['science','culture']){
+    const next=publish(s,series);assert.equal(next.players[0].influence,0);assert.equal(next.cities[0].fieldCollection,series);
+    assert.equal(getStats(next,0)[series+'Income'],before[series+'Income']+1);
+    next.players[0].influence=12;assert.throws(()=>publish(next,series));
+    const other=series==='science'?'culture':'science';assert.equal(getStats(next,0)[other+'Income'],before[other+'Income']);
+  }
+});
+
+test('a normal solo game recruits a scout, funds a notebook, travels, records and files using only public orders',()=>{
+  let s=createGame([{name:'Field party'}],'la',{seed:1,mapSize:'large',practice:true});
+  const act=a=>{s=applyAction(s,0,a);};
+  act({type:'found',unit:s.units[0].id});act({type:'produce',city:s.cities[0].id,item:'scout'});
+  while(!s.units.some(u=>u.type==='scout') && s.round<14)act({type:'end'});
+  const id=s.units.find(u=>u.type==='scout').id;
+  const unit=()=>s.units.find(u=>u.id===id);
+  const field=(item,step)=>act({type:'fieldStudy',unit:id,item,study:'transect',step});
+  field('start',0);field('sample',0);
+  const moveToStudySite=()=>{
+    const view=campaignView(s,0),u=view.units.find(u=>u.id===id),r=fieldReport(view,u,getMap(view),hexDistance);
+    return fieldRoutes(r,getUnitOptions(view,id).moves,t=>getRouteDetail(view,id,t))[0];
+  };
+  let target=moveToStudySite();
+  if(!target){act({type:'end'});target=moveToStudySite();}
+  assert.ok(target);act({type:'move',unit:id,tile:target.id});
+  if(!unit().moves)act({type:'end'});field('sample',1);
+  for(let i=0;i<5 && hexDistance(unit().tile,s.cities[0].tile)>1;i++){
+    const rows=getUnitOptions(campaignView(s,0),id).moves.sort((a,b)=>hexDistance(a,s.cities[0].tile)-hexDistance(b,s.cities[0].tile));
+    if(rows[0] && hexDistance(rows[0],s.cities[0].tile)<hexDistance(unit().tile,s.cities[0].tile))act({type:'move',unit:id,tile:rows[0]});
+    else act({type:'end'});
+  }
+  if(!unit().moves)act({type:'end'});const prior=s.players[0].science;
+  field('file',2);assert.equal(s.players[0].science,prior+6);assert.ok(s.players[0].fieldReports.transect);
 });

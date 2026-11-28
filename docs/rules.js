@@ -642,6 +642,8 @@ function calculateStats(state,seat,includeSources=false) {
       stats.scienceIncome+=yields.science || 0;
       stats.cultureIncome+=yields.culture || 0;
     }
+    if(city.fieldCollection==='science')stats.scienceIncome++;
+    if(city.fieldCollection==='culture')stats.cultureIncome++;
     const festival=festivalBenefit(state,city);
     stats.cultureIncome+=festival?.culture || 0;
     stats.capitalIncome+=festival?.capital || 0;

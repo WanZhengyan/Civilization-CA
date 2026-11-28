@@ -67,6 +67,13 @@ export function openFieldDesk(read,act,preview) {
       if(t.carry)return button('hostTour',local('Open exhibition','举办展览')+' · '+name,ready && t.host,t.key);
       return button('loadTour',local('Pack exhibit','装运展品')+' · '+name+' · '+esc(t.origin?.name || local('Home city lost','已失去收藏城市')),ready && t.load,t.key);
     }).join('')+'</details>';
+    if(Object.keys(r.filed).length){
+      const publication=r.player.fieldPublication, c=state.cities.find(city=>city.id===publication?.city);
+      html+='<details><summary>'+local('Permanent regional collection','常设地区馆藏')+'</summary>';
+      if(publication)html+='<p>'+esc(c?.name || publication.city)+' · +1 '+label(currencies[publication.series])+' '+local('each harvest for the host city’s owner','每次收获归馆藏城市的领主')+'</p>';
+      else html+='<p>'+local('File three different studies, bring a scout to a friendly city and spend 4 influence to found one permanent collection. The host city earns the chosen yield every harvest.','交付三种不同的考察后，在己方城市附近花 4 影响力建立一处常设馆藏。馆藏城市每次收获获得所选收益。')+' ('+Math.min(3,Object.keys(r.filed).length)+'/3)</p>'+button('publish',local('Research collection · +1 science','研究馆藏 · +1 科研'),ready && r.canPublish,'science')+button('publish',local('Public reading room · +1 culture','公共阅览室 · +1 文化'),ready && r.canPublish,'culture');
+      html+='</details>';
+    }
     if(r.filed.corridor)html+='<p>'+local('Habitat dividend this harvest','本次收获的栖息地收益')+' · '+corridorIncome(state,unit.seat)+' '+local('culture','文化')+'</p>';
     body.innerHTML=html;
     body.querySelector('select[data-study]')?.addEventListener('change',e=>{selected=e.target.value;paint();});

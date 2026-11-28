@@ -14,10 +14,11 @@ Field notes handed to another scout.|已将考察笔记移交给另一名侦察�
 Recovered a lost field notebook.|已找回遗失的考察笔记。
 Touring exhibition dispatched.|巡展展品已启程。
 Touring exhibition opened.|巡回展览已开幕。
+Regional field collection inaugurated.|地区常设馆藏已开放。
 Field camp established.|已设立野外营地。
 Field report deposited.|已交付考察报告。
 Choose your scout with movement remaining.|请选择仍有移动力的己方侦察兵。
-Commission a new field study near your city with enough gold.|请在己方城市附近准备足够金币后领取新课题。
+Commission a field study at a city or camp with enough gold.|请在己方城市附近或野外营地准备足够金币后领取新课题。
 Field notes changed. Review the expedition.|考察记录已更新，请重新查看课题。
 This field order is unavailable here.|此地无法执行这项考察指令。
 `);
