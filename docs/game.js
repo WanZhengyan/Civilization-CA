@@ -7,7 +7,8 @@ import {advancementGuide,recoveryGuide} from './unit-service-copy.js';
 import {naturalWonderArt} from './natural-wonder-art.js';
 import {discoveredNaturalWonders} from './natural-wonders.js';
 import {invitationCode, launchDestination} from './launch.js';
-import {armyHandbook} from './army-handbook.js';
+import {buildGuideIndex, guideSearchBox, bindGuideSearch} from './guide-search.js';
+import {armyHandbook, handbookRows} from './army-handbook.js';
 import {ledgerBody} from './resource-ledger.js';
 import {getResourceLedger} from './rules.js';
 import {getLanguage, translate, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
@@ -20,7 +21,7 @@ import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
 import {changeRoomSetup,difficultyField,difficultyLabel,newRoomSetup,roomSetupFields,teamLabel,validRoomTeams} from './room-setup.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
 
-import {getEra, getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
+import {ERAS, getEra, getScoreTarget, TARGET_SCORE, MAX_ROUNDS} from './rules.js';
 
 const SEATS_KEY = 'angel-basin.room-seats.v1';
 const LAST_ROOM_KEY = 'angel-basin.active-room.v1';
@@ -790,6 +791,30 @@ const guideSections = {
     ['Count civic points', 'Score 2 per district, 1 per development level and 2 per landmark. Cities earn 3 each, plus 1 per resident, 2 per finished building and 1 per land improvement.']
   ]}
 };
+function guideTopics(chapter, language, state) {
+  if(chapter==='formations') {
+    return Object.values(ERAS).flatMap(era=>handbookRows(era.id).map(unit=>({
+      key:'unit-'+unit.id,title:unit.name,body:unit.note
+    })));
+  }
+  const orders=(chapter==='influence' || !state || state.campaignVariety===1) ? fieldGuideOrders(chapter,language) : [];
+  let entries=guideSections[chapter].entries || [];
+  if(state && state.campaignVariety!==1)entries=entries.filter(entry=>entry!==freightGuide && entry!==voyageGuide);
+  if(chapter==='research' && (!state || state.victoryMode)){
+    entries=entries.filter(([title])=>!['Win by domination','Win on civic points'].includes(title));
+    if(!state || (!state.practice && state.victoryMode!=='science')) entries.push(['Conquest victory','Your side wins by controlling every original capital or by being the last side with a surviving civilization.']);
+    if(!state || state.victoryMode!=='conquest') entries.push(['Science victory',
+      '<span>Research Radio Networks and Motorization, then Rocketry. In City production, choose Orbital Survey. Finish it in one city to win for your entire side.</span> <strong>Production required</strong> · '+SCIENCE_PROJECT.required]);
+  }
+  return [...orders, ...entries].map(([title,detail],i)=>({
+    key:'topic-'+i, title, body:typeof detail==='function'?detail(state):detail
+  }));
+}
+
+export function gameGuideIndex(state) {
+  return buildGuideIndex(guideSections,(chapter,language)=>guideTopics(chapter,language,state));
+}
+
 function wonderJournal(state) {
   const discoveries=state ? discoveredNaturalWonders(state) : [];
   const region=getMap(state || 'la');
@@ -841,23 +866,17 @@ function content() {
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
-    const orders=(guideTab==='influence' || !state || state.campaignVariety===1) ? fieldGuideOrders(guideTab,getLanguage()) : [];
-    let entries=guideSections[guideTab].entries;
-    if(entries && state && state.campaignVariety!==1)entries=entries.filter(entry=>entry!==freightGuide && entry!==voyageGuide);
-    if(guideTab==='research' && (!state || state.victoryMode)){
-      entries=entries.filter(([title])=>!['Win by domination','Win on civic points'].includes(title));
-      if(!state || (!state.practice && state.victoryMode!=='science')) entries.push(['Conquest victory','Your side wins by controlling every original capital or by being the last side with a surviving civilization.']);
-      if(!state || state.victoryMode!=='conquest') entries.push(['Science victory',
-        '<span>Research Radio Networks and Motorization, then Rocketry. In City production, choose Orbital Survey. Finish it in one city to win for your entire side.</span> <strong>Production required</strong> · '+SCIENCE_PROJECT.required]);
-    }
+    const guideState=mode==='home'?null:state;
     const influenceLink=guideTab==='influence' && state && mode!=='home'
       ? '<button type="button" class="modal-primary" data-influence-open>'+ (getLanguage()==='zh-CN'?'使用影响力':'Spend influence')+'</button>' : '';
-    return {kicker:'Field guide', title:'How to play', body:tabs +
+    const guides=guideTab==='formations' ? armyHandbook(escapeHTML) :
+      list(guideTopics(guideTab,getLanguage(),guideState).map(({title,body,key})=>
+        row('<span tabindex="-1" data-guide-target="'+key+'">'+title+'</span>',body)));
+    return {kicker:'Field guide', title:'How to play', body:guideSearchBox(getLanguage())+'<div data-guide-chapter>'+tabs +
       (influenceLink ? actions(influenceLink) : '') +
-      (guideTab==='start' && (!state || state.civilizationTraits===1) ? compareCivilizations() : '') +
-      (guideTab === 'universities' ? wonderJournal(state) : '') +
-      (orders.length ? list(orders.map(([title,text])=>row(title,text))) : '') +
-      (guideTab === 'formations' ? armyHandbook(escapeHTML) : list(entries.map(([title, text]) => row(title, typeof text === 'function' ? text(state) : text)))) + actions(button('back', 'Return to map', 'primary'))};
+      (guideTab==='start' && (!guideState || guideState.civilizationTraits===1) ? compareCivilizations() : '')+
+      (guideTab==='universities' ? wonderJournal(guideState) : '')+guides+'</div>' +
+      actions(button('back',mode==='home'?'Title screen':'Return to map','primary'))};
   }
   if (modal === 'log') return {
     kicker: 'Campaign records', title: 'Event log',
@@ -918,6 +937,22 @@ function drawDialog() {
   const scrolled = dialog.querySelector('.modal-body')?.scrollTop || 0;
   const { kicker, title, body } = content();
   dialog.innerHTML = `<div class="modal-shell"><div class="modal-head"><div><div class="modal-kicker">${kicker}</div><h2 class="modal-title" id="game-dialog-title" tabindex="-1">${title}</h2></div><button type="button" class="modal-close" aria-label="Close dialog" data-act="back"${pending && modal==='multiplayer' ? ' disabled' : ''}>×</button></div><div class="modal-body">${body}${modal === 'menu' ? languageControl()+soundtrackControls(soundtrack?.music) : ''}${errorMessage ? `<p class="modal-error" role="alert" tabindex="-1">${escapeHTML(errorMessage)}</p>` : ''}</div></div>`;
+  if(modal==='help'){
+    const state=mode==='home'?null:getState();
+    bindGuideSearch(dialog,getLanguage(),
+      ()=>gameGuideIndex(state),
+      result=>{
+        guideTab=result.chapter;
+        drawDialog();
+        const target=dialog.querySelector('[data-guide-target="'+result.key+'"]');
+        if(!target)return;
+        for(let node=target.parentElement; node && node!==dialog; node=node.parentElement){
+          if(node.tagName==='DETAILS')node.open=true;
+        }
+        target.focus({preventScroll:true});
+        target.scrollIntoView({block:'nearest'});
+      },escapeHTML);
+  }
   if (modal==='menu') soundtrack?.refresh();
   dialog.setAttribute('aria-labelledby','game-dialog-title');
   dialog.querySelector('.modal-body').scrollTop = scrolled;
@@ -1103,6 +1138,7 @@ async function init({ render, locate, toast: showToast }) {
     if (locale) { setLanguage(locale); return; }
     const action = event.target.closest('[data-title]')?.dataset.title;
     if (pending || !action) return;
+    if (action === 'help') open('help');
     if (action === 'tutorial') enterTutorial();
     if (action === 'solo') { selectCampaignSettings(solo); open('campaign-atlas'); }
     if (action === 'reconnect') reconnectRoom(read(LAST_ROOM_KEY,''));
