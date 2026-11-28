@@ -77,3 +77,11 @@ test('field notebooks persist ordered real sites across atlas sessions and recov
     gazetteerAction(v,'pin-oakland');assert.deepEqual(newGazetteer().pins,['lighthouse']);
   } finally {if(old)Object.defineProperty(globalThis,'localStorage',old);else delete globalThis.localStorage;}
 });
+import {surveyProgress} from '../docs/gazetteer.js';
+test('survey counts shared districts once, respects the active map, and keeps undiscovered coordinates out of the UI',()=>{
+  const campaign={mapId:'la',intel:{explored:['4,7']}};
+  const p=surveyProgress(campaign);assert.equal(p.known.length,1);assert.equal(p.total,4);
+  assert.equal(p.known[0].places.length,2);assert.equal(surveyProgress(null),null);
+  const v=newGazetteer();gazetteerAction(v,'section-survey');const body=gazetteerContent(v,'en',campaign).body;
+  assert.match(body,/1 \/ 4/);assert.ok(!body.includes('15,3'));assert.ok(!body.includes('Pasadena'));
+});

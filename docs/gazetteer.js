@@ -21,7 +21,7 @@ const catalogue=[...places,...landmarks,...coastalWorks];
 function entryAction(p) {
   return (p.slug?'place-':p.year?'work-':'site-')+p.id;
 }
-const labels = {saved:['Notebook','地点收藏'],search:['Search atlas','搜索地名志'],profile:['Places','地点档案'],compare:['Compare','横向对比'],sites:['Field sites','实地档案'],coast:['Coastal timeline','海岸建设年表']};
+const labels = {survey:['Field survey','探索记录'],saved:['Notebook','地点收藏'],search:['Search atlas','搜索地名志'],profile:['Places','地点档案'],compare:['Compare','横向对比'],sites:['Field sites','实地档案'],coast:['Coastal timeline','海岸建设年表']};
 const esc = value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tr = (pair,lang)=>pair[lang==='zh-CN'?1:0];
 const number = (value,lang)=>new Intl.NumberFormat(lang,{maximumFractionDigits:2}).format(value);
@@ -39,6 +39,25 @@ function readPins() {
 function pinControl(view,p,lang) {
   const pinned=view.pins.includes(p.id);
   return choice('pin-'+p.id,tr(pinned?['Remove from notebook','取消收藏']:['Save to notebook','收藏地点'],lang),pinned);
+}
+export function surveyProgress(campaign) {
+  if(!campaign?.intel)return null;
+  const region=campaign.mapId||'la';
+  const areas=new Map();
+  for(const p of catalogue.filter(p=>p.region===region && p.anchor)){
+    if(!areas.has(p.anchor))areas.set(p.anchor,{places:[],tile:knownAnchor(p,campaign)});
+    areas.get(p.anchor).places.push(p);
+  }
+  const known=[...areas.values()].filter(a=>a.tile);
+  return {region,total:areas.size,known};
+}
+function survey(view,lang,campaign) {
+  const progress=surveyProgress(campaign);
+  if(!progress)return '<p>'+tr(['Open the field survey from a campaign to track which atlas districts your scouts have charted.','在战役中打开探索记录，追踪已经探明的地名志地区。'],lang)+'</p>';
+  const {region,known,total}=progress;
+  return '<h3>'+esc(tr(regions[region],lang))+'</h3><label class="gaz-label">'+tr(['Atlas districts charted','已探索的地名志地区'],lang)+' · '+known.length+' / '+total+
+    '<progress max="'+total+'" value="'+known.length+'"></progress></label><p>'+tr(['Each distinct campaign district counts once, including districts that have several real-world profiles.','每个战役地区只计一次；同一地区可关联多个现实地点。'],lang)+'</p>'+
+    known.map(area=>'<article class="gaz-place"><h4>'+esc(tr(area.places[0].name,lang))+'</h4>'+indexRows(area.places,lang)+mapControl(area.places[0],lang,campaign)+'</article>').join('');
 }
 function notebook(view,lang) {
   const records=view.pins.map(id=>catalogue.find(p=>p.id===id)).filter(Boolean);
@@ -129,8 +148,12 @@ function sites(view,lang,campaign) {
     link(selected.url,tr(selected.publisher,lang))+pinControl(view,selected,lang)+mapControl(selected,lang,campaign)+'</article>';
 }
 export function gazetteerContent(view,lang,campaign) {
-  const modes=Object.entries(labels).map(([id,names])=>choice('section-'+id,tr(names,lang),id===view.section)).join('');
-  let body=view.section==='saved'?notebook(view,lang):view.section==='search'?search(view,lang):view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
+  const primary=['profile','compare','search'];
+  const sectionButton=id=>choice('section-'+id,tr(labels[id],lang),id===view.section);
+  const more=Object.keys(labels).filter(id=>!primary.includes(id));
+  const modes=primary.map(sectionButton).join('')+'<details class="gaz-more"'+(more.includes(view.section)?' open':'')+
+    '><summary>'+tr(['Field tools','实地工具'],lang)+'</summary><div class="gaz-switch">'+more.map(sectionButton).join('')+'</div></details>';
+  let body=view.section==='survey'?survey(view,lang,campaign):view.section==='saved'?notebook(view,lang):view.section==='search'?search(view,lang):view.section==='coast'?coast(view,lang,campaign):view.section==='sites'?sites(view,lang,campaign):view.section==='compare'?comparison(view,lang):profile(view,lang,campaign);
   return {kicker:tr(['Field guide','游戏指南'],lang),title:tr(['California gazetteer','加州地名志'],lang),body:'<section class="gaz" translate="no"><p class="gaz-intro">'+
     tr(['Real places and public measurements. Campaign hexes represent approximate locations and have their own game yields.','查阅现实地点与公开数据。战役地块是近似位置，产出按游戏规则计算。'],lang)+'</p>'+
     (Object.keys(labels).length>1?'<nav class="gaz-nav" aria-label="'+tr(['Gazetteer sections','地名志栏目'],lang)+'">'+modes+'</nav>':'')+body+'</section>'};
