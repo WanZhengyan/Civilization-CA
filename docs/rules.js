@@ -276,6 +276,16 @@ export const BUILDINGS = {
   granary: {name:"Granary", required:10, description:"Provides 2 food and housing for 2 more citizens."},
   neighborhood: {name:"Residential quarter", era:"frontier", civic:"publicWorks", required:16, description:"Provides housing for 3 more citizens."},
   workshop: {name:"Workshop", tech:"industry", era:"frontier", required:13, description:"Adds 2 production per turn in this city."},
+  shop: {name:'Shop', era:'frontier', tech:'civics', required:12, yields:{capital:3},
+    description:'Earns 3 gold per turn for the treasury.'},
+  academy: {name:'Academy', era:'industrial', tech:'cartography', required:22, yields:{science:2},
+    description:'Generates 2 science per turn for research.'},
+  grainMill: {name:'Grain mill', era:'industrial', tech:'agriculturalScience', required:21, yields:{food:2,production:1},
+    description:'Supplies 2 food and 1 production per turn to this city.'},
+  foundry: {name:'Foundry', era:'industrial', tech:'metallurgy', building:'workshop', required:27, yields:{production:3},
+    description:'Adds 3 production per turn to a city with a workshop.'},
+  printingHouse: {name:'Printing house', era:'industrial', tech:'electricity', required:26, yields:{culture:3},
+    description:'Generates 3 culture per turn for civics.'},
   monument: {name:"Monument", required:10},
   walls: {name:"City walls", tech:"tactics", era:"frontier", required:14, description:"Adds 50 city health, reduces incoming damage by 7 and strengthens retaliation."}
 };
@@ -534,6 +544,13 @@ export function getCityYield(state,cityId) {
     capital: city.population + fisheries + (has('harbor') ? 2 : 0) + (civics ? 2 : 0) + (trade ? 2 : 0),
     influence: (has('monument') ? 3 : 0) + (civics ? 1 : 0)
   };
+  for (const item of city.buildings) {
+    const yields=BUILDINGS[item]?.yields;
+    if (!yields) continue;
+    result.food+=yields.food || 0;
+    result.production+=yields.production || 0;
+    result.capital+=yields.capital || 0;
+  }
   const festival=festivalBenefit(state,city);
   if (festival) {
     result.production+=festival.production || 0;
@@ -605,6 +622,13 @@ function calculateStats(state,seat,includeSources=false) {
       +2*cities.filter(c=>tradesBySea(state,c)).length,
     influenceIncome:0};
   for (const city of cities) {
+    for (const item of city.buildings) {
+      const yields=BUILDINGS[item]?.yields;
+      if (!yields) continue;
+      stats.capitalIncome+=yields.capital || 0;
+      stats.scienceIncome+=yields.science || 0;
+      stats.cultureIncome+=yields.culture || 0;
+    }
     const festival=festivalBenefit(state,city);
     stats.cultureIncome+=festival?.culture || 0;
     stats.capitalIncome+=festival?.capital || 0;
@@ -964,6 +988,7 @@ export function getProductionOptions(state,cityId,{replace=false}={}) {
     else if (!seatMayOrder(state,city.seat)) reason='Wait for the city owner’s turn.';
     else if (city.queue && (!replace || city.queue.item===item)) reason='This city already has a project in progress.';
     else if (city.buildings.includes(item)) reason='This city already has that building.';
+    else if (def.building && !city.buildings.includes(def.building)) reason='Build a workshop in this city first.';
     else if (WONDERS[item] && campusStatus(state,item)==='complete') reason='This university has already opened.';
     else if (WONDERS[item] && state.cities.some(c=>c.seat===city.seat && c.queue?.item===item)) reason='One of your cities already holds this charter.';
     else if (item==='harbor' && !berth) reason='Settle on the shore or claim a shore district connected to this city within two hexes.';

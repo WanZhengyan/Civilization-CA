@@ -1593,3 +1593,17 @@ Otay Lake|奥泰湖
 section(`
 Adds 50 city health, reduces incoming damage by 7 and strengthens retaliation.|城市生命上限增加 50，受击伤害减少 7，并强化城市反击。
 `);
+
+section(`
+Shop|商店
+Academy|学院
+Grain mill|磨坊
+Foundry|铸造厂
+Printing house|印刷所
+Earns 3 gold per turn for the treasury.|每回合为国库增加 3 金币。
+Generates 2 science per turn for research.|每回合为科技研究增加 2 点科研。
+Supplies 2 food and 1 production per turn to this city.|本城每回合增加 2 粮食和 1 生产力。
+Adds 3 production per turn to a city with a workshop.|拥有工坊的城市每回合增加 3 生产力。
+Generates 3 culture per turn for civics.|每回合为市政研究增加 3 点文化。
+Build a workshop in this city first.|请先在这座城市建造工坊。
+`);
