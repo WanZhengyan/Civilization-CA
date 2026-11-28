@@ -1,3 +1,4 @@
+import {TERRAIN_LABELS} from './maps.js';
 import {getCitizenWorkforce,getPopulationReport,getMap,getWorkingCity,getCityExpansion,getBorderCharter} from './rules.js';
 import {canSeeDeposits,connectedDeposit,RESOURCES} from './resources.js';
 import {NATURAL_WONDERS} from './natural-wonders.js';
@@ -83,7 +84,7 @@ function frontierPage(state,city){
   const lines=[[local('Natural growth','自然扩张'),budget.turns,influence,budget.progress+' / '+budget.required]];
   if(choice)lines.push([local('Border charter','边境特许'),quote.enabled?local('Now','立即'):label(quote.reason),
     influence>=quote.cost?influence-quote.cost:'—',local('Reset to 0','重置为 0')]);
-  return section(local('Next border decision','下次扩界决策'),'<p>'+label(tile.name)+' · '+label(tile.terrain)+'</p>'+
+  return section(local('Next border decision','下次扩界决策'),'<p>'+label(tile.name)+' · '+label(TERRAIN_LABELS[tile.terrain])+'</p>'+
     table([local('Acquisition','取得方式'),local('Harvests at current population','按当前人口所需收获次数'),
       local('Influence after fee','扣费后影响力'),local('Border progress','边境进度')],lines)+
     '<div class="city-study-actions">'+action('tile',local('Locate next parcel','定位下一块领土'),tile.id)+

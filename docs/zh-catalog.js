@@ -9,6 +9,8 @@ export const catalog = new Map();
 section(`
 Natural wonder project|自然奇观工程
 Natural wonder projects|自然奇观工程
+Natural wonders|自然奇观
+Survey|勘察
 Beside|相邻景点
 View project in city|前往城市查看工程
 Choose an empty owned land tile beside this landmark and within two hexes of the city.|选择紧邻此景点、距城市不超过两格的一块己方空地。
@@ -42,6 +44,7 @@ Interpret the exposed canyon rock for 2 production and 2 science per turn.|解�
 section(`
 California coast|加州海岸
 Game setup|游戏设置
+Gameplay|玩法
 Maps|选地图
 Main menu|主导航
 Return to website|返回官网
@@ -49,7 +52,7 @@ Return to website|返回官网
 section(`
 Modern fortifications|现代城防
 Fire a city battery|使用城防炮台
-Build City walls in the city center. After Motorization, upgrade to Modern fortifications. Select the city, choose Fire city battery, then click a highlighted field force to review the shot. A city can fire once per round.|在市中心建造城墙，研究机动化后可升级为现代城防。选中城市，选择「发动城防炮击」，再点击高亮敌军查看预估伤害。每座城市每轮可炮击一次。
+Build City walls in the city center. After Motorization, upgrade to Modern fortifications. Select the city, choose Fire city battery, then click a highlighted field force to review the shot. A city can fire once per round.|在市中心建造城墙，研究「机械化」后可升级为现代城防。选中城市，选择「发动城防炮击」，再点击高亮敌军查看预估伤害。每座城市每轮可炮击一次。
 Built in the city center. Adds 50 city health, reduces incoming damage by 7 and strengthens retaliation.|建在市中心。城市生命上限增加 50，受到的伤害减少 7，并增强反击。
 Upgrades the city center. Adds 35 city health and one battery shot per round for up to 32 damage against visible field forces within two hexes.|升级市中心城防，城市生命上限增加 35。每轮可炮击一次，两格内可见的野战部队最多受到 32 点伤害。
 Build city walls in this city first.|请先在本城建成城墙。
@@ -712,9 +715,12 @@ Open water|水域
 Open ocean|远洋
 Coast|海岸
 Lowlands|低地
+Plains|低地
 Urban|城区
 Woodland|林地
+Forest|林地
 Foothills|丘陵
+Hills|丘陵
 Mountains|山地
 Unclaimed land|中立领土
 Improvement|改良设施
@@ -1695,4 +1701,15 @@ section(`
 Pay outstanding unit maintenance at harvest before recruiting or upgrading.|请在收获结算时偿清拖欠的单位维护费，再招募部队或提高维护费的兵种升级。
 Choose a maintained unit you control.|请选择一支由你控制且需要维护费的单位。
 Unit retired from service.|单位已退役。
+`);
+
+section(`
+Choose an available council project.|请选择当前可研究的科技或可议定的市政。
+Review the available wagon, cargo and charted trade route.|请重新核对可用的商队、货物和已探明的商路。
+Choose an outgoing wagon with a friendly home city.|请选择尚未返程且出发城市仍属己方的商队。
+Review the alternate destination and its two-gold diversion fee.|请重新确认改送的目的地。改送需支付 2 金币。
+A wagon depot needs a local Shop, 18 gold and an unassigned depot charter.|本城须有商店，国库须有 18 金币。每个文明只能设立一座商队货栈。
+Grading needs Public Works, the quoted gold and an ungraded corridor.|请先通过「公共工程」，选择尚未整修的商路，并备足整修所需的金币。
+Choose a charted corridor and cancel any previous food line.|请选择已探明的商路。如果已有粮食救济线，请先取消。
+There is no standing food line to cancel.|目前没有可取消的常设粮食救济线。
 `);

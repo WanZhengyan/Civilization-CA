@@ -28,7 +28,7 @@ The left production drawer names the city and centers it on the exposed map. Pic
 
 ## Build beside a natural wonder
 
-Scout the coast of Los Angeles for the **Ballona Wetlands**. A citizen working land next to the marsh earns an extra food and science each harvest. Adopt **Irrigation Districts** and a city near the wetlands can build a boardwalk for another 2 food and 2 culture per turn. All three regions have three discoverable landscapes, each with its own project.
+Scout the coast of Los Angeles for the **Ballona Wetlands**. A citizen working land next to the marsh earns 1 extra food and 1 extra science each harvest. Adopt **Irrigation Districts** and a city near the wetlands can build a boardwalk for another 2 food and 2 culture per turn. All three regions have three discoverable landscapes, each with its own project.
 
 Open **Wonders** to check a discovery and its research requirement. From a nearby city, open **City production → Natural wonder projects**. Pick a highlighted parcel that you own next to the landmark, within two hexes of the city. Keep it clear of resources and other construction. The first city to commission the work reserves it while building. Its recurring yields start at completion, and the landscape keeps its original worker bonus.
 
