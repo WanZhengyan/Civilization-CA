@@ -1,5 +1,11 @@
 # Campaign updates
 
+## v6.5.0 — Play your first campaign in Pasadena
+
+Start the guided campaign from the homepage or the game title screen. Found a capital on the Los Angeles relief map, choose a technology and a civic, set up production, weigh the cost of expanding early, and send a unit into the field. Open the usual game controls for each choice. You can keep your influence, choose a different unit, collapse the tips, and continue to play after the last lesson. The tutorial resumes from its own save slot.
+
+The bilingual homepage and GitHub README now link directly to the playable tutorial and show the current map. The title screen links back to the homepage. Run the Pages release check to confirm that the branch serving the website matches the source on main.
+
 ## Resolve orders from the turn button
 
 The bottom-right button takes you to an available research choice, a civic, an idle city's production, or a unit waiting for orders. Select a task to open the relevant council, city, or map location. A unit can spend its movement or skip the rest of this turn’s reminders. You can still select a skipped unit manually while it has movement. When the list is clear, the button offers **End turn** or **Mark ready** in a shared team turn.
