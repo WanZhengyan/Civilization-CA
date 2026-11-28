@@ -1,5 +1,13 @@
 # Campaign updates
 
+## Relief terrain and a tilted campaign table
+
+The map now opens in a fixed, tilted relief view. Rocky ridges, rolling foothills, regional forests, clustered houses and shoreline banks have directional light and cast shadows. Rivers retain their navigable courses, and bridges have raised decks. All terrain and miniature artwork is original and generated locally.
+
+Use **Relief view / 立体地形** beside the map controls to switch back to the flat strategic map. The choice is remembered on this device. Units, city names, resource markers and combat numbers remain upright. Zoom, drag, touch pinch, keyboard movement and city-label selection share the same projected ground coordinates.
+
+A padded viewport cache keeps nearby terrain sharp on Grand and Epic maps. Previously explored land remains visible under a blue-gray veil. Unseen terrain never enters the relief mesh. This changes presentation only: ongoing campaigns and rooms keep their existing rules and saves.
+
 ## Compare scouting routes, plan coastal deliveries and review each battle
 
 A scout can compare reachable destinations by how many uncharted hexes it will reveal. Review the dotted footprint before moving. A fishing crew can chart a course to a known friendly berth, inspect its next legal leg and see the earliest round it can unload.

@@ -1,3 +1,26 @@
+## Relief-map review
+
+The reference was `ebe5056`. The hypothesis was that a tilted ground plane, height-based terrain light and upright game pieces would make height and unit position clearer without changing a campaign order. This release used ten source iterations, followed by a final cache/memory correction.
+
+| Iteration | Observed issue and resulting change |
+| --- | --- |
+| 1 | Flat, blurred terrain became a lit xyz mesh projected onto a tilted ground plane; projection and inverse picking share one camera module. |
+| 2 | Neutral miniatures and battle numbers were compressed by the tilt; their ground shadows stay tilted while the pieces and text stay upright. |
+| 3 | Rivers and bridges lacked thickness; bank shadows, shallow/deep water and raised bridge decks retain the original routes. |
+| 4 | Input checks exercised real painted positions. A click on the lower HP bar initially selected the tile behind the unit; the hitbox now covers the painted bar. |
+| 5 | Repeated ridges and forests gained seeded shapes, regional palettes and height-aware scenery ordering. |
+| 6 | An entire Epic bitmap blurred at close zoom; the renderer now caches a padded viewport and regenerates it when the camera leaves it. |
+| 7 | Tilted geographic text and adjacent names collided; captions stay upright and share collision bounds. |
+| 8 | Move-range tint obscured terrain; lighter fills, upright settlement flags and directional formation shadows preserve the scenery. |
+| 9 | Known terrain was too dark and the exterior looked like a flat chart; a quieter backdrop and lighter memory veil distinguish survey from unseen mist. |
+| 10 | Native renders exposed cliff-like hills and triangular flat-land seams; lower rolling shoulders, nearly level woodland and grouped pitched-roof houses replaced them. |
+
+The final complete suite passed 467 tests, including 22 focused rendering tests. The full rules replay runs 18 fixed campaigns twice. The candidate report is identical to the baseline JSON, including every action/state replay hash, round, counter and winner. The result remains 12 science and six conquest wins. Camera regression cases cover all three regions and all four historical/current map sizes, desktop and phone insets, both views, cursor zoom, drag, a moving pinch midpoint, keyboard navigation, full unit/body/HP selection and city-label order pass-through.
+
+Native Canvas renders were inspected across Los Angeles, San Francisco and San Diego, including full-region and close views. Geometry tests check shared zero-height seams, clear tile centers, directional light, regional variety, raster limits and independence from unseen neighboring terrain. Ordinary frames reuse the bitmap; fully explored fit views still have a one-time mesh/raster preparation cost. Flat planes are excluded from the depth sort, and close views use the smaller viewport cache. On the same fully explored LA Epic native-Canvas benchmark, removing 86,562 flat triangles reduced one-time preparation/rendering from 3,827 ms to 2,403 ms. These timings describe this test machine, not mobile devices.
+
+The managed development preview stalled on existing module requests, including `rules.js`. Native rendering and input integration tests provided visual and coordinate verification. This is a Canvas renderer with an orthographic terrain mesh and upright illustrated pieces; it is not a free-rotation WebGL world. Full physical occlusion between every mountain, building and unit is not implemented: tactical pieces remain legible above terrain.
+
 # Testing a campaign change
 
 Start with one question a player could answer. For example, does faster production give a player enough time to train a defender before the first attack? Identify the rule or screen to change and write down what result would support the change. If the question concerns timing, add a measurement for the turn of the first defender and the first attack.

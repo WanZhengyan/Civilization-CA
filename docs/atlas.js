@@ -1071,7 +1071,7 @@ export function createAtlas(host, options = {}) {
     if(background && reliefView && reliefWindow && (
       viewport.left<reliefWindow.left || viewport.right>reliefWindow.right ||
       viewport.top<reliefWindow.top || viewport.bottom>reliefWindow.bottom ||
-      Math.min(2,s*(canvas.width/Math.max(1,boxW)))>Math.min(2,reliefWindow.pixelScale)*1.5))forgetBackground();
+      (s>reliefWindow.scale*1.5 && background.resolution<1.95)))forgetBackground();
     if(background)return;
     const region=model.region||getMap('la');
     // The printed plate is stable across discoveries. Water fills, bridges and
@@ -1080,7 +1080,7 @@ export function createAtlas(host, options = {}) {
     if(reliefView){
       // Repaint a padded viewport, not the entire Epic world at low resolution.
       // The cache remains stable through small pans and is bounded to 5M pixels.
-      reliefWindow={left:viewport.left-W*2,right:viewport.right+W*2,top:viewport.top-H*2,bottom:viewport.bottom+H*2,pixelScale:s*(canvas.width/Math.max(1,boxW))};
+      reliefWindow={left:viewport.left-W*2,right:viewport.right+W*2,top:viewport.top-H*2,bottom:viewport.bottom+H*2,scale:s};
       const known=(model.fog?.knownTiles||tiles).filter(tile=>{
         const [x,y]=pos(tile.q,tile.r);
         return x>reliefWindow.left-W && x<reliefWindow.right+W && y>reliefWindow.top-H && y<reliefWindow.bottom+H;

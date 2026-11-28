@@ -18,6 +18,8 @@ Choose **Play solo** to set your civilization, the number of computer opponents 
 
 Large, the smallest new map, has 598–689 playable hexes. Grand has 1,346–1,545 and Epic has 2,391–2,747. Westwood spans five hexes on a Large Los Angeles map and sixteen on Epic. You can resume an earlier compact map from its saved slot. Each region and size has its own solo save. Resuming keeps the original opponents and goal. Starting a new campaign in an occupied slot requires confirmation. **Create room** lets the host set the region and size for everyone. **Join room** accepts a room code or invitation. Switch between English and 简体中文 on the website or during play.
 
+The campaign opens as a tilted relief landscape with modeled ridges, shaded trees, riverbanks and raised bridges. Use **Relief view / 立体地形** beside the map controls to return to the flat strategic map. This is a fixed orthographic view; it does not provide free camera rotation.
+
 Drag the map or pinch to zoom. Technology and Civics sit on the left, with Field Command on the right. **Fit region** shows the whole playable coastline. A double line marks the last playable hex, and a shared border shows the color of each civilization on its own side. Select a frontier district to identify its neighbors.
 
 Visible cities carry a nameplate on their own hex. A gold crown marks an original capital and stays with it after capture. The rim shows the current owner. Select a nameplate to inspect the city. Turning off geographic names keeps city names on the board.
