@@ -886,11 +886,11 @@ function overlayUnitBoxes(model,scale) {
     const a=unitAnchor(model,u.tile);if(!a)continue;
     const f=u.id===model.selectedUnitId?1.48:1.30, badge=Math.max(1,Math.min(1.4,1.04/scale));
     boxes.push([a[0]-16*f,a[1]-40*f/pitch,a[0]+16*f,a[1]+5]);
-    boxes.push([a[0]+13.2*f-9*badge,a[1]-(29*f+8*badge)/pitch,a[0]+13.2*f+9*badge,a[1]+(-29*f+11*badge)/pitch]);
+    boxes.push([a[0]+13.2*f-9*badge,a[1]-(29*f+8*badge)/pitch,a[0]+13.2*f+9*badge,a[1]+(-29*f+12*badge)/pitch]);
   }
   if(model.motions.length)for(const u of model.hitUnits){
     boxes.push([u.x-u.width,u.y-u.height,u.x+u.width,u.y+5]);
-    boxes.push([u.bx-9*u.badgeScale,u.by-8*u.badgeScale/pitch,u.bx+9*u.badgeScale,u.by+11*u.badgeScale/pitch]);
+    boxes.push([u.bx-9*u.badgeScale,u.by-8*u.badgeScale/pitch,u.bx+9*u.badgeScale,u.by+12*u.badgeScale/pitch]);
   }
   return boxes;
 }
@@ -1044,7 +1044,7 @@ export function createAtlas(host, options = {}) {
   let replay=null,returnCamera=null,lastCameraInput=-Infinity;
   function manualCamera(){returnCamera=null;lastCameraInput=performance.now();}
   let background=null,boxW=1,boxH=1,base=1,zoom=1,cx=0,cy=0,request=0,resizeFrame=0,tween=0;
-  let reliefView=options.reliefView!==false, reliefKey='';
+  let reliefView=options.reliefView!==false, reliefKey='',reliefWindow=null;
   const pitch=()=>reliefView?RELIEF_PITCH:1;
   const camera=()=>({cx,cy,scale:base*zoom,pitch:pitch(),width:boxW,height:boxH});
   model.pitch=pitch();
@@ -1052,15 +1052,27 @@ export function createAtlas(host, options = {}) {
   let frame=chartFrame(tiles), mesh=chartMesh(tiles), extent=chartExtent(tiles);
   let landmarkTiles=tiles.filter(tile=>tile.landmark);
   let cityMarks=[],cityCamera=null;
-  function forgetBackground(){background?.buffer.close?.();background=null;}
+  function forgetBackground(){background?.buffer.close?.();background=null;reliefWindow=null;}
   function ensureBackground() {
+    const s=base*zoom,sy=s*pitch();
+    const viewport={left:cx-boxW/(2*s),right:cx+boxW/(2*s),top:cy-boxH/(2*sy),bottom:cy+boxH/(2*sy)};
+    if(background && reliefView && reliefWindow && (
+      viewport.left<reliefWindow.left || viewport.right>reliefWindow.right ||
+      viewport.top<reliefWindow.top || viewport.bottom>reliefWindow.bottom ||
+      Math.min(2,s*(canvas.width/Math.max(1,boxW)))>Math.min(2,reliefWindow.pixelScale)*1.5))forgetBackground();
     if(background)return;
     const region=model.region||getMap('la');
     // The printed plate is stable across discoveries. Water fills, bridges and
     // their labels are overprinted from this seat's changing survey below.
     const paper=region.waterways ? getMap(region.id,region.mapSize) : region;
     if(reliefView){
-      const known=model.fog?.knownTiles||tiles;
+      // Repaint a padded viewport, not the entire Epic world at low resolution.
+      // The cache remains stable through small pans and is bounded to 5M pixels.
+      reliefWindow={left:viewport.left-W*2,right:viewport.right+W*2,top:viewport.top-H*2,bottom:viewport.bottom+H*2,pixelScale:s*(canvas.width/Math.max(1,boxW))};
+      const known=(model.fog?.knownTiles||tiles).filter(tile=>{
+        const [x,y]=pos(tile.q,tile.r);
+        return x>reliefWindow.left-W && x<reliefWindow.right+W && y>reliefWindow.top-H && y<reliefWindow.bottom+H;
+      }).map(tile=>tile.waterway?paper.byId[tile.id]||tile:tile);
       const landmarks=landmarkTiles.filter(tile=>!model.fog||model.fog.explored.has(tile.id));
       background=renderReliefAtlas(known,region,landmarks,(g,tile,x,y)=>{
         drawLandmark(g,tile.landmark,x,y,1.48);
@@ -1114,9 +1126,9 @@ export function createAtlas(host, options = {}) {
     if(bw>0&&bh>0)ctx.drawImage(buffer,(bx-originX)*resolution,(by-originY)*resolution,
       bw*resolution,bh*resolution,bx,by,bw,bh);
     if(model.region?.waterways){
-      inkWaterways(ctx,model.region);
+      inkWaterways(ctx,model.region,{relief:reliefView,pitch:pitch()});
       for(const bridge of model.region.waterways.crossings || []){
-        inkRiverBridge(ctx,model.region.byId[bridge.a],model.region.byId[bridge.b]);
+        inkRiverBridge(ctx,model.region.byId[bridge.a],model.region.byId[bridge.b],{relief:reliefView,pitch:pitch()});
       }
     }
     if(model.fog)ctx.restore();
@@ -1135,7 +1147,7 @@ export function createAtlas(host, options = {}) {
     ctx.save();ctx.setTransform(dpi,0,0,dpi,0,0);
     paintCityLabels(ctx,cityMarks,s,seat=>factionColor(model,seat));ctx.restore();
     ctx.save();ctx.clip(frame);
-    if(replay && paintBattleReport(ctx,replay,s,performance.now()))schedule();
+    if(replay && paintBattleReport(ctx,replay,s,performance.now(),pitch()))schedule();
     ctx.restore();
     ctx.restore();
     // A very light vignette holds together all the terrain colours at the edge of the atlas.
@@ -1192,7 +1204,7 @@ export function createAtlas(host, options = {}) {
   function hitUnitAt(x,y){
     const [wx,wy]=toWorld(x,y);
     if(!chartHit(wx,wy,id=>model.byId.has(id)))return null;
-    return model.hitUnits.findLast(u=>(Math.abs(wx-u.bx)<=9*u.badgeScale && Math.abs(wy-u.by)<=9*u.badgeScale/pitch())||(Math.abs(wx-u.x)<=u.width && wy>u.y-u.height && wy<u.y+5));
+    return model.hitUnits.findLast(u=>(Math.abs(wx-u.bx)<=9*u.badgeScale && wy>=u.by-8*u.badgeScale/pitch() && wy<=u.by+12*u.badgeScale/pitch())||(Math.abs(wx-u.x)<=u.width && wy>u.y-u.height && wy<u.y+5));
   }
   function hit(x,y){
     return chartHit(...toWorld(x,y),id=>model.byId.has(id));
