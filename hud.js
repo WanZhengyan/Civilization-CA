@@ -1,3 +1,8 @@
+import {mountTutorialCoach} from './tutorial-coach.js';
+import {mountTurnResults} from './turn-results.js';
+import {turnButtonState,paintTurnButton,pendingTurnTasks} from './turn-button.js';
+import {getLanguage} from './i18n.js';
+import {mountInfluencePanel} from "./influence-panel.js";
 import {unchartedFrom,scoutingRoutes,openScoutingRoutes} from './scout-routes.js';
 import {notebookReport,notebookPanel} from './regional-atlas.js';
 import {FIELD_STATIONS,fieldStationReport,nearestKnownStation,stationInstruction} from './field-stations.js';
@@ -13,7 +18,7 @@ import {fishingTask} from './maritime.js';
 import {modeLabels} from './campaign-choices.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
 import {borderSummary} from './border-summary.js';
-import {getCityExpansions} from './rules.js';
+import {BORDER_CHARTER_COST,getCityExpansions} from './rules.js';
 import {NATURAL_WONDERS,neighboringWonders} from './natural-wonders.js';
 import {naturalWonderArt} from './natural-wonder-art.js';
 import {mountMapWorkspace, compactMap, showMapPanel, closeMapPanel, displayMapOnMobile, inspectMapOnMobile, chartViewInsets} from './map-workspace.js';
@@ -23,7 +28,7 @@ import {constructionTurns} from './harvest-forecast.js';
 import {directoryButton,mountCityDirectory} from './city-directory.js';
 import {councilInvestments,investmentPanel} from './council-investment.js';
 import {councilStages,stageHeading,renderCouncilPath,prerequisiteLine,projectQuote} from './council-path.js';
-import {researchLinks,syncResearchLens} from './research-catalog.js';
+import {researchLinks,syncResearchLens,focusAvailableProject} from './research-catalog.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
 import {openCityHall,paintCityHall} from './city-hall.js';
@@ -41,7 +46,7 @@ import {captureOrderHint,cityAttackHint,forecastCounterLabel} from './attack-mod
 import {militaryTraining,trainingPanel} from './combat-training.js';
 import {fieldPosition,fieldPositionPanel} from './field-position.js';
 import {advancementPanel,recoveryPanel} from './unit-service-ui.js';
-import {getUpgradePlans,getRecoveryForecast} from './rules.js';
+import {canSkipUnit,getUpgradePlans,getRecoveryForecast} from './rules.js';
 import {mountSurveyControls, showSelectedFrontier} from './survey-controls.js';
 import {createAtlas} from "./atlas.js";
 import {drawUnitPortrait} from "./unit-art.js";
@@ -56,7 +61,7 @@ const unitRole={settler:"Civilian unit",builder:"Engineering unit",melee:"Melee 
 const isSeaUnit=item=>UNIT_TYPES[item]?.domain==="sea";
 const portBuildings=new Set(["harbor","shipyard"]);
 const eraName=id=>ERAS[id]?.name||id;
-let updateWaterKey,cityDirectory;
+let updateWaterKey,cityDirectory,influencePanel;
 const councilGoals={research:"",civics:""};
 let mapRegion,councilKind="research",lastCouncilMarkup="",lastProjectsMarkup="";
 const itemDesc={settler:"Founds a new city at least three hexes from another city.",builder:"Builds farms and mines in your territory. Three charges.",melee:"Fights adjacent enemies and captures weakened cities.",ranged:"Strikes enemies up to two hexes away.",granary:"Adds 2 food per turn to help this city grow.",workshop:"Adds 2 production per turn in this city.",monument:"Adds 3 influence per turn.",walls:"Increases this city’s defenses."};
@@ -87,6 +92,7 @@ const symbols={
   city:'<path d="M3 21h18M5 20V9h5v11m0-14 4-3 4 3v14m0-10h3v10M7 12h1m5-3h2m-2 4h2"/>',
   land:'<path d="m3 18 5-9 4 6 3-4 6 7H3z"/><circle cx="17" cy="6" r="2"/>',
   move:'<path d="M12 2v20M2 12h20M9 5l3-3 3 3m-6 14 3 3 3-3M5 9l-3 3 3 3m14-6 3 3-3 3"/>',
+  skipUnit:'<path d="m5 5 10 7L5 19zM19 5v14"/>',
   attack:'<path d="m3 3 4 1 12 14m-4 1 4-5m-9-1-5 6-2-2 5-6m5-2 4-5 4-1-1 4-5 4"/>',
   found:'<path d="M3 21h18M5 20V10l4-4 4 4v10m0-8 3-3 4 3v8M9 6V2m0 0 5 1-5 2"/>',
   farm:'<path d="M12 21V8m-1 7C7 16 4 12 4 8c4 0 7 2 8 6m1-1c1-4 4-6 8-6-1 4-4 7-8 7m-1-6c-3-2-3-4 0-7 3 3 3 5 0 7"/>',
@@ -115,6 +121,24 @@ function cityAt(tile){return view.state.cities.find(c=>c.tile===tile)}
 function getUnit(){return view.state.units.find(u=>sameId(u.id,selectedUnit))}
 function faction(seat){const player=view.state.players[seat];return {name:names[player?.faction??seat],color:FACTIONS[player?.faction??seat]?.color||"#9aabb2"}}
 function ownUnits(){return view.state.units.filter(u=>u.seat===view.seat)}
+function readyUnits(){
+  if(view.mode==='online' && !view.state.intel?.turnReadiness)return ownUnits().filter(u=>u.moves>0);
+  const needed=new Set(pendingTurnTasks(view).filter(task=>task.kind==="unit").map(task=>task.id));
+  return ownUnits().filter(unit=>needed.has(unit.id));
+}
+function skipUnitButton(unit,locked){
+  const {state,seat}=view;
+  if(state.intel && !state.intel.turnReadiness)return "";
+  const skipped=unit.skippedRound===state.round;
+  let detail="Keeps remaining movement";
+  if(state.phase!=="playing")detail="The campaign has ended.";
+  else if(locked)detail=view.busy?"Updating orders…":"Wait for your turn.";
+  else if(skipped && unit.moves>0)detail="Can still act this turn";
+  else if(unit.fortified)detail="Fortified position";
+  else if(unit.resting)detail="Rest order committed";
+  else if(!unit.moves)detail="No movement left";
+  return actionButton("skipUnit",skipped?"Skipped this turn":"Skip this turn",detail,"",locked||!canSkipUnit(state,seat,unit.id));
+}
 function ownCities(){return view.state.cities.filter(c=>c.seat===view.seat)}
 function customCity(city){return Boolean(city && city.name!==mapRegion.byId[city.tile]?.name)}
 function cityNameAttrs(city){return customCity(city)?' translate="no"':''}
@@ -143,7 +167,7 @@ function select(tile,unit=null,city=false){
   kind=piece?"unit":place?"city":"tile";selectedUnit=piece?.id??null;
 }
 function selectOpening(){
-  const units=ownUnits(),starter=units.find(u=>u.type==="settler"&&u.moves>0)||units.find(u=>u.moves>0)||units[0];
+  const ready=readyUnits(),starter=ready.find(u=>u.type==="settler")||ready[0]||ownUnits()[0];
   if(starter)select(starter.tile,starter.id);
   else {const city=ownCities()[0];select(city?.tile || view.state.intel?.explored?.[0] || mapRegion.tiles[0].id,null,true)}
 }
@@ -387,6 +411,7 @@ function inspect(){
         const definition=UNIT_TYPES[u.type];
         explanation=definition.description||itemDesc[u.type]||("Attack range · "+definition.range+" hexes.");
       }
+      actions+=skipUnitButton(u,disabled);
       const journal=notebookReport(state,u,mapRegion,hexDistance);
       const visit=fieldStationReport(state,u);
       if(visit){
@@ -418,7 +443,12 @@ function inspect(){
     const buildings=(c.buildings||[]).map(id=>'<span>'+illustration(id)+'<span>'+esc(items[id]||id)+'</span></span>');
     if(buildings.length)info+='<div class="built-gallery">'+buildings.join('')+'</div>';
     const expansion=expansionForecasts.get(c.id);
-    info+=populationSummary(getPopulationReport(state,c.id))+borderSummary(expansion,mapRegion.byId[expansion?.tile],esc)+cityQueue(c);
+    info+=populationSummary(getPopulationReport(state,c.id))+borderSummary(expansion,mapRegion.byId[expansion?.tile],esc);
+    if(own && expansion?.tile && state.intel?.borderCharters){
+      const label=getLanguage()==='zh-CN'?'查看提前扩张 · '+BORDER_CHARTER_COST+' 影响力':'Review expansion · '+BORDER_CHARTER_COST+' influence';
+      info+='<button type="button" class="border-charter-link" data-influence-open data-influence-city="'+esc(c.id)+'" aria-haspopup="dialog" translate="no">'+esc(label)+'</button>';
+    }
+    info+=cityQueue(c);
     if(c.atlasCopies)info+='<div class="unit-sight"><span>Regional atlas collection</span><strong>+'+Number(c.atlasCopies)+' <span>influence</span></strong></div>';
     if(own && c.buildingSites) info+='<div class="works-sites">'+Object.entries(c.buildingSites).map(([item,id])=>
       '<small>'+esc(items[item]||item)+' · '+esc(mapRegion.byId[id]?.name||id)+' · '+esc(id)+'</small>').join('')+'</div>';
@@ -548,9 +578,10 @@ function roster(){
     const label=unitTab ? items[o.type]||o.type : o.name;
     const turns=unitTab?null:projectTurns(o);
     const subtitle=unitTab?o.moves+' / '+o.maxMoves+' movement':o.queue?(items[o.queue.item]||o.queue.item)+' · '+(turns?turnsText(turns):'Awaiting deployment'):'Awaiting production';
-    return '<button class="roster-unit" aria-pressed="'+active+'" data-roster-id="'+esc(o.id)+'"><span class="roster-symbol">'+icon(unitTab?o.type:'city')+'</span><span><b'+(unitTab?'':cityNameAttrs(o))+'>'+esc(label)+'</b><small>'+esc(subtitle)+'</small></span></button>';
+    const skipped=unitTab && o.skippedRound===view.state.round ? ' · <span>Skipped this turn</span>' : '';
+    return '<button class="roster-unit" aria-pressed="'+active+'" data-roster-id="'+esc(o.id)+'"><span class="roster-symbol">'+icon(unitTab?o.type:'city')+'</span><span><b'+(unitTab?'':cityNameAttrs(o))+'>'+esc(label)+'</b><small><span>'+esc(subtitle)+'</span>'+skipped+'</small></span></button>';
   }).join('')||'<div class="roster-empty">'+(unitTab?'You have no units in the field.':'You have no cities.')+'</div>');
-  el("next-unit").disabled=!mayOrder()||!ownUnits().some(u=>u.moves>0);
+  el("next-unit").disabled=!mayOrder()||!readyUnits().length;
 }
 function redraw(){inspect();updateMap();roster()}
 function projectTurns(city){
@@ -742,6 +773,80 @@ function openCombat(unit,tile){
 function closeCombat(){
   battle=null;if(el("combat-modal").open)el("combat-modal").close();if(view&&atlas)updateMap();
 }
+function handleTurnButton(){
+  if(!view)return;
+  const next=turnButtonState(view);
+  if(next.disabled)return;
+  if(next.kind==="lobby"){Game.open("multiplayer");return;}
+  if(next.kind==="standings"){Game.open("standings");return;}
+  if(next.kind==="end"){
+    moveDraft=null;order="";
+    Game.doAction(next.checked?{type:"end",requireReady:true}:{type:"end"});
+    return;
+  }
+  openPendingTask(next.task);
+}
+function openPendingTask(task){
+  if(!task || !mayOrder())return;
+  if(task.kind==="research" || task.kind==="civics"){
+    councilGoals[task.kind]="";
+    openCouncil(task.kind);
+    focusAvailableProject(task.kind,el("research-options"));
+    return;
+  }
+  // Resume the player's unfinished site selection when this is the same city.
+  if(task.kind==="production" && parcelOrder?.city===task.id){
+    closeMapPanel();openMapOnMobile();
+    parcelBar.querySelector("[data-site-list]")?.focus({preventScroll:true});
+    return;
+  }
+  endPlacement();
+  closeMapPanel();
+  const unit=task.kind==="unit";
+  activeRoster=unit?"units":"cities";
+  select(task.tile,unit?task.id:null,!unit);
+  atlas.focus(task.tile);redraw();
+  if(unit){
+    inspectMapOnMobile();
+    el("entity-commands").querySelector("button[data-order]:enabled")?.focus({preventScroll:true});
+  }else{
+    openProduction();
+    el("production-options").querySelector("[data-produce]:enabled")?.focus();
+  }
+}
+let tutorialCoach;
+function locateTutorialOrder(lesson){
+  if(!view?.tutorial)return;
+  const {step,city,unit}=lesson;
+  if(step==="research" || step==="civic"){
+    const track=step==="research"?"research":"civics";
+    councilGoals[track]="";
+    openCouncil(track);focusAvailableProject(track,el("research-options"));
+    return;
+  }
+  if(step==="influence"){el("influence-open").click();return;}
+  if(step==="restart"){Game.open("restart-tutorial");return;}
+  if(step==="turn" || step==="wait" || step==="restFounder"){
+    closeMapPanel();
+    el("end-turn").focus({preventScroll:true});return;
+  }
+  endPlacement();closeMapPanel();
+  if(step==="produce" && city){
+    select(city.tile,null,true);atlas.focus(city.tile);redraw();
+    openProduction();
+    const list=el("production-options");
+    (list.querySelector('[data-produce="scout"]:enabled') || list.querySelector('[data-produce]:enabled'))?.focus({preventScroll:true});
+  }else if(unit){
+    select(unit.tile,unit.id);atlas.focus(unit.tile);redraw();
+    if(step==="found"){
+      inspectMapOnMobile();
+      const found=el("entity-commands").querySelector('[data-order="found"]:enabled');
+      if(found){found.focus({preventScroll:true});return;}
+    }
+    displayMapOnMobile();el("atlas").querySelector("canvas")?.focus({preventScroll:true});
+  }
+}
+let turnResults;
 let expansionForecasts = new Map();
 function paint(next){
   expansionForecasts=getCityExpansions(next.state,next.seat);
@@ -760,6 +865,8 @@ function paint(next){
   if(!mayOrder())order="";
   const player=state.players[seat],stats=getStats(state,seat),f=faction(seat);
   paintDiplomacy(next,stats);
+  influencePanel?.paint();
+  turnResults?.(view);
   cityDirectory?.paint();
   text("brand-region",mapRegion.shortName);text("campaign-title",mapRegion.name);
   text("chart-coordinate",mapRegion.coordinates);text("footer-region",mapRegion.shortName);
@@ -779,8 +886,7 @@ function paint(next){
   trophy.title=state.victoryMode?'Victory progress':'View faction standings';
   trophy.querySelector('.resource-label').textContent=state.victoryMode?'Victory':'Score';
   text('score',state.victoryMode ? (state.practice?'Space race':({standard:'Two paths',conquest:'Conquest',science:'Space race'})[state.victoryMode]) : stats.score);
-  text("end-label",view.roomStatus || (waiting?"Open room":finished?"Standings":teamStatus?teamStatus.button:myTurn?"End turn":mode==="solo"?"Rivals playing…":state.players[state.turn]?.bot?"Computer playing…":"Waiting…"));
-  el("end-turn").disabled=!waiting&&!finished&&(!myTurn||view.busy);
+  paintTurnButton(el("end-turn"),view);
   const event=state.log.at(-1);text("event-turn","TURN "+String(event?.round||1).padStart(2,"0"));text("event-text",event?Game.eventText(event):"");
   el("legend").innerHTML=contacts.map(p=>'<span class="legend-item"><i class="swatch" style="--swatch:'+FACTIONS[p.faction].color+'"></i><span>'+esc(names[p.faction])+'</span>'+(state.teams?' · <span>'+teamLabel(state.teams[p.seat])+'</span>':'')+'</span>').join('');
   const eventKey=event?JSON.stringify(event):"";
@@ -793,6 +899,7 @@ function paint(next){
   if(el("production-modal").open)productionOptions();
   if(el("combat-modal").open)drawCombat();
   battleReports.update(next,key,mapRegion);
+  tutorialCoach?.paint();
 }
 let campusNoticeKey='',hiddenCampusNotice='';
 function showCampusOpening(state,seat,key){
@@ -879,6 +986,17 @@ function chooseOrder(key){
     return;
   }
   if(!mayOrder())return;
+  if(key==="skipUnit"){
+    if(!canSkipUnit(view.state,view.seat,u.id))return;
+    order="";freightTarget=null;
+    const fromButton=document.activeElement?.dataset.order==="skipUnit";
+    const session=matchKey;
+    Promise.resolve(Game.doAction({type:"skipUnit",unit:u.id})).then(()=>{
+      if(fromButton && matchKey===session && sameId(getUnit()?.id,u.id) && getUnit().skippedRound===view.state.round && document.activeElement===document.body)
+        el("end-turn").focus({preventScroll:true});
+    });
+    return;
+  }
   if(key.startsWith("train:")){order="";Game.doAction({type:"train",unit:u.id,item:key.slice(6)});return}
   if(key==="fortify"){order="";Game.doAction({type:"fortify",unit:u.id});return}
   if(["provisionVoyage","loadFreight","landFreight","returnFreight","landCatch","haulFish"].includes(key)){order="";Game.doAction({type:key,unit:u.id});return}
@@ -913,14 +1031,36 @@ function chooseRoster(id){
   if(!item)return;closeMapPanel();select(item.tile,units?item.id:null,!units);atlas.focus(item.tile);redraw();openMapOnMobile();
 }
 function nextReady(){
-  const ready=ownUnits().filter(u=>u.moves>0);if(!ready.length)return;
+  const ready=readyUnits();if(!ready.length)return;
   const i=ready.findIndex(u=>sameId(u.id,selectedUnit));activeRoster="units";chooseRoster(ready[(i+1)%ready.length].id);
 }
 function showRoster(type){activeRoster=type;roster()}
 function toggleLayers(open){el("layers-menu").hidden=!open;el("layers").setAttribute("aria-expanded",String(open))}
 function mount(){
-  atlas=createAtlas(el("atlas"),{viewInsets:chartViewInsets,onSelect:onMapSelect,onHover:updateHint,onZoom:percent=>text("map-zoom",Math.round(percent)+"%")});
+  const reliefPreference='civilization-ca.relief-view.v1';
+  let reliefView=true;
+  try {reliefView=localStorage.getItem(reliefPreference)!=='false';} catch {/* Rendering still works when browser storage is unavailable. */}
+  atlas=createAtlas(el("atlas"),{reliefView,viewInsets:chartViewInsets,onSelect:onMapSelect,onHover:updateHint,onZoom:percent=>text("map-zoom",Math.round(percent)+"%")});
+  const reliefButton=document.createElement('button');
+  reliefButton.id='map-relief';reliefButton.className='relief-view';reliefButton.type='button';
+  reliefButton.setAttribute('aria-label','Relief view');
+  reliefButton.setAttribute('aria-pressed',String(reliefView));
+  reliefButton.title='Switch between relief terrain and the flat strategic map.';
+  reliefButton.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m2 18 7-12 5 8 3-5 5 9-10 4z"/><path d="m9 6 1 12 12 0M2 18h8l2 4"/></svg><span>Relief view</span>';
+  el('inspect-map').after(reliefButton);
+  reliefButton.onclick=()=>{
+    reliefView=!reliefView;
+    atlas.setReliefView(reliefView);
+    reliefButton.setAttribute('aria-pressed',String(reliefView));
+    try {localStorage.setItem(reliefPreference,String(reliefView));} catch {/* Keep the selected view for this session. */}
+  };
   battleReports=mountBattleReports(atlas);
+  turnResults=mountTurnResults(el("watch-cities").closest("section"),task=>{
+    if(!task || !mayOrder())return;
+    const current=pendingTurnTasks(view).find(t=>t.kind===task.kind && t.id===task.id);
+    if(current)openPendingTask(current);
+  });
+  document.addEventListener('civitas-language',()=>turnResults(view));
   cityDirectory=mountCityDirectory(()=>view,(city,command)=>{
     closeMapPanel();select(city.tile,null,true);atlas.focus(city.tile);redraw();
     if(command==='production')openProduction();
@@ -948,7 +1088,7 @@ function mount(){
   };
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>Game.open(b.dataset.open));
   el("board-nav").onclick=()=>{closeMapPanel();el("atlas").querySelector("canvas")?.focus({preventScroll:true})};
-  el("end-turn").onclick=()=>{if(lobby())Game.open("multiplayer");else if(view.state.phase==="finished")Game.open("standings");else{moveDraft=null;order="";Game.endTurn()}};
+  el("end-turn").onclick=handleTurnButton;
   el("zoom-out").onclick=()=>atlas.zoomBy(.8);el("zoom-in").onclick=()=>atlas.zoomBy(1.25);el("recenter").onclick=()=>atlas.reset();
   el("inspect-map").onclick=()=>{order=order==="inspect"?"":"inspect";hoverId=null;redraw()};
   el("layers").onclick=()=>toggleLayers(el("layers-menu").hidden);
@@ -959,6 +1099,8 @@ function mount(){
     atlas.focus(id,true);redraw();updateHint(id);inspectMapOnMobile();
   });
   mountMapWorkspace();
+  tutorialCoach=mountTutorialCoach({getView:()=>view,getLanguage,locate:locateTutorialOrder,
+    saveProgress:patch=>Game.setTutorialProgress(patch)});
   moveBar=document.createElement("section");
   moveBar.className="move-review";moveBar.hidden=true;moveBar.setAttribute("aria-label","Movement preview");
   moveBar.innerHTML=`<div class="move-place"><strong id="move-place"></strong> <small id="move-coord"></small></div>
@@ -998,6 +1140,10 @@ function mount(){
     }
   };
   mountDiplomacy(action=>Game.doAction(action));
+  influencePanel=mountInfluencePanel({
+    getView:()=>view,issue:action=>Game.doAction(action),closeLedger:()=>Game.close(),
+    showTile:locateDistrict
+  });
   document.querySelector('.map-messages')?.prepend(parcelBar);
   el("map-labels").onchange=e=>atlas.setLabels(e.currentTarget.checked);
   el("territory-lines").onchange=e=>atlas.setTerritories(e.currentTarget.checked);
@@ -1073,7 +1219,7 @@ function mount(){
     if(!view || !getResearchOptions(view.state,view.seat).some(o=>o.item===item))return;
     openCouncil('research');showCouncilGoal(item);
   });
-  document.addEventListener('civitas-language',()=>{if(!view)return;roster();if(el('research-modal').open)paintResearch();else paintProjects()});
+  document.addEventListener('civitas-language',()=>{if(!view)return;paintTurnButton(el('end-turn'),view);roster();inspect();if(el('research-modal').open)paintResearch();else paintProjects()});
   el("close-combat").onclick=closeCombat;el("cancel-combat").onclick=closeCombat;
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};

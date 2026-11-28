@@ -1,0 +1,45 @@
+#influence-panel {
+  --edge:#596059; --muted:#b7c3bd; --gold:#e7cc94;
+  box-sizing:border-box; width:min(655px,calc(100vw - 24px));
+  max-height:min(88dvh,800px); padding:0; border:1px solid var(--edge); border-radius:8px;
+  background:#19242a; color:#f2ebdc; box-shadow:0 22px 95px #0009;
+}
+#influence-panel[open] {display:flex;flex-direction:column}
+#influence-panel::backdrop {background:#0c161cc4}
+.influence-head {display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:21px 24px 17px;flex:none;border-bottom:1px solid var(--edge);background:linear-gradient(90deg,#1b282bf5 36%,#14212377),url('./art/civic-delegates.webp') center 43%/cover}
+.influence-head h2 {margin:0 0 10px;font:normal clamp(23px,4.5vw,31px)/1.15 var(--serif,Georgia,serif);color:#fff0cc}
+.influence-balance {display:flex;gap:25px;color:#d9ded8;font-size:13px}
+.influence-balance b {margin-left:5px;color:#f7e6c7;font-size:19px;font-variant-numeric:tabular-nums}
+#influence-panel button,#influence-panel select {font:inherit}
+#influence-panel :focus-visible {outline:2px solid #f1d598;outline-offset:2px}
+.influence-head button {width:40px;height:40px;border:1px solid #938b79;border-radius:4px;background:#1b252be8;color:#e8dfcf;font-size:22px!important;cursor:pointer}
+.influence-scroll {min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 20px 20px}
+.influence-income {padding:0 3px 12px;color:var(--muted);font-size:13px}
+.influence-income summary {color:var(--gold);cursor:pointer}
+.influence-income dl {margin:7px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 15px}
+.influence-income dl div {display:flex;justify-content:space-between;border-bottom:1px solid #444f51;padding:4px 0}
+.influence-income dd {margin:0;font-variant-numeric:tabular-nums}
+.influence-cards {display:grid;gap:9px}
+.influence-card {padding:12px 14px;border:1px solid #48554f;border-radius:5px;background:#202d30}
+.influence-row {display:flex;align-items:center;justify-content:space-between;gap:10px}
+.influence-card h3 {margin:0;color:#f5ebd3;font-family:var(--serif,Georgia,serif);font-size:18px;font-weight:600}
+.influence-price {flex:none;color:var(--gold);font-variant-numeric:tabular-nums;font-size:13px}
+.influence-card p {color:var(--muted);font-size:13px;line-height:1.45;margin:5px 0}
+.influence-selection {margin-top:9px}
+.influence-target {font-size:13px}
+.influence-card select {min-width:0;max-width:100%;padding:5px;border:1px solid #728079;border-radius:3px;background:#17262b;color:#f3e8cd}
+.influence-map {flex:none;border:0;border-bottom:1px dotted #aebbb6;background:none;color:#bcd1ca;font-size:12px!important;cursor:pointer}
+.influence-card .influence-detail {color:#e1e6dd}
+.influence-card .influence-reason {color:#dbc7a7}
+.influence-issue {margin-top:5px;padding:6px 11px;border:1px solid #c5ae7b;border-radius:4px;background:#d9c18d;color:#182227;font-weight:600!important;cursor:pointer}
+.influence-issue:disabled {background:#273335;color:#aeb9b3;border-color:#58605c;cursor:default}
+.influence-receipt {margin:0 0 10px;padding:8px 10px;background:#294139;border-left:3px solid #a3c8ac;color:#e5f4de;font-size:14px}
+@media(max-width:600px){
+  #influence-panel {max-height:92dvh}
+  .influence-head {padding:14px}
+  .influence-scroll {padding:11px}
+  .influence-card {padding:10px}
+  .influence-issue,.influence-map {min-height:37px}
+}
+.influence-remaining {display:inline-block;margin:5px 0 0 10px;font-size:12px;color:#bed0c4}
+.border-charter-link {display:block;width:100%;padding:6px 8px;margin:6px 0;border:1px solid #918766;border-radius:4px;background:#353830;color:#e3d1a4;cursor:pointer}

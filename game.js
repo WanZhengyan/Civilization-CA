@@ -10,11 +10,12 @@ import {invitationCode, launchDestination} from './launch.js';
 import {armyHandbook} from './army-handbook.js';
 import {ledgerBody} from './resource-ledger.js';
 import {getResourceLedger} from './rules.js';
-import {getLanguage, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
+import {getLanguage, translate, installLanguage, languageControl, observeCityNames, setLanguage} from './i18n.js';
 import {SCIENCE_PROJECT} from './victory-rules.js';
 import {victoryPanel} from './victory-panel.js';
 import {modeLabels,modePicker,civilizationPicker,civilizationName,compareCivilizations,validCivilization} from './campaign-choices.js';
 import {mapPicker, sizePicker, sizeName, rivalPicker, installMapStyles} from './regions-ui.js';
+import {TUTORIAL_KEY, newTutorial, restoreTutorial, tutorialProgressAfter} from './tutorial-save.js';
 import {newSolo, restoreSolo, soloSlotKey, SOLO_KEY} from './solo-saves.js';
 import {changeRoomSetup,difficultyField,difficultyLabel,newRoomSetup,roomSetupFields,teamLabel,validRoomTeams} from './room-setup.js';
 import { campaignView, FACTIONS, UNIT_TYPES, BUILDINGS, IMPROVEMENTS, applyAction, chooseBotAction, getStats, getMap } from './rules.js';
@@ -47,11 +48,12 @@ function save(key, value) {
 }
 
 function archiveSolo() {
-  if (solo) save(soloSlotKey(getMap(solo).id,solo.mapSize), solo);
+  if (solo && !tutorial) save(soloSlotKey(getMap(solo).id,solo.mapSize), solo);
 }
 function campaignSave(mapId, size) {
   const matches = state => state && getMap(state).id === mapId && (state.mapSize || 'standard') === size;
-  if (matches(solo)) return solo;
+  const ordinary = tutorial ? previousSolo : solo;
+  if (matches(ordinary)) return ordinary;
   const saved = read(soloSlotKey(mapId,size),null);
   return matches(saved) ? restoreSolo(saved) : null;
 }
@@ -62,6 +64,36 @@ function selectCampaignSettings(state) {
   selectedMode = 'standard';
   selectedCivilization = 'random';
   selectedDifficulty = state?.difficulty || 'normal';
+}
+
+let tutorial = null, lastTutorial = null, previousSolo = null;
+function persistSolo() {
+  if (tutorial) {
+    tutorial.game = solo;
+    save(TUTORIAL_KEY,tutorial);
+  } else save(SOLO_KEY,solo);
+}
+function leaveTutorialSlot() {
+  if (!tutorial) return;
+  lastTutorial = tutorial;
+  tutorial = null;
+  solo = previousSolo;
+  previousSolo = null;
+}
+function enterTutorial(fresh=false) {
+  if (pending) return;
+  if (!tutorial) previousSolo = solo;
+  tutorial = fresh ? newTutorial() : (tutorial || lastTutorial || restoreTutorial(read(TUTORIAL_KEY,null)) || newTutorial());
+  solo = tutorial.game;
+  resultShown = '';
+  persistSolo();
+  returnToSolo();
+}
+function setTutorialProgress(patch) {
+  if (mode !== 'solo' || !tutorial) return;
+  tutorial.progress = {...tutorial.progress,...patch};
+  persistSolo();
+  emit();
 }
 
 let soundtrack;
@@ -96,8 +128,15 @@ function updateRoomShortcut() {
   shortcut.querySelector('[data-last-room]').textContent = shortcut.hidden ? '' : code;
 }
 
+function updateTutorialShortcut() {
+  const button = document.querySelector('[data-title="tutorial"]');
+  if (!button) return;
+  let hasSave = Boolean(tutorial || lastTutorial);
+  try { hasSave ||= Boolean(localStorage.getItem(TUTORIAL_KEY)); } catch { /* Memory-only play. */ }
+  button.textContent = translate(hasSave ? 'Continue tutorial' : 'New player tutorial',getLanguage());
+}
 function showTitle(visible) {
-  if (visible) { updateRoomShortcut(); soundtrack?.music.setScene(null); }
+  if (visible) { updateRoomShortcut(); updateTutorialShortcut(); soundtrack?.music.setScene(null); }
   const screen = document.getElementById('title-screen');
   const leavingTitle = !visible && !screen.hidden;
   screen.hidden = !visible;
@@ -115,7 +154,9 @@ function emit() {
   soundtrack?.music.setScene(state ? getEra(state,currentSeat()).id : null);
   if (state) observeCityNames(state.cities || [], getMap(state).byId);
   renderView?.({
-    state, seat: currentSeat(), room, session: mode==='solo' ? solo.seed : room?.code,
+    state, seat: currentSeat(), room, session: mode==='solo' ? (tutorial?.id ?? solo.seed) : room?.code,
+    tutorial:mode==='solo' && Boolean(tutorial), tutorialId:mode==='solo' ? tutorial?.id : undefined,
+    tutorialProgress:mode==='solo' ? tutorial?.progress : undefined,
     mode, roomStatus:mode==='online' ? (offline?'Reconnecting…':unconfirmedOrder && !pending?'Checking order…':'') : '',
     busy: pending || (mode==='online' && offline) || (mode==='online' && !!unconfirmedOrder) || (mode === 'solo' && playingBots) || (mode === 'online' && !room?.game)
   });
@@ -141,8 +182,8 @@ function updateURL(code, board = false) {
   const url = new URL(location.href);
   if (code) url.searchParams.set('room', code);
   else url.searchParams.delete('room');
-  if (board) url.hash = 'campaign';
-  else if (url.hash === '#campaign') url.hash = '';
+  if (board) url.hash = tutorial && mode==='solo' ? 'tutorial' : 'campaign';
+  else if (['#tutorial','#campaign'].includes(url.hash)) url.hash = '';
   history.replaceState(null, '', url);
 }
 function checkFinished() {
@@ -173,7 +214,7 @@ async function runBots() {
       } catch {
         solo = applyAction(solo, solo.turn, {type:'end'});
       }
-      save(SOLO_KEY, solo);
+      persistSolo();
       emit();
       if (modal === 'log' || modal === 'standings') drawDialog();
     }
@@ -349,6 +390,7 @@ function returnToSolo() {
 }
 
 function enterSoloCampaign(target) {
+  leaveTutorialSlot();
   archiveSolo();
   solo = target;
   resultShown = '';
@@ -358,7 +400,9 @@ function enterSoloCampaign(target) {
 
 function enterTitle() {
   if (pending) return;
-  archiveSolo();
+  const wasTutorial = Boolean(tutorial);
+  if (wasTutorial) leaveTutorialSlot();
+  else archiveSolo();
   roomEpoch++;
   clearTimeout(pollTimer);
   polling = false;
@@ -369,7 +413,7 @@ function enterTitle() {
   close();
   showTitle(true);
   window.scrollTo(0,0);
-  document.querySelector('[data-title="solo"]')?.focus({preventScroll:true});
+  document.querySelector(wasTutorial ? '[data-title="tutorial"]' : '[data-title="solo"]')?.focus({preventScroll:true});
 }
 
 async function seatRequest(form) {
@@ -487,8 +531,10 @@ function doAction(type, tile) {
   }
   if (playingBots) return;
   try {
+    const before = solo;
     solo = applyAction(solo, 0, action);
-    save(SOLO_KEY, solo);
+    if (tutorial) tutorial.progress = tutorialProgressAfter(tutorial.progress,before,action);
+    persistSolo();
     emit();
     checkFinished();
     runBots();
@@ -684,6 +730,7 @@ const guideSections = {
     ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Open Full civic tree to inspect future policies and universities.'],
     ['Plan your turn', 'Start with two district orders per turn to claim, develop or contest land. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
   ]},
+  influence: {label:'Influence', entries:[]},
   city: {label:'City growth', entries:[
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
     ['Develop a district', 'Select visible land you own. If a unit or city shares the hex, open District development in Field command. Each upgrade spends one district order and raises the level by one. Levels 1, 2 and 3 cost 5, 8 and 11 capital respectively. Level 3 is the maximum.'],
@@ -794,16 +841,19 @@ function content() {
   if (modal === 'help') {
     const tabs = `<div class="modal-tabs" role="tablist" aria-label="Field guide chapters">${Object.entries(guideSections).map(([key,section]) =>
       `<button type="button" class="modal-tab" role="tab" aria-selected="${guideTab === key}" data-act="guide-${key}">${section.label}</button>`).join('')}</div>`;
-    const orders=(!state || state.campaignVariety===1) ? fieldGuideOrders(guideTab,getLanguage()) : [];
+    const orders=(guideTab==='influence' || !state || state.campaignVariety===1) ? fieldGuideOrders(guideTab,getLanguage()) : [];
     let entries=guideSections[guideTab].entries;
-    if(state && state.campaignVariety!==1)entries=entries.filter(entry=>entry!==freightGuide && entry!==voyageGuide);
+    if(entries && state && state.campaignVariety!==1)entries=entries.filter(entry=>entry!==freightGuide && entry!==voyageGuide);
     if(guideTab==='research' && (!state || state.victoryMode)){
       entries=entries.filter(([title])=>!['Win by domination','Win on civic points'].includes(title));
       if(!state || (!state.practice && state.victoryMode!=='science')) entries.push(['Conquest victory','Your side wins by controlling every original capital or by being the last side with a surviving civilization.']);
       if(!state || state.victoryMode!=='conquest') entries.push(['Science victory',
         '<span>Research Radio Networks and Motorization, then Rocketry. In City production, choose Orbital Survey. Finish it in one city to win for your entire side.</span> <strong>Production required</strong> · '+SCIENCE_PROJECT.required]);
     }
+    const influenceLink=guideTab==='influence' && state && mode!=='home'
+      ? '<button type="button" class="modal-primary" data-influence-open>'+ (getLanguage()==='zh-CN'?'使用影响力':'Spend influence')+'</button>' : '';
     return {kicker:'Field guide', title:'How to play', body:tabs +
+      (influenceLink ? actions(influenceLink) : '') +
       (guideTab==='start' && (!state || state.civilizationTraits===1) ? compareCivilizations() : '') +
       (guideTab === 'universities' ? wonderJournal(state) : '') +
       (orders.length ? list(orders.map(([title,text])=>row(title,text))) : '') +
@@ -849,6 +899,9 @@ function content() {
         mapPicker(selectedMap,false,selectedSize)+actions(button('start-configured',saved?'Start new campaign':'Start campaign','primary'))+
         '</section>'};
   }
+  if (modal === 'restart-tutorial') return {kicker:'New player tutorial',title:'Restart the tutorial?',
+    body:desc('Your tutorial will start again in Pasadena. Your other campaigns keep their saves.')+
+      actions(button('back','Return to map'),button('confirm-tutorial','Restart tutorial','primary'))};
   if (modal === 'restart') return {kicker:'Solo campaign', title:'Replace saved campaign?',
     body:savedCampaignCard(campaignSave(selectedMap,selectedSize),false)+
       '<section class="solo-new-setup"><h3>New campaign settings</h3>'+muted(campaignSummary(getMap(selectedMap,selectedSize),selectedSize))+
@@ -857,7 +910,7 @@ function content() {
       actions(button('campaign-atlas','Edit settings'),button('restart','Replace and start','primary'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings',state?.victoryMode?'Victory progress':'Faction standings'),button('log','Event log'),
-    button('help','Field guide'), button('supplies','Supply ledger'), button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
+    button('help','Field guide'), button('supplies','Supply ledger'), mode==='solo' && tutorial ? button('restart-tutorial','Restart tutorial') : '', button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
 }
 
 function drawDialog() {
@@ -905,6 +958,8 @@ function modalAction(act) {
   }
   if(act==='battle-reports'){dismissDialog();document.dispatchEvent(new Event('civitas-battle-history'));return;}
   if(act==='title-screen'){enterTitle();return}
+  if(act==='restart-tutorial' && mode==='solo' && tutorial){open('restart-tutorial');return}
+  if(act==='confirm-tutorial' && modal==='restart-tutorial' && tutorial){enterTutorial(true);return}
   if(act==='supplies'){open('supplies');return}
   if(act.startsWith('cargo-')){
     const [,resource,market]=act.split('-');
@@ -1034,9 +1089,12 @@ async function init({ render, locate, toast: showToast }) {
   solo = restoreSolo(read(SOLO_KEY,null));
   formName = String(read(NAME_KEY, '') || '');
   const title = document.getElementById('title-screen');
-  const syncLocale = () => title.querySelectorAll('[data-title-lang]').forEach(button => {
-    button.setAttribute('aria-pressed',String(button.dataset.titleLang === getLanguage()));
-  });
+  const syncLocale = () => {
+    updateTutorialShortcut();
+    title.querySelectorAll('[data-title-lang]').forEach(button => {
+      button.setAttribute('aria-pressed',String(button.dataset.titleLang === getLanguage()));
+    });
+  };
   syncLocale();
   document.addEventListener('civitas-language',syncLocale);
   document.getElementById('title-nav').addEventListener('click',enterTitle);
@@ -1045,6 +1103,7 @@ async function init({ render, locate, toast: showToast }) {
     if (locale) { setLanguage(locale); return; }
     const action = event.target.closest('[data-title]')?.dataset.title;
     if (pending || !action) return;
+    if (action === 'tutorial') enterTutorial();
     if (action === 'solo') { selectCampaignSettings(solo); open('campaign-atlas'); }
     if (action === 'reconnect') reconnectRoom(read(LAST_ROOM_KEY,''));
     if (action === 'create' || action === 'join') {
@@ -1085,6 +1144,7 @@ async function init({ render, locate, toast: showToast }) {
   }
   if (entry.screen === 'reconnect') await reconnectRoom(entry.code);
   if (entry.screen === 'solo') returnToSolo();
+  if (entry.screen === 'tutorial') enterTutorial();
   if (entry.screen === 'join') {
     open('multiplayer','join',entry.code);
     if (!entry.code) showError('This invitation has an invalid room code.');
@@ -1092,5 +1152,5 @@ async function init({ render, locate, toast: showToast }) {
   if (mode === 'solo') runBots();
   if (!modal && mode !== 'home') checkFinished();
 }
-export const Game = {init, doAction, eventText, endTurn:()=>doAction('end'), open, close};
+export const Game = {init, doAction, setTutorialProgress, eventText, endTurn:()=>doAction('end'), open, close};
 window.Game = Game;

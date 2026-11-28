@@ -232,6 +232,27 @@ export function getCityExpansions(state, seat) {
   return planCityBorders(state,seat,getMap(state),getVisibleTiles(state,seat));
 }
 
+export const BORDER_CHARTER_COST = 6;
+
+export function getBorderCharter(state, seat, cityId, expansions) {
+  const city = cityOrNull(state, cityId);
+  const owned = city && city.seat === seat && (!state.intel || state.intel.seat === seat);
+  const report = owned ? (expansions || getCityExpansions(state, seat)).get(cityId) : null;
+  let reason = '';
+  if (!owned) reason = 'Choose one of your cities.';
+  else if (state.intel && !state.intel.borderCharters) reason = 'This room does not support border charters.';
+  else if (state.phase !== 'playing') reason = 'The campaign has ended.';
+  else if (!seatMayOrder(state, seat) || state.players[seat].eliminated) reason = 'Wait for your turn.';
+  else if (city.borderCharterRound === state.round) reason = 'This city already expanded by charter this round.';
+  else if (!report?.tile) reason = 'No visible neutral district is available.';
+  else if (state.players[seat].influence < BORDER_CHARTER_COST) reason = 'You need 6 influence.';
+  return {
+    cost: BORDER_CHARTER_COST, enabled: !reason, reason,
+    tile: report?.tile ?? null, progress: report?.progress ?? 0,
+    required: report?.required ?? 0, turns: report?.turns ?? null
+  };
+}
+
 export function neighbors(id,stateOrId) {
   return [...(stateOrId ? getMap(stateOrId).neighbors(id) : adjacent[id] || [])];
 }
@@ -371,7 +392,7 @@ function drawOpeningSeat(seed,teams,count) {
   const pick=options=>options[Math.floor(random()*options.length)];
   return pick(pick([...members.values()]));
 }
-export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2, campaignVariety=!legacyVictory && researchPace===2, fieldCommandRevision=campaignVariety ? 1 : 0} = {}) {
+export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=>({bot:true}))], mapId = "la", {seed: requestedSeed, mapSize='standard', scoreTarget=TARGET_SCORE, practice=false, teams, difficulty='normal', drawInitiative=false, simultaneousTeams=false, civilizationTraits=true, waterways=true, victoryMode='standard', legacyVictory=false, researchPace=legacyVictory ? 0 : 2, campaignVariety=!legacyVictory && researchPace===2, fieldCommandRevision=campaignVariety ? 1 : 0, influencePlanning=fieldCommandRevision===1} = {}) {
   if (!validMapId(mapId)) throw new Error("Choose a valid campaign map.");
   if (!validVictoryMode(victoryMode)) throw new Error('Choose a valid victory mode.');
   if (!legacyVictory && practice && victoryMode==='conquest') throw new Error('Conquest requires a rival civilization.');
@@ -398,7 +419,7 @@ export function createGame(players = [{name:"You"}, ...FACTIONS.slice(1).map(()=
   const waterPlan=waterways ? planWaterways(base,seed) : null;
   const map=waterwayChart(base,waterPlan);
   const starts = selectStarts(map, players.length, seed, map.neighbors, hexDistance);
-  const next = {seed, mapId, ...(campaignVariety ? {campaignVariety:1} : {}), ...(campaignVariety && fieldCommandRevision===1 ? {fieldCommandRevision} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
+  const next = {seed, mapId, ...(influencePlanning && campaignVariety ? {influencePlanning:1} : {}), ...(campaignVariety ? {campaignVariety:1} : {}), ...(campaignVariety && fieldCommandRevision===1 ? {fieldCommandRevision} : {}), ...(waterPlan ? {waterways:waterPlan} : {}), ...([1,2].includes(researchPace) ? {researchPace} : {}), ...(civilizationTraits ? {civilizationTraits:1} : {}), ...(legacyVictory ? {} : {victoryMode}), ...(mapSize!=='standard' ? {mapSize} : {}), ...(practice ? {practice:true} : {}),
     ...(teams ? {teams:[...teams]} : {}), ...(difficulty!=='normal' ? {difficulty} : {}),
     ...(drawInitiative===true ? {firstSeat} : {}), ...(!legacyVictory || scoreTarget===TARGET_SCORE ? {} : {scoreTarget}), mapShape:REGIONAL_SHAPE, naturalWonderVersion:1, opening:'settlers', rulesVersion:3, nextId:1, cities:[], units:[], round:1,turn:firstSeat,actionsLeft:ACTIONS_PER_TURN,phase:'playing',winners:[],
     board:Object.fromEntries(map.tiles.map(tile=>[tile.id,{owner:null,level:0,improvement:null}])),
@@ -543,6 +564,15 @@ export function getPopulationReport(state, cityId) {
   return city ? foodForecast(city, getCityYield(state, cityId).food, extraHousing(state.players[city.seat])) : null;
 }
 export function getStats(state,seat) {
+  return calculateStats(state,seat);
+}
+
+// Use the same signed contributions for the bank deposit and the player's receipt.
+export function getInfluenceIncomeSources(state,seat) {
+  return calculateStats(state,seat,true).influenceSources;
+}
+
+function calculateStats(state,seat,includeSources=false) {
   let territories=0,developments=0,landmarks=0,improvements=0,productive=0,fisheries=0;
   for (const tile of getMap(state).tiles) {
     const holding = state.board[tile.id];
@@ -559,6 +589,11 @@ export function getStats(state,seat) {
   const monuments=cities.filter(c=>c.buildings.includes('monument')).length;
   const settled = count > 0 || state.opening !== 'settlers';
   const score=territories*2+developments+landmarks*2+count*3+population+buildings*2+improvements;
+  const sources = {
+    settlement:2*Number(settled), territory:Math.floor(territories/3), development:developments-productive,
+    monuments:3*monuments, civics:knows(state,seat,'civics') ? count : 0,
+    festivals:0, charters:0, atlases:0, exposition:0, portDues:0
+  };
   const stats = {territories,developments,landmarks,improvements,cities:count,population,buildings,units:(state.units||[]).filter(u=>u.seat===seat).length,
     score:state.legacyFinalScores?.[seat] ?? score,
     cultureIncome:cities.reduce((n,c)=>n+universityYield(c,'culture'),0)+Number(settled)+count+2*monuments+(adopted(state,seat,'charter') ? count : 0)
@@ -567,38 +602,41 @@ export function getStats(state,seat) {
       +(adopted(state,seat,'publicRadio') ? 2*count : 0),
     capitalIncome:3*Number(settled)+fisheries+2*cities.filter(c=>c.buildings.includes('harbor')).length+Math.floor(territories/2)+productive+population+(knows(state,seat,'civics') ? 2*count : 0)
       +2*cities.filter(c=>tradesBySea(state,c)).length,
-    influenceIncome:2*Number(settled)+Math.floor(territories/3)+developments-productive+3*monuments+(knows(state,seat,'civics') ? count : 0)};
+    influenceIncome:0};
   for (const city of cities) {
     const festival=festivalBenefit(state,city);
     stats.cultureIncome+=festival?.culture || 0;
     stats.capitalIncome+=festival?.capital || 0;
-    stats.influenceIncome+=festival?.influence || 0;
+    sources.festivals+=festival?.influence || 0;
     const charter=charterBenefit(state,city);
     stats.capitalIncome+=charter?.capital || 0;
-    stats.influenceIncome+=charter?.influence || 0;
+    sources.charters+=charter?.influence || 0;
   }
   const bonus=capitalBonus(state,seat,cities.find(city=>city.originalSeat===seat));
   stats.scienceIncome+=bonus.science || 0;
-  if (state.campaignVariety===1) stats.influenceIncome+=cities.reduce((n,city)=>n+(city.atlasCopies || 0),0);
+  if (state.campaignVariety===1) sources.atlases=cities.reduce((n,city)=>n+(city.atlasCopies || 0),0);
   stats.capitalIncome+=bonus.capital || 0;
   if (adopted(state,seat,'harborCommission')) stats.capitalIncome += 3 * cities.filter(c=>c.buildings.includes('harbor')).length;
   if (adopted(state,seat,'normalSchools')) stats.scienceIncome += 2 * cities.filter(c=>c.population>=3).length;
   if (adopted(state,seat,'exposition')) {
     const campuses=cities.reduce((n,c)=>n+c.buildings.filter(id=>WONDERS[id]).length,0);
     stats.cultureIncome += 2 * campuses;
-    stats.influenceIncome += 2 * campuses;
+    sources.exposition=2 * campuses;
   }
   if (knows(state,seat,'electricity')) stats.scienceIncome+=2*cities.filter(c=>c.buildings.includes('workshop')).length;
   if (adopted(state,seat,'landRegistry')) stats.capitalIncome+=count;
   if (adopted(state,seat,'publicLibraries')) stats.cultureIncome+=2*monuments;
   if (adopted(state,seat,'regionalPlanning')) stats.cultureIncome+=cities.filter(c=>c.population>=5).length;
+  stats.influenceIncome=Object.values(sources).reduce((total,n)=>total+n,0);
   const policy=state.players[seat].policy;
   if (policy==='lectures') { stats.cultureIncome+=count; stats.scienceIncome-=count; }
   if (policy==='grants') { stats.scienceIncome+=2*count; stats.capitalIncome-=2*count; }
   if (policy==='portDues') {
     stats.capitalIncome+=3*cities.filter(c=>c.buildings.includes('harbor')).length;
-    stats.influenceIncome=Math.max(0,stats.influenceIncome-count);
+    sources.portDues=-Math.min(stats.influenceIncome,count);
+    stats.influenceIncome+=sources.portDues;
   }
+  if (includeSources) stats.influenceSources=sources;
   return stats;
 }
 function refreshScores(state) { state.players.forEach((p,i)=>{p.score=getStats(state,i).score;}); }
@@ -968,6 +1006,48 @@ function councilOptions(state, seat, track) {
 export function getResearchOptions(state, seat) { return councilOptions(state,seat,SCIENCE); }
 export function getCivicOptions(state, seat) { return councilOptions(state,seat,CULTURE); }
 
+function availableUnit(state, seat, unit) {
+  return !!unit && unit.seat === seat && unit.hp > 0 && unit.moves > 0
+    && !unit.fortified && unit.skippedRound !== state.round
+    && !state.players[seat]?.eliminated && seatMayOrder(state, seat);
+}
+
+export function canSkipUnit(state, seat, unitId) {
+  return (!state.intel || state.intel.turnReadiness === true)
+    && availableUnit(state, seat, unitOrNull(state, unitId));
+}
+
+export function unitNeedsOrders(state, seat, unit) {
+  if (!availableUnit(state, seat, unit)) return false;
+  const choices = getUnitOptions(state, unit.id);
+  return choices.moves.length > 0 || choices.attacks.length > 0
+    || choices.canFound || choices.improvements.length > 0;
+}
+
+// Review the same visible choices on the map and on the room authority.
+export function getPendingTurnTasks(state, seat) {
+  if (!state?.players[seat] || state.players[seat].eliminated || !seatMayOrder(state, seat)) return [];
+  const view = state.intel ? state : campaignView(state, seat);
+  const player = view.players[seat];
+  const cities = view.cities.filter(city => city.seat === seat);
+  const tasks = [];
+  if (cities.length && !player.research && getResearchOptions(view, seat).some(option => option.enabled))
+    tasks.push({kind:'research'});
+  if (cities.length && !player.civic && getCivicOptions(view, seat).some(option => option.enabled))
+    tasks.push({kind:'civics'});
+
+  for (const city of cities) {
+    if (city.queue) continue;
+    const canProduce = getProductionOptions(view, city.id).some(option =>
+      option.enabled && (option.kind !== 'building' || getProjectSites(view, city.id, option.item).length));
+    if (canProduce) tasks.push({kind:'production', id:city.id, tile:city.tile});
+  }
+  for (const unit of view.units) {
+    if (unitNeedsOrders(view, seat, unit)) tasks.push({kind:'unit', id:unit.id, tile:unit.tile});
+  }
+  return tasks;
+}
+
 function finishProject(state, seat, track) {
   const player = state.players[seat], item = player[track.focus];
   if (!item) return;
@@ -1236,7 +1316,7 @@ export function campaignView(state, seat) {
       }
     }
   }
-  return {...view,intel:{...view.intel,forecasts,unavailableSites,portSites,harborSites:harborChoices,workSites,districtChoices}};
+  return {...view,intel:{...view.intel,turnReadiness:true,borderCharters:true,forecasts,unavailableSites,portSites,harborSites:harborChoices,workSites,districtChoices}};
 }
 
 export function combatPreview(state, unitId, target) {
@@ -1458,6 +1538,11 @@ function unitOrder(state,seat,action) {
 }
 export function applyAction(source,seat,action) {
   const current=migrateGame(source);
+  if (action?.type === 'skipUnit') {
+    const unit = unitOrNull(current, action.unit);
+    if (unit && unit.seat === seat && unit.skippedRound === current.round && seatMayOrder(current, seat))
+      return current;
+  }
   if (!current.teamPhase) return rememberVision(resolveOrder(current,seat,action),current);
   if (!seatMayOrder(current,seat)) throw new Error('Wait for your turn.');
   const phase=current.teamPhase;
@@ -1477,13 +1562,34 @@ function resolveOrder(source,seat,action) {
   if (!Number.isInteger(seat) || seat!==state.turn) throw new Error('Wait for your turn.');
   if (!action || typeof action!=='object') throw new Error('Choose an action.');
   const next=cloneGame(state);
-  if (action.type==='end') {endTurn(next,seat);return next;}
+  if (action.type==='end') {
+    if (action.requireReady === true && getPendingTurnTasks(state, seat).length)
+      throw new Error('Review your remaining turn decisions.');
+    endTurn(next,seat);
+    return next;
+  }
+  if (action.type==='skipUnit') {
+    if (!canSkipUnit(state, seat, action.unit)) throw new Error('Choose a ready unit you control.');
+    unitOrNull(next, action.unit).skippedRound = next.round;
+    return next;
+  }
   if (action.type==='recordTransect' || action.type==='fileTransect') {
     const entry=runAtlasOrder(next,seat,action,getMap(next),hexDistance);
     record(next,seat,action.type,entry.text,entry.tile,{unit:action.unit});
   } else if (action.type==='visitStation') {
     const visit=visitFieldStation(next,seat,action);
     record(next,seat,'visitStation',visit.text,visit.tile,{unit:action.unit});
+  } else if (action.type==='charterBorder') {
+    const offer = getBorderCharter(next, seat, action.city);
+    if (!offer.enabled) throw new Error(offer.reason);
+    if (action.tile !== offer.tile) throw new Error('The next district changed. Review the border charter again.');
+    const city = cityOrNull(next, action.city);
+    next.players[seat].influence -= offer.cost;
+    next.board[offer.tile] = {...next.board[offer.tile], owner:seat};
+    city.borderCharterRound = next.round;
+    city.borderProgress = 0;
+    city.borderClaims = (city.borderClaims || 0) + 1;
+    record(next, seat, 'charterBorder', 'The city spent 6 influence to incorporate its next district.', offer.tile, {city:city.id});
   } else if (action.type==='delegation') {
     sendDelegation(next,seat,action.target,getVisibleTiles(next,seat));
     record(next,seat,'delegation','Diplomatic delegation dispatched.',null,{target:action.target});
@@ -1847,6 +1953,25 @@ function botMovement(state,unit,options,difficulty) {
   }
   return best===unit.tile ? null : {type:'move',unit:unit.id,tile:best};
 }
+// Buy an early parcel only when residents will actually work it. Natural border
+// growth is free, so preserve a reserve for diplomacy and skip imminent growth.
+function botBorderCharter(state,difficulty) {
+  const seat=state.turn;
+  if (state.influencePlanning!==1 || difficulty==='easy' || state.players[seat].influence<BORDER_CHARTER_COST+9) return null;
+  const expansions=getCityExpansions(state,seat);
+  for (const [city,report] of expansions) {
+    if (!report.tile || report.turns<3) continue;
+    const offer=getBorderCharter(state,seat,city,expansions);
+    if (!offer.enabled) continue;
+    const tile=offer.tile;
+    const after={...state,board:{...state.board,[tile]:{...state.board[tile],owner:seat}}};
+    const beforeYields=getCitizenWorkforce(state,city).yields;
+    const afterYields=getCitizenWorkforce(after,city).yields;
+    const gains=Object.keys(beforeYields).map(resource=>afterYields[resource]-beforeYields[resource]);
+    if (gains.every(gain=>gain>=0) && gains.some(gain=>gain>0)) return {type:'charterBorder',city,tile};
+  }
+  return null;
+}
 function botDistrict(state,difficulty) {
   const map=getMap(state);
   if (!state.actionsLeft) return null;
@@ -1900,7 +2025,7 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   const observedBerths=Array.isArray(view.intel.visibleBerths) ? {visibleBerths:view.intel.visibleBerths.filter(id=>visible.includes(id))} : {};
   const friendlyHarbors=view.campaignVariety===1 ? {alliedFreightPorts:(view.intel.alliedFreightPorts || []).filter(port=>
     visible.includes(port.portTile) && sameTeam(view,seat,port.seat))} : {};
-  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,...observedBerths,...friendlyHarbors}};
+  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,borderCharters:view.influencePlanning===1,...observedBerths,...friendlyHarbors}};
   const player = state.players[seat];
   if (!state.cities.some(c=>c.seat===seat)) {
     const pioneer=state.units.find(u=>u.type==='settler' && u.seat===seat && u.moves>0);
@@ -2033,5 +2158,5 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   }
   const envoy=proposeDelegation(view.intel.diplomacy || [],state.round,player.influence,difficulty);
   if (envoy) return envoy;
-  return botDistrict(state,difficulty) || {type:'end'};
+  return botDistrict(state,difficulty) || botBorderCharter(state,difficulty) || {type:'end'};
 }

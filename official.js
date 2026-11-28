@@ -21,11 +21,21 @@ function showLanguage(language) {
   document.dispatchEvent(new Event('civitas-language'));
 }
 
-let initialLanguage = 'en';
-try {
-  if (localStorage.getItem(languageKey) === 'zh-CN') initialLanguage = 'zh-CN';
-} catch { /* The page can still switch language when browser storage is unavailable. */ }
-showLanguage(initialLanguage);
+function restoreLanguage() {
+  try {
+    showLanguage(localStorage.getItem(languageKey) === 'zh-CN' ? 'zh-CN' : 'en');
+  } catch {
+    showLanguage(document.documentElement.lang === 'zh-CN' ? 'zh-CN' : 'en');
+  }
+}
+restoreLanguage();
+// Browser Back can restore the same home page after the player changed language in the game.
+window.addEventListener('pageshow', event => {
+  if (event.persisted) restoreLanguage();
+});
+window.addEventListener('storage', event => {
+  if (event.key === languageKey) restoreLanguage();
+});
 
 for (const button of document.querySelectorAll('[data-language]')) {
   button.addEventListener('click', () => {

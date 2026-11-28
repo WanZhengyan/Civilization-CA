@@ -33,6 +33,9 @@ export function drawBarbarians(g,model,position) {
     const [x,y]=position(tile.q,tile.r);
     g.save();g.translate(x,y);
     g.fillStyle='#281e227a';g.beginPath();g.ellipse(2,9,19,6,0,0,Math.PI*2);g.fill();
+    // Keep the contact shadow on the ground while tents, patrols and their
+    // health indicators stand upright in the tilted camera.
+    g.scale(1,1/(model.pitch||1));
     if (piece.type==='camp') {
       polygon(g,[[-18,7],[-8,-9],[3,6],[-6,10]],'#b5a077','#453c32');
       polygon(g,[[-7,7],[4,-12],[17,8],[6,10]],'#d9b481','#493a31');

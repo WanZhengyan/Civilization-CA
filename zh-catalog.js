@@ -8,6 +8,13 @@ import {serviceTranslations} from './unit-service-copy.js';
 export const catalog = new Map();
 section(serviceTranslations);
 section(`
+Review your remaining turn decisions.|请先处理本回合待办事项。
+Choose a ready unit you control.|请选择仍可行动的己方单位。
+This room does not support border charters.|当前房间版本暂不支持使用影响力扩地。
+This city already expanded by charter this round.|本轮这座城市已用影响力扩过一次领土。
+No visible neutral district is available.|当前视野内没有可供扩张的中立地块。
+The next district changed. Review the border charter again.|候选地块已改变，请重新查看扩地选项。
+The city spent 6 influence to incorporate its next district.|城市花费了 6 点影响力，将下一块候选地纳入领土。
 Scouting routes|侦察路线
 Compare new ground|比较探图范围
 Newly charted hexes|新增已探索地块
@@ -399,6 +406,12 @@ Choose a region and map size. Each combination has its own solo save. Set the ci
 In a campaign with rivals, control every participating civilization’s original capital to win immediately.|在有对手的战役中，占领所有参战文明的初始首府即可立即获胜。
 Starting over replaces the solo save for this region and size.|重新开始会覆盖该地区在所选尺寸下的单人存档。
 Official website|官方网站
+New player tutorial|新手教程
+Continue tutorial|继续新手教程
+Learn the first turns in Pasadena, or choose a California region for your own campaign.|在帕萨迪纳学会前几个回合，也可以选择加州地图，开启自己的战役。
+Restart the tutorial?|重新开始新手教程？
+Restart tutorial|重玩新手教程
+Your tutorial will start again in Pasadena. Your other campaigns keep their saves.|教程将从帕萨迪纳重新开始，其他战役的存档将保留。
 This room server created a Standard map. Large maps are available in solo play.|当前联机服务器创建了标准地图。你可以在单人模式中选择大型地图。
 Planning|规划
 Roster|名册
@@ -594,6 +607,12 @@ Move unit|移动单位
 Show moves|显示可移动地块
 Select|选择
 Spent|已用尽
+Skip this turn|跳过本回合
+Skipped this turn|本回合已跳过
+Keeps remaining movement|保留剩余移动力
+Can still act this turn|本回合仍可行动
+No movement left|移动力已用尽
+Updating orders…|正在同步指令…
 Found city|建造城市
 Settle here|在此建城
 Unavailable|不可用

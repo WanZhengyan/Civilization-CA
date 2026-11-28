@@ -20,8 +20,12 @@ function ring(g,x,y,r,color,width) {
   g.beginPath();g.ellipse(x,y,r,r*.60,0,0,Math.PI*2);
   g.strokeStyle=color;g.lineWidth=width;g.stroke();
 }
+function upright(g,x,y,pitch,paint) {
+  g.save();g.translate(x,y);g.scale(1,1/pitch);g.translate(-x,-y);
+  paint();g.restore();
+}
 
-export function paintBattleReport(g,replay,scale,now) {
+export function paintBattleReport(g,replay,scale,now,pitch=1) {
   const f=Math.min(1,Math.max(0,(now-replay.start)/replay.duration));
   if(f>=1 && !replay.pinned)return false;
   const {report,to,from,still,color}=replay,[tx,ty]=to;
@@ -46,7 +50,8 @@ export function paintBattleReport(g,replay,scale,now) {
       ring(g,sx,sy,15,'#2c2424',3.8*screen);ring(g,sx,sy,15,color,1.8*screen);
       if(!still && report.attacker.kind==='unit' && f<.55){
         const lunge=Math.sin(Math.PI*Math.min(1,f/.55)),distance=ranged?0:Math.min(17,length*.23)*lunge;
-        drawUnitArt(g,report.attacker.type,sx+ux*distance,sy+uy*distance+3,{color,scale:.83,facing:dx<0?-1:1,strike:lunge});
+        const x=sx+ux*distance,y=sy+uy*distance+3;
+        upright(g,x,y,pitch,()=>drawUnitArt(g,report.attacker.type,x,y,{color,scale:.83,facing:dx<0?-1:1,strike:lunge}));
       }
     }
   }
@@ -60,16 +65,20 @@ export function paintBattleReport(g,replay,scale,now) {
       }
     }
     const damage=report.damage>0?'−'+report.damage:'◇';
-    const y=ty-(26+(!still?4*impact:0))*screen;
+    const y=ty-(26+(!still?4*impact:0))*screen/pitch;
     g.font='bold '+(13*screen)+'px system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';
     const width=g.measureText(damage).width+12*screen;
-    g.fillStyle='#412a2c';g.fillRect(tx-width/2,y-9*screen,width,18*screen);
-    g.fillStyle='#ffe2bb';g.fillText(damage,tx,y);
+    upright(g,tx,y,pitch,()=>{
+      g.fillStyle='#412a2c';g.fillRect(tx-width/2,y-9*screen,width,18*screen);
+      g.fillStyle='#ffe2bb';g.fillText(damage,tx,y);
+    });
     if (from && report.retaliation!=null && (ranged || report.retaliation>0)) {
       const label=report.retaliation ? '−'+report.retaliation : '0';
-      const xx=from[0], yy=from[1]-27*screen, width=g.measureText(label).width+10*screen;
-      g.fillStyle=ranged?'#233e37':'#412a2c';g.fillRect(xx-width/2,yy-8*screen,width,16*screen);
-      g.fillStyle=ranged?'#c5f2d6':'#ffe2bb';g.fillText(label,xx,yy);
+      const xx=from[0], yy=from[1]-27*screen/pitch, width=g.measureText(label).width+10*screen;
+      upright(g,xx,yy,pitch,()=>{
+        g.fillStyle=ranged?'#233e37':'#412a2c';g.fillRect(xx-width/2,yy-8*screen,width,16*screen);
+        g.fillStyle=ranged?'#c5f2d6':'#ffe2bb';g.fillText(label,xx,yy);
+      });
     }
   }
   g.restore();return !still && f<1;

@@ -30,6 +30,11 @@ body:not(.on-title) .map-workspace {
 .map-workspace .map-heading>.section-label,.map-workspace .drag-hint {display:none}
 .map-workspace .map-head-tools {display:flex;align-items:center;gap:3px;position:static}
 .map-workspace .map-head-tools button {min-height:34px}
+.map-workspace .relief-view {display:flex;align-items:center;gap:5px;padding:4px 7px;white-space:nowrap;color:#bdc7c9;border:1px solid transparent;border-radius:4px;font-size:14px}
+.map-workspace .relief-view svg {width:18px;height:18px;flex-shrink:0}
+.map-workspace .relief-view:hover {background:#323e43}
+.map-workspace .relief-view[aria-pressed=true] {color:#e8d19b;background:#394139;border-color:#677256}
+.map-workspace .relief-view:focus-visible {outline:2px solid #f1d398;outline-offset:2px}
 .map-workspace .map-buttons {position:static;display:flex;margin-left:2px;padding:0 0 0 5px;gap:1px;border:0;border-left:1px solid #49514c;border-radius:0;background:none;box-shadow:none}
 .map-workspace .map-buttons button {width:28px}
 .map-workspace .layers-menu {z-index:8;min-width:230px;max-width:calc(100vw - 24px);max-height:62dvh;overflow:auto;background:#1e292c;box-shadow:0 5px 18px #111b1dcc}
@@ -135,6 +140,10 @@ body:not(.on-title):has(.map-workspace) #visitor-counts {z-index:4}
   .map-workspace .map-drawer[hidden]{display:none}
   .map-workspace:has(.map-drawer:not([hidden])) .map-intel{visibility:hidden}
 }
+@media(max-width:600px){
+  .map-workspace .relief-view {justify-content:center;min-width:36px;padding:4px 7px}
+  .map-workspace .relief-view span {display:none}
+}
 @media(max-width:365px){
   .map-workspace .brand-mark{display:none}
   .map-workspace .dock-button{min-width:38px;font-size:9px}
@@ -192,3 +201,30 @@ body:not(.on-title):has(.map-workspace) #visitor-counts {z-index:4}
 .scout-destinations button>small {grid-column:1/-1}
 .scout-destinations small {font-size:.8rem;color:#c2cec7}
 .scout-destinations button:focus-visible {outline:2px solid #e4bd78;outline-offset:1px}
+
+/* An unresolved decision replaces the gold end-turn command in the same slot. */
+#end-turn:has([data-turn-count]:not([hidden])) {
+  background:linear-gradient(145deg,#35534d,#253e3e);color:#f2efe1;
+  border:1px solid #8db5a0;gap:6px;line-height:1.15;
+}
+#end-turn:has([data-turn-count]:not([hidden]))>svg {display:none}
+#end-turn [data-turn-count]:not([hidden]) {
+  display:grid;place-items:center;flex:none;min-width:19px;min-height:19px;padding:0 3px;
+  border-radius:12px;background:#c7daca;color:#203b33;font:600 11px/1 system-ui,sans-serif;
+}
+@media(max-width:540px) {
+  .map-workspace .turn-panel:has([data-turn-count]:not([hidden])) {flex-direction:column;align-items:stretch;gap:1px}
+  .map-workspace .turn-panel:has([data-turn-count]:not([hidden])) .turn-top h2 {font-size:12px;line-height:1.1}
+  .map-workspace #end-turn:has([data-turn-count]:not([hidden])) {min-height:32px}
+}
+
+.map-workspace .turn-results {
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:7px 0;color:#e5d5ac;font-size:12px;line-height:1.4;
+}
+.map-workspace .turn-results[hidden] {display:none}
+.turn-results summary {cursor:pointer;overflow-wrap:anywhere}
+.turn-results ul {display:grid;gap:7px;list-style:none;padding:0;margin:8px 0 2px}
+.turn-results li {display:grid;gap:2px;color:#e0e6dc}
+.turn-results small {color:#aab9b4;line-height:1.3}
+.turn-results button {justify-self:start;padding:3px 6px;border:1px solid #788576;border-radius:3px;color:#d5e4d4;background:#263735}
