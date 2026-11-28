@@ -1776,7 +1776,12 @@ function botProject(state,city,difficulty) {
   if (defensible) {
     if (forecast.surplus<=1 && !forecast.housingLimited) choices.push('grainMill');
     if (state.players[city.seat].capital<3*BUILDINGS.shop.required) choices.push('shop');
-    if (pursuingOrbitalResearch(state,city.seat)) choices.push('academy','foundry');
+    if (pursuingOrbitalResearch(state,city.seat)) {
+      choices.push('academy');
+      if (knows(state,city.seat,'metallurgy') && !city.buildings.includes('foundry')) {
+        choices.push(city.buildings.includes('workshop') ? 'foundry' : 'workshop');
+      }
+    }
     if (state.players[city.seat].civic) choices.push('printingHouse');
   }
   if (count('builder')===0) choices.push('builder');

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {applyAction, BUILDINGS, campaignView, createGame, getCityYield, getPopulationReport,
-  getProductionOptions, getProjectSites, getResearchOptions, getStats, migrateGame} from '../docs/rules.js';
+  chooseBotAction, getMap, getProductionOptions, getProjectSites, getResearchOptions, getStats, migrateGame} from '../docs/rules.js';
 import {revisionOf} from '../docs/works.js';
 
 function opening(mapId='la') {
@@ -141,4 +141,24 @@ test('an existing city can finish or resume historic workshop and wall investmen
     assert.ok(!state.players[0].technologies.includes(BUILDINGS[item].tech));
     assert.deepEqual(getProjectSites(opening(),city.id,item),[]);
   }
+});
+
+test('a protected science governor commissions the local workshop before its foundry',()=>{
+  let state=opening();
+  state.round=2;
+  state.victoryMode='science';
+  Object.assign(state.players[0],{technologies:['industry','mechanics','steam','metallurgy'],
+    research:'electricity',civic:'charter',capital:50,policyRound:state.round});
+  const city=state.cities[0];
+  city.focusRound=state.round;
+  for (const [index,type] of ['melee','scout'].entries()) {
+    state.units.push({id:'guard'+index,seat:0,type,tile:index?getMap(state).neighbors(city.tile)[0]:city.tile,
+      hp:65,maxHp:65,moves:0,maxMoves:2});
+  }
+  assert.equal(chooseBotAction(state).item,'workshop');
+  state=buy(state,'workshop');
+  const next=chooseBotAction(state);
+  assert.equal(next.item,'foundry');
+  assert.ok(getProjectSites(state,city.id,'foundry').some(site=>site.id===next.site));
+  assert.equal(applyAction(state,0,next).cities[0].queue.site,next.site);
 });
