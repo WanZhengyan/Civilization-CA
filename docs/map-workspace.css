@@ -201,3 +201,19 @@ body:not(.on-title):has(.map-workspace) #visitor-counts {z-index:4}
 .scout-destinations button>small {grid-column:1/-1}
 .scout-destinations small {font-size:.8rem;color:#c2cec7}
 .scout-destinations button:focus-visible {outline:2px solid #e4bd78;outline-offset:1px}
+
+/* An unresolved decision replaces the gold end-turn command in the same slot. */
+#end-turn:has([data-turn-count]:not([hidden])) {
+  background:linear-gradient(145deg,#35534d,#253e3e);color:#f2efe1;
+  border:1px solid #8db5a0;gap:6px;line-height:1.15;
+}
+#end-turn:has([data-turn-count]:not([hidden]))>svg {display:none}
+#end-turn [data-turn-count]:not([hidden]) {
+  display:grid;place-items:center;flex:none;min-width:19px;min-height:19px;padding:0 3px;
+  border-radius:12px;background:#c7daca;color:#203b33;font:600 11px/1 system-ui,sans-serif;
+}
+@media(max-width:540px) {
+  .map-workspace .turn-panel:has([data-turn-count]:not([hidden])) {flex-direction:column;align-items:stretch;gap:1px}
+  .map-workspace .turn-panel:has([data-turn-count]:not([hidden])) .turn-top h2 {font-size:12px;line-height:1.1}
+  .map-workspace #end-turn:has([data-turn-count]:not([hidden])) {min-height:32px}
+}

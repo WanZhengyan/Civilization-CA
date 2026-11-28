@@ -36,3 +36,16 @@ export function syncResearchLens(track, container, planning=false) {
   toolbar.hidden=planning || track!=='research';
   if (track==='research') filterCards(container);
 }
+
+// A reminder should always reveal an available choice, even after browsing later eras.
+export function focusAvailableProject(track,container) {
+  const selector='[data-project][data-status="available"]:enabled';
+  const visible=()=>Array.from(container.querySelectorAll(selector)).find(card=>!card.closest('[hidden]'));
+  let project=visible();
+  if(!project && track==='research' && toolbar) {
+    toolbar.querySelector('select').value='';
+    filterCards(container);
+    project=visible();
+  }
+  project?.focus();
+}

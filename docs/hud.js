@@ -1,3 +1,4 @@
+import {turnButtonState,paintTurnButton,pendingTurnTasks} from './turn-button.js';
 import {getLanguage} from './i18n.js';
 import {mountInfluencePanel} from "./influence-panel.js";
 import {unchartedFrom,scoutingRoutes,openScoutingRoutes} from './scout-routes.js';
@@ -25,7 +26,7 @@ import {constructionTurns} from './harvest-forecast.js';
 import {directoryButton,mountCityDirectory} from './city-directory.js';
 import {councilInvestments,investmentPanel} from './council-investment.js';
 import {councilStages,stageHeading,renderCouncilPath,prerequisiteLine,projectQuote} from './council-path.js';
-import {researchLinks,syncResearchLens} from './research-catalog.js';
+import {researchLinks,syncResearchLens,focusAvailableProject} from './research-catalog.js';
 import {getSightRadius} from './vision.js';
 import {RESOURCES, canSeeDeposits, canSurvey, connectedDeposit} from './resources.js';
 import {openCityHall,paintCityHall} from './city-hall.js';
@@ -749,6 +750,44 @@ function openCombat(unit,tile){
 function closeCombat(){
   battle=null;if(el("combat-modal").open)el("combat-modal").close();if(view&&atlas)updateMap();
 }
+function handleTurnButton(){
+  if(!view)return;
+  const next=turnButtonState(view);
+  if(next.disabled)return;
+  if(next.kind==="lobby"){Game.open("multiplayer");return;}
+  if(next.kind==="standings"){Game.open("standings");return;}
+  if(next.kind==="end"){
+    moveDraft=null;order="";
+    Game.doAction(next.checked?{type:"end",requireReady:true}:{type:"end"});
+    return;
+  }
+  const task=next.task;
+  if(task.kind==="research" || task.kind==="civics"){
+    councilGoals[task.kind]="";
+    openCouncil(task.kind);
+    focusAvailableProject(task.kind,el("research-options"));
+    return;
+  }
+  // Resume the player's unfinished site selection when this is the same city.
+  if(task.kind==="production" && parcelOrder?.city===task.id){
+    closeMapPanel();openMapOnMobile();
+    parcelBar.querySelector("[data-site-list]")?.focus({preventScroll:true});
+    return;
+  }
+  endPlacement();
+  closeMapPanel();
+  const unit=task.kind==="unit";
+  activeRoster=unit?"units":"cities";
+  select(task.tile,unit?task.id:null,!unit);
+  atlas.focus(task.tile);redraw();
+  if(unit){
+    inspectMapOnMobile();
+    el("entity-commands").querySelector("button[data-order]:enabled")?.focus({preventScroll:true});
+  }else{
+    openProduction();
+    el("production-options").querySelector("[data-produce]:enabled")?.focus();
+  }
+}
 let expansionForecasts = new Map();
 function paint(next){
   expansionForecasts=getCityExpansions(next.state,next.seat);
@@ -787,8 +826,7 @@ function paint(next){
   trophy.title=state.victoryMode?'Victory progress':'View faction standings';
   trophy.querySelector('.resource-label').textContent=state.victoryMode?'Victory':'Score';
   text('score',state.victoryMode ? (state.practice?'Space race':({standard:'Two paths',conquest:'Conquest',science:'Space race'})[state.victoryMode]) : stats.score);
-  text("end-label",view.roomStatus || (waiting?"Open room":finished?"Standings":teamStatus?teamStatus.button:myTurn?"End turn":mode==="solo"?"Rivals playing…":state.players[state.turn]?.bot?"Computer playing…":"Waiting…"));
-  el("end-turn").disabled=!waiting&&!finished&&(!myTurn||view.busy);
+  paintTurnButton(el("end-turn"),view);
   const event=state.log.at(-1);text("event-turn","TURN "+String(event?.round||1).padStart(2,"0"));text("event-text",event?Game.eventText(event):"");
   el("legend").innerHTML=contacts.map(p=>'<span class="legend-item"><i class="swatch" style="--swatch:'+FACTIONS[p.faction].color+'"></i><span>'+esc(names[p.faction])+'</span>'+(state.teams?' · <span>'+teamLabel(state.teams[p.seat])+'</span>':'')+'</span>').join('');
   const eventKey=event?JSON.stringify(event):"";
@@ -972,7 +1010,7 @@ function mount(){
   };
   document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>Game.open(b.dataset.open));
   el("board-nav").onclick=()=>{closeMapPanel();el("atlas").querySelector("canvas")?.focus({preventScroll:true})};
-  el("end-turn").onclick=()=>{if(lobby())Game.open("multiplayer");else if(view.state.phase==="finished")Game.open("standings");else{moveDraft=null;order="";Game.endTurn()}};
+  el("end-turn").onclick=handleTurnButton;
   el("zoom-out").onclick=()=>atlas.zoomBy(.8);el("zoom-in").onclick=()=>atlas.zoomBy(1.25);el("recenter").onclick=()=>atlas.reset();
   el("inspect-map").onclick=()=>{order=order==="inspect"?"":"inspect";hoverId=null;redraw()};
   el("layers").onclick=()=>toggleLayers(el("layers-menu").hidden);
@@ -1101,7 +1139,7 @@ function mount(){
     if(!view || !getResearchOptions(view.state,view.seat).some(o=>o.item===item))return;
     openCouncil('research');showCouncilGoal(item);
   });
-  document.addEventListener('civitas-language',()=>{if(!view)return;roster();inspect();if(el('research-modal').open)paintResearch();else paintProjects()});
+  document.addEventListener('civitas-language',()=>{if(!view)return;paintTurnButton(el('end-turn'),view);roster();inspect();if(el('research-modal').open)paintResearch();else paintProjects()});
   el("close-combat").onclick=closeCombat;el("cancel-combat").onclick=closeCombat;
   el("combat-modal").addEventListener("close",()=>{battle=null;updateMap()});
   el("combat-modal").onclick=e=>{if(e.target===el("combat-modal"))closeCombat()};
