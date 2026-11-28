@@ -8,7 +8,7 @@ const local=(en,zh)=>lang()?zh:en;
 const label=(value)=>esc(value[lang()]);
 const currencies={food:['city food','交付城市的粮食'],capital:['gold','金币'],science:['science','科研'],culture:['culture','文化'],influence:['influence','影响力']};
 const rewardText=reward=>Object.entries(reward).map(([key,n])=>'+'+n+' '+label(currencies[key])).join(' · ');
-const button=(cmd,text,enabled)=>'<button type="button" class="btn" data-do="'+cmd+'"'+(enabled?'':' disabled')+'>'+text+'</button>';
+const button=(cmd,text,enabled,target)=>'<button type="button" class="btn" data-do="'+cmd+'"'+(target?' data-target="'+esc(target)+'"':'')+(enabled?'':' disabled')+'>'+text+'</button>';
 
 export function openFieldDesk(read,act) {
   const dialog=document.createElement('dialog');dialog.className='order-dialog field-desk';dialog.setAttribute('aria-labelledby','field-desk-title');
@@ -48,6 +48,7 @@ export function openFieldDesk(read,act) {
       }
       else html+=button('sample',local('Record observation','记录观察'),ready && r.canSample);
     }
+    if(active && r.relay.length)html+='<details><summary>'+local('Hand off this study','移交本课题')+'</summary><p>'+local('An adjacent scout takes all notes and the commission. Each scout spends one movement. Only one handoff per study this turn.','将课题及笔记交给相邻侦察兵，双方各花费 1 移动力。每个课题每回合可移交一次。')+'</p>'+r.relay.map(u=>button('relay',local('Hand to scout at ','交给侦察兵，位置 ')+esc(u.tile),ready,u.id)).join('')+'</details>';
     html+='<details><summary>'+local('Field camp','野外营地')+'</summary><p>'+local('Spend 7 gold and all remaining movement to establish your field office here. It replaces your previous camp. Choose neutral or friendly ground at least two hexes from your cities.','花费 7 金币和全部剩余移动力，就地设立营地以领取课题。新营地取代旧营地，须位于距己方城市至少两格的中立或己方领土。')+'</p>';
     if(r.player.fieldCamp)html+='<p>'+local('Current camp','现有营地')+' · '+esc(r.player.fieldCamp.tile)+'</p>';
     html+=button('camp',local('Pitch camp here','在此扎营'),ready && r.canCamp)+'</details>';
@@ -57,7 +58,7 @@ export function openFieldDesk(read,act) {
     body.querySelector('select[data-study]')?.addEventListener('change',e=>{selected=e.target.value;paint();});
     body.querySelectorAll('[data-do]').forEach(b=>b.onclick=()=>{
       dialog.close();
-      act({type:'fieldStudy',unit:unit.id,item:b.dataset.do,study:key,step:active?.notes.length||0});
+      act({type:'fieldStudy',unit:unit.id,item:b.dataset.do,target:b.dataset.target,study:key,step:active?.notes.length||0});
     });
   }
   dialog.querySelector('[data-close]').onclick=()=>dialog.close();

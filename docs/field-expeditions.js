@@ -96,13 +96,15 @@ export function fieldReport(state,unit,map,distance) {
   const catalog=Object.entries(studies).filter(([,study])=>!study.region || study.region===map.id);
   const activeKeys=new Set(state.units.filter(u=>u.seat===unit.seat).map(u=>player.fieldCrews?.[u.id]?.key));
   const open=catalog.filter(([key])=>!filed[key] && !activeKeys.has(key));
+  const relay=mission && mission.relayRound!==state.round ? state.units.filter(u=>u.id!==unit.id && u.seat===unit.seat && u.type==='scout' &&
+    u.moves>0 && distance(u.tile,unit.tile)<=1 && !player.fieldCrews?.[u.id]) : [];
   const spec=studies[mission?.key];
   const complete=Boolean(spec && notes.length===spec.steps.length);
   const canSample=Boolean(spec && !complete && unit.moves>0 && spec.sample(context));
   const sponsor=mission && state.cities.find(c=>c.id===mission.sponsor && c.seat===unit.seat);
   const archive=state.board[unit.tile]?.fieldStation==='archive';
   const canMail=Boolean(archive && sponsor && complete && !spec.reward.food && player.influence>=2);
-  return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,open,spec,complete,canSample,context};
+  return {player,mission,filed,base,office,atCamp,canCamp,sponsor,archive,canMail,relay,open,spec,complete,canSample,context};
 }
 
 function storeCrew(player,id,mission) {
@@ -132,6 +134,14 @@ export function fieldOrder(state,seat,action,map,distance) {
     return 'Field expedition commissioned.';
   }
   if(!mission || mission.key!==action.study || action.step!==mission.notes.length)throw new Error('Field notes changed. Review the expedition.');
+  if(action.item==='relay'){
+    const recipient=r.relay.find(u=>u.id===action.target);
+    if(!recipient)throw new Error('This field order is unavailable here.');
+    storeCrew(player,unit.id,null);
+    storeCrew(player,recipient.id,{...mission,relayRound:state.round});
+    unit.moves--;recipient.moves--;
+    return 'Field notes handed to another scout.';
+  }
   if(action.item==='sample' && r.canSample) {
     const note={tile:unit.tile,terrain:context.tile.terrain,round:state.round,...spec.evidence?.(context)};
     storeCrew(player,unit.id,{...mission,notes:[...mission.notes,note]});

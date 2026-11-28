@@ -4,7 +4,7 @@ A turn-based strategy game for one to four players, set in Los Angeles, San Fran
 
 **[Play the Pasadena tutorial](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=tutorial)** · [Start a solo campaign](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=solo) · [Play with friends](https://wanzhengyan.github.io/Civilization-CA/game.html?setup=host)
 
-[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.0.88 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
+[Game homepage](https://wanzhengyan.github.io/Civilization-CA/) · [v7.0.89 release notes](./CHANGELOG.md) · [简体中文](./README.zh-CN.md)
 
 [Playable atlas versions](./VERSIONS.md)
 

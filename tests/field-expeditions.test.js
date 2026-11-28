@@ -111,3 +111,14 @@ test('a paid remote camp uses the rest of the turn and commissions for a real ho
   s=travel(s,tile);assert.throws(()=>order(s,'camp'));s=order(s,'start');assert.equal(read(s).mission.sponsor,home.id);
   assert.equal(campaignView(s,1).players[0].fieldCamp,undefined);
 });
+
+test('two adjacent friendly scouts relay one notebook and each contributes movement',()=>{
+  let s=start();s=order(s,'start');s=order(s,'sample');
+  s.units.push({...scout(s),id:'relay-scout',moves:2});
+  const carry=(state,target)=>order(state,'relay','transect',{target});
+  assert.throws(()=>carry(s,'bogus'));const next=carry(s,'relay-scout');
+  assert.equal(next.players[0].fieldCrews['field-team'],undefined);assert.equal(next.players[0].fieldCrews['relay-scout'].notes.length,1);
+  assert.equal(next.units.find(u=>u.id==='relay-scout').moves,1);assert.equal(scout(next).moves,0);assert.throws(()=>carry(next,'relay-scout'));
+  const receiver=next.units.find(u=>u.id==='relay-scout');scout(next).moves=1;
+  assert.equal(fieldReport(next,receiver,getMap(next),hexDistance).relay.length,0);
+});
