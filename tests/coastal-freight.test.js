@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {applyAction,campaignView,createGame,getFreightManifest,getUnitOptions} from '../docs/rules.js';
+import {applyAction,campaignView,createGame,getFreightManifest,getMap,getUnitOptions} from '../docs/rules.js';
 import {freightPanel} from '../docs/harbor-ledger-ui.js';
 
 function twoPorts() {
@@ -79,4 +79,16 @@ test('only a charted allied harbor can receive food; its city stores and cargo s
   delete s.campaignVariety;
   assert.equal(getFreightManifest(s,crew),null);
   assert.throws(()=>applyAction(s,0,{type:'loadFreight',unit:crew.id}));
+});
+
+test('remembering a distant water tile cannot reveal a newly built allied berth there',()=>{
+  const s=twoPorts(),crew=s.units.find(u=>u.type==='workboat'),dest=s.cities.filter(c=>c.seat===0)[1];
+  dest.seat=1;s.teams=[0,0];
+  const visible=new Set(campaignView(s,0).intel.visible);
+  const hidden=getMap(s).tiles.find(t=>t.terrain==='ocean' && !visible.has(t.id));
+  dest.portTile=hidden.id;
+  s.exploration[0]=Object.fromEntries(getMap(s).tiles.map(t=>[t.id,null]));
+  const projected=campaignView(s,0);
+  assert.deepEqual(projected.intel.alliedFreightPorts,[]);
+  assert.deepEqual(getFreightManifest(s,crew).routes,[]);
 });

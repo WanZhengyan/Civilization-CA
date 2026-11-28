@@ -1371,7 +1371,7 @@ function resolveAttack(state, unit, target) {
 }
 export function getFreightManifest(state,unit) {
   if(state.campaignVariety!==1 || !unit || unit.type!=='workboat' || state.intel && state.intel.seat!==unit.seat)return null;
-  return freightManifest(state,unit,getMap(state),getVision(state,unit.seat).explored,hexDistance);
+  return freightManifest(state,unit,getMap(state),getVision(state,unit.seat),hexDistance);
 }
 const freightOrders=['loadFreight','landFreight','returnFreight'];
 function unitOrder(state,seat,action) {
@@ -1891,7 +1891,9 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
   if(!validDifficulty(difficulty))throw new Error('Choose a valid AI difficulty.');
   const {visible,explored,hasFoundedCapital,teamSurveyed}=view.intel;
   const observedBerths=Array.isArray(view.intel.visibleBerths) ? {visibleBerths:view.intel.visibleBerths.filter(id=>visible.includes(id))} : {};
-  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,...observedBerths}};
+  const friendlyHarbors=view.campaignVariety===1 ? {alliedFreightPorts:(view.intel.alliedFreightPorts || []).filter(port=>
+    visible.includes(port.portTile) && sameTeam(view,seat,port.seat))} : {};
+  const state={...view,intel:{seat,visible,explored,hasFoundedCapital,teamSurveyed,...observedBerths,...friendlyHarbors}};
   const player = state.players[seat];
   if (!state.cities.some(c=>c.seat===seat)) {
     const pioneer=state.units.find(u=>u.type==='settler' && u.seat===seat && u.moves>0);

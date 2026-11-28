@@ -8,10 +8,11 @@ export function alliedFreightPorts(state,seat,visible) {
     .map(({id,seat,name,portTile})=>({id,seat,name,portTile}));
 }
 
-export function freightManifest(state,unit,map,explored,distance) {
+export function freightManifest(state,unit,map,vision,distance) {
   if(state.campaignVariety!==1 || unit.type!=='workboat' || unit.fishCargo)return null;
+  const {visible,explored}=vision;
   const own=state.cities.filter(c=>c.seat===unit.seat && c.portTile && c.buildings.includes('harbor'));
-  const allies=state.intel?.alliedFreightPorts ?? alliedFreightPorts(state,unit.seat,explored);
+  const allies=state.intel?.alliedFreightPorts ?? alliedFreightPorts(state,unit.seat,visible);
   const ports=[...own,...allies],here=ports.find(c=>c.portTile===unit.tile);
   const cargo=unit.freight;
   const origin=cargo || (here?.seat===unit.seat ? here : null);
