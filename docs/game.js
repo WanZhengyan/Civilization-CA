@@ -943,6 +943,7 @@ function content() {
       actions(button('campaign-atlas','Edit settings'),button('restart','Replace and start','primary'))};
   return {kicker:'Command center', title:'Game menu', body:actions(
     button('multiplayer', room ? 'Multiplayer room' : 'Play with friends', 'primary'),button('standings',state?.victoryMode?'Victory progress':'Faction standings'),button('log','Event log'),
+    state?.phase==='playing' ? button('advisors',getLanguage()==='zh-CN'?'顾问团':'Advisors') : '',
     button('help','Field guide'), button('supplies','Supply ledger'), mode==='solo' && tutorial ? button('restart-tutorial','Restart tutorial') : '', button('title-screen','Title screen'), mode === 'solo' ? button('campaign-atlas','Solo game setup') : button('to-solo','Return to solo'))};
 }
 
@@ -992,6 +993,7 @@ async function copyInvite() {
   }
 }
 function modalAction(act) {
+  if(act==='advisors'){dismissDialog();document.dispatchEvent(new Event('civitas-advisors'));return;}
   if (act.startsWith('locate-wonder-')) {
     const match=discoveredNaturalWonders(getState()).find(site=>site.id===act.slice('locate-wonder-'.length));
     if (match) {

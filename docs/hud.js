@@ -1,4 +1,5 @@
 import {mountCampaignExplorer} from './campaign-explorer.js';
+import {mountAdvisors} from './advisors-ui.js';
 import {settlerPopulationReason, SETTLER_WAITING} from './population.js';
 import {mountTutorialCoach} from './tutorial-coach.js';
 import {mountTurnResults} from './turn-results.js';
@@ -830,7 +831,14 @@ function reviewScoutDestination(unit,target){
   moveDraft=draft;order="";openMapOnMobile();updateMap();atlas.focus(target);
   moveBar.querySelector('[data-move-confirm]').focus({preventScroll:true});
 }
-let tutorialCoach;
+let tutorialCoach,paintAdvisors;
+function reviewAdvice(link){
+  const city=ownCities().find(c=>c.id===link.city);
+  if(!city)return;
+  select(city.tile,null,true);atlas.focus(city.tile);redraw();
+  if(link.kind==='citizens')chooseOrder('citizens');
+}
+
 function locateTutorialOrder(lesson){
   if(!view?.tutorial)return;
   const {step,city,unit}=lesson;
@@ -888,6 +896,7 @@ function paint(next){
   influencePanel?.paint();
   turnResults?.(view);
   cityDirectory?.paint();
+  paintAdvisors?.();
   text("brand-region",mapRegion.shortName);text("campaign-title",mapRegion.name);
   text("chart-coordinate",mapRegion.coordinates);text("footer-region",mapRegion.shortName);
   document.querySelector(".map-panel").setAttribute("aria-label","Tactical map · "+mapRegion.shortName);
@@ -1148,6 +1157,7 @@ function mount(){
       }
     }
   };
+  paintAdvisors=mountAdvisors(()=>view,reviewAdvice);
   mountDiplomacy(action=>Game.doAction(action));
   influencePanel=mountInfluencePanel({
     getView:()=>view,issue:action=>Game.doAction(action),closeLedger:()=>Game.close(),

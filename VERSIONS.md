@@ -15,3 +15,4 @@ git log --format="%h %s" --grep="^v7[.]0[.]"
 | 7.0.5 | Match available construction crews to reachable jobs and remaining work capacity |
 | 7.0.6 | Compare legal harbor berths by their sponsoring city and construction time |
 | 7.0.7 | Survey university parcels against charter fees, specialty terrain and build time |
+| 7.0.8 | Advise cities on harvest risk and the real cost of reassigning workers |
