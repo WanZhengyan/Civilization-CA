@@ -45,7 +45,7 @@ function influenceOrders(view,lang) {
     const [order] = getActions(state,seat,id);
     if (order?.type !== 'contest') continue;
     contests.push({key:id,target:parcelName(id),tile:id,cost:order.cost.influence,gold:order.cost.capital,reason:t(order.reason),
-      detail:L('Take ownership of this district. Uses one district order.','夺取该地块的控制权，消耗一次地区指令。'),action:{type:'contest',tile:id}});
+      detail:L('Take ownership of this district. Uses one border order.','夺取该地块的控制权，消耗一次边境指令。'),action:{type:'contest',tile:id}});
   }
   const soloOnly = state.practice || state.players.length === 1;
   return [
@@ -54,7 +54,7 @@ function influenceOrders(view,lang) {
     {id:'mission',title:L('Send a delegation','派遣使团'),description:L('See a rival’s era and total city count for three rounds.','在三轮内查看对方所处的时代和城市总数。'),button:L('Send delegation','派遣使团'),cost:6,
       empty:soloOnly?L('This practice campaign has no rival.','本场单人练习没有对手。'):L('Explore until you meet a rival civilization.','先探索地图，接触另一个文明。'),options:missions},
     {id:'policy',title:L('Change policy','调整政策'),description:L('Your first vote is free. Later changes cost 3 influence, once per round.','第一次颁布政策免费，此后更换需 3 点影响力，每轮限一次。'),button:L('Enact policy','颁布政策'),cost:p.policyRound == null ? 0 : 3,options:policies},
-    {id:'contest',title:L('Contest a border district','争夺边境地块'),description:L('Take an unguarded rival district beside your land using one district order.','花费一次地区指令，夺取紧邻己方领土且无人守卫的对方地块。'),button:L('Contest district','争夺地块'),cost:5,gold:4,
+    {id:'contest',title:L('Contest a border district','争夺边境地块'),description:L('Take an unguarded rival district beside your land using one border order.','花费一次边境指令，夺取紧邻己方领土且无人守卫的对方地块。'),button:L('Contest district','争夺地块'),cost:5,gold:4,
       empty:soloOnly?L('This practice campaign has no rival territory.','本场单人练习没有敌方领土。'):L('No eligible rival district is visible along your border.','当前边境视野内没有可以争夺的敌方地块。'),options:contests}
   ];
 }

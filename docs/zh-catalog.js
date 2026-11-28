@@ -182,7 +182,7 @@ Launch city|发射城市
 Paused project|暂停的发射项目
 Plan Rocketry|规划火箭技术路线
 Follow Steam Power with Industrial Metallurgy and Electrical Engineering to unlock Radio Networks. The other branch of Rocketry runs through District Railways and Motorization.|研究蒸汽动力后，依次研究工业冶金和电气工程，即可解锁无线电网络。通向火箭技术的另一条分支需要先研究地区铁路与机械化。
-Land Registry leads to County Federation, then Teachers Colleges and Public Libraries. Libraries increase the culture produced by monuments. On another branch, Park Conservancies rewards cities with suitable land.|土地登记之后可依次推进郡县联邦、师范学院和公共图书馆。公共图书馆会提高纪念碑的文化产出。也可走公园保护区分支，让拥有林地或丘陵的城市获益。
+Land Registry leads to County Federation, which gives each city 2 more border points per turn. Teachers Colleges and Public Libraries follow. A different branch leads to Park Conservancies.|郡县联邦的前置市政是土地登记，完成后每座城市每回合多获得 2 点扩地进度。之后可推进师范学院和公共图书馆。另一条路线通向公园保护区。
 Rocketry|火箭技术
 Orbital Survey|轨道勘测计划
 Launch a satellite to survey California from orbit. Completing this city project wins a science victory.|发射卫星，从轨道勘测加州。完成此城市项目即可取得科技胜利。
@@ -208,6 +208,7 @@ Each civilization can be chosen only once. Choose an available civilization or R
 `);
 section(`
 Border expansion|领土扩张
+Residents|居民
 Locate next district|在地图上查看候选地
 Explore or clear neutral land within three steps.|探索或清除三步内无主土地上的障碍。
 Next district|下一块土地
@@ -215,7 +216,7 @@ Border progress|扩地进度
 Frontier blocked|暂无可扩展土地
 Points per turn|每回合扩地点数
 Grow city borders|扩大城市领土
-Each resident adds one border point at the end of your turn. A city starts at eight points per district. Each new district raises the next cost by two, up to sixteen. Only visible, unclaimed land within three connected land steps qualifies. If the frontier is blocked, explore or secure a clear route. Progress pauses until a parcel opens.|每回合结束时，每名居民提供一点扩地进度。首块土地需要八点，每次扩地后增加两点，最高十六点。候选地必须是当前可见的无主陆地，从城市沿己方陆地最多走三步可达。若边界无法扩展，派人探索或打通通路。出现候选地后，扩地进度会继续累积。
+Each resident adds one border point per turn. Land Surveying adds 1 and County Federation adds 2 in each city. The first parcel costs 8 points. Each new parcel raises the next cost by 2, up to 16. Progress pauses if no visible neutral land is reachable within three land steps.|每名居民每回合提供 1 点扩地进度。土地测绘使每城额外获得 1 点，郡县联邦再加 2 点。首块土地需 8 点，此后每次扩地所需点数增加 2，最高 16 点。若沿己方土地三步内没有可见的中立候选地，扩地进度会暂停。
 The city incorporated a district.|城市将一块土地纳入领土。
 Production changed. Review the current city order.|生产项目已变化，请重新查看城市的当前指令。
 This city has no project to switch.|该城市没有可更换的生产项目。
@@ -780,7 +781,7 @@ Civic Administration|市政管理
 Each city produces 2 more food per turn.|每座城市每回合粮食产量增加 2。
 Each city produces 2 more production per turn.|每座城市每回合生产力增加 2。
 Military units deal 7 more attack damage and 3 more retaliation damage.|军事单位的攻击伤害增加 7，反击伤害增加 3。
-Each city earns 2 more capital and 1 more influence per turn.|每座城市每回合多获得 2 资金和 1 影响力。
+Each city earns 2 more gold, 1 influence and 1 point toward natural border growth per turn.|每座城市每回合额外获得 2 金币、1 影响力和 1 点自然扩地进度。
 Founds a new city at least three hexes from another city. Train or buy at 3 or more residents. One resident leaves when the settler deploys.|在距离其他城市至少三格的位置建立新城。本城达到 3 人口才能训练或购买开拓者，部署时迁出 1 名居民。
 Settlers need 3 residents in this city.|本城达到 3 人口才能招募开拓者。
 Waiting for 3 residents|等待本城达到 3 人口
@@ -799,8 +800,8 @@ Adds 3 influence per turn.|每回合增加 3 影响力。
 Increases this city’s defenses.|提高城市防御能力。
 Capital per turn|每回合资金收入
 Influence per turn|每回合影响力收入
-1 district order|1 次地区指令
-1 district order remains this turn.|本回合还可下达 1 次地区指令。
+1 border order|1 次边境指令
+1 border order remains this turn.|本回合还可下达 1 次边境指令。
 Select a city to manage production or send a builder to improve nearby land.|选择一座城市安排生产，或派建造者改良城市附近的土地。
 Your capital city|己方首府
 Rival capital city|敌方首府
@@ -811,7 +812,7 @@ Claim district|拓展领土
 Contest district|争夺地区
 The campaign has ended.|战役已结束。
 Wait for your turn.|请等待你的回合。
-You have used both civic actions this turn.|本回合的两次地区指令均已用尽。
+You have used both civic actions this turn.|本回合的两次边境指令均已用尽。
 Choose a district next to your territory.|请选择与己方领土相邻的地区。
 Select a tile on the map.|请选择一个地图地块。
 Select a settler to survey this tile.|请选择开拓者勘察这块地。
@@ -1061,7 +1062,7 @@ Choose a valid civic.|请选择可用的市政。
 Choose an available civic.|请选择可用的市政。
 Your faction has already completed this project.|你的阵营已完成此项目。
 This is your current project.|这就是当前项目。
-You have used all district orders this turn.|本回合的地区指令已用尽。
+You have used all border orders this turn.|本回合的边境指令已用尽。
 Workshop Engineering|工坊工程
 Land Surveying|土地测绘
 Coastal Navigation|近海航行
@@ -1080,7 +1081,7 @@ Each city produces 1 more production per turn.|每座城市每回合额外获得
 Park Conservancies|公园保护区
 Cities near an owned woodland or foothill gain 1 food and 1 culture per turn.|邻近己方林地或丘陵的城市每回合额外获得 1 粮食和 1 文化。
 County Federation|郡县联邦
-Gain a third district order at the start of each turn.|每回合开始时，多获得一次地区指令，共三次。
+Each city adds 2 points per turn toward its next natural border expansion.|每座城市每回合额外获得 2 点自然扩地进度。
 Public Broadcasting|公共广播
 Civil Mobilization|全民动员
 New military units enter service with 20 extra maximum health.|新训练的军事单位最大生命值增加 20。
@@ -1183,7 +1184,7 @@ No field upgrade is available.|当前没有可用的战场升级。
 Choose your map|选择地图
 Open Change map for Los Angeles, San Francisco or San Diego. Each region has a separate solo save. For multiplayer, the host chooses the map when creating the room.|选择「切换地图」可前往洛杉矶、旧金山或圣迭戈。每个地区的单人进度独立保存。多人联机时由房主在建房时选择地图。
 Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.|打开地图旁的「科技」和「市政」，分别选择一项议程。建立首都后，你的文明每回合分别积累科研点和文化。
-Start with two district orders per turn to claim neutral land or contest a rival border. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.|初始每回合有两次地区指令，可用于认领中立地块或争夺敌方边境地块。通过「郡县联邦」后增加为三次。各单位单独消耗移动力。结束回合后结算收入，轮到下一个阵营行动。
+Each turn you have two border orders. Select a visible tile next to your land to claim neutral ground or contest an unguarded rival tile. Cities also expand naturally at the end of your turn.|每回合有两次边境指令。选中紧邻己方领土的可见地块，可以认领中立土地，也可以争夺无人守卫的敌方土地。每回合结束时，城市还会自然扩地。
 Check the selected unit’s movement allowance. Land units spend one point on coast, lowlands or urban land and two in woodland or foothills. Ships travel on open water. Occupied hexes block movement.|先查看所选单位的移动力。陆地单位进入海岸、低地或城区耗一点，进入林地或丘陵耗两点。船只在水面航行。已被其他单位占据的地块无法通行。
 Land units deploy in the city or an adjacent open, passable hex in friendly or neutral territory. Ships deploy at the harbor or in neighboring open water. Clear a deployment space before ending your turn.|陆地单位部署在城内或相邻的己方、中立可通行空地。舰船从港口或相邻空水域下水。结束回合前请留出部署空间。
 Upgrade in the field|战场升级
@@ -1191,7 +1192,7 @@ After the required discovery, select a veteran in your territory and pay the dis
 Workshop Engineering opens Steam Power and then Radio Networks. Field Tactics leads to Ballistics. Learn both Steam Power and Ballistics to unlock Motorization and train an Armored Column.|工坊工程解锁蒸汽动力，随后可研究无线电网络。野战战术解锁弹道学。掌握蒸汽动力和弹道学后可研究机械化，训练装甲纵队。
 Cities, population and discoveries contribute science. Culture funds a separate civic project at the same time. Switch projects without losing saved points. Surplus science and culture carry over.|城市、人口和已有的发现都能贡献科研点。文化同时推进独立的市政项目。切换项目不会损失已累积的点数，结余也会保留。
 Choose a civic path|选择市政路线
-Municipal Charter leads to County Federation for another district order, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.|通过市政宪章后，可选郡县联邦，增加地区指令；也可选公园保护区，利用地形获得额外产出。完成较晚时代的项目即可进入该时代。
+Municipal Charter leads to County Federation for faster natural border growth, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.|通过市政宪章后，可选择郡县联邦，加快自然扩地；也可选择公园保护区，利用地形获得额外产出。完成较晚时代的项目即可进入该时代。
 At sea|海上行动
 Choose a harbor site|港口选址
 Found on the shore or connect a city to your own coast within two hexes. Choose Harbor in city production. The harbor reserves an adjacent water hex and earns capital.|在海岸建城，或将城市与两格以内的己方海岸连接。打开城市生产，选择「港口」。港口会预留相邻水域，并带来资金收入。

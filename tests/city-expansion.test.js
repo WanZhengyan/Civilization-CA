@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {borderBudget} from '../docs/city-expansion.js';
 
 test('each resident contributes a point; old cities start with zero progress', () => {
-  assert.deepEqual(borderBudget({population:2}), {progress:0, rate:2, required:8, turns:4});
+  assert.deepEqual(borderBudget({population:2}), {progress:0, rate:2, residents:2, surveying:0, federation:0, required:8, turns:4});
   assert.equal(borderBudget({population:4, borderProgress:5}).turns, 1);
 });
 
@@ -179,4 +179,31 @@ test('allies expand once per ready order even when the later seat finishes first
   assert.equal(state.board[first].owner,0);
   assert.equal(state.cities.find(c=>c.seat===1).borderClaims,1);
   assert.equal(state.log.filter(e=>e.type==='border').length,2);
+});
+
+test('surveying and federation speed the forecast and the actual annexation while manual border orders stay at two', () => {
+  let state=founded();
+  const city=state.cities[0], player=state.players[0];
+  city.food=0;
+  player.science=200;
+  player.culture=200;
+  const baseline=getCityExpansion(state,city.id);
+  state=applyAction(state,0,{type:'research',item:'civics'});
+  const surveyed=getCityExpansion(state,city.id);
+  assert.equal(surveyed.rate,baseline.rate+1);
+  for (const item of ['charter','landRegistry','federation']) state=applyAction(state,0,{type:'civic',item});
+  const report=getCityExpansion(state,city.id);
+  assert.equal(report.rate,surveyed.rate+2);
+  assert.equal(report.turns,2);
+  assert.deepEqual(getCityExpansion(campaignView(state,0),city.id),report);
+  const html=borderSummary(report,getMap(state).byId[report.tile],String);
+  assert.match(html,/Land Surveying<\/span><b>\+1/);
+  assert.match(html,/County Federation<\/span><b>\+2/);
+  state=applyAction(state,0,{type:'end'});
+  assert.equal(state.cities[0].borderProgress,4);
+  state=applyAction(state,1,{type:'end'});
+  assert.equal(state.actionsLeft,2);
+  state=applyAction(state,0,{type:'end'});
+  assert.equal(state.board[report.tile].owner,0);
+  assert.equal(state.cities[0].borderClaims,1);
 });

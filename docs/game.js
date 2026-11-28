@@ -733,12 +733,12 @@ const guideSections = {
     ['Give your capital a project', 'Open Cities in the Empire roster, select your capital and choose production. Your cities add food and production when you end your turn.'],
     ['Choose research', 'Open Technology and Civics beside the map. Choose a project in each council. Once you found your first city, your faction earns science and culture separately every turn.'],
     ['Fund a government program', 'In Civics, open Government policy. Municipal Charter unlocks Public lectures. Public Works unlocks Public contracts. Compare the gain with the cost in each city, then ratify a program. Select Full tree to see which civics unlock future policies and universities.'],
-    ['Plan your turn', 'Start with two district orders per turn to claim neutral land or contest a rival border. County Federation adds a third. Units use their own movement points. End turn collects income and passes play to the next faction.']
+    ['Plan your turn', 'Each turn you have two border orders. Select a visible tile next to your land to claim neutral ground or contest an unguarded rival tile. Cities also expand naturally at the end of your turn.']
   ]},
   influence: {label:'Influence', entries:[]},
   city: {label:'City growth', entries:[
     ['Food and production', 'Each citizen eats two food every turn. Cities store surplus harvest for new citizens. A deficit uses the food reserve first. If it runs out, the city loses one citizen. Its founding household stays. Production advances the city queue.'],
-    ['Grow city borders', 'Each resident adds one border point at the end of your turn. A city starts at eight points per district. Each new district raises the next cost by two, up to sixteen. Only visible, unclaimed land within three connected land steps qualifies. If the frontier is blocked, explore or secure a clear route. Progress pauses until a parcel opens.'],
+    ['Grow city borders', 'Each resident adds one border point per turn. Land Surveying adds 1 and County Federation adds 2 in each city. The first parcel costs 8 points. Each new parcel raises the next cost by 2, up to 16. Progress pauses if no visible neutral land is reachable within three land steps.'],
     ['Improve nearby land', 'A builder has three charges. Work a land tile connected to a friendly city by at most two steps through your territory. Match the improvement to the deposit. Grain needs a farm, citrus an orchard, timber a lumber camp, stone a quarry, and iron a mine.'],
     ['Use stored goods', 'Each connected, improved deposit adds one good to your stockpile at the end of your turn. Open the Supply ledger to sell two matching goods for five capital or send them to one of your cities. You can make one shipment per turn.'],
     ['Plan housing', 'A new city has room for three citizens. A granary adds two places. Public Works unlocks residential quarters, which add three. A full city keeps one growth reserve and can grow after more housing opens. Choose a housing investment in the citizen panel.'],
@@ -782,8 +782,8 @@ const guideSections = {
       : 'Workshop Engineering opens Steam Power and then Radio Networks. Field Tactics leads to Ballistics. Learn both Steam Power and Ballistics to unlock Motorization and train an Armored Column.'],
     ['Build up science', 'Cities, population and discoveries contribute science. Culture funds a separate civic project at the same time. Switch projects without losing saved points. Surplus science and culture carry over.'],
     ['Choose a civic path', state=>!state || state.researchPace===2
-      ? 'Land Registry leads to County Federation, then Teachers Colleges and Public Libraries. Libraries increase the culture produced by monuments. On another branch, Park Conservancies rewards cities with suitable land.'
-      : 'Municipal Charter leads to County Federation for another district order, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
+      ? 'Land Registry leads to County Federation, which gives each city 2 more border points per turn. Teachers Colleges and Public Libraries follow. A different branch leads to Park Conservancies.'
+      : 'Municipal Charter leads to County Federation for faster natural border growth, or Park Conservancies for terrain bonuses. Completing a project from a later era advances your faction.'],
     ['Win by domination', state=>state?.teams ? 'A team wins immediately when its members collectively hold every original capital.' : 'In a campaign with rivals, control every participating civilization’s original capital to win immediately.'],
     ['Win on civic points', state=>{
       if(state?.teams)return '<span>Living teammates combine their civic points. Compare team totals at the end of the round when a team reaches the target, or after round 30. Tied teams share victory.</span> <strong>Team civic target</strong> · '+getScoreTarget(state);

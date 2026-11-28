@@ -157,7 +157,9 @@ function scienceDesk({state,seat,cities,L,t,add}){
 function civicDesk({state,seat,cities,L,t,name,add}){
   if(!cities.length || state.players[seat].civic)return;
   const choices=getCivicOptions(state,seat),balance=state.players[seat].culture||0;
+  const frontiers=getCityExpansions(state,seat);
   const offers=[
+    {goal:'federation',eligible:cities.filter(city=>frontiers.get(city.id)?.tile),gain:2,unit:L('border points','扩地进度')},
     {goal:'normalSchools',eligible:cities.filter(c=>c.population>=3),gain:2,unit:L('science','科研')},
     {goal:'harborCommission',eligible:cities.filter(c=>c.buildings.includes('harbor')),gain:3,unit:L('gold','金币')},
     {goal:'publicWorks',eligible:cities,gain:1,unit:L('production','生产力')}

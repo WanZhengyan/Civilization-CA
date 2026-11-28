@@ -683,7 +683,7 @@ function record(state,seat,type,text,tile,detail={}) {
   state.log.push({round:state.round,seat,type,text,...(tile ? {tile}:{}),...detail});
   if (state.log.length>160) state.log.shift();
 }
-const DISTRICT_ORDER_COST=1;
+const BORDER_ORDER_COST=1;
 function territoryOrder(state,seat,tile) {
   if (tile.terrain==='ocean' || wildAt(state,tile.id)) return null;
   const {owner}=state.board[tile.id];
@@ -704,7 +704,7 @@ export function getActions(state,seat,id,visible) {
   let reason='';
   if (state.phase!=='playing') reason='The campaign has ended.';
   else if (state.turn!==seat) reason='Wait for your turn.';
-  else if (state.actionsLeft<DISTRICT_ORDER_COST) reason='You have used all district orders this turn.';
+  else if (state.actionsLeft<BORDER_ORDER_COST) reason='You have used all border orders this turn.';
   else if (!getMap(state).neighbors(id).some(key=>state.board[key].owner===seat)) reason='Choose a district next to your territory.';
   else if (player.capital<order.cost.capital) reason='You need '+order.cost.capital+' capital.';
   else if (player.influence<order.cost.influence) reason='You need '+order.cost.influence+' influence.';
@@ -1291,7 +1291,7 @@ function advanceTeamIfReady(state) {
   if (!active.length) {
     const next=nextTeamPhase(state);
     if (!next || (next.wrap && !startNextRound(state))) return;
-    state.teamPhase=newTeamPhase(state,next.team,id=>ACTIONS_PER_TURN+Number(adopted(state,id,'federation')));
+    state.teamPhase=newTeamPhase(state,next.team,()=>ACTIONS_PER_TURN);
     active=activeTeamSeats(state);
     for (const id of active) refreshSeat(state,id);
   }
@@ -1314,7 +1314,7 @@ function endTurn(state,seat) {
   if (roundPosition(next)<=roundPosition(seat)) {
     if (!startNextRound(state)) return;
   }
-  state.turn=next;state.actionsLeft=ACTIONS_PER_TURN+Number(adopted(state,next,'federation'));
+  state.turn=next;state.actionsLeft=ACTIONS_PER_TURN;
   refreshSeat(state,next);
 }
 // Compute spotter-assisted forecasts on the authority without disclosing rival
@@ -1712,7 +1712,7 @@ function resolveOrder(source,seat,action) {
     const tile=getMap(state).byId[action.tile],prior=next.board[tile.id],player=next.players[seat];
     player.capital-=order.cost.capital;player.influence-=order.cost.influence;
     next.board[tile.id]={...prior,owner:seat};
-    next.actionsLeft-=DISTRICT_ORDER_COST;
+    next.actionsLeft-=BORDER_ORDER_COST;
     const verb=order.type==='contest' ? 'took control of' : 'claimed';
     record(next,seat,order.type,FACTIONS[state.players[seat].faction].name+' '+verb+' '+tile.name+'.',tile.id);
   }
@@ -2118,7 +2118,8 @@ export function chooseBotActionFromView(view,difficulty=view.difficulty || 'norm
     if (project) return {type: 'research', item: project};
   }
   if (!player.civic && player.civics.length < Object.keys(councilTree(state,'civic')).length) {
-    const project=councilAgenda(state,seat);
+    const openFrontier=!adopted(state,seat,'federation') && [...getCityExpansions(state,seat).values()].some(report=>report.turns>1);
+    const project=councilAgenda(state,seat,openFrontier);
     if (project) return {type:'civic',item:project};
   }
   const available=state.units.filter(u=>u.seat===seat && u.moves>0);

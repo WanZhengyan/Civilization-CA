@@ -501,9 +501,9 @@ function inspect(){
     }else if(state.intel?.visibleBerths?.includes(tile.id)){
       text("entity-kind","Marked berth");explanation="A harbor occupies or has reserved this water tile.";
     }else if(territory){
-      const cost=[territory.cost.capital && (territory.cost.capital+" capital"),territory.cost.influence && (territory.cost.influence+" influence"),"1 district order"].filter(Boolean).join(" · ");
+      const cost=[territory.cost.capital && (territory.cost.capital+" capital"),territory.cost.influence && (territory.cost.influence+" influence"),"1 border order"].filter(Boolean).join(" · ");
       actions=actionButton(territory.type,territory.label,cost,"gold",!mayOrder()||!territory.enabled);
-      explanation=territory.reason || (state.actionsLeft===1 ? "1 district order remains this turn." : state.actionsLeft+" district orders remain this turn.");
+      explanation=territory.reason || (state.actionsLeft===1 ? "1 border order remains this turn." : state.actionsLeft+" border orders remain this turn.");
     }else explanation=tile.waterway?"Ships spend one movement per water hex.":tile.terrain==="ocean"?"Land units cannot cross open water.":holding?.owner===view.seat?"Select a city to manage production or send a builder to improve nearby land.":"Select a unit to give orders or a city to set production.";
   }
   const neutral=!activeUnit && !activeCity && wildAt(state,tile.id);

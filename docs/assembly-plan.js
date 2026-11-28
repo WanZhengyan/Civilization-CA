@@ -2,7 +2,7 @@ import {councilTree} from './progression.js';
 import {WONDERS} from './wonders.js';
 import {policyOptions} from './policy.js';
 
-export function councilAgenda(state,seat) {
+export function councilAgenda(state,seat,openFrontier=false) {
   const tree=councilTree(state,'civic');
   const cities=state.cities.filter(c=>c.seat===seat);
   const owns=key=>state.players[seat].civics.includes(key);
@@ -10,7 +10,8 @@ export function councilAgenda(state,seat) {
   if (cities.some(c=>c.hp<c.maxHp)) ideas.push('mutualAid');
   if (cities.some(c=>c.buildings.includes('harbor'))) ideas.push('harborCommission');
   if (cities.some(c=>c.buildings.some(id=>WONDERS[id]))) ideas.push('exposition','normalSchools','conservation');
-  if (cities.some(c=>c.population>=3)) ideas.push('housingTrust','normalSchools','federation');
+  if (openFrontier && !owns('federation')) ideas.push(...tree.federation.requires,'federation');
+  if (cities.some(c=>c.population>=3)) ideas.push('housingTrust','normalSchools');
   if (Object.values(state.board).some(t=>t.owner===seat && !t.pillaged && ['farm','orchard'].includes(t.improvement))) ideas.push('irrigationDistricts');
   ideas.push('charter','federation','publicWorks','conservation','irrigationDistricts','normalSchools','mobilization','publicRadio',...Object.keys(tree));
   return ideas.find(key=>!owns(key) && tree[key].requires.every(owns));

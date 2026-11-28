@@ -70,6 +70,9 @@ test('technology planning prices the complete route to an unbuilt facility after
 
 test('civic proposals count only cities that meet each policy’s requirements',()=>{
   const s=capital(),p=s.players[0];p.civics=['publicWorks','charter'];
+  const frontier=read(s).find(r=>r.desk==='civic');
+  assert.equal(frontier.link.item,'federation');assert.match(frontier.detail,/gain 2 border points/);
+  p.civics.push('federation');
   assert.ok(!read(s).some(r=>r.desk==='civic'));s.cities[0].population=3;
   const school=read(s).find(r=>r.desk==='civic');assert.equal(school.link.item,'normalSchools');assert.match(school.detail,/gain 2 science/);
   s.cities[0].population=1;s.cities[0].buildings.push('harbor');assert.equal(read(s).find(r=>r.desk==='civic').link.item,'harborCommission');

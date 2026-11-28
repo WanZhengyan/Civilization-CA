@@ -24,7 +24,7 @@ test('research and civic agendas advance concurrently and retain their own balan
   assert.equal(getStats(s,0).cultureIncome,income.cultureIncome+1);
 });
 
-test('civic branches grant real order and production bonuses, with no repeated purchase',()=>{
+test('civic branches grant real border growth and production bonuses, with no repeated purchase',()=>{
   let s=fresh();
   const original=getCityYield(s,s.cities[0].id).production;
   s.players[0].culture=80;
@@ -35,7 +35,7 @@ test('civic branches grant real order and production bonuses, with no repeated p
   s=act(s,'civic','charter'); s=act(s,'civic','federation');
   assert.throws(()=>act(s,'civic','federation'));
   s=round(s);
-  assert.equal(s.actionsLeft,3);
+  assert.equal(s.actionsLeft,2);
   s=act(s,'end');
   assert.equal(s.actionsLeft,2);
 });

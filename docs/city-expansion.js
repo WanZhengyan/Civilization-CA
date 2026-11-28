@@ -1,9 +1,11 @@
-// One resident contributes one point at the city's next end of turn.
-export function borderBudget(city) {
+export function borderBudget(city, player) {
   const progress = city.borderProgress || 0;
-  const rate = Math.max(1, city.population);
+  const residents = Math.max(1, city.population);
+  const surveying = player?.technologies?.includes('civics') ? 1 : 0;
+  const federation = player?.civics?.includes('federation') ? 2 : 0;
+  const rate = residents + surveying + federation;
   const required = 8 + Math.min(8, (city.borderClaims || 0) * 2);
-  return {progress, rate, required, turns: Math.ceil((required - progress) / rate)};
+  return {progress, rate, residents, surveying, federation, required, turns: Math.ceil((required - progress) / rate)};
 }
 
 const availableLand = new Set(['coast', 'plains', 'urban', 'hills', 'forest']);
@@ -37,7 +39,7 @@ export function borderParcels(state, city, map, visible) {
 export function planCityBorders(state, seat, map, visible) {
   const allocated = new Set(), reports = new Map();
   for (const city of state.cities.filter(c=>c.seat===seat)) {
-    const budget = borderBudget(city);
+    const budget = borderBudget(city, state.players[seat]);
     const parcel = borderParcels(state, city, map, visible).find(site=>!allocated.has(site.id));
     if (parcel) allocated.add(parcel.id);
     reports.set(city.id, {...budget, tile:parcel?.id || null, turns:parcel ? budget.turns : null});
